@@ -330,7 +330,9 @@ class DatabaseSourceAdapter(SourceAdapter):
                 "queries": queries,
                 "checkpoint": {
                     "cursor_text": checkpoint.cursor_text if checkpoint else None,
-                    "cursor_time": checkpoint.cursor_time.isoformat() if checkpoint and checkpoint.cursor_time else None,
+                    "cursor_time": checkpoint.cursor_time.isoformat()
+                    if checkpoint and checkpoint.cursor_time
+                    else None,
                 },
                 "reason_code": "dry_run_preview",
                 "fallback_used": False,
@@ -396,7 +398,9 @@ class DatabaseSourceAdapter(SourceAdapter):
 
                     if time_column:
                         candidate_time = _extract_datetime(row.get(time_column))
-                        if candidate_time is not None and (next_cursor_time is None or candidate_time > next_cursor_time):
+                        if candidate_time is not None and (
+                            next_cursor_time is None or candidate_time > next_cursor_time
+                        ):
                             next_cursor_time = candidate_time
                     if cursor_column:
                         candidate_cursor = _clean_text(row.get(cursor_column))
@@ -486,7 +490,9 @@ class WebSourceAdapter(SourceAdapter):
                 provider="httpx",
             )
 
-        timeout_seconds = _coerce_positive_int(source.options.get("timeout_seconds"), default=20, minimum=3, maximum=120)
+        timeout_seconds = _coerce_positive_int(
+            source.options.get("timeout_seconds"), default=20, minimum=3, maximum=120
+        )
         user_agent = _clean_text(source.options.get("user_agent")) or "AgentFlow-FAQ-RAG/1.0"
 
         added_chunks = 0
@@ -510,7 +516,9 @@ class WebSourceAdapter(SourceAdapter):
                     response = await _retry_async(client.get, target_url)
                     response.raise_for_status()
                 except Exception as exc:
-                    logger.warning("Web source fetch failed: source=%s url=%s error=%s", source.source_id, target_url, exc)
+                    logger.warning(
+                        "Web source fetch failed: source=%s url=%s error=%s", source.source_id, target_url, exc
+                    )
                     failed_urls += 1
                     continue
 
@@ -636,7 +644,9 @@ class ApiSourceAdapter(SourceAdapter):
                 provider="httpx",
             )
 
-        timeout_seconds = _coerce_positive_int(source.options.get("timeout_seconds"), default=20, minimum=3, maximum=120)
+        timeout_seconds = _coerce_positive_int(
+            source.options.get("timeout_seconds"), default=20, minimum=3, maximum=120
+        )
         data_path = _clean_text(source.options.get("data_path"))
         content_field = _clean_text(source.options.get("content_field"))
         params = _coerce_string_dict(source.options.get("params"))
@@ -891,7 +901,9 @@ class S3SourceAdapter(SourceAdapter):
             try:
                 raw = await asyncio.to_thread(_get_s3_object_bytes, client, bucket, key)
             except Exception as exc:
-                logger.warning("S3 read failed: source=%s bucket=%s key=%s error=%s", source.source_id, bucket, key, exc)
+                logger.warning(
+                    "S3 read failed: source=%s bucket=%s key=%s error=%s", source.source_id, bucket, key, exc
+                )
                 failed_objects += 1
                 continue
 
@@ -1368,9 +1380,7 @@ class RAGIngestionOrchestrator:
             await ensure_database_ready()
             run_stmt: Select[tuple[IngestionRun]] = select(IngestionRun).where(IngestionRun.id == run_id)
             item_stmt: Select[tuple[IngestionRunItem]] = (
-                select(IngestionRunItem)
-                .where(IngestionRunItem.run_id == run_id)
-                .order_by(IngestionRunItem.id.asc())
+                select(IngestionRunItem).where(IngestionRunItem.run_id == run_id).order_by(IngestionRunItem.id.asc())
             )
             async with get_db_session() as session:
                 run = (await session.execute(run_stmt)).scalars().first()
@@ -2071,7 +2081,12 @@ def _apply_incremental_filters(
     limited_sql = _apply_limit(sql, row_limit=row_limit, dialect=dialect)
     filters: list[str] = []
 
-    if checkpoint is not None and time_column and checkpoint.cursor_time is not None and _IDENTIFIER_RE.match(time_column):
+    if (
+        checkpoint is not None
+        and time_column
+        and checkpoint.cursor_time is not None
+        and _IDENTIFIER_RE.match(time_column)
+    ):
         timestamp_text = checkpoint.cursor_time.astimezone(UTC).isoformat()
         filters.append(f"afq_sub.{time_column} > '{timestamp_text}'")
 

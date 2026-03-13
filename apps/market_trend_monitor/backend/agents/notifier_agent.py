@@ -112,6 +112,8 @@ class NotifierAgent(AgentBlock):
         }
     """
 
+    name: str = "NotifierAgent"
+
     def __init__(self) -> None:
         """初期化."""
         super().__init__()

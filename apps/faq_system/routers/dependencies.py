@@ -243,10 +243,12 @@ def get_suggestion_service() -> SuggestionService:
 
 
 def get_faq_agent() -> FAQAgent:
-    """FAQAgent取得（遅延初期化）."""
+    """FAQAgent取得（遅延初期化 + A2AHub 登録）."""
+    from agentflow.protocols.a2a_hub import get_hub
+
     if "faq_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()
-        _services["faq_agent"] = create_faq_app_agent(
+        agent = create_faq_app_agent(
             FAQAgent,
             agent_type="specialist",
             init_kwargs={
@@ -263,14 +265,20 @@ def get_faq_agent() -> FAQAgent:
                 )
             },
         )
+        _services["faq_agent"] = agent
+        hub = get_hub()
+        if hub.discover(agent.name) is None:
+            hub.register(agent)
     return _services["faq_agent"]
 
 
 def get_sales_agent() -> SalesAgent:
-    """SalesAgent取得（遅延初期化）."""
+    """SalesAgent取得（遅延初期化 + A2AHub 登録）."""
+    from agentflow.protocols.a2a_hub import get_hub
+
     if "sales_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()
-        _services["sales_agent"] = create_faq_app_agent(
+        agent = create_faq_app_agent(
             SalesAgent,
             agent_type="specialist",
             init_kwargs={
@@ -279,6 +287,10 @@ def get_sales_agent() -> SalesAgent:
                 )
             },
         )
+        _services["sales_agent"] = agent
+        hub = get_hub()
+        if hub.discover(agent.name) is None:
+            hub.register(agent)
     return _services["sales_agent"]
 
 

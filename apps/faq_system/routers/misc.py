@@ -202,7 +202,7 @@ async def health_check() -> dict[str, Any]:
     try:
         rag_enabled = is_rag_enabled()
         sql_enabled = is_sql_enabled()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("RAG/SQL 有効フラグ取得エラー（health check）: %s", exc)
 
     payload: dict[str, Any] = {

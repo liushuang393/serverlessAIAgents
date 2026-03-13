@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
+from agentflow.core.resilient_agent import ResilientAgent
 from agentflow.providers import get_llm
 from agentflow.routing import (
     ExecutiveSummaryBuilder,
@@ -70,16 +71,18 @@ class AssistantConfig:
     use_emoji: bool = True
 
 
-class PersonalAssistantCoordinator:
+class PersonalAssistantCoordinator(ResilientAgent):
     """私人助理協調器.
 
     主管が自然言語でタスクを依頼し、簡潔なサマリーを受け取る。
 
     Example:
         >>> coordinator = PersonalAssistantCoordinator()
-        >>> result = await coordinator.process("過去3日のメールを整理して")
+        >>> result = await coordinator.process_message("過去3日のメールを整理して")
         >>> print(result["summary"])
     """
+
+    name = "PersonalAssistantCoordinator"
 
     def __init__(
         self,
@@ -96,6 +99,7 @@ class PersonalAssistantCoordinator:
             event_emitter: イベント送信コールバック
             lazy_tool_loader: 懒加載ツールローダー（コンテキスト最適化用）
         """
+        super().__init__()
         self._config = config or AssistantConfig()
         self._gateway = skill_gateway
         self._event_emitter = event_emitter
@@ -536,22 +540,34 @@ class PersonalAssistantCoordinator:
             )
         )
 
-    async def process(
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
+
+    async def process(  # type: ignore[override]
         self,
-        message: str,
+        message: str | Any = "",
         user_id: str = "default",
         context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """メッセージを処理してタスクを実行.
 
+        ResilientAgent の process() 抽象メソッドを満たしつつ、
+        既存の呼び出し元（message: str）との互換性を維持。
+
         Args:
-            message: ユーザーメッセージ（自然言語）
+            message: ユーザーメッセージ（自然言語）または dict 入力
             user_id: ユーザーID
             context: 追加コンテキスト
 
         Returns:
             処理結果（summary, details, raw_results を含む）
         """
+        # ResilientAgent 経由で dict が渡された場合の互換処理
+        if isinstance(message, dict):
+            context = message.get("context", context)
+            user_id = message.get("user_id", user_id)
+            message = message.get("message", "")
         context = context or {}
         run_id = str(context.get("run_id") or f"run_{uuid.uuid4().hex}")
         context["run_id"] = run_id

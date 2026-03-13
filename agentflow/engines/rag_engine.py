@@ -58,19 +58,8 @@ class RAGEngine(BaseEngine):
         return "\n\n".join(context_parts)
 
     async def _run_agent(self, agent: Any, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Agent実行."""
-        if hasattr(agent, "run"):
-            result = await agent.run(inputs)
-        elif hasattr(agent, "invoke"):
-            result = await agent.invoke(inputs)
-        elif hasattr(agent, "process"):
-            result = await agent.process(inputs)
-        else:
-            raise AttributeError(f"Agent {agent} has no run/invoke/process method")
-
-        if isinstance(result, dict):
-            return result
-        return {"result": result}
+        """Agent実行（A2AHub 経由統一呼び出し）."""
+        return await self.call_agent(agent, inputs)
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """RAG実行."""

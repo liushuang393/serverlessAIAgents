@@ -13,10 +13,10 @@ from typing import Any
 
 from apps.platform.services.tenant_dashboard import TenantDashboard
 
-from agentflow.core.agent_block import AgentBlock
+from agentflow.core.resilient_agent import ResilientAgent
 
 
-class AnalyticsAgent(AgentBlock):
+class AnalyticsAgent(ResilientAgent):  # type: ignore[type-arg]
     """分析・レポートAgent.
 
     テナントの使用状況を分析し、インサイトを提供する。
@@ -24,15 +24,23 @@ class AnalyticsAgent(AgentBlock):
 
     name = "analytics-agent"
 
-    def __init__(self, llm_client: Any = None) -> None:
+    def __init__(self, llm_client: Any = None, **kwargs: Any) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント
+            **kwargs: ResilientAgent 追加引数
         """
-        super().__init__()
-        self._llm_client = llm_client
+        super().__init__(llm_client=llm_client, **kwargs)
         self._dashboard = TenantDashboard()
+
+    async def process(self, input_data: Any) -> Any:
+        """process メソッド（run() にデリゲート）."""
+        return await self.run(input_data)
+
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
 
     def _get_system_prompt(self) -> str:
         """システムプロンプトを取得."""

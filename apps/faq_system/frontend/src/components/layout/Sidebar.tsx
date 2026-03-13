@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '../../stores/chatStore';
-import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeft, PanelLeftClose, Database } from 'lucide-react';
+import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '../../i18n';
@@ -120,19 +120,6 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 >
                     <MessageCircle size={15} />
                     {t('sidebar.chat')}
-                </button>
-                <button
-                    type="button"
-                    data-testid="nav-rag"
-                    onClick={() => navigate('/rag')}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
-                        location.pathname === '/rag'
-                            ? 'bg-white/5 text-white border border-white/10'
-                            : 'text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03] border border-transparent'
-                    }`}
-                >
-                    <Database size={15} />
-                    ナレッジ(詳細)
                 </button>
             </div>
 

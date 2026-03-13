@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Search, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import { useI18n } from '../../i18n';
 import { useRAGStore } from '../../stores/ragStore';
 import { ragApi } from '../../api/rag';
 import type { CollectionInfo } from '../../api/rag';
@@ -51,6 +52,7 @@ function ScoreBadge({ score }: { score: number }) {
 // ---------------------------------------------------------------------------
 
 export function PanelRetrieval() {
+  const { t } = useI18n();
   const { collections, collectionsLoading, fetchCollections, updateCollection } = useRAGStore();
 
   // コレクション選択
@@ -173,7 +175,7 @@ export function PanelRetrieval() {
       {/* コレクション選択 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          コレクション選択
+          {t('knowledge_panel.collection_label')}
         </h4>
         <select
           data-testid="select-collection"
@@ -181,7 +183,7 @@ export function PanelRetrieval() {
           onChange={(e) => handleCollectionChange(e.target.value)}
           className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white"
         >
-          <option value="">コレクションを選択...</option>
+          <option value="">{t('knowledge_panel.select_collection')}</option>
           {collections.map((c) => (
             <option key={c.collection_name} value={c.collection_name}>
               {c.display_name || c.collection_name}
@@ -189,13 +191,13 @@ export function PanelRetrieval() {
           ))}
         </select>
         {collectionsLoading && collections.length === 0 && (
-          <p className="text-xs text-[var(--text-muted)] mt-1">読み込み中...</p>
+          <p className="text-xs text-[var(--text-muted)] mt-1">{t('knowledge_panel.loading')}</p>
         )}
       </div>
 
       {!selected && (
         <div className="text-center py-8 text-[var(--text-muted)] text-sm">
-          コレクションを選択してください
+          {t('knowledge_panel.select_collection_prompt')}
         </div>
       )}
 
@@ -204,7 +206,7 @@ export function PanelRetrieval() {
           {/* パターン選択 */}
           <div>
             <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-              パターンプリセット
+              {t('knowledge_panel.pattern_preset')}
             </h4>
             <div className="grid grid-cols-2 gap-2">
               {PRESETS.map((p) => (
@@ -219,8 +221,8 @@ export function PanelRetrieval() {
                       : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'
                   }`}
                 >
-                  <p className="text-xs font-semibold text-white">{p.label}</p>
-                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{p.description}</p>
+                  <p className="text-xs font-semibold text-white">{t(p.labelKey)}</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t(p.descriptionKey)}</p>
                 </button>
               ))}
             </div>
@@ -229,13 +231,13 @@ export function PanelRetrieval() {
           {/* チャンキング設定 */}
           <div>
             <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-              チャンキング設定
+              {t('knowledge_panel.chunking_settings')}
             </h4>
             <div className="space-y-3">
               <label className="block">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-muted)]">戦略</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">テキスト分割の方法</span>
+                  <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.chunk_strategy')}</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.chunk_strategy_help')}</span>
                 </div>
                 <select
                   data-testid="select-chunk-strategy"
@@ -254,9 +256,9 @@ export function PanelRetrieval() {
               <label className="block">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">
-                    チャンクサイズ: <span data-testid="chunk-size-value">{chunkSize}</span>
+                    {t('knowledge_panel.chunk_size')}: <span data-testid="chunk-size-value">{chunkSize}</span>
                   </span>
-                  <span className="text-[10px] text-[var(--text-muted)]">各チャンクの最大文字数</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.chunk_size_help')}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <input
@@ -285,9 +287,9 @@ export function PanelRetrieval() {
               <label className="block">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">
-                    オーバーラップ: <span data-testid="chunk-overlap-value">{chunkOverlap}</span>
+                    {t('knowledge_panel.chunk_overlap')}: <span data-testid="chunk-overlap-value">{chunkOverlap}</span>
                   </span>
-                  <span className="text-[10px] text-[var(--text-muted)]">隣接チャンクとの重複文字数</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.chunk_overlap_help')}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <input
@@ -318,13 +320,13 @@ export function PanelRetrieval() {
           {/* 検索設定 */}
           <div>
             <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-              検索設定
+              {t('knowledge_panel.retrieval_settings')}
             </h4>
             <div className="space-y-3">
               <label className="block">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-muted)]">検索方式</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">ベクトル検索の方式</span>
+                  <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.retrieval_method')}</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.retrieval_method_help')}</span>
                 </div>
                 <select
                   data-testid="select-retrieval-method"
@@ -340,8 +342,8 @@ export function PanelRetrieval() {
 
               <label className="block">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-muted)]">リランカー</span>
-                  <span className="text-[10px] text-[var(--text-muted)]">検索結果の再順位付け</span>
+                  <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.reranker')}</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.reranker_help')}</span>
                 </div>
                 <select
                   data-testid="select-reranker"
@@ -360,9 +362,9 @@ export function PanelRetrieval() {
               <label className="block">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">
-                    Top-K: <span data-testid="top-k-value">{topK}</span>
+                    {t('knowledge_panel.top_k')}: <span data-testid="top-k-value">{topK}</span>
                   </span>
-                  <span className="text-[10px] text-[var(--text-muted)]">検索結果の最大件数</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.top_k_help')}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <input
@@ -391,9 +393,9 @@ export function PanelRetrieval() {
               <label className="block">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-[var(--text-muted)]">
-                    類似度閾値: <span data-testid="min-similarity-value">{minSimilarity.toFixed(2)}</span>
+                    {t('knowledge_panel.min_similarity')}: <span data-testid="min-similarity-value">{minSimilarity.toFixed(2)}</span>
                   </span>
-                  <span className="text-[10px] text-[var(--text-muted)]">最低スコアの閾値</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">{t('knowledge_panel.min_similarity_help')}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <input
@@ -425,13 +427,13 @@ export function PanelRetrieval() {
           <div>
             <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Search size={12} />
-              テストクエリ
+              {t('knowledge_panel.test_query')}
             </h4>
             <textarea
               data-testid="test-query-input"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="テストクエリを入力..."
+              placeholder={t('knowledge_panel.test_query_placeholder')}
               rows={3}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)] resize-none"
             />
@@ -443,7 +445,7 @@ export function PanelRetrieval() {
               className="mt-2 w-full px-4 py-2 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-semibold hover:bg-[var(--primary)]/20 transition border border-[var(--primary)]/20 disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
               <Send size={12} />
-              {testing ? '実行中...' : 'テスト実行'}
+              {testing ? t('knowledge_panel.testing') : t('knowledge_panel.run_test')}
             </button>
 
             {/* テスト結果 */}
@@ -458,7 +460,7 @@ export function PanelRetrieval() {
                 {testResults.results && (
                   <>
                     <p className="text-xs text-[var(--text-muted)]">
-                      ヒット数: <span data-testid="hit-count" className="text-white font-semibold">{testResults.results.length}</span>
+                      {t('knowledge_panel.hits')}: <span data-testid="hit-count" className="text-white font-semibold">{testResults.results.length}</span>
                     </p>
                     {testResults.results.map((item, idx) => {
                       const content = item.content ?? '';
@@ -492,12 +494,12 @@ export function PanelRetrieval() {
                               {isExpanded ? (
                                 <>
                                   <ChevronUp size={10} />
-                                  折りたたむ
+                                  {t('knowledge_panel.collapse_text')}
                                 </>
                               ) : (
                                 <>
                                   <ChevronDown size={10} />
-                                  全文を表示
+                                  {t('knowledge_panel.expand_text')}
                                 </>
                               )}
                             </button>
@@ -520,7 +522,7 @@ export function PanelRetrieval() {
               disabled={saving}
               className="w-full px-4 py-2.5 rounded-lg bg-[var(--primary)] text-black text-xs font-semibold hover:opacity-90 transition disabled:opacity-50"
             >
-              {saving ? '保存中...' : '設定を保存'}
+              {saving ? t('knowledge_panel.saving') : t('knowledge_panel.save_settings')}
             </button>
           </div>
         </>

@@ -78,7 +78,9 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(["run_id"], ["ingestion_runs.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
         )
-    op.create_index("ix_ingestion_run_items_run_id", "ingestion_run_items", ["run_id"], unique=False, if_not_exists=True)
+    op.create_index(
+        "ix_ingestion_run_items_run_id", "ingestion_run_items", ["run_id"], unique=False, if_not_exists=True
+    )
     op.create_index(
         "ix_ingestion_run_items_source_id",
         "ingestion_run_items",
@@ -86,7 +88,9 @@ def upgrade() -> None:
         unique=False,
         if_not_exists=True,
     )
-    op.create_index("ix_ingestion_run_items_status", "ingestion_run_items", ["status"], unique=False, if_not_exists=True)
+    op.create_index(
+        "ix_ingestion_run_items_status", "ingestion_run_items", ["status"], unique=False, if_not_exists=True
+    )
     op.create_index(
         "ix_ingestion_run_items_run_source",
         "ingestion_run_items",

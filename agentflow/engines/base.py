@@ -156,6 +156,49 @@ class BaseEngine(ABC):
         self._is_resuming: bool = False
         self._resume_checkpoint_id: str | None = None
 
+        # A2A Hub 統合: 全 Agent 呼び出しはハブ経由
+        from agentflow.protocols.a2a_hub import LocalA2AHub, get_hub
+
+        self._hub: LocalA2AHub = get_hub()
+
+    async def call_agent(self, agent: Any, inputs: dict[str, Any]) -> dict[str, Any]:
+        """Agent を A2A プロトコル経由で呼び出す（Engine 統一メソッド）.
+
+        ローカルハブに登録済み → ハブ経由で呼び出し
+        未登録 → 直接 agent.run() にフォールバック
+
+        Args:
+            agent: Agent インスタンス（name 属性を持つ）
+            inputs: 入力データ
+
+        Returns:
+            Agent の出力データ
+        """
+        from typing import cast
+
+        agent_name = getattr(agent, "name", None)
+
+        # ハブに登録済みの場合は A2A 経由
+        if agent_name and self._hub.discover(agent_name) is not None:
+            return await self._hub.call(agent_name, inputs)
+
+        # 未登録の場合は直接呼び出し（後方互換）
+        if hasattr(agent, "run"):
+            result = await agent.run(inputs)
+        elif hasattr(agent, "invoke"):
+            result = await agent.invoke(inputs)
+        elif hasattr(agent, "process"):
+            result = await agent.process(inputs)
+        else:
+            msg = f"Agent {agent} has no run/invoke/process method"
+            raise AttributeError(msg)
+
+        if isinstance(result, dict):
+            return result
+        if hasattr(result, "model_dump"):
+            return cast("dict[str, Any]", result.model_dump())
+        return {"result": result}
+
     @property
     def config(self) -> EngineConfig:
         """現在の設定を取得."""

@@ -21,6 +21,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from agentflow.core.resilient_agent import ResilientAgent
 
 if TYPE_CHECKING:
     from agentflow.skills.gateway import SkillGateway
@@ -130,12 +131,14 @@ class DuplicateGroup:
         }
 
 
-class FileOrganizerAgent:
+class FileOrganizerAgent(ResilientAgent):
     """ファイル整理エージェント.
 
     SkillGateway経由でファイルシステムを操作し、
     インテリジェントなファイル整理を行う。
     """
+
+    name = "FileOrganizerAgent"
 
     # カテゴリ定義
     CATEGORIES = {
@@ -218,10 +221,23 @@ class FileOrganizerAgent:
             days_old_threshold: 古いファイルの閾値（日）
             large_file_mb: 大きいファイルの閾値（MB）
         """
+        super().__init__()
         self._gateway = gateway
         self._days_old = days_old_threshold
         self._large_file_bytes = large_file_mb * 1024 * 1024
         self._logger = logging.getLogger(__name__)
+
+    async def process(self, input_data: Any) -> Any:
+        """process メソッド（analyze_directory にデリゲート）."""
+        path = input_data.get("path", ".") if isinstance(input_data, dict) else "."
+        action = input_data.get("action", "analyze") if isinstance(input_data, dict) else "analyze"
+        if action == "organize":
+            return await self.organize(path)
+        return await self.analyze_directory(path)
+
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
 
     def _get_category(self, filename: str) -> str:
         """ファイル名からカテゴリを取得."""

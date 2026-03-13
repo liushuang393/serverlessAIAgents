@@ -5,6 +5,7 @@
  * ドキュメント一覧表示、チャンクプレビューを提供する。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { JSX } from 'react';
 import {
   Upload,
   Trash2,
@@ -14,6 +15,7 @@ import {
   CheckCircle,
   X,
 } from 'lucide-react';
+import { useI18n } from '../../i18n';
 import { useRAGStore } from '../../stores/ragStore';
 
 /** ステータスバッジのスタイル定義 */
@@ -28,6 +30,7 @@ const ACCEPTED_FORMATS = '.pdf,.docx,.doc,.csv,.txt,.md,.json';
 
 /** パネル内ドキュメント管理 */
 export function PanelDocuments(): JSX.Element {
+  const { t } = useI18n();
   const {
     collections,
     fetchCollections,
@@ -49,6 +52,7 @@ export function PanelDocuments(): JSX.Element {
   const [autoIndex, setAutoIndex] = useState(false);
   const [previewDocId, setPreviewDocId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   /** 初回マウント時にコレクション一覧を取得 */
   useEffect(() => {
@@ -68,10 +72,14 @@ export function PanelDocuments(): JSX.Element {
     async (files: FileList | null) => {
       if (!files || !selectedCollection) return;
       setUploading(true);
+      setUploadError(null);
       try {
         for (const file of Array.from(files)) {
           await uploadDocument(selectedCollection, file, autoIndex);
         }
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        setUploadError(message);
       } finally {
         setUploading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -93,7 +101,7 @@ export function PanelDocuments(): JSX.Element {
   /** 削除確認ダイアログ付き削除 */
   const handleDelete = useCallback(
     (docId: string) => {
-      if (window.confirm('このドキュメントを削除しますか？')) {
+      if (window.confirm(t('knowledge_panel.confirm_delete_document'))) {
         void deleteDocument(selectedCollection, docId);
       }
     },
@@ -104,14 +112,14 @@ export function PanelDocuments(): JSX.Element {
     <div className="space-y-4" data-testid="panel-documents">
       {/* コレクション選択 */}
       <div>
-        <label className="block text-xs text-[var(--text-muted)] mb-1.5">コレクション</label>
+        <label className="block text-xs text-[var(--text-muted)] mb-1.5">{t('knowledge_panel.collection_label')}</label>
         <select
           data-testid="collection-select"
           value={selectedCollection}
           onChange={(e) => setSelectedCollection(e.target.value)}
           className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white"
         >
-          <option value="">コレクションを選択...</option>
+          <option value="">{t('knowledge_panel.select_collection')}</option>
           {collections.map((c) => (
             <option key={c.collection_name} value={c.collection_name}>
               {c.display_name || c.collection_name}
@@ -122,7 +130,7 @@ export function PanelDocuments(): JSX.Element {
 
       {!selectedCollection && (
         <div className="text-center py-8 text-[var(--text-muted)] text-sm">
-          コレクションを選択してください
+          {t('knowledge_panel.select_collection_prompt')}
         </div>
       )}
 
@@ -144,9 +152,9 @@ export function PanelDocuments(): JSX.Element {
             }`}
           >
             <Upload size={24} className="mx-auto mb-2 text-[var(--text-muted)]" />
-            <p className="text-sm text-white mb-1">ファイルをドラッグ＆ドロップ</p>
+            <p className="text-sm text-white mb-1">{t('knowledge_panel.upload_area')}</p>
             <p className="text-xs text-[var(--text-muted)] mb-3">
-              PDF, DOCX, DOC, CSV, TXT, MD, JSON
+              {t('knowledge_panel.supported_formats')}
             </p>
             <input
               ref={fileInputRef}
@@ -162,7 +170,7 @@ export function PanelDocuments(): JSX.Element {
               disabled={uploading}
               className="px-4 py-1.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition disabled:opacity-50"
             >
-              {uploading ? 'アップロード中...' : 'ファイルを選択'}
+              {uploading ? t('knowledge_panel.uploading') : t('knowledge_panel.select_file')}
             </button>
           </div>
 
@@ -175,17 +183,33 @@ export function PanelDocuments(): JSX.Element {
               onChange={(e) => setAutoIndex(e.target.checked)}
               className="rounded border-white/20"
             />
-            アップロード後に自動インデックス
+            {t('knowledge_panel.auto_index')}
           </label>
+
+          {/* アップロードエラー */}
+          {uploadError && (
+            <div
+              data-testid="upload-error"
+              className="flex items-center justify-between p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400"
+            >
+              <span>{t('knowledge_panel.error_prefix')}: {uploadError}</span>
+              <button
+                onClick={() => setUploadError(null)}
+                className="ml-2 hover:text-rose-300 transition"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
 
           {/* ドキュメント一覧 */}
           {documentsLoading && documents.length === 0 && (
-            <div className="text-center py-6 text-[var(--text-muted)] text-sm">読み込み中...</div>
+            <div className="text-center py-6 text-[var(--text-muted)] text-sm">{t('knowledge_panel.loading')}</div>
           )}
 
           {documents.length === 0 && !documentsLoading && (
             <div className="text-center py-6 text-[var(--text-muted)] text-sm">
-              ドキュメントはありません
+              {t('knowledge_panel.no_documents')}
             </div>
           )}
 
@@ -225,7 +249,7 @@ export function PanelDocuments(): JSX.Element {
                         void previewChunks(selectedCollection, doc.document_id);
                       }}
                       className="p-1.5 rounded-lg hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition"
-                      title="チャンクプレビュー"
+                      title={t('knowledge_panel.chunk_preview_tooltip')}
                     >
                       <Eye size={14} />
                     </button>
@@ -236,7 +260,7 @@ export function PanelDocuments(): JSX.Element {
                         data-testid={`btn-index-${doc.document_id}`}
                         onClick={() => void indexDocument(selectedCollection, doc.document_id)}
                         className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-[var(--text-muted)] hover:text-emerald-400 transition"
-                        title="インデックス"
+                        title={t('knowledge_panel.index_tooltip')}
                       >
                         <CheckCircle size={14} />
                       </button>
@@ -248,7 +272,7 @@ export function PanelDocuments(): JSX.Element {
                         data-testid={`btn-reindex-${doc.document_id}`}
                         onClick={() => void reindexDocument(selectedCollection, doc.document_id)}
                         className="p-1.5 rounded-lg hover:bg-blue-500/10 text-[var(--text-muted)] hover:text-blue-400 transition"
-                        title="再インデックス"
+                        title={t('knowledge_panel.reindex_tooltip')}
                       >
                         <RotateCcw size={14} />
                       </button>
@@ -259,7 +283,7 @@ export function PanelDocuments(): JSX.Element {
                       data-testid={`btn-delete-${doc.document_id}`}
                       onClick={() => handleDelete(doc.document_id)}
                       className="p-1.5 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition"
-                      title="削除"
+                      title={t('knowledge_panel.delete_tooltip')}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -277,10 +301,10 @@ export function PanelDocuments(): JSX.Element {
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-white">
-                  チャンクプレビュー
+                  {t('knowledge_panel.chunk_preview')}
                   {!chunksLoading && chunkPreviews.length > 0 && (
                     <span className="ml-2 text-xs text-[var(--text-muted)] font-normal">
-                      ({chunkPreviews.length} チャンク)
+                      ({chunkPreviews.length} {t('knowledge_panel.chunks_count')})
                     </span>
                   )}
                 </h3>
@@ -294,9 +318,9 @@ export function PanelDocuments(): JSX.Element {
               </div>
 
               {chunksLoading ? (
-                <p className="text-xs text-[var(--text-muted)]">読み込み中...</p>
+                <p className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.loading')}</p>
               ) : chunkPreviews.length === 0 ? (
-                <p className="text-xs text-[var(--text-muted)]">チャンクがありません</p>
+                <p className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.no_chunks')}</p>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {chunkPreviews.map((chunk) => (

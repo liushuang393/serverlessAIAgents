@@ -35,6 +35,8 @@ from apps.faq_system.routers.dependencies import (
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from agentflow.protocols.a2a_hub import get_hub
+
 
 if TYPE_CHECKING:
     from apps.faq_system.backend.auth.models import UserInfo
@@ -112,9 +114,15 @@ def _create_agent(agent_type: AgentType) -> Any:
 
 
 def get_agent(agent_type: AgentType) -> Any:
-    """Agent 取得（遅延初期化 + シングルトン）."""
+    """Agent 取得（遅延初期化 + シングルトン + A2AHub 登録）."""
     if agent_type.value not in _agent_cache:
-        _agent_cache[agent_type.value] = _create_agent(agent_type)
+        agent = _create_agent(agent_type)
+        _agent_cache[agent_type.value] = agent
+        # A2AHub に登録（ローカル通信用）
+        hub = get_hub()
+        agent_name = getattr(agent, "name", agent_type.value)
+        if hub.discover(agent_name) is None:
+            hub.register(agent)
     return _agent_cache[agent_type.value]
 
 
@@ -163,10 +171,12 @@ async def _run_agent(
     agent_type: AgentType,
     input_data: dict[str, Any],
 ) -> dict[str, Any]:
-    """Agent 実行の共通ラッパー."""
+    """Agent 実行の共通ラッパー（A2AHub 経由）."""
     try:
         agent = get_agent(agent_type)
-        return await agent.run(input_data)
+        hub = get_hub()
+        agent_name = getattr(agent, "name", agent_type.value)
+        return await hub.call(agent_name, input_data)
     except TimeoutError as exc:
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except Exception as exc:

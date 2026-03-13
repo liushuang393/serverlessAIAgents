@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from apps.faq_system.routers.collections import update_collection, UpdateCollectionRequest
+import pytest
+from apps.faq_system.routers.collections import UpdateCollectionRequest, update_collection
 
 
 class TestRAGConfigReload:

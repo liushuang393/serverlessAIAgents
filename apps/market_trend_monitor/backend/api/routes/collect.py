@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from agentflow.core.agent_factory import AgentFactorySpec
 from agentflow.core.agent_factory import create as create_agent
+from agentflow.protocols.a2a_hub import get_hub
 
 
 router = APIRouter(prefix="/api", tags=["データ収集"])
@@ -65,51 +66,59 @@ async def _run_fallback_collection(
     sources: list[str],
     date_range: dict[str, str] | None,
 ) -> dict[str, Any]:
-    """フォールバック収集を実行（collector + analyzer + reporter）."""
-    collector_agent = create_agent(AgentFactorySpec(agent_class=CollectorAgent, agent_type="executor"))
-    analyzer_agent = create_agent(
-        AgentFactorySpec(
-            agent_class=AnalyzerAgent,
-            init_kwargs={"evidence_service": evidence_service},
-            agent_type="reactor",
-        )
+    """フォールバック収集を実行（A2AHub 経由: collector → analyzer → reporter）."""
+    hub = get_hub()
+
+    # Agent が未登録の場合は登録する
+    _ensure_agents_registered(hub)
+
+    collector_result = await hub.call(
+        "CollectorAgent",
+        {"keywords": keywords, "sources": sources, "date_range": date_range},
     )
-    reporter_agent = create_agent(AgentFactorySpec(agent_class=ReporterAgent, agent_type="reporter"))
+    analyzer_result = await hub.call(
+        "AnalyzerAgent",
+        {
+            "articles": collector_result.get("articles", []),
+            "enable_sentiment": config.analyzer.enable_sentiment_analysis,
+        },
+    )
+    reporter_result = await hub.call(
+        "ReporterAgent",
+        {
+            "trends": analyzer_result.get("trends", []),
+            "summary": analyzer_result.get("summary", ""),
+            "period": datetime.now().strftime("%Y-W%U"),
+        },
+    )
+    return {
+        "collector": collector_result,
+        "analyzer": analyzer_result,
+        "reporter": reporter_result,
+    }
 
-    await collector_agent.initialize()
-    await analyzer_agent.initialize()
-    await reporter_agent.initialize()
 
-    try:
-        collector_result = await collector_agent.run(
-            {"keywords": keywords, "sources": sources, "date_range": date_range}
+def _ensure_agents_registered(hub: Any) -> None:
+    """必要な Agent が Hub に未登録の場合は登録する."""
+    if hub.discover("CollectorAgent") is None:
+        agent = create_agent(AgentFactorySpec(agent_class=CollectorAgent, agent_type="executor"))
+        hub.register(agent)
+    if hub.discover("AnalyzerAgent") is None:
+        agent = create_agent(
+            AgentFactorySpec(
+                agent_class=AnalyzerAgent,
+                init_kwargs={"evidence_service": evidence_service},
+                agent_type="reactor",
+            )
         )
-        analyzer_result = await analyzer_agent.run(
-            {
-                "articles": collector_result.get("articles", []),
-                "enable_sentiment": config.analyzer.enable_sentiment_analysis,
-            }
-        )
-        reporter_result = await reporter_agent.run(
-            {
-                "trends": analyzer_result.get("trends", []),
-                "summary": analyzer_result.get("summary", ""),
-                "period": datetime.now().strftime("%Y-W%U"),
-            }
-        )
-        return {
-            "collector": collector_result,
-            "analyzer": analyzer_result,
-            "reporter": reporter_result,
-        }
-    finally:
-        await collector_agent.cleanup()
-        await analyzer_agent.cleanup()
-        await reporter_agent.cleanup()
+        hub.register(agent)
+    if hub.discover("ReporterAgent") is None:
+        agent = create_agent(AgentFactorySpec(agent_class=ReporterAgent, agent_type="reporter"))
+        hub.register(agent)
 
 
 async def _ensure_reporter_result(result: dict[str, Any]) -> dict[str, Any]:
-    """reporter 結果が欠落している場合に補完する."""
+    """reporter 結果が欠落している場合に補完する（A2AHub 経由）."""
     reporter = result.get("reporter", {})
     analyzer = result.get("analyzer", {})
 
@@ -119,21 +128,21 @@ async def _ensure_reporter_result(result: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(analyzer, dict):
         return result
 
-    reporter_agent = create_agent(AgentFactorySpec(agent_class=ReporterAgent, agent_type="reporter"))
+    hub = get_hub()
+    _ensure_agents_registered(hub)
+
     try:
-        await reporter_agent.initialize()
-        reporter_result = await reporter_agent.run(
+        reporter_result = await hub.call(
+            "ReporterAgent",
             {
                 "trends": analyzer.get("trends", []),
                 "summary": analyzer.get("summary", ""),
                 "period": datetime.now().strftime("%Y-W%U"),
-            }
+            },
         )
     except Exception as exc:
         logger.warning("reporter補完に失敗: %s", exc)
         return result
-    finally:
-        await reporter_agent.cleanup()
 
     merged = dict(result)
     merged["reporter"] = reporter_result

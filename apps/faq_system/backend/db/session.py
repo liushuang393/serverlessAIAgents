@@ -12,8 +12,9 @@ import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
-from agentflow.database import DatabaseConfig, DatabaseManager
 from apps.faq_system.backend.db.models import Base
+
+from agentflow.database import DatabaseConfig, DatabaseManager
 
 
 if TYPE_CHECKING:

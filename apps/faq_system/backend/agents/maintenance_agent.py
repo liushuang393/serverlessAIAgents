@@ -154,6 +154,14 @@ class MaintenanceAgent(ResilientAgent):
         self._config = config or MaintenanceConfig()
         self._logger = logging.getLogger(self.name)
 
+    async def process(self, input_data: Any) -> Any:
+        """process メソッド（run() にデリゲート）."""
+        return await self.run(input_data if isinstance(input_data, dict) else {})
+
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Agent 実行."""
         start_time = datetime.now()

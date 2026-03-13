@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from agentflow.core.agent_factory import AgentFactorySpec
 from agentflow.core.agent_factory import create as create_agent
+from agentflow.protocols.a2a_hub import get_hub
 
 
 router = APIRouter(prefix="/api", tags=["戦略機能"])
@@ -196,16 +197,21 @@ async def _collect_articles_for_watchlist_focus(
     keywords: list[str],
     sources: list[str],
 ) -> int:
-    """競合フォーカスで追加収集を実行し、ストアへ反映."""
+    """競合フォーカスで追加収集を実行し、ストアへ反映（A2AHub 経由）."""
     if not keywords:
         return 0
 
-    collector_agent = create_agent(AgentFactorySpec(agent_class=CollectorAgent, agent_type="executor"))
-    await collector_agent.initialize()
-    try:
-        collector_result = await collector_agent.run({"keywords": keywords, "sources": sources})
-    finally:
-        await collector_agent.cleanup()
+    hub = get_hub()
+
+    # CollectorAgent が未登録の場合は登録
+    if hub.discover("CollectorAgent") is None:
+        agent = create_agent(AgentFactorySpec(agent_class=CollectorAgent, agent_type="executor"))
+        hub.register(agent)
+
+    collector_result = await hub.call(
+        "CollectorAgent",
+        {"keywords": keywords, "sources": sources},
+    )
 
     if not isinstance(collector_result, dict):
         return 0

@@ -22,6 +22,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from agentflow.protocols.a2a_hub import get_hub
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -84,7 +86,9 @@ async def chat(
     )
 
     agent = get_faq_agent()
-    result = await agent.run(
+    hub = get_hub()
+    result = await hub.call(
+        agent.name,
         {
             "question": request.message,
             "context": {
@@ -98,7 +102,7 @@ async def chat(
                 "options": request.options,
                 "conversation_history": conversation_history,
             },
-        }
+        },
     )
 
     result = register_artifacts(result)

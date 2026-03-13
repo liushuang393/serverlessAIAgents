@@ -135,23 +135,8 @@ class SimpleEngine(BaseEngine):
         Returns:
             Agent出力結果
         """
-        # Agentを呼び出し
-        if hasattr(self._agent_instance, "run"):
-            result = await self._agent_instance.run(inputs)
-        elif hasattr(self._agent_instance, "invoke"):
-            result = await self._agent_instance.invoke(inputs)
-        elif hasattr(self._agent_instance, "process"):
-            result = await self._agent_instance.process(inputs)
-        else:
-            msg = f"Agent {self._agent_instance} has no run/invoke/process method"
-            raise AttributeError(msg)
-
-        # dictを返却することを保証
-        if isinstance(result, dict):
-            return result
-        if hasattr(result, "model_dump"):
-            return cast("dict[str, Any]", result.model_dump())
-        return {"result": result}
+        # Agent を A2AHub 経由で統一呼び出し
+        return await self.call_agent(self._agent_instance, inputs)
 
     async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行（ノードイベントを発行）."""

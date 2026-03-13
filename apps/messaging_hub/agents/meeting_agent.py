@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
+from agentflow.core.resilient_agent import ResilientAgent
 from agentflow.providers import get_llm
 from agentflow.skills.calendar import CalendarEvent
 
@@ -155,11 +156,13 @@ class MeetingNotes:
         return "\n".join(lines)
 
 
-class MeetingAgent:
+class MeetingAgent(ResilientAgent):
     """会議エージェント.
 
     会議の準備、議事録生成、フォローアップを担当。
     """
+
+    name = "MeetingAgent"
 
     def __init__(
         self,
@@ -170,8 +173,27 @@ class MeetingAgent:
         Args:
             calendar_skill: カレンダースキル
         """
+        super().__init__()
         self._calendar = calendar_skill
         self._logger = logging.getLogger(__name__)
+
+    async def process(self, input_data: Any) -> Any:
+        """process メソッド（prepare_meeting_brief にデリゲート）."""
+        if isinstance(input_data, dict):
+            action = input_data.get("action", "brief")
+            if action == "notes":
+                return await self.generate_meeting_notes(
+                    input_data.get("transcript", ""),
+                    input_data.get("event_id"),
+                )
+            return await self.prepare_meeting_brief(
+                input_data.get("event_id", ""),
+            )
+        return {"error": "Invalid input"}
+
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
 
     @staticmethod
     def _strip_code_fence(content: str) -> str:

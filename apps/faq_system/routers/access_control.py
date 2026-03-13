@@ -110,10 +110,9 @@ async def update_collection_roles(
             # 権限を付与
             if read_perm not in role_perms.kb_permissions:
                 role_perms.kb_permissions.append(read_perm)
-        else:
-            # 権限を削除
-            if read_perm in role_perms.kb_permissions:
-                role_perms.kb_permissions.remove(read_perm)
+        # 権限を削除
+        elif read_perm in role_perms.kb_permissions:
+            role_perms.kb_permissions.remove(read_perm)
 
     matrix = _build_matrix(config)
     return {"updated": True, "collection_name": collection_name, "matrix": matrix}

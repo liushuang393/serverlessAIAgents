@@ -60,13 +60,16 @@ def _trust_proxy_auth_enabled() -> bool:
 
 
 def _legacy_fallback_enabled() -> bool:
-    mode = _resolve_auth_mode()
-    if mode == _AUTH_MODE_TENANT_SSO and not os.getenv("PYTEST_CURRENT_TEST"):
-        return False
-
+    # 明示的に設定されている場合はモードに関わらず優先する。
+    # auth_service 未起動のローカル開発で FAQ_AUTH_LEGACY_FALLBACK=true にすれば
+    # FAQ ローカル認証へフォールバックできる。
     configured = _env_bool("FAQ_AUTH_LEGACY_FALLBACK")
     if configured is not None:
         return configured
+
+    mode = _resolve_auth_mode()
+    if mode == _AUTH_MODE_TENANT_SSO and not os.getenv("PYTEST_CURRENT_TEST"):
+        return False
 
     # pytest 実行時は auth_service 未起動のため、互換 fallback を既定有効にする。
     return bool(os.getenv("PYTEST_CURRENT_TEST"))

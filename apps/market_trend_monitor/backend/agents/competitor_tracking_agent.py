@@ -15,6 +15,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from agentflow import get_llm
+from agentflow.core.resilient_agent import ResilientAgent
 
 
 if TYPE_CHECKING:
@@ -135,13 +136,15 @@ DEFAULT_COMPETITOR_ALIASES: dict[str, list[str]] = {
 }
 
 
-class CompetitorTrackingAgent:
+class CompetitorTrackingAgent(ResilientAgent):
     """競合追跡エージェント.
 
     - 競合企業の動向追跡
     - 競合戦略の分析とマッピング
     - 市場ポジショニングの可視化データ生成
     """
+
+    name = "CompetitorTrackingAgent"
 
     def __init__(
         self,
@@ -151,6 +154,7 @@ class CompetitorTrackingAgent:
         competitor_aliases: dict[str, list[str]] | None = None,
     ) -> None:
         """初期化."""
+        super().__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
         self._llm = llm
         self._competitors = competitors or DEFAULT_COMPETITORS
@@ -161,6 +165,15 @@ class CompetitorTrackingAgent:
         self._alias_patterns: list[tuple[str, str, re.Pattern[str]]] = []
         self._rebuild_alias_index()
         self._profiles: dict[str, CompetitorProfile] = {}
+
+    async def process(self, input_data: Any) -> Any:
+        """process メソッド（track_competitors にデリゲート）."""
+        articles = input_data.get("articles", []) if isinstance(input_data, dict) else []
+        return [p.to_dict() for p in await self.track_competitors(articles)]
+
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
 
     def _get_llm(self) -> Any:
         """LLMインスタンスを取得."""

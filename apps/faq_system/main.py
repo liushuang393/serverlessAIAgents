@@ -55,11 +55,6 @@ _load_faq_app_env()
 
 # --- 循環参照回避のため、FastAPI 起動前にパッケージパス等を微調整する場合に備え ---
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from agentflow.database import DatabaseConfig, DatabaseManager
-from agentflow.observability.startup import log_startup_info
 from apps.faq_system.backend.auth.dependencies import (
     get_faq_contract_auth_guard,
 )
@@ -85,6 +80,11 @@ from apps.faq_system.routers.dependencies import (
     start_rag_ingestion_scheduler,
     stop_rag_ingestion_scheduler,
 )
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from agentflow.database import DatabaseConfig, DatabaseManager
+from agentflow.observability.startup import log_startup_info
 
 
 logging.basicConfig(level=logging.INFO)
@@ -176,9 +176,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await init_rag_tables()
 
     # CollectionManager / DocumentManager 初期化
+    from apps.faq_system.routers.collections import init_managers as init_collection_managers
+
     from agentflow.knowledge.collection_manager import CollectionManager
     from agentflow.knowledge.document_manager import DocumentManager
-    from apps.faq_system.routers.collections import init_managers as init_collection_managers
 
     session_factory = get_rag_session_factory()
     col_mgr = CollectionManager(session_factory=session_factory)

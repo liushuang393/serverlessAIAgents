@@ -51,11 +51,11 @@ class ApiClient {
         });
 
         if (response.status === 401) {
-            // Token expired or invalid
+            // トークン期限切れまたは無効
             localStorage.removeItem('access_token');
             localStorage.removeItem('user_info');
             if (!window.location.pathname.startsWith('/login')) {
-                window.location.href = '/login';
+                window.location.href = '/login?error=session_expired';
             }
             throw new Error('Unauthorized');
         }

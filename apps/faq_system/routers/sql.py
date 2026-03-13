@@ -16,6 +16,8 @@ from apps.faq_system.routers.dependencies import (
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from agentflow.protocols.a2a_hub import get_hub
+
 
 if TYPE_CHECKING:
     from apps.faq_system.backend.auth.models import UserInfo
@@ -78,4 +80,5 @@ async def sales_analyze(
     SalesAgent を使用して売上データを分析します。
     """
     agent = get_sales_agent()
-    return await agent.run({"question": request.question})
+    hub = get_hub()
+    return await hub.call(agent.name, {"question": request.question})

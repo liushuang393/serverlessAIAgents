@@ -406,6 +406,31 @@ def agent[T: type](
         except Exception as e:
             _logger.warning(f"AgentRegistry 登録エラー: {e}")
 
+        # NEW: LocalA2AHub にも登録（統一通信のため）
+        try:
+            from agentflow.protocols.a2a_hub import get_hub
+
+            hub = get_hub()
+            if hub.discover(agent_name) is None:
+                instance = registered.get_instance()
+                if instance is not None and hasattr(instance, "run"):
+                    # RegisteredAgent は ResilientAgent ではないが
+                    # run() メソッドと name 属性を持つため Hub 経由で呼び出し可能
+                    hub._agents[agent_name] = instance  # type: ignore[assignment]
+                    from agentflow.protocols.a2a_card import AgentCard, AgentSkill
+
+                    card = AgentCard(
+                        name=agent_name,
+                        description=system_prompt or cls.__doc__ or f"Agent: {agent_name}",
+                        version="1.0.0",
+                        skills=[AgentSkill(name="process", description=f"{agent_name} process")],
+                        metadata={"decorator": True, "local": True},
+                    )
+                    hub._cards[agent_name] = card
+                    _logger.debug("Agent '%s' を LocalA2AHub に登録", agent_name)
+        except Exception as e:
+            _logger.warning("LocalA2AHub 登録エラー: %s", e)
+
         # 元のクラスにメタデータを追加
         cls._agent_name = agent_name  # type: ignore
         cls._agent_registered = registered  # type: ignore

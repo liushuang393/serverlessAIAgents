@@ -28,6 +28,7 @@ export function DocumentManager() {
     uploadDocument,
     deleteDocument,
     indexDocument,
+    reindexDocument,
     chunkPreviews,
     chunksLoading,
     previewChunks,
@@ -184,7 +185,7 @@ export function DocumentManager() {
                     )}
                     {doc.status === 'indexed' && (
                       <button
-                        onClick={() => void indexDocument(selectedCollection, doc.document_id)}
+                        onClick={() => void reindexDocument(selectedCollection, doc.document_id)}
                         className="p-1.5 rounded-lg hover:bg-blue-500/10 text-[var(--text-muted)] hover:text-blue-400 transition"
                         title={t('rag.reindex')}
                       >

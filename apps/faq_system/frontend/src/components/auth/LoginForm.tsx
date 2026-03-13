@@ -50,13 +50,16 @@ export const LoginForm = () => {
         }
     }, [isAuthenticated, navigate]);
 
-    // Show OAuth error from callback
+    // エラーコードを i18n メッセージに変換して表示する
     useEffect(() => {
-        const oauthError = searchParams.get('error');
-        if (oauthError) {
-            setError(oauthError);
+        const errorCode = searchParams.get('error');
+        if (errorCode) {
+            const i18nKey = `auth.error.${errorCode}`;
+            const translated = t(i18nKey);
+            // i18n キーが定義済みならメッセージ、未定義ならコードをそのまま表示する
+            setError(translated === i18nKey ? errorCode : translated);
         }
-    }, [searchParams]);
+    }, [searchParams, t]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

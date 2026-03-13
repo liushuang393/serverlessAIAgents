@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from apps.faq_system.backend.rag.parsers import FileParser
 
+
 # ldap3 はオプション依存。未インストール時はテストをスキップ
 _has_ldap3 = True
 try:

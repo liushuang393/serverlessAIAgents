@@ -16,6 +16,7 @@ from fastapi import FastAPI, Response
 from pydantic import BaseModel, Field
 
 from agentflow import __version__ as agentflow_version
+from agentflow.core.resilient_agent import ResilientAgent
 
 
 _APP_ROOT = Path(__file__).resolve().parent
@@ -141,6 +142,41 @@ def main() -> None:
         )
     else:
         uvicorn.run(app, host=host, port=port)
+
+
+class OrchestrationGuardianAgent(ResilientAgent):
+    """オーケストレーション検証 Agent.
+
+    アプリのオーケストレーション準備状況を検証する。
+    """
+
+    name = "OrchestrationGuardianAgent"
+
+    async def process(self, input_data: Any) -> Any:
+        """検証を実行."""
+        if not isinstance(input_data, dict):
+            return {"error": "Invalid input"}
+        checks = {
+            "streaming": input_data.get("has_streaming", False),
+            "a2a": input_data.get("has_a2a", False),
+            "rag_contract": input_data.get("has_rag_contract", False),
+            "auth_baseline": input_data.get("has_auth_baseline", False),
+        }
+        passed = sum(1 for ok in checks.values() if ok)
+        total = len(checks)
+        score = round((passed / total) * 100, 2)
+        return {
+            "app_name": input_data.get("app_name", "unknown"),
+            "score": score,
+            "passed": passed,
+            "total": total,
+            "checks": checks,
+            "status": "ready" if score >= _READY_SCORE_THRESHOLD else "needs_improvement",
+        }
+
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
+        """入力をそのまま返す."""
+        return input_data
 
 
 if __name__ == "__main__":

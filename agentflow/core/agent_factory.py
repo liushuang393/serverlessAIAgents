@@ -2,16 +2,31 @@
 
 Agent インスタンス生成を一元化し、共通の実行コンテキスト
 （tool gateway / mcp / skills / tiered memory）を注入する。
+
+A2A Hub 連携:
+    from_module() / from_app_config() で ResilientAgent を検出・インスタンス化し、
+    LocalA2AHub に自動登録する。
+
+使用例:
+    >>> from agentflow.core.agent_factory import AgentFactory
+    >>> agents = AgentFactory.from_app_config(Path("apps/my_app/app_config.json"))
 """
 
 from __future__ import annotations
 
 import importlib
 import inspect
+import json
+import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from agentflow.core.resilient_agent import ResilientAgent
+from agentflow.protocols.a2a_hub import LocalA2AHub, get_hub
+
+_logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_TYPE = "specialist"
 
@@ -182,3 +197,207 @@ def _attach_shared_context(
                 setattr(agent, attr, value)
             except Exception:
                 continue
+
+
+
+# ============================================================================
+# AgentFactory — A2AHub 連携（設定ファイル自動インスタンス化）
+# ============================================================================
+
+
+class AgentInstantiationError(Exception):
+    """Agent インスタンス化失敗の例外.
+
+    Attributes:
+        agent_name: 失敗した Agent 名
+        module_path: インポートしようとしたモジュールパス
+    """
+
+    def __init__(self, agent_name: str, module_path: str, cause: Exception) -> None:
+        self.agent_name = agent_name
+        self.module_path = module_path
+        super().__init__(f"Failed to instantiate {agent_name} from {module_path}: {cause}")
+
+
+class AgentFactory:
+    """app_config.json から Agent を自動インスタンス化するファクトリ.
+
+    責務:
+    - module パスから ResilientAgent サブクラスを検出
+    - インスタンス化して LocalA2AHub に自動登録
+    - app_config.json の agents[] を一括処理
+    """
+
+    @staticmethod
+    def from_module(
+        module_path: str,
+        *,
+        llm_client: Any = None,
+        init_kwargs: dict[str, Any] | None = None,
+        hub: LocalA2AHub | None = None,
+    ) -> ResilientAgent[Any, Any]:
+        """モジュールパスから Agent を検出・インスタンス化.
+
+        検出優先順位:
+        1. ResilientAgent サブクラス
+        2. AgentBlock サブクラス（後方互換）
+
+        インスタンス化フォールバック:
+        1. llm_client + init_kwargs で試行
+        2. init_kwargs のみで試行
+        3. 引数なしで試行
+
+        Args:
+            module_path: Python モジュールパス（例: "apps.my_app.agents.my_agent"）
+            llm_client: LLM クライアント（None の場合は自動注入）
+            init_kwargs: Agent コンストラクタへの追加キーワード引数
+            hub: 登録先 LocalA2AHub（None の場合はグローバル Hub）
+
+        Returns:
+            インスタンス化された Agent
+
+        Raises:
+            AgentInstantiationError: インスタンス化に失敗した場合
+        """
+        from agentflow.core.agent_block import AgentBlock
+
+        target_hub = hub or get_hub()
+
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError as e:
+            raise AgentInstantiationError("(unknown)", module_path, e) from e
+
+        # モジュール内の Agent サブクラスを検索
+        # 優先順位: ResilientAgent > AgentBlock > @agent デコレータ
+        agent_cls: type[Any] | None = None
+        fallback_cls: type[Any] | None = None
+        decorated_cls: type[Any] | None = None
+
+        for _attr_name, obj in inspect.getmembers(module, inspect.isclass):
+            if obj.__module__ != module_path:
+                continue
+            if issubclass(obj, ResilientAgent) and obj is not ResilientAgent:
+                agent_cls = obj
+                break
+            if issubclass(obj, AgentBlock) and obj is not AgentBlock and fallback_cls is None:
+                fallback_cls = obj
+            # @agent デコレータで登録されたクラスを検出
+            if hasattr(obj, "_agent_registered") and decorated_cls is None:
+                decorated_cls = obj
+
+        if agent_cls is None:
+            agent_cls = fallback_cls
+
+        # @agent デコレータ経由の場合: RegisteredAgent から直接インスタンスを取得
+        if agent_cls is None and decorated_cls is not None:
+            from agentflow.agent_decorator import RegisteredAgent
+
+            registered: RegisteredAgent = decorated_cls._agent_registered  # type: ignore[union-attr]
+            try:
+                instance = registered.get_instance()
+            except Exception as e:
+                raise AgentInstantiationError(registered.name, module_path, e) from e
+            if instance is None:
+                msg = f"RegisteredAgent.get_instance() returned None for {registered.name}"
+                raise AgentInstantiationError(registered.name, module_path, ValueError(msg))
+
+            # Hub に登録（既に登録済みの場合はスキップ）
+            agent_name = registered.name
+            if target_hub.discover(agent_name) is None:
+                target_hub.register(instance)
+                _logger.info("Agent auto-registered (decorator): %s from %s", agent_name, module_path)
+
+            return instance
+
+        if agent_cls is None:
+            msg = "No ResilientAgent/AgentBlock/@agent subclass found"
+            raise AgentInstantiationError("(none)", module_path, ValueError(msg))
+
+        # インスタンス化（複数フォールバック戦略）
+        extra = init_kwargs or {}
+        instance = None
+        cls_name = getattr(agent_cls, "name", "(unknown)")
+
+        for kwargs in [
+            {"llm_client": llm_client, **extra},
+            {**extra},
+            {},
+        ]:
+            try:
+                instance = agent_cls(**kwargs)
+                break
+            except TypeError:
+                continue
+
+        if instance is None:
+            last_err = TypeError(f"All instantiation strategies failed for {cls_name}")
+            raise AgentInstantiationError(cls_name, module_path, last_err)
+
+        # Hub に登録（既に登録済みの場合はスキップ）
+        agent_name = getattr(instance, "name", cls_name)
+        if target_hub.discover(agent_name) is None:
+            target_hub.register(instance)
+            _logger.info("Agent auto-registered: %s from %s", agent_name, module_path)
+
+        return instance
+
+    @staticmethod
+    def from_app_config(
+        config_path: Path,
+        *,
+        llm_client: Any = None,
+        hub: LocalA2AHub | None = None,
+    ) -> dict[str, ResilientAgent[Any, Any]]:
+        """app_config.json の agents[] から全 Agent をインスタンス化.
+
+        Args:
+            config_path: app_config.json のパス
+            llm_client: LLM クライアント
+            hub: 登録先 LocalA2AHub
+
+        Returns:
+            Agent 名 → ResilientAgent インスタンスのマッピング
+
+        Raises:
+            FileNotFoundError: 設定ファイルが存在しない場合
+        """
+        if not config_path.is_file():
+            msg = f"Config file not found: {config_path}"
+            raise FileNotFoundError(msg)
+
+        raw = json.loads(config_path.read_text("utf-8"))
+        agents_config: list[dict[str, Any]] = raw.get("agents", [])
+
+        result: dict[str, ResilientAgent[Any, Any]] = {}
+        errors: list[str] = []
+
+        for agent_entry in agents_config:
+            module_path = agent_entry.get("module")
+            agent_name = agent_entry.get("name", "(unknown)")
+
+            if module_path is None:
+                _logger.warning("Agent %s has no module path, skipping", agent_name)
+                continue
+
+            # app_config.json の init_kwargs を取得
+            entry_init_kwargs = agent_entry.get("init_kwargs")
+
+            try:
+                instance = AgentFactory.from_module(
+                    module_path,
+                    llm_client=llm_client,
+                    init_kwargs=entry_init_kwargs,
+                    hub=hub,
+                )
+                resolved_name = getattr(instance, "name", None) or agent_name
+                result[resolved_name] = instance
+            except AgentInstantiationError as e:
+                errors.append(str(e))
+                _logger.warning("Skipping agent %s: %s", agent_name, e)
+
+        _logger.info(
+            "AgentFactory: %d agents instantiated, %d errors from %s",
+            len(result), len(errors), config_path,
+        )
+        return result

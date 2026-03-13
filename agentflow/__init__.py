@@ -132,6 +132,7 @@ from agentflow.context import (
 # 公開API: Agent基底クラス
 # =============================================================================
 from agentflow.core.agent_block import AgentBlock
+from agentflow.core.agent_factory import AgentFactory, AgentInstantiationError
 from agentflow.core.agent_registry import (
     AgentRegistry,
     get_global_agent_registry,
@@ -164,6 +165,16 @@ from agentflow.core.exceptions import (
 from agentflow.core.resilient_agent import (
     BaseDecisionAgent,
     ResilientAgent,
+)
+
+# =============================================================================
+# 公開API: A2A Hub（ローカル Agent 間通信）
+# =============================================================================
+from agentflow.protocols.a2a_hub import (
+    AgentNotFoundError,
+    LocalA2AHub,
+    get_hub,
+    reset_hub,
 )
 from agentflow.core.retry_advisor import (
     RetryAction,
@@ -309,7 +320,8 @@ from agentflow.observability import (
 )
 
 # =============================================================================
-# 公開API: 適応型コーディネーター（能力差を吸収する分業型Agent設計）
+# 非推奨: 適応型コーディネーター（Engine + A2AHub で代替）
+# 後方互換のためインポートは維持
 # =============================================================================
 from agentflow.patterns.adaptive_coordinator import (
     AdaptiveCoordinator,

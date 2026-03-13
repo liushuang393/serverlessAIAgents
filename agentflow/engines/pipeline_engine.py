@@ -482,22 +482,8 @@ class PipelineEngine(BaseEngine):
         }
 
     async def _run_agent(self, agent: Any, inputs: dict[str, Any]) -> dict[str, Any]:
-        """単一Agentを実行."""
-        if hasattr(agent, "run"):
-            result = await agent.run(inputs)
-        elif hasattr(agent, "invoke"):
-            result = await agent.invoke(inputs)
-        elif hasattr(agent, "process"):
-            result = await agent.process(inputs)
-        else:
-            msg = f"Agent {agent} has no run/invoke/process method"
-            raise AttributeError(msg)
-
-        if isinstance(result, dict):
-            return result
-        if hasattr(result, "model_dump"):
-            return cast("dict[str, Any]", result.model_dump())
-        return {"result": result}
+        """単一Agentを実行（A2AHub 経由統一呼び出し）."""
+        return await self.call_agent(agent, inputs)
 
     async def _run_stage(self, stage: StageConfig, inputs: dict[str, Any]) -> dict[str, Any]:
         """単一ステージを実行.

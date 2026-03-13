@@ -6,6 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Plus, Database } from 'lucide-react';
+import { useI18n } from '../../i18n';
 import { useRAGStore } from '../../stores/ragStore';
 import type { CollectionInfo } from '../../api/rag';
 
@@ -27,16 +28,16 @@ export type PresetKey = 'faq_precision' | 'balanced_knowledge' | 'long_doc_reaso
 
 export interface PresetDef {
   key: PresetKey;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   values: PresetValues | null;
 }
 
 export const PRESETS: PresetDef[] = [
   {
     key: 'faq_precision',
-    label: 'FAQ 高精度',
-    description: 'sentence / hybrid / cohere',
+    labelKey: 'knowledge_panel.pattern_faq_precision',
+    descriptionKey: 'knowledge_panel.pattern_faq_precision_desc',
     values: {
       chunk_strategy: 'sentence',
       chunk_size: 500,
@@ -49,8 +50,8 @@ export const PRESETS: PresetDef[] = [
   },
   {
     key: 'balanced_knowledge',
-    label: 'バランス型',
-    description: 'recursive / hybrid / bm25',
+    labelKey: 'knowledge_panel.pattern_balanced',
+    descriptionKey: 'knowledge_panel.pattern_balanced_desc',
     values: {
       chunk_strategy: 'recursive',
       chunk_size: 800,
@@ -63,8 +64,8 @@ export const PRESETS: PresetDef[] = [
   },
   {
     key: 'long_doc_reasoning',
-    label: '長文推論',
-    description: 'markdown / multi_query / cross_encoder',
+    labelKey: 'knowledge_panel.pattern_long_doc',
+    descriptionKey: 'knowledge_panel.pattern_long_doc_desc',
     values: {
       chunk_strategy: 'markdown',
       chunk_size: 1200,
@@ -77,8 +78,8 @@ export const PRESETS: PresetDef[] = [
   },
   {
     key: 'custom',
-    label: 'カスタム',
-    description: '手動で全設定を指定',
+    labelKey: 'knowledge_panel.pattern_custom',
+    descriptionKey: 'knowledge_panel.pattern_custom_desc',
     values: null,
   },
 ];
@@ -94,6 +95,7 @@ interface CollectionFormProps {
 }
 
 function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
+  const { t } = useI18n();
   const isEdit = !!initial;
 
   const [preset, setPreset] = useState<PresetKey>('custom');
@@ -145,7 +147,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {/* プリセット選択 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          パターンプリセット
+          {t('knowledge_panel.pattern_preset')}
         </h4>
         <div className="grid grid-cols-2 gap-2">
           {PRESETS.map((p) => (
@@ -160,8 +162,8 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
                   : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'
               }`}
             >
-              <p className="text-xs font-semibold text-white">{p.label}</p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{p.description}</p>
+              <p className="text-xs font-semibold text-white">{t(p.labelKey)}</p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t(p.descriptionKey)}</p>
             </button>
           ))}
         </div>
@@ -171,28 +173,28 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {!isEdit && (
         <div>
           <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-            基本情報
+            {t('knowledge_panel.basic_info')}
           </h4>
           <div className="space-y-2">
             <input
               data-testid="input-collection-name"
               value={collectionName}
               onChange={(e) => setCollectionName(e.target.value)}
-              placeholder="collection_name (必須)"
+              placeholder={t('knowledge_panel.collection_name_placeholder')}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)]"
             />
             <input
               data-testid="input-display-name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="表示名"
+              placeholder={t('knowledge_panel.display_name_placeholder')}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)]"
             />
             <textarea
               data-testid="input-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="説明"
+              placeholder={t('knowledge_panel.description_placeholder')}
               rows={2}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)] resize-none"
             />
@@ -203,11 +205,11 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {/* チャンキング設定 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          チャンキング設定
+          {t('knowledge_panel.chunking_settings')}
         </h4>
         <div className="space-y-3">
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">戦略</span>
+            <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.chunk_strategy')}</span>
             <select
               data-testid="select-chunk-strategy"
               value={chunkStrategy}
@@ -223,7 +225,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              チャンクサイズ: <span data-testid="chunk-size-value">{chunkSize}</span>
+              {t('knowledge_panel.chunk_size')}: <span data-testid="chunk-size-value">{chunkSize}</span>
             </span>
             <input
               data-testid="range-chunk-size"
@@ -238,7 +240,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              オーバーラップ: <span data-testid="chunk-overlap-value">{chunkOverlap}</span>
+              {t('knowledge_panel.chunk_overlap')}: <span data-testid="chunk-overlap-value">{chunkOverlap}</span>
             </span>
             <input
               data-testid="range-chunk-overlap"
@@ -257,11 +259,11 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {/* 検索設定 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          検索設定
+          {t('knowledge_panel.retrieval_settings')}
         </h4>
         <div className="space-y-3">
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">検索方式</span>
+            <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.retrieval_method')}</span>
             <select
               data-testid="select-retrieval-method"
               value={retrievalMethod}
@@ -275,7 +277,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">リランカー</span>
+            <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.reranker')}</span>
             <select
               data-testid="select-reranker"
               value={reranker}
@@ -290,7 +292,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              Top-K: <span data-testid="top-k-value">{topK}</span>
+              {t('knowledge_panel.top_k')}: <span data-testid="top-k-value">{topK}</span>
             </span>
             <input
               data-testid="range-top-k"
@@ -305,7 +307,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              類似度閾値: <span data-testid="min-similarity-value">{minSimilarity.toFixed(2)}</span>
+              {t('knowledge_panel.min_similarity')}: <span data-testid="min-similarity-value">{minSimilarity.toFixed(2)}</span>
             </span>
             <input
               data-testid="range-min-similarity"
@@ -328,7 +330,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           onClick={onCancel}
           className="px-4 py-2 rounded-lg text-xs text-[var(--text-muted)] hover:bg-white/5 transition"
         >
-          キャンセル
+          {t('knowledge_panel.cancel')}
         </button>
         <button
           type="button"
@@ -337,7 +339,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           disabled={!isEdit && !collectionName.trim()}
           className="px-4 py-2 rounded-lg bg-[var(--primary)] text-black text-xs font-semibold hover:opacity-90 transition disabled:opacity-50"
         >
-          {isEdit ? '保存' : '作成'}
+          {isEdit ? t('knowledge_panel.save') : t('knowledge_panel.create')}
         </button>
       </div>
     </div>
@@ -349,6 +351,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
 // ---------------------------------------------------------------------------
 
 export function PanelCollections() {
+  const { t } = useI18n();
   const {
     collections,
     collectionsLoading,
@@ -410,7 +413,7 @@ export function PanelCollections() {
       {/* ヘッダー + 新規作成ボタン */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-          コレクション一覧
+          {t('knowledge_panel.collection_list')}
         </h3>
         <button
           data-testid="btn-new-collection"
@@ -423,19 +426,19 @@ export function PanelCollections() {
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium hover:bg-[var(--primary)]/20 transition border border-[var(--primary)]/20"
         >
           <Plus size={14} />
-          新規コレクション
+          {t('knowledge_panel.new_collection')}
         </button>
       </div>
 
       {/* ローディング */}
       {collectionsLoading && collections.length === 0 && (
-        <div className="text-center py-8 text-[var(--text-muted)] text-sm">読み込み中...</div>
+        <div className="text-center py-8 text-[var(--text-muted)] text-sm">{t('knowledge_panel.loading')}</div>
       )}
 
       {/* 空状態 */}
       {!collectionsLoading && collections.length === 0 && (
         <div className="text-center py-8 text-[var(--text-muted)] text-sm">
-          コレクションがありません
+          {t('knowledge_panel.no_collections')}
         </div>
       )}
 

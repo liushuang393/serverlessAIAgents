@@ -21,7 +21,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_info');
     if (!window.location.pathname.startsWith('/login')) {
-      window.location.href = '/login';
+      window.location.href = '/login?error=session_expired';
     }
     throw new Error('Unauthorized');
   }
@@ -215,4 +215,10 @@ export const ragApi = {
   // アクセス制御
   getAccessMatrix: () =>
     get<{ matrix: Record<string, Record<string, boolean>> }>('/access/matrix'),
+
+  updateAccessRoles: (collectionName: string, allowedRoles: string[]) =>
+    patch<{ updated: boolean; collection_name: string; matrix: Record<string, Record<string, boolean>> }>(
+      `/access/collections/${collectionName}/roles`,
+      { allowed_roles: allowedRoles },
+    ),
 };

@@ -6,7 +6,6 @@ import { RegisterForm } from './components/auth/RegisterForm';
 import { AuthCallback } from './components/auth/AuthCallback';
 import { Sidebar } from './components/layout/Sidebar';
 import { ChatWindow } from './components/chat/ChatWindow';
-import { RAGLayout } from './components/rag/RAGLayout';
 
 /**
  * 認証済みページのレイアウトラッパー。
@@ -40,7 +39,6 @@ function App() {
           </AuthGuard>
         }>
           <Route index element={<ChatWindow />} />
-          <Route path="rag" element={<RAGLayout />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
