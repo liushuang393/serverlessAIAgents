@@ -39,7 +39,7 @@ export ANTHROPIC_API_KEY=
 {% elif llm_provider == 'google' %}
 
 ```bash
-export GOOGLE_API_KEY=
+export GEMINI_API_KEY=
 ```
 
 {% endif %}

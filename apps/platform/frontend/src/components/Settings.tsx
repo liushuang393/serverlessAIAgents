@@ -1,18 +1,24 @@
 /**
  * Settings - 設定画面.
  *
- * Platform バージョン情報と再スキャンアクション。
+ * 実運用で使う設定アクションのみを提供。
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '../i18n';
 
 export function Settings() {
   const { t } = useI18n();
-  const { refresh, totalApps, error, clearError } = useAppStore();
+  const { refresh, error, clearError } = useAppStore();
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const quickLinks = [
+    { to: '/llm-management', label: t('stg.hub_llm') },
+    { to: '/rag', label: t('stg.hub_rag') },
+    { to: '/mcp', label: t('stg.hub_mcp') },
+  ];
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -54,37 +60,6 @@ export function Settings() {
         </div>
       )}
 
-      {/* Platform 情報 */}
-      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-200">{t('stg.platform_info')}</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">
-              {t('stg.version')}
-            </p>
-            <p className="text-slate-300">2.0.0</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">
-              {t('stg.registered_apps')}
-            </p>
-            <p className="text-slate-300">{totalApps}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">
-              {t('stg.backend_label')}
-            </p>
-            <p className="text-slate-300">FastAPI (port 8000)</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">
-              {t('stg.frontend_label')}
-            </p>
-            <p className="text-slate-300">React + Tailwind (port 3000)</p>
-          </div>
-        </div>
-      </div>
-
       {/* アクション */}
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-200">{t('stg.actions')}</h2>
@@ -106,7 +81,23 @@ export function Settings() {
           </div>
         </div>
       </div>
+
+      {/* 実務設定ハブ */}
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-200">{t('stg.config_hubs')}</h2>
+        <p className="text-xs text-slate-500">{t('stg.config_hubs_desc')}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="px-3 py-2 text-center text-sm rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 transition-colors"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
-

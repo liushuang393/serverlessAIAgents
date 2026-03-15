@@ -358,7 +358,12 @@
     "refresh_desc": "apps/*/app_config.json を再スキャンして App 一覧を更新",
     "scanning": "Scanning...",
     "refresh_btn": "Refresh",
-    "refresh_success": "App 一覧を再スキャンしました"
+    "refresh_success": "App 一覧を再スキャンしました",
+    "config_hubs": "設定ハブ",
+    "config_hubs_desc": "モデル/RAG/MCP などの設定は各専用画面で管理します。",
+    "hub_llm": "LLM 管理",
+    "hub_rag": "RAG 設定",
+    "hub_mcp": "MCP 設定"
   },
   "llm_mgmt": {
     "title": "LLM 管理",

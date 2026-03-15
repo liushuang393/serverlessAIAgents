@@ -21,7 +21,7 @@
         - LLM_PROVIDER (auto/openai/anthropic/google/deepseek/ollama/mock)
         - OPENAI_API_KEY, OPENAI_MODEL
         - ANTHROPIC_API_KEY, ANTHROPIC_MODEL
-        - GOOGLE_API_KEY, GOOGLE_MODEL
+        - GEMINI_API_KEY (推奨, GOOGLE_API_KEY 互換), GOOGLE_MODEL
         - DEEPSEEK_API_KEY, DEEPSEEK_MODEL
         - OLLAMA_BASE_URL, OLLAMA_MODEL
     DB関連:
@@ -41,7 +41,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -82,7 +82,11 @@ class AgentFlowSettings(BaseSettings):
     # ========================================
     # Google
     # ========================================
-    google_api_key: str | None = Field(default=None, description="Google APIキー")
+    google_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY"),
+        description="Google/Gemini APIキー（GEMINI_API_KEY を正規名とする）",
+    )
     google_model: str = Field(default="gemini-2.0-flash", description="Google モデル名")
 
     # ========================================

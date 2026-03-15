@@ -497,7 +497,8 @@ def create_router_from_env() -> ModelRouter:
     環境変数（優先度の高い順）:
         - OPENAI_API_KEY: OpenAI APIキー
         - ANTHROPIC_API_KEY: Anthropic APIキー
-        - GOOGLE_API_KEY: Google AI Studio APIキー
+        - GEMINI_API_KEY: Google AI Studio APIキー（正規名）
+        - GOOGLE_API_KEY: Google AI Studio APIキー（互換）
         - DEEPSEEK_API_KEY: DeepSeek APIキー
         - OLLAMA_BASE_URL: Ollamaサービスアドレス（デフォルト: http://localhost:11434）
         - LOCALAI_BASE_URL: LocalAIサービスアドレス（デフォルト: http://localhost:8080）
@@ -545,17 +546,18 @@ def create_router_from_env() -> ModelRouter:
             api_key=os.environ["ANTHROPIC_API_KEY"],
         )
 
-    # Google Gemini
-    if os.environ.get("GOOGLE_API_KEY"):
+    # Google Gemini（GEMINI_API_KEY を優先し、GOOGLE_API_KEY は互換として受ける）
+    gemini_api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if gemini_api_key:
         models["gemini-2.0-flash"] = LLMConfig(
             provider="google",
             model="gemini-2.0-flash-exp",
-            api_key=os.environ["GOOGLE_API_KEY"],
+            api_key=gemini_api_key,
         )
         models["gemini-1.5-pro"] = LLMConfig(
             provider="google",
             model="gemini-1.5-pro",
-            api_key=os.environ["GOOGLE_API_KEY"],
+            api_key=gemini_api_key,
         )
 
     # DeepSeek
@@ -594,7 +596,7 @@ def create_router_from_env() -> ModelRouter:
     if not models:
         logger.warning(
             "LLMプロバイダーが設定されていません。次のいずれかを設定してください: "
-            "OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, DEEPSEEK_API_KEY, "
+            "OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, "
             "またはOllama/LocalAIサービスを起動してください。"
         )
 

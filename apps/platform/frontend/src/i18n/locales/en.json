@@ -358,7 +358,12 @@
     "refresh_desc": "Re-scan apps/*/app_config.json and update app list",
     "scanning": "Scanning...",
     "refresh_btn": "Refresh",
-    "refresh_success": "App registry re-scanned"
+    "refresh_success": "App registry re-scanned",
+    "config_hubs": "Configuration Hubs",
+    "config_hubs_desc": "Manage model, RAG, and MCP settings from their dedicated pages.",
+    "hub_llm": "LLM Management",
+    "hub_rag": "RAG Settings",
+    "hub_mcp": "MCP Settings"
   },
   "llm_mgmt": {
     "title": "LLM Management",

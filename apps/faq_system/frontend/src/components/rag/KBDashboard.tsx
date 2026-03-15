@@ -141,7 +141,7 @@ export function KBDashboard() {
           <div className="space-y-1.5">
             {ingestRuns.slice(0, 3).map((run) => (
               <div
-                key={run.id}
+                key={run.run_id}
                 className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/5 text-xs"
               >
                 <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export function KBDashboard() {
                   >
                     {run.status}
                   </span>
-                  <span className="text-[var(--text-muted)] font-mono">{run.id.slice(0, 8)}</span>
+                  <span className="text-[var(--text-muted)] font-mono">{run.run_id.slice(0, 8)}</span>
                 </div>
                 <span className="text-[var(--text-muted)]">
                   {run.started_at ? new Date(run.started_at).toLocaleString('ja-JP') : '-'}

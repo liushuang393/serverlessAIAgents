@@ -19,7 +19,7 @@ providers:
   models: []
   enabled: true
 - name: local
-  api_base: http://127.0.0.1:18001
+  api_base: http://127.0.0.1:11434/v1
   api_key_env: null
   models: []
   enabled: true
@@ -217,11 +217,11 @@ models:
 - alias: local_vllm_default
   model_id: local_vllm_default
   provider: local
-  model: Qwen/Qwen2.5-0.5B-Instruct
+  model: qwen3:4b
   model_type: text
-  api_base: http://127.0.0.1:18001/v1
+  api_base: http://127.0.0.1:11434/v1
   api_key_env: null
-  engine: vllm
+  engine: ''
   enabled: true
   modalities:
   - text

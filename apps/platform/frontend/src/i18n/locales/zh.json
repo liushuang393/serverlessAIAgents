@@ -351,7 +351,12 @@
     "refresh_desc": "重新扫描 apps/*/app_config.json 并更新应用列表",
     "scanning": "扫描中...",
     "refresh_btn": "刷新",
-    "refresh_success": "应用注册表已重新扫描"
+    "refresh_success": "应用注册表已重新扫描",
+    "config_hubs": "配置入口",
+    "config_hubs_desc": "模型、RAG、MCP 等配置请在对应页面维护。",
+    "hub_llm": "LLM 管理",
+    "hub_rag": "RAG 配置",
+    "hub_mcp": "MCP 配置"
   },
   "llm_mgmt": {
     "title": "LLM 管理",

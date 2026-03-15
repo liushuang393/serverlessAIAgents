@@ -61,7 +61,7 @@ export function IngestHistoryPage() {
           const StatusIcon = s.icon;
           return (
             <div
-              key={run.id}
+              key={run.run_id}
               className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/5"
             >
               <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ export function IngestHistoryPage() {
                   <StatusIcon size={12} className={run.status === 'running' ? 'animate-spin' : ''} />
                   {run.status}
                 </span>
-                <span className="text-xs text-[var(--text-muted)] font-mono">{run.id.slice(0, 12)}</span>
+                <span className="text-xs text-[var(--text-muted)] font-mono">{run.run_id.slice(0, 12)}</span>
                 <span className="text-xs text-[var(--text-muted)]">{run.trigger_mode}</span>
               </div>
               <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">

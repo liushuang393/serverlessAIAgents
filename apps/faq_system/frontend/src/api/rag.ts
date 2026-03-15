@@ -133,12 +133,16 @@ export interface ChunkPreview {
 }
 
 export interface IngestRunSummary {
-  id: string;
+  run_id: string;
   status: string;
   trigger_mode: string;
   started_at: string;
   finished_at: string | null;
-  summary_json: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  dry_run: boolean;
+  source_ids: string[];
+  error_message: string | null;
+  duration_ms: number | null;
 }
 
 // ---------------------------------------------------------------------------
