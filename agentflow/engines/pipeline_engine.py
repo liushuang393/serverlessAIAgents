@@ -230,7 +230,10 @@ class PipelineEngine(BaseEngine):
         # デフォルトは何もしない
 
     async def _initialize_agents(self) -> None:
-        """すべてのAgentインスタンスを初期化."""
+        """すべてのAgentインスタンスを初期化し、A2AHub に登録."""
+        from agentflow.protocols.a2a_hub import get_hub
+
+        hub = get_hub()
         for stage in self._stage_configs:
             instances = []
 
@@ -238,6 +241,9 @@ class PipelineEngine(BaseEngine):
                 inst = self._resolve_agent(stage.agent)
                 if hasattr(inst, "initialize"):
                     await inst.initialize()
+                agent_name = getattr(inst, "name", None) or type(inst).__name__
+                if hub.discover(agent_name) is None:
+                    hub.register(inst)
                 instances.append(inst)
 
             if stage.agents:
@@ -245,6 +251,9 @@ class PipelineEngine(BaseEngine):
                     inst = self._resolve_agent(agent)
                     if hasattr(inst, "initialize"):
                         await inst.initialize()
+                    agent_name = getattr(inst, "name", None) or type(inst).__name__
+                    if hub.discover(agent_name) is None:
+                        hub.register(inst)
                     instances.append(inst)
 
             self._stage_instances[stage.name] = instances
