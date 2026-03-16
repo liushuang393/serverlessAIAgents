@@ -76,7 +76,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 from agentflow.protocols.agui_events import ProgressEvent

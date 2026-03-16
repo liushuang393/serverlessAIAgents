@@ -5,8 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from agentflow.core.resilient_agent import ResilientAgent
-
 from apps.Legacy_modernization_geo_platform.agents._models import (
     ContentBlueprintInput,
     ContentBlueprintOutput,
@@ -16,6 +14,8 @@ from apps.Legacy_modernization_geo_platform.backend.schemas import (
     ContentBlueprintArtifact,
     ContentBlueprintPage,
 )
+
+from agentflow.core.resilient_agent import ResilientAgent
 
 
 def _slugify(value: str) -> str:

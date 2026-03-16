@@ -282,6 +282,7 @@ _file_organizer_agent = FileOrganizerAgent(gateway=_skill_gateway)
 # A2AHub に Agent を登録
 from agentflow.protocols.a2a_hub import get_hub as _get_a2a_hub
 
+
 _a2a_hub = _get_a2a_hub()
 if _a2a_hub.discover("FileOrganizer") is None:
     _a2a_hub.register(_file_organizer_agent)

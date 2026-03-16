@@ -18,12 +18,23 @@ from apps.Legacy_modernization_geo_platform.agents.demand_signal_agent import (
 from apps.Legacy_modernization_geo_platform.agents.evidence_matrix_agent import (
     EvidenceMatrixAgent,
 )
+from apps.Legacy_modernization_geo_platform.agents.geo_qa_agent import GeoQAAgent
 from apps.Legacy_modernization_geo_platform.agents.legacy_semantics_agent import (
     LegacySemanticsAgent,
+)
+from apps.Legacy_modernization_geo_platform.agents.publishing_agent import (
+    PublishingAgent,
 )
 from apps.Legacy_modernization_geo_platform.agents.question_graph_agent import (
     QuestionGraphAgent,
 )
+from apps.Legacy_modernization_geo_platform.agents.report_assembler_agent import (
+    ReportAssemblerAgent,
+)
+from apps.Legacy_modernization_geo_platform.agents.supervisor_agent import (
+    SupervisorAgent,
+)
+
 
 __all__ = [
     "AccountScoreAgent",
@@ -32,6 +43,10 @@ __all__ = [
     "ContentDraftAgent",
     "DemandSignalAgent",
     "EvidenceMatrixAgent",
+    "GeoQAAgent",
     "LegacySemanticsAgent",
+    "PublishingAgent",
     "QuestionGraphAgent",
+    "ReportAssemblerAgent",
+    "SupervisorAgent",
 ]

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow.core.resilient_agent import ResilientAgent
-
 from apps.Legacy_modernization_geo_platform.agents._models import (
     ContentDraftInput,
     ContentDraftOutput,
@@ -16,6 +14,8 @@ from apps.Legacy_modernization_geo_platform.backend.schemas import (
     ContentDraftPage,
     FAQEntry,
 )
+
+from agentflow.core.resilient_agent import ResilientAgent
 
 
 class ContentDraftAgent(ResilientAgent[ContentDraftInput, ContentDraftOutput]):
