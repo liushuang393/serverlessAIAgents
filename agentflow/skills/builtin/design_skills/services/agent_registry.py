@@ -160,6 +160,15 @@ class DesignAgentRegistry:
 
         agent = self._create_agent(agent_def)
         self._agents[agent_id] = agent
+
+        # A2AHub に登録（未登録の場合のみ）
+        from agentflow.protocols.a2a_hub import get_hub
+
+        hub = get_hub()
+        agent_name = getattr(agent, "name", None) or type(agent).__name__
+        if hub.discover(agent_name) is None:
+            hub.register(agent)
+
         return agent
 
     def get_all_agents(self) -> dict[str, Any]:

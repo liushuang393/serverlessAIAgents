@@ -278,6 +278,14 @@ _lazy_tool_loader = LazyToolLoader(
     skills_manager=_skills_manager,
 )
 _file_organizer_agent = FileOrganizerAgent(gateway=_skill_gateway)
+
+# A2AHub に Agent を登録
+from agentflow.protocols.a2a_hub import get_hub as _get_a2a_hub
+
+_a2a_hub = _get_a2a_hub()
+if _a2a_hub.discover("FileOrganizer") is None:
+    _a2a_hub.register(_file_organizer_agent)
+
 _active_step_events: dict[str, str] = {}
 _run_started_at: dict[str, float] = {}
 _process_started_at = time.time()
@@ -813,6 +821,9 @@ assistant = PersonalAssistantCoordinator(
     lazy_tool_loader=_lazy_tool_loader,
 )
 
+if _a2a_hub.discover("PersonalAssistantCoordinator") is None:
+    _a2a_hub.register(assistant)
+
 
 def _standard_event_names() -> list[str]:
     """標準イベント一覧を返す."""
@@ -1295,6 +1306,16 @@ async def get_a2a_card() -> dict[str, Any]:
             {"name": "file_organize", "description": "ファイル分類と整理提案"},
         ],
     }
+
+
+@app.get("/api/a2a/agents")
+async def list_a2a_agents() -> list[dict[str, Any]]:
+    """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
+    from agentflow.protocols.a2a_hub import get_hub
+
+    hub = get_hub()
+    cards = hub.list_agents()
+    return [card.to_a2a_format() for card in cards]
 
 
 @app.get("/platforms")

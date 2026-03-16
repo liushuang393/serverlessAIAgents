@@ -108,6 +108,15 @@ async def health() -> dict[str, Any]:
     }
 
 
+@app.get("/api/a2a/agents")
+async def list_a2a_agents() -> list[dict[str, Any]]:
+    """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
+    from agentflow.protocols.a2a_hub import get_hub
+
+    hub = get_hub()
+    return [card.to_a2a_format() for card in hub.list_agents()]
+
+
 @app.post("/api/design")
 async def generate_design(request: Request, body: DesignRequest) -> dict[str, Any]:
     """Run design pipeline and return final result."""

@@ -89,6 +89,15 @@ async def get_agent_definitions() -> dict[str, Any]:
     return definitions
 
 
+@router.get("/api/a2a/agents")
+async def list_a2a_agents() -> list[dict[str, Any]]:
+    """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
+    from agentflow.protocols.a2a_hub import get_hub
+
+    hub = get_hub()
+    return [card.to_a2a_format() for card in hub.list_agents()]
+
+
 @router.get("/api/flows/{flow_id}/definition")
 async def get_flow_definition_api(flow_id: str) -> dict[str, Any]:
     """Flow定義を取得（前端同期用）.
