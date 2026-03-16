@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -12,12 +11,11 @@ from pathlib import Path
 from typing import Any, Callable, TypeVar
 from uuid import uuid4
 
-from fastapi import WebSocket
-from pydantic import BaseModel
-
+from apps.Legacy_modernization_geo_platform.agents._models import (
+    ReportAssemblerOutput,
+)
 from apps.Legacy_modernization_geo_platform.backend.intelligence import (
     GeoIntelligenceAdapter,
-    IntelligenceSnapshot,
 )
 from apps.Legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.Legacy_modernization_geo_platform.backend.qa import GeoQualityGate
@@ -25,7 +23,6 @@ from apps.Legacy_modernization_geo_platform.backend.reporting import build_campa
 from apps.Legacy_modernization_geo_platform.backend.repository import GeoRepository
 from apps.Legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreArtifact,
-    AccountScoreEntry,
     AccountSignalArtifact,
     ApprovalRecord,
     ApprovalRequest,
@@ -34,25 +31,24 @@ from apps.Legacy_modernization_geo_platform.backend.schemas import (
     BrandMemoryArtifact,
     CampaignReport,
     ContentBlueprintArtifact,
-    ContentBlueprintPage,
     ContentDraftArtifact,
     ContentDraftPage,
     EvidenceMatrixArtifact,
-    EvidenceMatrixEntry,
-    FAQEntry,
-    FunnelCluster,
     GeoExecuteRequest,
     GeoQAReport,
     LegacySemanticsArtifact,
-    PersonaQuestionSet,
+    PublishManifest,
     QuestionGraphArtifact,
-    SignalEntry,
     TaskCommandRequest,
     TaskEvent,
     TaskStateResponse,
     TaskStatus,
 )
 from apps.Legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
+from fastapi import WebSocket
+from pydantic import BaseModel
+
+from agentflow.core.app_agent_runtime import AppAgentRuntime
 
 
 logger = logging.getLogger(__name__)
@@ -96,6 +92,7 @@ class GeoOrchestrator:
         intelligence_adapter: GeoIntelligenceAdapter | None = None,
         quality_gate: GeoQualityGate | None = None,
         publisher: GeoPublisher | None = None,
+        agent_runtime: AppAgentRuntime | None = None,
     ) -> None:
         """Initialize the orchestrator."""
         self._settings = settings
@@ -103,9 +100,11 @@ class GeoOrchestrator:
         self._intelligence = intelligence_adapter or GeoIntelligenceAdapter()
         self._quality_gate = quality_gate or GeoQualityGate()
         self._publisher = publisher or GeoPublisher(settings)
+        self._agent_runtime = agent_runtime
         self._runtimes: dict[str, GeoTaskRuntime] = {}
         self._subscribers: dict[str, set[WebSocket]] = {}
         self._broadcast_loop: asyncio.AbstractEventLoop | None = None
+        self._register_agents()
 
     async def start(self, request: GeoExecuteRequest) -> str:
         """Start a new task asynchronously."""
@@ -179,6 +178,23 @@ class GeoOrchestrator:
         )
         return updated
 
+    async def stream_events(self, task_id: str, *, poll_interval: float = 0.25) -> Any:
+        """Persisted task event stream を順次返す."""
+        seen = 0
+        while True:
+            events = self._repository.list_events(task_id)
+            while seen < len(events):
+                yield events[seen]
+                seen += 1
+
+            state = self._repository.get_task_state(task_id)
+            if state is None:
+                msg = f"Task not found: {task_id}"
+                raise KeyError(msg)
+            if state.status in {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED} and seen >= len(events):
+                break
+            await asyncio.sleep(poll_interval)
+
     async def apply_command(self, task_id: str, command: TaskCommandRequest) -> dict[str, Any]:
         """Apply an operator command."""
         runtime = self._runtimes.get(task_id)
@@ -241,6 +257,35 @@ class GeoOrchestrator:
         )
         return payload
 
+    def _register_agents(self) -> None:
+        """8 つの GEO Agent を A2AHub に登録."""
+        from apps.Legacy_modernization_geo_platform.agents.account_score_agent import AccountScoreAgent
+        from apps.Legacy_modernization_geo_platform.agents.brand_memory_agent import BrandMemoryAgent
+        from apps.Legacy_modernization_geo_platform.agents.content_blueprint_agent import ContentBlueprintAgent
+        from apps.Legacy_modernization_geo_platform.agents.content_draft_agent import ContentDraftAgent
+        from apps.Legacy_modernization_geo_platform.agents.demand_signal_agent import DemandSignalAgent
+        from apps.Legacy_modernization_geo_platform.agents.evidence_matrix_agent import EvidenceMatrixAgent
+        from apps.Legacy_modernization_geo_platform.agents.legacy_semantics_agent import LegacySemanticsAgent
+        from apps.Legacy_modernization_geo_platform.agents.question_graph_agent import QuestionGraphAgent
+
+        from agentflow.protocols.a2a_hub import get_hub
+
+        hub = get_hub()
+        agents = [
+            BrandMemoryAgent(),
+            DemandSignalAgent(),
+            AccountScoreAgent(),
+            QuestionGraphAgent(),
+            EvidenceMatrixAgent(),
+            LegacySemanticsAgent(),
+            ContentBlueprintAgent(),
+            ContentDraftAgent(),
+        ]
+        for agent in agents:
+            agent_name = getattr(agent, "name", None) or type(agent).__name__
+            if hub.discover(agent_name) is None:
+                hub.register(agent)
+
     def _run_pipeline(self, runtime: GeoTaskRuntime) -> None:
         """Execute the MVP pipeline inside a dedicated worker thread."""
         task_id = runtime.task_id
@@ -258,66 +303,143 @@ class GeoOrchestrator:
             )
 
             intelligence_snapshot = asyncio.run(self._intelligence.gather_market_intelligence(request))
+            self._invoke_registered_agent(
+                "Supervisor",
+                {"task_id": task_id, "request": request.model_dump(mode="json")},
+            )
             brand_memory = self._run_stage(
                 runtime,
                 stage="brand_memory",
                 agent="BrandMemory",
                 artifact_name="brand_memory_artifact",
-                factory=lambda: self._build_brand_memory(task_id, request),
+                factory=lambda: self._execute_artifact_agent(
+                    "BrandMemory",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                    },
+                    BrandMemoryArtifact,
+                    fallback=lambda: self._build_brand_memory(task_id, request),
+                ),
             )
             signal_artifact = self._run_stage(
                 runtime,
                 stage="demand_signal",
                 agent="DemandSignal",
                 artifact_name="account_signal_artifact",
-                factory=lambda: self._build_demand_signal(task_id, request, intelligence_snapshot),
+                factory=lambda: self._execute_artifact_agent(
+                    "DemandSignal",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                        "intelligence_snapshot": intelligence_snapshot,
+                    },
+                    AccountSignalArtifact,
+                    fallback=lambda: self._build_demand_signal(task_id, request, intelligence_snapshot),
+                ),
             )
             score_artifact = self._run_stage(
                 runtime,
                 stage="icp_scoring",
-                agent="ICPScoring",
+                agent="AccountScore",
                 artifact_name="account_score_artifact",
-                factory=lambda: self._build_account_score(task_id, request, signal_artifact),
+                factory=lambda: self._execute_artifact_agent(
+                    "AccountScore",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                        "signal_artifact": signal_artifact.model_dump(mode="json"),
+                    },
+                    AccountScoreArtifact,
+                    fallback=lambda: self._build_account_score(task_id, request, signal_artifact),
+                ),
             )
             question_graph = self._run_stage(
                 runtime,
                 stage="question_map",
-                agent="BuyerQuestionMap",
+                agent="QuestionGraph",
                 artifact_name="question_graph_artifact",
-                factory=lambda: self._build_question_graph(task_id, request, score_artifact),
+                factory=lambda: self._execute_artifact_agent(
+                    "QuestionGraph",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                        "score_artifact": score_artifact.model_dump(mode="json"),
+                    },
+                    QuestionGraphArtifact,
+                    fallback=lambda: self._build_question_graph(task_id, request, score_artifact),
+                ),
             )
             evidence_matrix = self._run_stage(
                 runtime,
                 stage="evidence_collection",
-                agent="EvidenceCollector",
+                agent="EvidenceMatrix",
                 artifact_name="evidence_matrix",
-                factory=lambda: self._build_evidence_matrix(task_id, question_graph, intelligence_snapshot),
+                factory=lambda: self._execute_artifact_agent(
+                    "EvidenceMatrix",
+                    {
+                        "task_id": task_id,
+                        "question_graph": question_graph.model_dump(mode="json"),
+                        "intelligence_snapshot": intelligence_snapshot,
+                    },
+                    EvidenceMatrixArtifact,
+                    fallback=lambda: self._build_evidence_matrix(task_id, question_graph, intelligence_snapshot),
+                ),
             )
             legacy_semantics = self._run_stage(
                 runtime,
                 stage="legacy_semantics",
                 agent="LegacySemantics",
                 artifact_name="legacy_semantics_artifact",
-                factory=lambda: self._build_legacy_semantics(task_id, request, brand_memory),
+                factory=lambda: self._execute_artifact_agent(
+                    "LegacySemantics",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                        "brand_memory": brand_memory.model_dump(mode="json"),
+                    },
+                    LegacySemanticsArtifact,
+                    fallback=lambda: self._build_legacy_semantics(task_id, request, brand_memory),
+                ),
             )
             blueprint = self._run_stage(
                 runtime,
                 stage="strategy",
-                agent="Strategy",
+                agent="ContentBlueprint",
                 artifact_name="content_blueprint_artifact",
-                factory=lambda: self._build_content_blueprint(task_id, request, question_graph),
+                factory=lambda: self._execute_artifact_agent(
+                    "ContentBlueprint",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                        "question_graph": question_graph.model_dump(mode="json"),
+                    },
+                    ContentBlueprintArtifact,
+                    fallback=lambda: self._build_content_blueprint(task_id, request, question_graph),
+                ),
             )
             content_draft = self._run_stage(
                 runtime,
                 stage="content_composition",
-                agent="ContentComposition",
+                agent="ContentDraft",
                 artifact_name="content_draft_artifact",
-                factory=lambda: self._build_content_draft(
-                    task_id,
-                    request,
-                    blueprint,
-                    evidence_matrix,
-                    legacy_semantics,
+                factory=lambda: self._execute_artifact_agent(
+                    "ContentDraft",
+                    {
+                        "task_id": task_id,
+                        "request": request.model_dump(mode="json"),
+                        "blueprint": blueprint.model_dump(mode="json"),
+                        "evidence_matrix": evidence_matrix.model_dump(mode="json"),
+                        "legacy_semantics": legacy_semantics.model_dump(mode="json"),
+                    },
+                    ContentDraftArtifact,
+                    fallback=lambda: self._build_content_draft(
+                        task_id,
+                        request,
+                        blueprint,
+                        evidence_matrix,
+                        legacy_semantics,
+                    ),
                 ),
             )
             qa_report = self._run_stage(
@@ -325,10 +447,19 @@ class GeoOrchestrator:
                 stage="geo_qa",
                 agent="GeoQA",
                 artifact_name="geo_qa_report",
-                factory=lambda: self._quality_gate.evaluate(
-                    task_id=task_id,
-                    draft=content_draft,
-                    evidence_matrix=evidence_matrix,
+                factory=lambda: self._execute_artifact_agent(
+                    "GeoQA",
+                    {
+                        "task_id": task_id,
+                        "draft": content_draft.model_dump(mode="json"),
+                        "evidence_matrix": evidence_matrix.model_dump(mode="json"),
+                    },
+                    GeoQAReport,
+                    fallback=lambda: self._quality_gate.evaluate(
+                        task_id=task_id,
+                        draft=content_draft,
+                        evidence_matrix=evidence_matrix,
+                    ),
                 ),
             )
             qa_report = self._handle_approval_loop(
@@ -344,9 +475,25 @@ class GeoOrchestrator:
                 stage="publishing",
                 agent="Publishing",
                 artifact_name="publish_manifest",
-                factory=lambda: self._publisher.publish(
-                    task_id,
-                    self._load_artifact(task_id, "content_draft_artifact", ContentDraftArtifact),
+                factory=lambda: self._execute_artifact_agent(
+                    "Publishing",
+                    {
+                        "task_id": task_id,
+                        "draft": self._load_artifact(
+                            task_id,
+                            "content_draft_artifact",
+                            ContentDraftArtifact,
+                        ).model_dump(mode="json"),
+                    },
+                    PublishManifest,
+                    fallback=lambda: self._publisher.publish(
+                        task_id,
+                        self._load_artifact(
+                            task_id,
+                            "content_draft_artifact",
+                            ContentDraftArtifact,
+                        ),
+                    ),
                 ),
             )
             for page in publish_manifest.pages:
@@ -361,24 +508,34 @@ class GeoOrchestrator:
                     payload={"page_urls": [item.page_url for item in publish_manifest.pages]},
                 ),
             )
-            report_artifact, markdown, summary = build_campaign_report(
-                task_id=task_id,
-                request=request,
-                signal_artifact=signal_artifact,
-                qa_report=qa_report,
-                publish_manifest=publish_manifest,
-                provider_status={"primary_provider": intelligence_snapshot.primary_provider},
+            report_output = self._execute_report_agent(
+                {
+                    "task_id": task_id,
+                    "request": request.model_dump(mode="json"),
+                    "signal_artifact": signal_artifact.model_dump(mode="json"),
+                    "qa_report": qa_report.model_dump(mode="json"),
+                    "publish_manifest": publish_manifest.model_dump(mode="json"),
+                    "provider_status": {"primary_provider": intelligence_snapshot.primary_provider},
+                },
+                fallback=lambda: build_campaign_report(
+                    task_id=task_id,
+                    request=request,
+                    signal_artifact=signal_artifact,
+                    qa_report=qa_report,
+                    publish_manifest=publish_manifest,
+                    provider_status={"primary_provider": intelligence_snapshot.primary_provider},
+                ),
             )
             self._run_stage(
                 runtime,
                 stage="report",
                 agent="ReportAssembler",
                 artifact_name="campaign_report",
-                factory=lambda: report_artifact,
+                factory=lambda: report_output.artifact,
             )
             report_path = self._settings.reports_dir / f"{task_id}_campaign_report.md"
-            report_path.write_text(markdown, encoding="utf-8")
-            self._repository.save_report(task_id, markdown, summary)
+            report_path.write_text(report_output.markdown, encoding="utf-8")
+            self._repository.save_report(task_id, report_output.markdown, report_output.summary)
             runtime.status = TaskStatus.COMPLETED
             self._repository.update_task(task_id, status=TaskStatus.COMPLETED, current_stage="report")
             self._emit_event(
@@ -458,6 +615,51 @@ class GeoOrchestrator:
             ),
         )
         return artifact
+
+    def _invoke_registered_agent(self, agent_name: str, input_data: dict[str, Any]) -> dict[str, Any] | None:
+        """A2AHub 経由で Agent を同期呼び出し（スレッドセーフ）."""
+        from agentflow.protocols.a2a_hub import get_hub
+
+        hub = get_hub()
+        if hub.discover(agent_name) is not None:
+            return asyncio.run(hub.call(agent_name, input_data))
+        # フォールバック: AppAgentRuntime
+        runtime = self._agent_runtime
+        if runtime is not None and runtime.get_agent(agent_name) is not None:
+            return asyncio.run(runtime.invoke(agent_name, input_data))
+        return None
+
+    def _execute_artifact_agent(
+        self,
+        agent_name: str,
+        input_data: dict[str, Any],
+        artifact_model: type[ModelT],
+        *,
+        fallback: Callable[[], ModelT],
+    ) -> ModelT:
+        result = self._invoke_registered_agent(agent_name, input_data)
+        if result is None:
+            return fallback()
+        artifact_payload = result.get("artifact")
+        if not isinstance(artifact_payload, dict):
+            return fallback()
+        return artifact_model.model_validate(artifact_payload)
+
+    def _execute_report_agent(
+        self,
+        input_data: dict[str, Any],
+        *,
+        fallback: Callable[[], tuple[CampaignReport, str, dict[str, Any]]],
+    ) -> ReportAssemblerOutput:
+        result = self._invoke_registered_agent("ReportAssembler", input_data)
+        if isinstance(result, dict):
+            return ReportAssemblerOutput.model_validate(result)
+        artifact, markdown, summary = fallback()
+        return ReportAssemblerOutput(
+            artifact=artifact,
+            markdown=markdown,
+            summary=summary,
+        )
 
     def _handle_approval_loop(
         self,
@@ -632,325 +834,6 @@ class GeoOrchestrator:
             ),
         )
 
-    def _build_brand_memory(self, task_id: str, request: GeoExecuteRequest) -> BrandMemoryArtifact:
-        """Build brand memory artifact."""
-        stacks = request.targets.legacy_stacks or request.inputs.target_services
-        regions = request.targets.regions or request.inputs.regions or ["Japan"]
-        return BrandMemoryArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:brand_memory", stage="brand_memory"),
-            positioning="AI検索時代に旧システム刷新の検討需要を捕捉し、診断から段階移行まで導く。",
-            differentiators=[
-                "COBOL/RPG/旧Java を横断した刷新提案",
-                "Business semantics を前提にした段階移行",
-                "AI検索向けの根拠付き情報資産を継続生成",
-            ],
-            supported_stacks=stacks or ["COBOL", "RPG", "Struts"],
-            target_regions=regions,
-        )
-
-    def _build_demand_signal(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        intelligence_snapshot: IntelligenceSnapshot,
-    ) -> AccountSignalArtifact:
-        """Build account signal artifact from live intelligence."""
-        company = (
-            request.inputs.target_accounts[0]
-            if request.inputs.target_accounts
-            else f"{(request.targets.industries or ['enterprise'])[0]} prospects"
-        )
-        signals = [
-            SignalEntry(
-                type="tech_stack",
-                description=source.summary or source.snippet or source.title,
-                source=f"{source.title} ({source.publisher})",
-                confidence=0.78 if source.reliability == "HIGH" else 0.62,
-            )
-            for source in intelligence_snapshot.sources[:5]
-        ]
-        fit_score = min(96, 58 + len(signals) * 7 + len(request.targets.legacy_stacks) * 4)
-        return AccountSignalArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:demand_signal", stage="demand_signal"),
-            company=company,
-            signals=signals,
-            urgency_hypothesis="保守要員不足と技術負債圧縮の同時要請が強い",
-            modernization_fit_score=fit_score,
-            evidence=[item.to_evidence_dict() for item in intelligence_snapshot.sources[:5]],
-            unknowns=list(dict.fromkeys(intelligence_snapshot.warnings)),
-            extensions={"primary_provider": intelligence_snapshot.primary_provider},
-        )
-
-    def _build_account_score(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        signal_artifact: AccountSignalArtifact,
-    ) -> AccountScoreArtifact:
-        """Build account scoring artifact."""
-        accounts = request.inputs.target_accounts or [signal_artifact.company]
-        base_fit = signal_artifact.modernization_fit_score
-        urgency_seed = 70 if "不足" in signal_artifact.urgency_hypothesis else 58
-        scores = [
-            AccountScoreEntry(
-                company=company,
-                fit_score=max(55, min(97, base_fit - index * 3)),
-                urgency_score=max(52, min(95, urgency_seed + len(request.targets.legacy_stacks) * 3 - index * 2)),
-                priority="high" if base_fit - index * 3 >= 80 else "medium",
-                rationale=[
-                    signal_artifact.urgency_hypothesis,
-                    f"Primary stacks: {', '.join(request.targets.legacy_stacks or ['legacy'])}",
-                ],
-            )
-            for index, company in enumerate(accounts[:3])
-        ]
-        return AccountScoreArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:icp_scoring", stage="icp_scoring"),
-            account_scores=scores,
-            recommended_focus=request.targets.legacy_stacks or request.inputs.target_services or ["COBOL modernization"],
-            evidence=[item.model_dump(mode="json") for item in scores],
-        )
-
-    def _build_question_graph(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        score_artifact: AccountScoreArtifact,
-    ) -> QuestionGraphArtifact:
-        """Build buyer question clusters."""
-        stack = (request.targets.legacy_stacks or ["COBOL"])[0]
-        industry = (request.targets.industries or ["manufacturing"])[0]
-        personas = [
-            PersonaQuestionSet(
-                role="cio",
-                questions=[
-                    f"{stack} を全面刷新せずに段階移行できるか",
-                    "投資対効果をどう説明するか",
-                ],
-                high_intent_questions=[
-                    f"{industry} での {stack} 段階移行事例はあるか",
-                ],
-            ),
-            PersonaQuestionSet(
-                role="it_manager",
-                questions=[
-                    "既存業務ルールを失わずに移行設計できるか",
-                    "保守要員不足にどう備えるか",
-                ],
-                high_intent_questions=[
-                    f"{stack} から Java/Spring Boot への移行順序はどう決めるか",
-                ],
-            ),
-            PersonaQuestionSet(
-                role="engineering_lead",
-                questions=[
-                    "影響分析とテスト生成をどこまで自動化できるか",
-                    "既存バッチとAPIを共存させられるか",
-                ],
-                high_intent_questions=[
-                    "段階移行中の品質ゲートをどう設計するか",
-                ],
-            ),
-        ]
-        funnel_clusters = [
-            FunnelCluster(
-                stage="comparison",
-                questions=[item for persona in personas for item in persona.high_intent_questions[:1]],
-                recommended_page_type="comparison_page",
-            ),
-            FunnelCluster(
-                stage="approval",
-                questions=[
-                    "経営層に説明できる移行ロードマップはどう作るか",
-                    "一括刷新と段階移行のリスク差分は何か",
-                ],
-                recommended_page_type="executive_lp",
-            ),
-        ]
-        return QuestionGraphArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:question_map", stage="question_map"),
-            personas=personas,
-            funnel_clusters=funnel_clusters,
-            content_clusters=[
-                {
-                    "theme": f"{industry} {stack} modernization",
-                    "recommended_asset": "industry_lp",
-                    "priority": score_artifact.account_scores[0].priority if score_artifact.account_scores else "medium",
-                }
-            ],
-        )
-
-    def _build_evidence_matrix(
-        self,
-        task_id: str,
-        question_graph: QuestionGraphArtifact,
-        intelligence_snapshot: IntelligenceSnapshot,
-    ) -> EvidenceMatrixArtifact:
-        """Build evidence rows from live sources."""
-        questions = [
-            question
-            for persona in question_graph.personas
-            for question in [*persona.high_intent_questions, *persona.questions]
-        ]
-        entries: list[EvidenceMatrixEntry] = []
-        for index, question in enumerate(questions[:6]):
-            if not intelligence_snapshot.sources:
-                break
-            source = intelligence_snapshot.sources[index % len(intelligence_snapshot.sources)]
-            entries.append(
-                EvidenceMatrixEntry(
-                    claim=f"{question} に対して、段階移行と業務ルール保持の両立が重要である。",
-                    question_ref=question,
-                    source_url=source.url,
-                    title=source.title,
-                    publisher=source.publisher,
-                    summary=source.summary,
-                    snippet=source.snippet,
-                    reliability=source.reliability,
-                    citation_ready=source.citation_ready,
-                    fresh=source.is_fresh,
-                ),
-            )
-        return EvidenceMatrixArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:evidence", stage="evidence_collection"),
-            entries=entries,
-            provider_status={
-                "primary_provider": intelligence_snapshot.primary_provider,
-                "warnings": intelligence_snapshot.warnings,
-                "source_count": len(entries),
-            },
-            evidence=[item.model_dump(mode="json") for item in entries],
-            unknowns=list(dict.fromkeys(intelligence_snapshot.warnings)),
-        )
-
-    def _build_legacy_semantics(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        brand_memory: BrandMemoryArtifact,
-    ) -> LegacySemanticsArtifact:
-        """Build legacy semantics artifact."""
-        stack = (request.targets.legacy_stacks or brand_memory.supported_stacks or ["legacy"])[0]
-        return LegacySemanticsArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:legacy_semantics", stage="legacy_semantics"),
-            business_processes=["受注処理", "請求管理", "在庫更新"],
-            business_events=["バッチ締め処理", "帳票出力", "マスタ同期"],
-            state_model={
-                "source_stack": stack,
-                "migration_style": "incremental",
-                "target_runtime": "Java / Spring Boot",
-            },
-            business_rules=[
-                "業務ルールをコード変換前に明文化する",
-                "影響分析の単位はジョブ・画面・帳票で分割する",
-                "品質ゲートを段階移行ごとに設ける",
-            ],
-        )
-
-    def _build_content_blueprint(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        question_graph: QuestionGraphArtifact,
-    ) -> ContentBlueprintArtifact:
-        """Build page blueprint artifact."""
-        industry = _slugify((request.targets.industries or ["enterprise"])[0])
-        stack = _slugify((request.targets.legacy_stacks or ["legacy"])[0])
-        primary_question = question_graph.personas[0].high_intent_questions[0]
-        page = ContentBlueprintPage(
-            slug=f"{industry}-{stack}-modernization-guide",
-            title=f"{(request.targets.industries or ['製造業'])[0]} 向け {(request.targets.legacy_stacks or ['COBOL'])[0]} モダナイゼーションガイド",
-            persona="it_manager",
-            primary_question=primary_question,
-            page_type="industry_lp",
-            cta="無料診断を依頼する",
-        )
-        return ContentBlueprintArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:strategy", stage="strategy"),
-            pages=[page],
-            target_language=(request.inputs.content_languages or ["ja"])[0],
-        )
-
-    def _build_content_draft(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        blueprint: ContentBlueprintArtifact,
-        evidence_matrix: EvidenceMatrixArtifact,
-        legacy_semantics: LegacySemanticsArtifact,
-    ) -> ContentDraftArtifact:
-        """Build deterministic page drafts."""
-        pages: list[ContentDraftPage] = []
-        question = blueprint.pages[0].primary_question if blueprint.pages else "段階移行は可能か"
-        evidence_lines = [
-            f"- 根拠: {entry.title} / {entry.publisher} / {entry.source_url}"
-            for entry in evidence_matrix.entries[:4]
-        ]
-        semantics_lines = [f"- {item}" for item in legacy_semantics.business_rules]
-        for page in blueprint.pages:
-            body_markdown = "\n".join(
-                [
-                    f"# {page.title}",
-                    "",
-                    "## 課題の背景",
-                    "旧システム刷新では、保守要員不足・調査難易度・一括刷新リスクが同時に発生します。",
-                    "",
-                    "## 段階移行の考え方",
-                    "既存資産を可視化し、業務ルールを抽出してから API・バッチ・画面を順次刷新します。",
-                    "",
-                    "## 比較観点",
-                    "全面刷新と比較すると、段階刷新は業務停止リスクを抑えつつ投資判断を分割できます。",
-                    "",
-                    "## 根拠サマリー",
-                    *evidence_lines,
-                    "",
-                    "## 業務意味の維持ポイント",
-                    *semantics_lines,
-                    "",
-                    "## 次の一手",
-                    f"{question} を起点に、対象資産の棚卸しと優先順位付けから着手します。",
-                ],
-            )
-            faq_entries = [
-                FAQEntry(question=question, answer="段階移行は現行業務の安定運用と並行して実施できます。"),
-                FAQEntry(question="一括刷新との違いは何ですか", answer="投資とリスクを工程ごとに分割できる点です。"),
-                FAQEntry(question="どこから調査を始めるべきですか", answer="高頻度バッチ、帳票、外部連携を優先して可視化します。"),
-            ]
-            json_ld = {
-                "@context": "https://schema.org",
-                "@type": "FAQPage",
-                "inLanguage": "ja-JP",
-                "mainEntity": [
-                    {
-                        "@type": "Question",
-                        "name": entry.question,
-                        "acceptedAnswer": {"@type": "Answer", "text": entry.answer},
-                    }
-                    for entry in faq_entries
-                ],
-            }
-            pages.append(
-                ContentDraftPage(
-                    slug=page.slug,
-                    title=page.title,
-                    summary=(
-                        f"{(request.targets.legacy_stacks or ['旧システム'])[0]} の刷新を、"
-                        "診断・業務ルール抽出・段階移行で進めるための実務ガイド。"
-                    ),
-                    body_markdown=body_markdown,
-                    cta=page.cta,
-                    faq_entries=faq_entries,
-                    json_ld=json_ld,
-                ),
-            )
-        return ContentDraftArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:content", stage="content_composition"),
-            pages=pages,
-            target_language=blueprint.target_language,
-            evidence=[item.model_dump(mode="json") for item in evidence_matrix.entries[:6]],
-            unknowns=list(evidence_matrix.unknowns),
-        )
-
     def _emit_event(self, event: TaskEvent) -> None:
         """Persist and broadcast an event."""
         self._repository.add_event(event)
@@ -1026,8 +909,3 @@ class GeoOrchestrator:
             raise RuntimeError("Task cancelled")
 
 
-def _slugify(value: str) -> str:
-    """Create a URL-safe slug from the provided value."""
-    lowered = value.strip().lower()
-    normalized = re.sub(r"[^a-z0-9]+", "-", lowered)
-    return normalized.strip("-") or "geo-page"
