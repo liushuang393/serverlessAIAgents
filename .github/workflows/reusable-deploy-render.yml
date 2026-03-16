@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Deploy via API
         if: ${{ inputs.service-id != '' && secrets.RENDER_API_KEY != '' }}
