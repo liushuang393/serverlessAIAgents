@@ -9,16 +9,24 @@ Allowed:
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
-TARGET_DIRS = [ROOT / "agentflow", ROOT / "apps"]
+TARGET_DIRS = [
+    ROOT / "agentflow",
+    ROOT / "apps",
+    ROOT / "infrastructure",
+    ROOT / "shared",
+    ROOT / "kernel",
+    ROOT / "harness",
+    ROOT / "control_plane",
+]
 
 ALLOWED_PATH_PREFIXES = [
     ROOT / "agentflow" / "llm" / "gateway",
+    ROOT / "infrastructure" / "llm",
 ]
 
 IMPORT_PATTERN = re.compile(

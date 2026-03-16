@@ -31,6 +31,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from contracts.flow import AgentRoleSpec
+from contracts.flow import FlowDefinition as ContractFlowDefinition
 from pydantic import BaseModel, Field
 
 from agentflow.core.agent_factory import AgentFactorySpec
@@ -162,6 +164,50 @@ class FlowDefinition(BaseModel):
             if agent.id == agent_id:
                 return agent
         return None
+
+    def to_contract(self) -> ContractFlowDefinition:
+        """新しい契約モデルへ変換する."""
+        return ContractFlowDefinition(
+            flow_id=self.flow_id,
+            name=self.name,
+            version=self.version,
+            description=self.description,
+            roles=[
+                AgentRoleSpec(
+                    role_id=agent.id,
+                    name=agent.name,
+                    description=agent.description,
+                    capability_tags=[agent.label] if agent.label else [],
+                    metadata={
+                        "icon": agent.icon,
+                        "agent_type": agent.agent_type,
+                        "class_name": agent.class_name,
+                        "module_path": agent.module_path,
+                    },
+                )
+                for agent in self.agents
+            ],
+            steps=[agent.id for agent in self.agents],
+        )
+
+    @classmethod
+    def from_contract(cls, contract: ContractFlowDefinition) -> "FlowDefinition":
+        """新契約モデルから legacy FlowDefinition を復元する."""
+        return cls(
+            flow_id=contract.flow_id,
+            name=contract.name,
+            version=contract.version,
+            description=contract.description,
+            agents=[
+                AgentDefinition(
+                    id=role.role_id,
+                    name=role.name,
+                    label=role.capability_tags[0] if role.capability_tags else role.name,
+                    description=role.description,
+                )
+                for role in contract.roles
+            ],
+        )
 
     def get_agent_ids(self) -> list[str]:
         """全Agent IDリストを取得."""

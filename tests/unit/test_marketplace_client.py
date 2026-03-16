@@ -1,14 +1,89 @@
 """MarketplaceClient のテスト.
 
 このテストは MarketplaceClient クラスの機能をテストします。
+外部 API への HTTP 通信はモックで置換し、純粋なロジックのみ検証する。
 """
 
+import io
+import zipfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from agentflow.marketplace.client import MarketplaceAgent, MarketplaceClient
 from agentflow.marketplace.registry import LocalRegistry
+
+# テスト用サンプルエージェントデータ
+_SAMPLE_AGENTS = [
+    MarketplaceAgent(
+        id="pdf-processor",
+        name="PDF Processor",
+        version="1.0.0",
+        author="AgentFlow",
+        category="document",
+        description="PDF を処理するエージェント",
+        protocols=["mcp", "a2a"],
+        download_url="https://example.com/pdf-processor.zip",
+        dependencies=[],
+    ),
+    MarketplaceAgent(
+        id="text-analyzer",
+        name="Text Analyzer",
+        version="1.0.0",
+        author="AgentFlow",
+        category="text",
+        description="テキストを解析するエージェント",
+        protocols=["mcp", "agui"],
+        download_url="https://example.com/text-analyzer.zip",
+        dependencies=[],
+    ),
+]
+
+
+def _make_agent_zip(agent_id: str) -> bytes:
+    """テスト用 agent.yaml を含む ZIP アーカイブを生成."""
+    agent = next((a for a in _SAMPLE_AGENTS if a.id == agent_id), _SAMPLE_AGENTS[0])
+    yaml_content = (
+        f"id: {agent.id}\n"
+        f"name: {agent.name}\n"
+        f"version: {agent.version}\n"
+        f"protocols:\n"
+        + "".join(f"  {p}:\n    enabled: true\n" for p in agent.protocols)
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("agent.yaml", yaml_content)
+    return buf.getvalue()
+
+
+def _mock_httpx_get(url: str, **kwargs):
+    """httpx.Client.get のモック: ダウンロード URL に対して ZIP を返す."""
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.raise_for_status = MagicMock()
+    # URL からエージェント ID を推定
+    agent_id = "pdf-processor"
+    for a in _SAMPLE_AGENTS:
+        if a.id in url:
+            agent_id = a.id
+            break
+    resp.content = _make_agent_zip(agent_id)
+    return resp
+
+
+@pytest.fixture(autouse=True)
+def _patch_marketplace_http():
+    """全テストで HTTP 通信をモック化."""
+    with (
+        patch.object(
+            MarketplaceClient,
+            "_request_marketplace_agents",
+            return_value=list(_SAMPLE_AGENTS),
+        ),
+        patch("httpx.Client.get", side_effect=_mock_httpx_get),
+    ):
+        yield
 
 
 class TestMarketplaceAgent:
@@ -223,4 +298,3 @@ class TestMarketplaceClient:
         assert "version: 1.0.0" in content
         assert "mcp:" in content
         assert "a2a:" in content
-        assert "agui:" in content

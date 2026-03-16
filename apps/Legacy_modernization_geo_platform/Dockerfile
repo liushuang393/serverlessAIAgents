@@ -34,7 +34,7 @@ COPY apps/Legacy_modernization_geo_platform/ /app/apps/Legacy_modernization_geo_
 COPY --from=frontend-builder /frontend/dist /app/apps/Legacy_modernization_geo_platform/frontend/dist
 RUN chown -R appuser:appgroup /app
 USER appuser
-EXPOSE 8010
+EXPOSE 8100
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8010/api/health')" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8100/api/health')" || exit 1
 CMD ["python", "-m", "apps.Legacy_modernization_geo_platform.main"]

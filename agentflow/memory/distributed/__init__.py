@@ -1,15 +1,12 @@
-"""分散記憶システムモジュール.
+"""agentflow.memory.distributed — re-export スタブ.
 
-Redis/PostgreSQLバックエンドを使用した分散記憶システムを提供します。
+実体: infrastructure.memory.distributed
 """
 
-from agentflow.memory.distributed.distributed_memory import DistributedMemoryManager
-from agentflow.memory.distributed.postgres_backend import PostgresBackend
-from agentflow.memory.distributed.redis_backend import RedisBackend
+from infrastructure.memory.distributed import (  # noqa: F401
+    DistributedMemoryManager,
+    PostgresBackend,
+    RedisBackend,
+)
 
-
-__all__ = [
-    "DistributedMemoryManager",
-    "PostgresBackend",
-    "RedisBackend",
-]
+__all__ = ["DistributedMemoryManager", "PostgresBackend", "RedisBackend"]

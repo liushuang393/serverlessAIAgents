@@ -18,6 +18,7 @@ from agentflow.protocols.a2ui import (
     ListComponent,
     TextComponent,
 )
+from agentflow.protocols.agui_events import AGUIEventType
 
 
 class TestComponentType:
@@ -176,3 +177,55 @@ class TestA2UIEmitter:
         assert events[0]["type"] == "a2ui_component"
         assert events[0]["surface_id"] == "main"
         assert events[0]["component"]["type"] == "card"
+
+    @pytest.mark.asyncio
+    async def test_emit_component_uses_typed_agui_event(self) -> None:
+        """AG-UI 連携時は typed A2UI event を発火する."""
+
+        class _StubAGUIEmitter:
+            def __init__(self) -> None:
+                self._flow_id = "flow-1"
+                self.events: list[object] = []
+
+            async def emit(self, event: object) -> None:
+                self.events.append(event)
+
+        agui_emitter = _StubAGUIEmitter()
+        emitter = A2UIEmitter(agui_emitter)
+
+        await emitter.emit_component(CardComponent("Review"), surface_id="approval")
+
+        assert len(agui_emitter.events) == 1
+        event = agui_emitter.events[0]
+        assert getattr(event, "event_type") == AGUIEventType.A2UI_COMPONENT
+        assert getattr(event, "surface_id") == "approval"
+        assert getattr(event, "component")["type"] == "card"
+
+    @pytest.mark.asyncio
+    async def test_emit_update_and_clear_use_typed_agui_events(self) -> None:
+        """update / clear も typed A2UI event を発火する."""
+
+        class _StubAGUIEmitter:
+            def __init__(self) -> None:
+                self._flow_id = "flow-2"
+                self.events: list[object] = []
+
+            async def emit(self, event: object) -> None:
+                self.events.append(event)
+
+        agui_emitter = _StubAGUIEmitter()
+        emitter = A2UIEmitter(agui_emitter)
+
+        await emitter.emit_update(
+            "draft-card",
+            {"component": {"id": "draft-card", "type": "text", "props": {"content": "updated"}}},
+            surface_id="content",
+        )
+        await emitter.emit_clear(surface_id="content")
+
+        assert len(agui_emitter.events) == 2
+        update_event, clear_event = agui_emitter.events
+        assert getattr(update_event, "event_type") == AGUIEventType.A2UI_UPDATE
+        assert getattr(update_event, "component_id") == "draft-card"
+        assert getattr(clear_event, "event_type") == AGUIEventType.A2UI_CLEAR
+        assert getattr(clear_event, "surface_id") == "content"

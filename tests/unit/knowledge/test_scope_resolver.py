@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from agentflow.knowledge.scope_resolver import CollectionTarget, ScopeResolver
+from agentflow.security.auth_client.client import AuthClient
 
 
 class TestScopeResolver:
@@ -48,3 +49,8 @@ class TestScopeResolver:
         assert target.vector_url is None
         assert target.permission_level == "read"
         assert target.metadata == {}
+
+    def test_real_auth_client_config_base_url_is_used(self) -> None:
+        """実際の AuthClient でも config.base_url を解決できる."""
+        resolver = ScopeResolver(auth_client=AuthClient(base_url="http://auth-service:8010/"))
+        assert resolver._auth_client.base_url == "http://auth-service:8010"

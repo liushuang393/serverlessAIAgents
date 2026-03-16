@@ -133,3 +133,29 @@ class TestRuntimeCommandResolver:
         )
         assert resolved.backend_dev == runtime.backend_dev
         assert resolved.source["backend_dev"] == "runtime.commands"
+
+    def test_readme_dev_and_compose_wrappers_are_recognized(self, tmp_path) -> None:
+        app_dir = tmp_path / "legacy_modernization_geo_platform"
+        app_dir.mkdir(parents=True)
+        (app_dir / "README.md").write_text(
+            (
+                "```bash\n"
+                "python apps/Legacy_modernization_geo_platform/scripts/dev.py\n"
+                "python apps/Legacy_modernization_geo_platform/scripts/compose.py publish\n"
+                "python apps/Legacy_modernization_geo_platform/scripts/compose.py start\n"
+                "python apps/Legacy_modernization_geo_platform/scripts/compose.py stop\n"
+                "```\n"
+            ),
+            encoding="utf-8",
+        )
+
+        resolved = RuntimeCommandResolver().resolve(
+            app_name="legacy_modernization_geo_platform",
+            app_dir=app_dir,
+            runtime_commands=RuntimeCommandsConfig(),
+        )
+
+        assert resolved.backend_dev == "python apps/Legacy_modernization_geo_platform/scripts/dev.py"
+        assert resolved.publish == "python apps/Legacy_modernization_geo_platform/scripts/compose.py publish"
+        assert resolved.start == "python apps/Legacy_modernization_geo_platform/scripts/compose.py start"
+        assert resolved.stop == "python apps/Legacy_modernization_geo_platform/scripts/compose.py stop"

@@ -32,3 +32,26 @@ class MockWebSocket {
 }
 
 vi.stubGlobal('WebSocket', MockWebSocket);
+
+class MockEventSource {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
+
+  readyState = MockEventSource.OPEN;
+  onmessage: ((event: MessageEvent<string>) => void) | null = null;
+  onopen: ((event: Event) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+
+  constructor(public readonly url: string) {}
+
+  close(): void {
+    this.readyState = MockEventSource.CLOSED;
+  }
+
+  addEventListener(): void {}
+
+  removeEventListener(): void {}
+}
+
+vi.stubGlobal('EventSource', MockEventSource);

@@ -95,3 +95,57 @@ def test_resolve_app_template_normalizes_explicit_value(
         engine_pattern="simple",
     )
     assert scaffolder._resolve_app_template(request) == "workflow_orchestrator"
+
+
+def test_build_app_config_sets_runtime_hosts_from_manifest_ports(
+    discovery: AppDiscoveryService,
+    tmp_path: Path,
+) -> None:
+    """生成 manifest は runtime.hosts に bind host 既定値を含む."""
+    scaffolder = AppScaffolderService(discovery=discovery, apps_dir=tmp_path / "apps")
+    request = AppCreateRequest(
+        name="hosted_demo",
+        display_name="Hosted Demo",
+        description="Demo",
+        product_line="framework",
+        surface_profile="developer",
+        audit_profile="developer",
+        plugin_bindings=[],
+        app_template="workflow_orchestrator",
+        engine_pattern="simple",
+    )
+
+    app_config = scaffolder._build_app_config(
+        request=request,
+        ports={"api": 8123, "frontend": 3123, "db": None, "redis": None},
+        agents=scaffolder._normalize_agents([], request.name),
+        app_template="workflow_orchestrator",
+        llm_api_key_env=None,
+        vector_db_api_key_env=None,
+    )
+
+    assert app_config["runtime"]["hosts"]["backend"] == "0.0.0.0"
+    assert app_config["runtime"]["hosts"]["frontend"] == "0.0.0.0"
+
+
+def test_render_docker_compose_uses_manifest_api_port_inside_container() -> None:
+    """新規 compose 雛形は ports.api を container listen port として使う."""
+    request = AppCreateRequest(
+        name="compose_demo",
+        display_name="Compose Demo",
+        description="Demo",
+        product_line="framework",
+        surface_profile="developer",
+        audit_profile="developer",
+        plugin_bindings=[],
+        app_template="workflow_orchestrator",
+        engine_pattern="simple",
+    )
+
+    rendered = AppScaffolderService._render_docker_compose(
+        request,
+        ports={"api": 8456, "frontend": 3456, "db": None, "redis": None},
+    )
+
+    assert "--port 8456" in rendered
+    assert '"8456:8456"' in rendered

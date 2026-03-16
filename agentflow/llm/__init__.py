@@ -1,26 +1,21 @@
-"""LLM統合モジュール.
+"""agentflow.llm 後方互換スタブ.
 
-このモジュールは、各種LLMプロバイダー（OpenAI、Anthropic、Gemini等）との
-統一インターフェースを提供します。
-
-推奨API（松耦合設計）:
-    >>> from agentflow import get_llm
-    >>> llm = get_llm()  # プロバイダー/モデル不明でOK
-    >>> response = await llm.chat([{"role": "user", "content": "hello"}])
-
-高度な機能:
-- ModelRouter: インテリジェントモデルルーティングと切り替え
-- マルチモデル管理、自動切り替え、コスト最適化、負荷分散
+実体は infrastructure.llm に移動済み。
+既存コードの import 互換性を維持するための re-export モジュール。
 """
 
-from agentflow.llm.gateway import (
+from infrastructure.llm import (  # noqa: F401
     GatewayResponse,
+    GatewayToolCall,
+    LLMClient,
+    LLMConfig,
+    LLMMessage,
+    LLMResponse,
     LiteLLMGateway,
-    LLMGatewayConfig,
+    ToolCall,
     load_gateway_config,
 )
-from agentflow.llm.llm_client import LLMClient, LLMConfig, LLMMessage, LLMResponse, ToolCall
-from agentflow.llm.model_router import (
+from infrastructure.llm.model_router import (  # noqa: F401
     MODELS,
     ModelCapability,
     ModelInfo,
@@ -32,16 +27,15 @@ from agentflow.llm.model_router import (
     create_router_from_env,
 )
 
-
 __all__ = [
-    "MODELS",
     "GatewayResponse",
+    "GatewayToolCall",
     "LLMClient",
     "LLMConfig",
-    "LLMGatewayConfig",
     "LLMMessage",
     "LLMResponse",
     "LiteLLMGateway",
+    "MODELS",
     "ModelCapability",
     "ModelInfo",
     "ModelRouter",

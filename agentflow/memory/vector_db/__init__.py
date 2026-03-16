@@ -1,15 +1,12 @@
-"""ベクトルデータベースモジュール.
+"""agentflow.memory.vector_db — re-export スタブ.
 
-Pinecone、Weaviate、Qdrantなどのベクトルデータベースを提供します。
+実体: infrastructure.memory.vector_db
 """
 
-from agentflow.memory.vector_db.pinecone_db import PineconeDB
-from agentflow.memory.vector_db.qdrant_db import QdrantDB
-from agentflow.memory.vector_db.vector_db_interface import VectorDatabase
+from infrastructure.memory.vector_db import (  # noqa: F401
+    PineconeDB,
+    QdrantDB,
+    VectorDatabase,
+)
 
-
-__all__ = [
-    "PineconeDB",
-    "QdrantDB",
-    "VectorDatabase",
-]
+__all__ = ["PineconeDB", "QdrantDB", "VectorDatabase"]

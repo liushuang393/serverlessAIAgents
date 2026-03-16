@@ -487,6 +487,10 @@ class AppScaffolderService:
                     "health": health_url,
                     "database": db_url,
                 },
+                "hosts": {
+                    "backend": "0.0.0.0" if ports["api"] is not None else None,
+                    "frontend": "0.0.0.0" if request.frontend_enabled and ports["frontend"] is not None else None,
+                },
                 "database": {
                     "kind": db_kind,
                     "url": db_url,
@@ -1133,10 +1137,10 @@ uvicorn apps.{request.name}.main:app --reload --port {ports["api"]}
                 "    command: >",
                 (
                     f'      bash -lc "pip install -e .[apps] && '
-                    f'uvicorn apps.{request.name}.main:app --host 0.0.0.0 --port 8000"'
+                    f'uvicorn apps.{request.name}.main:app --host 0.0.0.0 --port {ports["api"] or 8000}"'
                 ),
                 "    ports:",
-                f'      - "{ports["api"]}:8000"',
+                f'      - "{ports["api"]}:{ports["api"] or 8000}"',
                 "    volumes:",
                 "      - ../../:/workspace",
             ]

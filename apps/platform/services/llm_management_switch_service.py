@@ -10,7 +10,6 @@ from agentflow.llm.gateway import (
     LLMGatewayConfig,
     ModelConfig,
     ProviderConfig,
-    build_provider_runtime_statuses,
 )
 from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
@@ -24,6 +23,7 @@ from apps.platform.services.llm_management_validator import (
     provider_default_api_base,
     provider_default_api_key_env,
 )
+from apps.platform.services.llm_runtime_status import resolve_provider_runtime_statuses
 
 
 if TYPE_CHECKING:
@@ -230,37 +230,16 @@ class LLMSwitchService:
         by_engine = {item.name: item for item in engine_statuses}
 
         provider_name = self._validator.canonical_provider_name(request.provider.value)
-        provider_statuses = build_provider_runtime_statuses(config, config_path=self._config_path)
+        provider_statuses = await resolve_provider_runtime_statuses(
+            config,
+            config_path=self._config_path,
+            engine_statuses=engine_statuses,
+        )
         by_provider = {item.name: item for item in provider_statuses}
         provider_status = by_provider.get(provider_name)
         if provider_status is not None:
             provider_runtime_status = provider_status.status
             provider_last_error = provider_status.last_error
-            if provider_name == "local":
-                linked_engines = sorted(
-                    {
-                        model.engine.strip().lower()
-                        for model in config.models
-                        if model.enabled
-                        and model.provider.strip().lower() == provider_name
-                        and isinstance(model.engine, str)
-                        and model.engine.strip()
-                    }
-                )
-                if linked_engines:
-                    unhealthy: list[str] = []
-                    for engine_name in linked_engines:
-                        engine_status = by_engine.get(engine_name)
-                        if engine_status is not None and engine_status.status == "available":
-                            continue
-                        reason = engine_status.last_error if engine_status is not None else "status_missing"
-                        unhealthy.append(f"{engine_name}:{reason or 'unavailable'}")
-                    if unhealthy:
-                        provider_runtime_status = "unavailable"
-                        provider_last_error = f"linked_engine_unhealthy:{' / '.join(unhealthy)}"
-                    else:
-                        provider_runtime_status = "available"
-                        provider_last_error = None
 
             runtime.provider_status = provider_runtime_status
             if request.validate_runtime and provider_runtime_status != "available":

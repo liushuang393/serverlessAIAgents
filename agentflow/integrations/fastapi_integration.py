@@ -148,6 +148,72 @@ def AgentRouter(
     return router
 
 
+def AgentContractRouter(runtime: Any, prefix: str = "") -> Any:
+    """Executable app agent runtime を公開する API ルーター."""
+    try:
+        from fastapi import APIRouter, HTTPException
+    except ImportError:
+        logger.warning("FastAPI not installed. AgentContractRouter not available.")
+        return None
+
+    router = APIRouter(prefix=prefix, tags=["agents"])
+
+    @router.get("/agents")
+    async def list_agents() -> dict[str, Any]:
+        agents = []
+        for agent_id in runtime.list_agent_ids():
+            card = runtime.get_card(agent_id)
+            agents.append(
+                {
+                    "id": agent_id,
+                    "name": agent_id,
+                    "label": agent_id,
+                    "description": card.description if card is not None else None,
+                }
+            )
+        return {"agents": agents}
+
+    @router.get("/agents/{agent_id}/card")
+    async def get_agent_card(agent_id: str) -> dict[str, Any]:
+        card = runtime.get_card(agent_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return card.to_a2a_format()
+
+    @router.get("/agents/{agent_id}/schema")
+    async def get_agent_schema(agent_id: str) -> dict[str, Any]:
+        card = runtime.get_card(agent_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        skill = card.skills[0] if card.skills else None
+        return {
+            "name": card.name,
+            "description": card.description,
+            "input_schema": skill.input_schema if skill is not None else {"type": "object"},
+            "output_schema": skill.output_schema if skill is not None else {"type": "object"},
+            "skills": [item.model_dump(mode="json") for item in card.skills],
+        }
+
+    @router.post("/agents/{agent_id}/invoke")
+    async def invoke_agent(agent_id: str, request: AgentRequest) -> AgentResponse:
+        try:
+            result = await runtime.invoke(agent_id, request.input)
+            return AgentResponse(success=True, data=result)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception("Agent invocation failed: %s", exc)
+            return AgentResponse(success=False, error=str(exc))
+
+    @router.post("/agents/{agent_id}/stream")
+    async def stream_agent(agent_id: str, request: AgentRequest) -> Any:
+        if runtime.get_agent(agent_id) is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return create_sse_response(runtime.stream(agent_id, request.input))
+
+    return router
+
+
 def FlowRouter(prefix: str = "") -> Any:
     """Flow 定義・結果 API ルーターを作成.
 

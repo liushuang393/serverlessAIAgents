@@ -107,32 +107,32 @@ class TestMockVectorDBProvider:
     @pytest.mark.asyncio
     async def test_add_and_search(self, provider: MockVectorDBProvider) -> None:
         """添加和搜索测试."""
-        # 添加文档（使用正确的参数名 documents）
-        await provider.add(
-            documents=["Hello world", "Goodbye world"],
+        # add_documents はプロトコル準拠のメソッド名
+        await provider.add_documents(
+            ["Hello world", "Goodbye world"],
             metadatas=[{"type": "greeting"}, {"type": "farewell"}],
         )
 
-        # 搜索
-        results = await provider.search("Hello", top_k=1)
+        # similarity_search はプロトコル準拠のメソッド名
+        results = await provider.similarity_search("Hello", k=1)
         assert len(results) >= 1
 
     @pytest.mark.asyncio
     async def test_delete(self, provider: MockVectorDBProvider) -> None:
         """删除测试."""
-        await provider.add(documents=["Test document"], ids=["doc-001"])
+        await provider.add_documents(["Test document"], ids=["doc-001"])
 
-        # delete 返回删除的数量
+        # delete は削除件数を返す
         result = await provider.delete(["doc-001"])
         assert result == 1
 
     @pytest.mark.asyncio
     async def test_clear(self, provider: MockVectorDBProvider) -> None:
         """清空测试."""
-        await provider.add(documents=["Doc 1", "Doc 2", "Doc 3"])
+        await provider.add_documents(["Doc 1", "Doc 2", "Doc 3"])
         await provider.clear()
-        # 搜索应该返回空
-        results = await provider.search("Doc", top_k=10)
+        # 検索結果は空であること
+        results = await provider.similarity_search("Doc", k=10)
         assert len(results) == 0
 
 

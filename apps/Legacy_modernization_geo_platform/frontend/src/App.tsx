@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  buildStreamUrl,
   fetchArtifacts,
   fetchState,
   postCommand,
@@ -17,6 +18,23 @@ import type {
 } from './types';
 
 type TabKey = 'console' | 'workspace' | 'content' | 'approval' | 'report';
+type SurfaceKey = 'workspace' | 'content' | 'approval' | 'report';
+
+interface StreamEvent {
+  event_type: string;
+  timestamp: number;
+  flow_id: string;
+  data?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface A2UIComponentNode {
+  type: string;
+  id?: string;
+  props?: Record<string, unknown>;
+  children?: A2UIComponentNode[];
+  style?: Record<string, unknown>;
+}
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'console', label: 'Campaign Console' },
@@ -36,10 +54,118 @@ const DEFAULT_FORM = {
   },
 };
 
+function createEmptySurfaces(): Record<SurfaceKey, A2UIComponentNode[]> {
+  return {
+    workspace: [],
+    content: [],
+    approval: [],
+    report: [],
+  };
+}
+
+function readEventField(event: StreamEvent, key: string): unknown {
+  if (event[key] !== undefined) {
+    return event[key];
+  }
+  return event.data?.[key];
+}
+
+function readEventString(event: StreamEvent, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = readEventField(event, key);
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function readEventRecord(event: StreamEvent, key: string): Record<string, unknown> | null {
+  const value = readEventField(event, key);
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function toTimelineEvent(event: StreamEvent, taskId: string): TaskEvent {
+  const message =
+    readEventString(event, 'message', 'reason', 'error_message') || event.event_type;
+
+  return {
+    event_type: event.event_type,
+    timestamp: new Date(event.timestamp * 1000).toISOString(),
+    task_id: taskId,
+    stage: readEventString(event, 'stage') ?? null,
+    agent: readEventString(event, 'agent', 'node_name') ?? null,
+    message,
+    payload: event.data ?? {},
+  };
+}
+
+function replaceSurfaceComponent(
+  components: A2UIComponentNode[],
+  nextComponent: A2UIComponentNode,
+): A2UIComponentNode[] {
+  const nextId = nextComponent.id;
+  if (!nextId) {
+    return [...components, nextComponent];
+  }
+  const index = components.findIndex((component) => component.id === nextId);
+  if (index === -1) {
+    return [...components, nextComponent];
+  }
+  return components.map((component, componentIndex) =>
+    componentIndex === index ? nextComponent : component,
+  );
+}
+
+function renderA2UIComponent(component: A2UIComponentNode, keyPrefix: string): ReactNode {
+  const componentKey = component.id || keyPrefix;
+  const props = component.props || {};
+  const children = component.children || [];
+
+  if (component.type === 'text') {
+    const content = typeof props.content === 'string' ? props.content : typeof props.text === 'string' ? props.text : '';
+    return (
+      <pre key={componentKey} className="a2ui-text">
+        {content}
+      </pre>
+    );
+  }
+
+  if (component.type === 'card') {
+    const title = typeof props.title === 'string' ? props.title : 'Surface Card';
+    return (
+      <article key={componentKey} className="card a2ui-card">
+        <h4>{title}</h4>
+        {children.map((child, index) => renderA2UIComponent(child, `${componentKey}-${index}`))}
+      </article>
+    );
+  }
+
+  if (component.type === 'list') {
+    return (
+      <ul key={componentKey} className="a2ui-list">
+        {children.map((child, index) => (
+          <li key={`${componentKey}-${index}`}>{renderA2UIComponent(child, `${componentKey}-${index}`)}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <pre key={componentKey} className="a2ui-text">
+      {JSON.stringify(component, null, 2)}
+    </pre>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('console');
   const [formState, setFormState] = useState(DEFAULT_FORM);
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [streamPath, setStreamPath] = useState<string | null>(null);
   const [taskState, setTaskState] = useState<TaskStateResponse | null>(null);
   const [eventLog, setEventLog] = useState<TaskEvent[]>([]);
   const [artifacts, setArtifacts] = useState<{
@@ -54,61 +180,132 @@ export default function App() {
       modernization_fit_score: number;
     };
   }>({});
+  const [surfaces, setSurfaces] = useState<Record<SurfaceKey, A2UIComponentNode[]>>(createEmptySurfaces());
   const [rewriteNote, setRewriteNote] = useState('请补充更明确的阶段迁移边界');
   const [busy, setBusy] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  async function refreshTaskState(currentTaskId: string): Promise<void> {
+    const [nextState, nextArtifacts] = await Promise.all([
+      fetchState(currentTaskId),
+      fetchArtifacts(currentTaskId),
+    ]);
+    setTaskState(nextState);
+    setEventLog(nextState.events);
+    setArtifacts(nextArtifacts);
+  }
 
   useEffect(() => {
     if (!taskId) {
-      return undefined;
-    }
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const nextState = await fetchState(taskId);
-        if (!cancelled) {
-          setTaskState(nextState);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    void load();
-    const timer = window.setInterval(() => {
-      void load();
-    }, 1500);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [taskId]);
-
-  useEffect(() => {
-    if (!taskState) {
       return;
     }
-    setEventLog(taskState.events);
-    void fetchArtifacts(taskState.task_id).then(setArtifacts);
-  }, [taskState]);
+    void refreshTaskState(taskId);
+  }, [taskId]);
 
   useEffect(() => {
-    if (!taskId) {
+    if (!taskId || !streamPath) {
       return undefined;
     }
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const socket = new WebSocket(`${protocol}://${window.location.host}/api/ws/${taskId}`);
-    socket.onmessage = (message) => {
-      const event = JSON.parse(message.data) as TaskEvent;
-      setEventLog((current) => [...current, event]);
+
+    eventSourceRef.current?.close();
+    const source = new EventSource(buildStreamUrl(streamPath));
+    eventSourceRef.current = source;
+
+    source.onmessage = (message) => {
+      const parsed = JSON.parse(message.data) as StreamEvent;
+      const timelineEvent = toTimelineEvent(parsed, taskId);
+
+      setEventLog((current) => {
+        const alreadyExists = current.some(
+          (entry) =>
+            entry.timestamp === timelineEvent.timestamp &&
+            entry.event_type === timelineEvent.event_type &&
+            entry.message === timelineEvent.message,
+        );
+        return alreadyExists ? current : [...current, timelineEvent];
+      });
+
+      setTaskState((current) => {
+        if (!current) {
+          return current;
+        }
+        const nextStatus =
+          parsed.event_type === 'flow.complete'
+            ? 'completed'
+            : parsed.event_type === 'flow.error'
+              ? 'failed'
+              : parsed.event_type === 'approval_required'
+                ? 'waiting_approval'
+                : parsed.event_type === 'node.start' || parsed.event_type === 'node.complete'
+                  ? 'running'
+                  : current.status;
+
+        return {
+          ...current,
+          status: nextStatus,
+          current_stage: readEventString(parsed, 'stage') || current.current_stage,
+        };
+      });
+
+      const surfaceId = readEventString(parsed, 'surface_id');
+      if (
+        surfaceId &&
+        (surfaceId === 'workspace' || surfaceId === 'content' || surfaceId === 'approval' || surfaceId === 'report')
+      ) {
+        setSurfaces((current) => {
+          if (parsed.event_type === 'a2ui.clear') {
+            return { ...current, [surfaceId]: [] };
+          }
+
+          if (parsed.event_type === 'a2ui.component') {
+            const component = readEventRecord(parsed, 'component') as A2UIComponentNode | null;
+            if (!component) {
+              return current;
+            }
+            return {
+              ...current,
+              [surfaceId]: replaceSurfaceComponent(current[surfaceId], component),
+            };
+          }
+
+          if (parsed.event_type === 'a2ui.update') {
+            const updates = readEventRecord(parsed, 'updates');
+            const replacement = updates?.component;
+            if (typeof replacement !== 'object' || replacement === null || Array.isArray(replacement)) {
+              return current;
+            }
+            return {
+              ...current,
+              [surfaceId]: replaceSurfaceComponent(
+                current[surfaceId],
+                replacement as A2UIComponentNode,
+              ),
+            };
+          }
+
+          return current;
+        });
+      }
+
+      if (
+        parsed.event_type === 'approval_required' ||
+        parsed.event_type === 'approval_submitted' ||
+        parsed.event_type === 'node.complete' ||
+        parsed.event_type === 'flow.complete' ||
+        parsed.event_type === 'flow.error'
+      ) {
+        void refreshTaskState(taskId);
+      }
     };
-    wsRef.current = socket;
+
+    source.onerror = () => {
+      source.close();
+    };
+
     return () => {
-      socket.close();
+      source.close();
     };
-  }, [taskId]);
+  }, [streamPath, taskId]);
 
   const pendingApprovals = useMemo(
     () => (taskState?.approvals || []).filter((item) => item.status === 'pending'),
@@ -118,8 +315,13 @@ export default function App() {
   async function handleStart() {
     setBusy(true);
     try {
+      setTaskState(null);
+      setArtifacts({});
+      setEventLog([]);
+      setSurfaces(createEmptySurfaces());
       const response = await startExecution(formState);
       setTaskId(response.task_id);
+      setStreamPath(response.stream_url || `/api/geo/${response.task_id}/stream`);
       setActiveTab('console');
     } finally {
       setBusy(false);
@@ -133,8 +335,7 @@ export default function App() {
     setBusy(true);
     try {
       await submitApproval(taskId, approved, action);
-      const nextState = await fetchState(taskId);
-      setTaskState(nextState);
+      await refreshTaskState(taskId);
     } finally {
       setBusy(false);
     }
@@ -147,8 +348,7 @@ export default function App() {
     setBusy(true);
     try {
       await postCommand(taskId, 'content.rewrite', rewriteNote);
-      const nextState = await fetchState(taskId);
-      setTaskState(nextState);
+      await refreshTaskState(taskId);
     } finally {
       setBusy(false);
     }
@@ -297,38 +497,46 @@ export default function App() {
                 <h3>需求信号、问题图谱与证据摘要</h3>
               </div>
             </div>
-            <div className="grid-two">
-              <div className="card" data-testid="demand-signals-card">
-                <h4>Demand Signals</h4>
-                <p className="score" data-testid="fit-score">
-                  {artifacts.signal?.modernization_fit_score ?? '--'}
-                </p>
-                <p>{artifacts.signal?.urgency_hypothesis || '等待执行结果'}</p>
-                <ul>
-                  {(artifacts.signal?.signals || []).map((signal) => (
-                    <li key={`${signal.type}-${signal.source}`}>{signal.description}</li>
-                  ))}
-                </ul>
+            {surfaces.workspace.length > 0 ? (
+              <div className="grid-two">
+                {surfaces.workspace.map((component, index) =>
+                  renderA2UIComponent(component, `workspace-${index}`),
+                )}
               </div>
-              <div className="card" data-testid="question-map-card">
-                <h4>Question Map</h4>
-                <ul>
-                  {(artifacts.questionGraph?.personas || []).map((persona) => (
-                    <li key={persona.role}>
-                      <strong>{persona.role}</strong>: {persona.high_intent_questions[0] || persona.questions[0]}
-                    </li>
-                  ))}
-                </ul>
+            ) : (
+              <div className="grid-two">
+                <div className="card" data-testid="demand-signals-card">
+                  <h4>Demand Signals</h4>
+                  <p className="score" data-testid="fit-score">
+                    {artifacts.signal?.modernization_fit_score ?? '--'}
+                  </p>
+                  <p>{artifacts.signal?.urgency_hypothesis || '等待执行结果'}</p>
+                  <ul>
+                    {(artifacts.signal?.signals || []).map((signal) => (
+                      <li key={`${signal.type}-${signal.source}`}>{signal.description}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="card" data-testid="question-map-card">
+                  <h4>Question Map</h4>
+                  <ul>
+                    {(artifacts.questionGraph?.personas || []).map((persona) => (
+                      <li key={persona.role}>
+                        <strong>{persona.role}</strong>: {persona.high_intent_questions[0] || persona.questions[0]}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="card" data-testid="evidence-summary-card">
+                  <h4>Evidence Summary</h4>
+                  <ul>
+                    {(artifacts.evidenceMatrix?.entries || []).slice(0, 4).map((entry) => (
+                      <li key={entry.source_url}>{entry.title}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <div className="card" data-testid="evidence-summary-card">
-                <h4>Evidence Summary</h4>
-                <ul>
-                  {(artifacts.evidenceMatrix?.entries || []).slice(0, 4).map((entry) => (
-                    <li key={entry.source_url}>{entry.title}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            )}
           </section>
         )}
 
@@ -368,25 +576,33 @@ export default function App() {
                 onChange={(event) => setRewriteNote(event.target.value)}
               />
             </label>
-            <div className="grid-two">
-              <div className="card">
-                <h4>Draft</h4>
-                <article data-testid="draft-preview">
-                  <h5>{artifacts.draft?.pages[0]?.title || '等待生成内容'}</h5>
-                  <p>{artifacts.draft?.pages[0]?.summary}</p>
-                  <pre>{artifacts.draft?.pages[0]?.body_markdown}</pre>
-                </article>
+            {surfaces.content.length > 0 ? (
+              <div className="grid-two">
+                {surfaces.content.map((component, index) =>
+                  renderA2UIComponent(component, `content-${index}`),
+                )}
               </div>
-              <div className="card">
-                <h4>QA</h4>
-                <p data-testid="qa-risk-level">{artifacts.qa?.risk_level || '--'}</p>
-                <ul>
-                  {(artifacts.qa?.issues || []).map((issue) => (
-                    <li key={issue}>{issue}</li>
-                  ))}
-                </ul>
+            ) : (
+              <div className="grid-two">
+                <div className="card">
+                  <h4>Draft</h4>
+                  <article data-testid="draft-preview">
+                    <h5>{artifacts.draft?.pages[0]?.title || '等待生成内容'}</h5>
+                    <p>{artifacts.draft?.pages[0]?.summary}</p>
+                    <pre>{artifacts.draft?.pages[0]?.body_markdown}</pre>
+                  </article>
+                </div>
+                <div className="card">
+                  <h4>QA</h4>
+                  <p data-testid="qa-risk-level">{artifacts.qa?.risk_level || '--'}</p>
+                  <ul>
+                    {(artifacts.qa?.issues || []).map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-            </div>
+            )}
           </section>
         )}
 
@@ -398,6 +614,13 @@ export default function App() {
                 <h3>人工决策门禁</h3>
               </div>
             </div>
+            {surfaces.approval.length > 0 && (
+              <div className="grid-two">
+                {surfaces.approval.map((component, index) =>
+                  renderA2UIComponent(component, `approval-surface-${index}`),
+                )}
+              </div>
+            )}
             {pendingApprovals.length === 0 ? (
               <p className="muted">当前没有待审批项。</p>
             ) : (
@@ -430,27 +653,35 @@ export default function App() {
                 <h3>执行摘要与发布结果</h3>
               </div>
             </div>
-            <div className="grid-two">
-              <div className="card">
-                <h4>Campaign Report</h4>
-                <pre data-testid="report-markdown">{taskState?.report?.markdown || '等待报告生成'}</pre>
-              </div>
-              <div className="card">
-                <h4>Published Assets</h4>
-                {publishedPage ? (
-                  <a
-                    data-testid="published-page-link"
-                    href={publishedPage.page_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {publishedPage.title}
-                  </a>
-                ) : (
-                  <p className="muted">等待发布完成</p>
+            {surfaces.report.length > 0 ? (
+              <div className="grid-two">
+                {surfaces.report.map((component, index) =>
+                  renderA2UIComponent(component, `report-${index}`),
                 )}
               </div>
-            </div>
+            ) : (
+              <div className="grid-two">
+                <div className="card">
+                  <h4>Campaign Report</h4>
+                  <pre data-testid="report-markdown">{taskState?.report?.markdown || '等待报告生成'}</pre>
+                </div>
+                <div className="card">
+                  <h4>Published Assets</h4>
+                  {publishedPage ? (
+                    <a
+                      data-testid="published-page-link"
+                      href={publishedPage.page_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {publishedPage.title}
+                    </a>
+                  ) : (
+                    <p className="muted">等待发布完成</p>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
         )}
       </main>

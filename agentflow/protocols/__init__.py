@@ -41,18 +41,12 @@ from agentflow.protocols.agui_events import (
     ProgressEvent,
 )
 
-# MCP Client は遅延インポート (Pydantic 互換性問題を回避)
-from agentflow.protocols.mcp_client import MCPClient
+# MCP 関連は遅延インポート（mcp パッケージはオプション依存）
+# __getattr__ で初回アクセス時にのみインポートする
 from agentflow.protocols.mcp_config import LazyLoadingConfig, MCPConfig, MCPServerConfig
 
-# MCP Lazy Client - 懒加載対応クライアント (v0.4.0 追加)
-from agentflow.protocols.mcp_lazy_client import (
-    LazyMCPClient,
-    ToolIndexEntry,
-    ToolSearchResult,
-)
-
 # MCP Tool - 工具基底クラスとクライアント (v0.3.0 追加)
+# mcp_tool は外部 mcp パッケージに依存しないため即時インポート可
 from agentflow.protocols.mcp_tool import (
     MCPTool,
     MCPToolClient,
@@ -60,9 +54,20 @@ from agentflow.protocols.mcp_tool import (
     MCPToolResponse,
 )
 
+# MCP Client / LazyMCPClient の遅延マッピング
+_MCP_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "MCPClient": ("agentflow.protocols.mcp_client", "MCPClient"),
+    "LazyMCPClient": ("agentflow.protocols.mcp_lazy_client", "LazyMCPClient"),
+    "ToolIndexEntry": ("agentflow.protocols.mcp_lazy_client", "ToolIndexEntry"),
+    "ToolSearchResult": ("agentflow.protocols.mcp_lazy_client", "ToolSearchResult"),
+}
+
 
 def __getattr__(name: str) -> object:
     """遅延インポートを実装.
+
+    mcp パッケージに依存するクラスは初回アクセス時のみインポートする。
+    これにより mcp 未インストール環境でもモジュールロードが可能になる。
 
     Args:
         name: インポートする属性名
@@ -73,8 +78,12 @@ def __getattr__(name: str) -> object:
     Raises:
         AttributeError: 属性が見つからない場合
     """
-    if name == "MCPClient":
-        return MCPClient
+    if name in _MCP_LAZY_IMPORTS:
+        module_path, attr_name = _MCP_LAZY_IMPORTS[name]
+        import importlib
+
+        module = importlib.import_module(module_path)
+        return getattr(module, attr_name)
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
 

@@ -15,7 +15,15 @@ export type AGUIEventType =
   | 'node.complete'
   | 'node.error'
   | 'progress'
-  | 'log';
+  | 'log'
+  | 'clarification.required'
+  | 'clarification.received'
+  | 'approval_required'
+  | 'approval_submitted'
+  | 'approval_timeout'
+  | 'a2ui.component'
+  | 'a2ui.update'
+  | 'a2ui.clear';
 
 /** AG-UI 基底イベント */
 export interface AGUIEvent {
@@ -23,6 +31,7 @@ export interface AGUIEvent {
   timestamp: number;
   flow_id: string;
   data?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 /** フロー開始イベント */
@@ -85,6 +94,58 @@ export interface LogEvent extends AGUIEvent {
   source?: string;
 }
 
+export interface ClarificationRequiredEvent extends AGUIEvent {
+  event_type: 'clarification.required';
+  original_question: string;
+  questions: Array<Record<string, unknown>>;
+  message?: string;
+}
+
+export interface ApprovalRequiredEvent extends AGUIEvent {
+  event_type: 'approval_required';
+  request_id: string;
+  action: string;
+  reason: string;
+  risk_level?: string;
+  context?: Record<string, unknown>;
+  options?: Array<Record<string, unknown>>;
+}
+
+export interface ApprovalSubmittedEvent extends AGUIEvent {
+  event_type: 'approval_submitted';
+  request_id: string;
+  approved: boolean;
+  approver?: string;
+  comment?: string;
+  modifications?: Record<string, unknown>;
+}
+
+export interface A2UIComponentNode {
+  type: string;
+  id?: string;
+  props?: Record<string, unknown>;
+  children?: A2UIComponentNode[];
+  style?: Record<string, unknown>;
+}
+
+export interface A2UIComponentEvent extends AGUIEvent {
+  event_type: 'a2ui.component';
+  surface_id: string;
+  component: A2UIComponentNode;
+}
+
+export interface A2UIUpdateEvent extends AGUIEvent {
+  event_type: 'a2ui.update';
+  surface_id: string;
+  component_id: string;
+  updates: Record<string, unknown>;
+}
+
+export interface A2UIClearEvent extends AGUIEvent {
+  event_type: 'a2ui.clear';
+  surface_id: string;
+}
+
 /** イベント型ガード */
 export function isFlowStartEvent(event: AGUIEvent): event is FlowStartEvent {
   return event.event_type === 'flow.start';
@@ -114,3 +175,58 @@ export function isProgressEvent(event: AGUIEvent): event is ProgressEvent {
   return event.event_type === 'progress';
 }
 
+function readEventField(event: AGUIEvent, key: string): unknown {
+  const directValue = event[key];
+  if (directValue !== undefined) {
+    return directValue;
+  }
+  return event.data?.[key];
+}
+
+export function getEventString(event: AGUIEvent, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = readEventField(event, key);
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+export function getEventNumber(event: AGUIEvent, ...keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = readEventField(event, key);
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+export function getEventRecord(
+  event: AGUIEvent,
+  ...keys: string[]
+): Record<string, unknown> | undefined {
+  for (const key of keys) {
+    const value = readEventField(event, key);
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+  }
+  return undefined;
+}
+
+export function getEventResult<TResult = unknown>(event: AGUIEvent): TResult | null {
+  const directResult = readEventField(event, 'result');
+  if (directResult !== undefined) {
+    return directResult as TResult;
+  }
+  if (event.data !== undefined) {
+    return event.data as TResult;
+  }
+  return null;
+}
+
+export function resolveAgentTarget(event: AGUIEvent): string | undefined {
+  return getEventString(event, 'node_id', 'node_name', 'agent', 'task_id');
+}

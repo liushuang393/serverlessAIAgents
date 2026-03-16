@@ -175,13 +175,25 @@ class RuntimeCommandResolver:
         app_token = app_name.lower()
         app_module_hint = f"apps.{app_token}"
         app_path_hint = f"apps/{app_token}"
+        dev_script_hint = f"python {app_path_hint}/scripts/dev.py"
+        dev_script_hint_py3 = f"python3 {app_path_hint}/scripts/dev.py"
+        compose_script_prefix = f"{app_path_hint}/scripts/compose.py"
 
         if action == "backend_dev":
-            return ("python -m " in lower and app_module_hint in lower) or ("uvicorn " in lower and app_module_hint in lower)
+            return (
+                ("python -m " in lower and app_module_hint in lower)
+                or ("uvicorn " in lower and app_module_hint in lower)
+                or dev_script_hint in lower
+                or dev_script_hint_py3 in lower
+            )
         if action == "frontend_dev":
             return "npm run dev" in lower and (app_path_hint in lower or "admin_ui" in lower or "frontend" in lower)
         if action == "publish":
-            return "docker compose up -d --build" in lower
+            return "docker compose up -d --build" in lower or (
+                compose_script_prefix in lower and lower.endswith(" publish")
+            )
         if action == "start":
-            return "docker compose up -d" in lower and "--build" not in lower
-        return "docker compose down" in lower
+            return ("docker compose up -d" in lower and "--build" not in lower) or (
+                compose_script_prefix in lower and lower.endswith(" start")
+            )
+        return "docker compose down" in lower or (compose_script_prefix in lower and lower.endswith(" stop"))

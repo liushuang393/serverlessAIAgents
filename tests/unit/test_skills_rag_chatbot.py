@@ -1,4 +1,9 @@
-"""RAG Skill と ChatBot Skill のユニットテスト."""
+"""RAG Skill と ChatBot Skill のユニットテスト.
+
+get_llm() は実行時に API キーが必要なため、テスト全体でモック化する。
+"""
+
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -9,6 +14,22 @@ from agentflow.skills.chatbot import (
     ChatSession,
 )
 from agentflow.skills.rag import RAGConfig, RAGResult, RAGSkill
+
+
+def _make_mock_llm() -> MagicMock:
+    """LLMProvider のモックを生成（chat メソッドが適切な dict を返す）."""
+    mock = MagicMock()
+    mock.chat = AsyncMock(return_value={"content": "モックLLM応答", "role": "assistant"})
+    mock.generate = AsyncMock(return_value={"content": "モックLLM応答", "role": "assistant"})
+    return mock
+
+
+@pytest.fixture(autouse=True)
+def _patch_get_llm():
+    """全テストで get_llm をモック化し、APIキー不在エラーを回避."""
+    with patch("agentflow.skills.rag.get_llm", return_value=_make_mock_llm()), \
+         patch("agentflow.skills.chatbot.get_llm", return_value=_make_mock_llm()):
+        yield
 
 
 class TestRAGSkill:

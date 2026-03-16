@@ -1,10 +1,13 @@
-"""AgentFlow embedded LiteLLM gateway."""
+"""agentflow.llm.gateway 後方互換スタブ. 実体は infrastructure.llm.gateway."""
 
-from agentflow.llm.gateway.config import (
+from infrastructure.llm.gateway import (  # noqa: F401
     EngineRuntimeStatus,
+    GatewayResponse,
     GatewayRuntimeConfig,
+    GatewayToolCall,
     InferenceEngineConfig,
     LLMGatewayConfig,
+    LiteLLMGateway,
     ModelConfig,
     ModelCostConfig,
     ProviderConfig,
@@ -16,8 +19,6 @@ from agentflow.llm.gateway.config import (
     resolve_secret_status,
     save_gateway_config,
 )
-from agentflow.llm.gateway.router import GatewayResponse, GatewayToolCall, LiteLLMGateway
-
 
 __all__ = [
     "EngineRuntimeStatus",

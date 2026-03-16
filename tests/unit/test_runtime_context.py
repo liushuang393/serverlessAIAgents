@@ -40,10 +40,14 @@ def test_llm_context_settings_override():
     assert llm._provider_info[1] == "gpt-test"
 
 
-def test_db_context_settings_override():
+def test_db_context_settings_override(monkeypatch: pytest.MonkeyPatch):
+    # DATABASE_URL / FAQ_DATABASE_URL が設定されていると SQLAlchemy が優先されるため除去
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("FAQ_DATABASE_URL", raising=False)
     settings = AgentFlowSettings(
         supabase_url="https://example.supabase.co",
         supabase_key="test-key",
+        database_url=None,
     )
     ctx = RuntimeContext(tenant_id="tenant-1", settings=settings)
     db = get_db(context=ctx, _new_instance=True)

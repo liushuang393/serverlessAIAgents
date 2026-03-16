@@ -21,7 +21,9 @@
   "agents": [
     {
       "name": "Supervisor",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "module": "apps.Legacy_modernization_geo_platform.agents.supervisor_agent",
+      "class_name": "SupervisorAgent",
+      "init_kwargs": {},
       "capabilities": [
         "routing",
         "task_control",
@@ -33,7 +35,9 @@
     },
     {
       "name": "BrandMemory",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "module": "apps.Legacy_modernization_geo_platform.agents.brand_memory_agent",
+      "class_name": "BrandMemoryAgent",
+      "init_kwargs": {},
       "capabilities": [
         "positioning",
         "brand_memory"
@@ -44,7 +48,9 @@
     },
     {
       "name": "DemandSignal",
-      "module": "apps.Legacy_modernization_geo_platform.backend.intelligence",
+      "module": "apps.Legacy_modernization_geo_platform.agents.demand_signal_agent",
+      "class_name": "DemandSignalAgent",
+      "init_kwargs": {},
       "capabilities": [
         "live_search",
         "signal_detection"
@@ -54,8 +60,10 @@
       "agent_type": "reactor"
     },
     {
-      "name": "ICPScoring",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "name": "AccountScore",
+      "module": "apps.Legacy_modernization_geo_platform.agents.account_score_agent",
+      "class_name": "AccountScoreAgent",
+      "init_kwargs": {},
       "capabilities": [
         "scoring",
         "prioritization"
@@ -65,8 +73,10 @@
       "agent_type": "reactor"
     },
     {
-      "name": "BuyerQuestionMap",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "name": "QuestionGraph",
+      "module": "apps.Legacy_modernization_geo_platform.agents.question_graph_agent",
+      "class_name": "QuestionGraphAgent",
+      "init_kwargs": {},
       "capabilities": [
         "question_mapping",
         "persona_planning"
@@ -76,8 +86,10 @@
       "agent_type": "planner"
     },
     {
-      "name": "EvidenceCollector",
-      "module": "apps.Legacy_modernization_geo_platform.backend.intelligence",
+      "name": "EvidenceMatrix",
+      "module": "apps.Legacy_modernization_geo_platform.agents.evidence_matrix_agent",
+      "class_name": "EvidenceMatrixAgent",
+      "init_kwargs": {},
       "capabilities": [
         "evidence_collection",
         "citation"
@@ -88,7 +100,9 @@
     },
     {
       "name": "LegacySemantics",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "module": "apps.Legacy_modernization_geo_platform.agents.legacy_semantics_agent",
+      "class_name": "LegacySemanticsAgent",
+      "init_kwargs": {},
       "capabilities": [
         "business_semantics",
         "modernization_strategy"
@@ -98,8 +112,10 @@
       "agent_type": "specialist"
     },
     {
-      "name": "Strategy",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "name": "ContentBlueprint",
+      "module": "apps.Legacy_modernization_geo_platform.agents.content_blueprint_agent",
+      "class_name": "ContentBlueprintAgent",
+      "init_kwargs": {},
       "capabilities": [
         "content_strategy",
         "page_blueprint"
@@ -109,8 +125,10 @@
       "agent_type": "planner"
     },
     {
-      "name": "ContentComposition",
-      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "name": "ContentDraft",
+      "module": "apps.Legacy_modernization_geo_platform.agents.content_draft_agent",
+      "class_name": "ContentDraftAgent",
+      "init_kwargs": {},
       "capabilities": [
         "content_generation",
         "json_ld"
@@ -121,7 +139,9 @@
     },
     {
       "name": "GeoQA",
-      "module": "apps.Legacy_modernization_geo_platform.backend.qa",
+      "module": "apps.Legacy_modernization_geo_platform.agents.geo_qa_agent",
+      "class_name": "GeoQAAgent",
+      "init_kwargs": {},
       "capabilities": [
         "quality_gate",
         "citation_checks",
@@ -133,7 +153,9 @@
     },
     {
       "name": "Publishing",
-      "module": "apps.Legacy_modernization_geo_platform.backend.publisher",
+      "module": "apps.Legacy_modernization_geo_platform.agents.publishing_agent",
+      "class_name": "PublishingAgent",
+      "init_kwargs": {},
       "capabilities": [
         "static_publish",
         "sitemap",
@@ -145,7 +167,9 @@
     },
     {
       "name": "ReportAssembler",
-      "module": "apps.Legacy_modernization_geo_platform.backend.reporting",
+      "module": "apps.Legacy_modernization_geo_platform.agents.report_assembler_agent",
+      "class_name": "ReportAssemblerAgent",
+      "init_kwargs": {},
       "capabilities": [
         "reporting",
         "summaries"
@@ -183,10 +207,14 @@
   },
   "runtime": {
     "urls": {
-      "backend": "http://localhost:8010",
-      "frontend": "http://localhost:3010",
-      "health": "http://localhost:8010/api/health",
+      "backend": "http://localhost:8100",
+      "frontend": "http://localhost:3100",
+      "health": "http://localhost:8100/api/health",
       "database": "sqlite:///apps/Legacy_modernization_geo_platform/data/geo_platform.db"
+    },
+    "hosts": {
+      "backend": "0.0.0.0",
+      "frontend": "0.0.0.0"
     },
     "database": {
       "kind": "sqlite",
@@ -202,9 +230,9 @@
     "commands": {
       "backend_dev": "python apps/Legacy_modernization_geo_platform/scripts/dev.py",
       "frontend_dev": "cd apps/Legacy_modernization_geo_platform/frontend && npm run dev",
-      "publish": "docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml up -d --build",
-      "start": "docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml up -d",
-      "stop": "docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml down"
+      "publish": "python apps/Legacy_modernization_geo_platform/scripts/compose.py publish",
+      "start": "python apps/Legacy_modernization_geo_platform/scripts/compose.py start",
+      "stop": "python apps/Legacy_modernization_geo_platform/scripts/compose.py stop"
     }
   },
   "tags": [
@@ -218,12 +246,18 @@
     "auth": {
       "enabled": true,
       "providers": [
-        "api_key"
+        "auth_service"
       ],
       "allow_anonymous": false,
       "required_scopes": [
         "geo.operator"
       ],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "token_policy": {
+        "jwt_issuer": "auth-service",
+        "jwt_audience": "auth-service"
+      },
       "session_ttl_minutes": 60
     },
     "llm": {

@@ -13,7 +13,7 @@ from agentflow.memory.embeddings.sentence_transformer_embeddings import (
 @pytest.fixture
 def sentence_transformer_embeddings():
     """SentenceTransformerEmbeddingsのフィクスチャ."""
-    with patch("agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer") as mock_st:
+    with patch("infrastructure.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer") as mock_st:
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
         mock_st.return_value = mock_model
@@ -95,7 +95,7 @@ def test_init_without_sentence_transformers():
     """Sentence Transformersパッケージなしの初期化テスト."""
     with (
         patch(
-            "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer",
+            "infrastructure.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer",
             side_effect=ImportError,
         ),
         pytest.raises(ImportError, match="sentence-transformers package is required"),
@@ -105,7 +105,7 @@ def test_init_without_sentence_transformers():
 
 def test_init_with_different_models():
     """異なるモデルでの初期化テスト."""
-    with patch("agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer") as mock_st:
+    with patch("infrastructure.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer") as mock_st:
         # all-MiniLM-L6-v2
         mock_model1 = MagicMock()
         mock_model1.get_sentence_embedding_dimension.return_value = 384

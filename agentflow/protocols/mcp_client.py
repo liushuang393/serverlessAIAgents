@@ -1,17 +1,59 @@
 """MCP クライアント実装.
 
 このモジュールは複数の MCP サーバーに接続し、ツールを呼び出すためのクライアントを提供します。
+
+Note:
+    ``mcp`` パッケージはオプション依存です。
+    トップレベルではインポートせず、実際に接続を行うメソッド内で遅延インポートします。
+    これにより ``mcp`` 未インストール環境でもモジュールのロードが可能になります。
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
-
-from mcp.client.stdio import stdio_client
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.security import AuditLogger, ParameterValidator, ToolWhitelist
 from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
-from mcp import ClientSession, StdioServerParameters
+
+if TYPE_CHECKING:
+    from mcp import ClientSession
+
+# mcp パッケージの遅延インポート用モジュール変数
+# _ensure_mcp_imports() で初期化され、テストからは patch で差し替え可能
+ClientSession: type | None = None  # type: ignore[no-redef]
+StdioServerParameters: type | None = None
+stdio_client: Any = None
+_mcp_imported: bool = False
+
+
+def _ensure_mcp_imports() -> None:
+    """mcp パッケージのシンボルをモジュール変数にキャッシュ（初回のみ）.
+
+    テスト時は patch でモジュール変数を差し替えるため、
+    フラグ ``_mcp_imported`` で二重インポートを防止する。
+
+    Raises:
+        ImportError: mcp パッケージがインストールされていない場合
+    """
+    global ClientSession, StdioServerParameters, stdio_client, _mcp_imported  # noqa: PLW0603
+    if _mcp_imported:
+        return
+    try:
+        import mcp as _mcp
+        from mcp.client.stdio import stdio_client as _stdio_client
+
+        ClientSession = _mcp.ClientSession
+        StdioServerParameters = _mcp.StdioServerParameters
+        stdio_client = _stdio_client
+        _mcp_imported = True
+    except ImportError as exc:
+        msg = (
+            "mcp パッケージが必要です。"
+            " `pip install mcp` でインストールしてください。"
+        )
+        raise ImportError(msg) from exc
 
 
 class ToolNotAllowedError(Exception):
@@ -65,7 +107,7 @@ class MCPClient:
         """
         self._config = config
         self._logger = logger or logging.getLogger(__name__)
-        self._sessions: dict[str, ClientSession] = {}
+        self._sessions: dict[str, ClientSession] = {}  # type: ignore[type-arg]
         self._tools: dict[str, dict[str, Any]] = {}
         self._contexts: dict[str, Any] = {}  # stdio_client コンテキストを保持
 
@@ -109,6 +151,9 @@ class MCPClient:
             Exception: 接続に失敗した場合
         """
         self._logger.debug(f"Connecting to server: {config.name}")
+
+        # mcp パッケージを遅延インポート（初回のみ実行）
+        _ensure_mcp_imports()
 
         # StdioServerParameters を作成
         server_params = StdioServerParameters(

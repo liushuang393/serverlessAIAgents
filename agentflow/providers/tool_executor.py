@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from contracts.tool import ToolResult as ContractToolResult
 from pydantic import BaseModel, Field
 
 from agentflow.governance import (
@@ -93,7 +94,7 @@ class FunctionCall(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict, description="引数")
 
 
-class ToolResult(BaseModel):
+class ToolResult(ContractToolResult):
     """ツール実行結果（OpenAI互換）.
 
     OpenAI tool message 形式と互換。
@@ -105,16 +106,6 @@ class ToolResult(BaseModel):
         name: ツール名
     """
 
-    tool_call_id: str = Field(..., description="対応するToolCall ID")
-    role: str = Field(default="tool")
-    content: str = Field(..., description="実行結果")
-    name: str = Field(..., description="ツール名")
-
-    # 拡張フィールド（内部使用）
-    status: ToolCallStatus = Field(default=ToolCallStatus.SUCCESS)
-    execution_time_ms: float = Field(default=0.0, description="実行時間（ミリ秒）")
-    error: str | None = Field(default=None, description="エラー情報")
-    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class BatchResult(BaseModel):

@@ -13,6 +13,7 @@ import httpx
 
 
 logger = logging.getLogger(__name__)
+DEFAULT_AUTH_SERVICE_URL = "http://localhost:8010"
 
 
 @dataclass
@@ -38,7 +39,7 @@ class ResourceManager:
     """
 
     def __init__(self, auth_client: Any) -> None:
-        self._base_url = getattr(auth_client, "base_url", "http://localhost:8010")
+        self._base_url = _resolve_auth_base_url(auth_client)
 
     async def list_resources(
         self,
@@ -139,3 +140,21 @@ class ResourceManager:
             metadata=data.get("metadata") or {},
             is_active=data.get("is_active", True),
         )
+
+
+def _resolve_auth_base_url(auth_client: Any) -> str:
+    """auth_client から auth_service のベース URL を解決."""
+    base_url = getattr(auth_client, "base_url", None)
+    if isinstance(base_url, str):
+        normalized = base_url.strip().rstrip("/")
+        if normalized:
+            return normalized
+
+    config = getattr(auth_client, "config", None)
+    config_base_url = getattr(config, "base_url", None)
+    if isinstance(config_base_url, str):
+        normalized = config_base_url.strip().rstrip("/")
+        if normalized:
+            return normalized
+
+    return DEFAULT_AUTH_SERVICE_URL

@@ -8,14 +8,45 @@ import type {
   TaskStateResponse,
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+function getApiBase(): string {
+  return import.meta.env.VITE_API_BASE_URL || window.location.origin;
+}
+
+function getStoredAccessToken(): string | null {
+  return window.localStorage.getItem('GEO_PLATFORM_ACCESS_TOKEN');
+}
 
 function buildHeaders(): HeadersInit {
-  const apiKey = window.localStorage.getItem('GEO_PLATFORM_API_KEY');
-  if (!apiKey) {
+  const accessToken = getStoredAccessToken();
+  if (!accessToken) {
     return {};
   }
-  return { 'x-api-key': apiKey };
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+export function buildStreamUrl(path: string): string {
+  const resolvedUrl = new URL(path, getApiBase());
+  const accessToken = getStoredAccessToken();
+  if (accessToken && !resolvedUrl.searchParams.has('access_token')) {
+    resolvedUrl.searchParams.set('access_token', accessToken);
+  }
+  return resolvedUrl.toString();
+}
+
+export function buildWebSocketUrl(path: string): string {
+  const resolvedUrl = new URL(path, getApiBase());
+  if (resolvedUrl.protocol === 'http:') {
+    resolvedUrl.protocol = 'ws:';
+  } else if (resolvedUrl.protocol === 'https:') {
+    resolvedUrl.protocol = 'wss:';
+  }
+
+  const accessToken = getStoredAccessToken();
+  if (accessToken && !resolvedUrl.searchParams.has('access_token')) {
+    resolvedUrl.searchParams.set('access_token', accessToken);
+  }
+
+  return resolvedUrl.toString();
 }
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -26,8 +57,10 @@ async function readJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function startExecution(payload: GeoExecuteRequest): Promise<{ task_id: string; ws_url: string }> {
-  const response = await fetch(`${API_BASE}/api/geo/execute`, {
+export async function startExecution(
+  payload: GeoExecuteRequest,
+): Promise<{ task_id: string; stream_url: string; ws_url: string }> {
+  const response = await fetch(`${getApiBase()}/api/geo/execute`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -39,14 +72,14 @@ export async function startExecution(payload: GeoExecuteRequest): Promise<{ task
 }
 
 export async function fetchState(taskId: string): Promise<TaskStateResponse> {
-  const response = await fetch(`${API_BASE}/api/geo/${taskId}/state`, {
+  const response = await fetch(`${getApiBase()}/api/geo/${taskId}/state`, {
     headers: buildHeaders(),
   });
   return readJson(response);
 }
 
 export async function submitApproval(taskId: string, approved: boolean, action?: string): Promise<unknown> {
-  const response = await fetch(`${API_BASE}/api/geo/${taskId}/approval`, {
+  const response = await fetch(`${getApiBase()}/api/geo/${taskId}/approval`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -63,7 +96,7 @@ export async function submitApproval(taskId: string, approved: boolean, action?:
 }
 
 export async function postCommand(taskId: string, command: string, comment?: string): Promise<unknown> {
-  const response = await fetch(`${API_BASE}/api/geo/${taskId}/commands`, {
+  const response = await fetch(`${getApiBase()}/api/geo/${taskId}/commands`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -83,7 +116,7 @@ export async function fetchArtifact<T>(
   taskId: string,
   artifactName: string,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE}/api/geo/${taskId}/artifacts/${artifactName}`, {
+  const response = await fetch(`${getApiBase()}/api/geo/${taskId}/artifacts/${artifactName}`, {
     headers: buildHeaders(),
   });
   return readJson(response);
@@ -105,4 +138,3 @@ export async function fetchArtifacts(taskId: string): Promise<{
   ]);
   return { signal, draft, qa, questionGraph, evidenceMatrix };
 }
-

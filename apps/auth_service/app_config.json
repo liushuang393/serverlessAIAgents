@@ -72,6 +72,10 @@
       "health": "http://localhost:8010/health",
       "database": "postgresql://localhost:5438/auth_service"
     },
+    "hosts": {
+      "backend": "0.0.0.0",
+      "frontend": "0.0.0.0"
+    },
     "database": {
       "kind": "postgresql",
       "url": "postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service",
@@ -84,11 +88,11 @@
       "note": "Local/Docker とも PostgreSQL(auth-db) を利用"
     },
     "commands": {
-      "backend_dev": "AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service} AUTH_DB_AUTO_CREATE=${AUTH_DB_AUTO_CREATE:-true} python -m apps.auth_service.main",
-      "frontend_dev": "cd apps/auth_service/frontend && npm run dev -- --host 0.0.0.0 --port 3010",
-      "publish": "cd apps/auth_service && docker compose up --build -d",
-      "start": "cd apps/auth_service && docker compose up -d",
-      "stop": "cd apps/auth_service && docker compose down"
+      "backend_dev": "python apps/auth_service/scripts/dev.py",
+      "frontend_dev": "cd apps/auth_service/frontend && npm run dev",
+      "publish": "python apps/auth_service/scripts/compose.py publish",
+      "start": "python apps/auth_service/scripts/compose.py start",
+      "stop": "python apps/auth_service/scripts/compose.py stop"
     }
   },
   "tags": [

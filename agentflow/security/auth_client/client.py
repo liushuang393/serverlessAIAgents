@@ -86,6 +86,11 @@ class AuthClient:
         return self._config
 
     @property
+    def base_url(self) -> str:
+        """正規化済み auth_service ベース URL を返す."""
+        return self._config.base_url
+
+    @property
     def router(self) -> APIRouter:
         """auth_service へのプロキシルーターを返す.
 
@@ -136,6 +141,7 @@ class AuthClient:
                 azp=_clean_text(payload.get("azp")),
                 email=payload.get("email"),
                 permissions=_normalize_string_list(payload.get("permissions"), fallback=[]),
+                extra=dict(payload),
             )
         except ImportError:
             logger.exception("PyJWT がインストールされていません: pip install pyjwt")
@@ -185,6 +191,7 @@ class AuthClient:
                     email=user_data.get("email"),
                     mfa_enabled=bool(user_data.get("mfa_enabled", False)),
                     permissions=_normalize_string_list(user_data.get("permissions"), fallback=[]),
+                    extra=dict(user_data),
                 )
         except Exception as e:
             logger.warning("auth_service リモート検証失敗: %s", e)

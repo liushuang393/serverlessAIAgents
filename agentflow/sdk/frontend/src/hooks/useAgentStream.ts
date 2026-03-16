@@ -18,7 +18,20 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { AGUIEvent } from '../types/events';
+import {
+  getEventNumber,
+  getEventRecord,
+  getEventResult,
+  getEventString,
+  resolveAgentTarget,
+  type AGUIEvent,
+  type A2UIClearEvent,
+  type A2UIComponentEvent,
+  type A2UIUpdateEvent,
+  type ApprovalRequiredEvent,
+  type ApprovalSubmittedEvent,
+  type ClarificationRequiredEvent,
+} from '../types/events';
 
 // ========================================
 // 型定義
@@ -72,6 +85,21 @@ export interface UseAgentStreamConfig<TResult = unknown> {
   
   /** 接続時コールバック */
   onConnect?: () => void;
+
+  /** 任意イベント購読 */
+  onEvent?: (event: AGUIEvent) => void;
+
+  /** 承認要求イベント */
+  onApprovalRequired?: (event: ApprovalRequiredEvent) => void;
+
+  /** 承認結果イベント */
+  onApprovalSubmitted?: (event: ApprovalSubmittedEvent) => void;
+
+  /** 補足要求イベント */
+  onClarificationRequired?: (event: ClarificationRequiredEvent) => void;
+
+  /** A2UI surface イベント */
+  onA2UIEvent?: (event: A2UIComponentEvent | A2UIUpdateEvent | A2UIClearEvent) => void;
 }
 
 /** ストリーム状態 */
@@ -129,6 +157,11 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
     onComplete,
     onError,
     onConnect,
+    onEvent,
+    onApprovalRequired,
+    onApprovalSubmitted,
+    onClarificationRequired,
+    onA2UIEvent,
   } = config;
 
   // 初期 Agent 状態を生成
@@ -152,6 +185,7 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
   const eventSourceRef = useRef<EventSource | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastParamsRef = useRef<TParams | null>(null);
+  const connectionStateRef = useRef({ isConnected: false, isComplete: false });
 
   // ========================================
   // ユーティリティ関数
@@ -164,12 +198,19 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
     }
   }, []);
 
+  const syncConnectionState = useCallback((updates: Partial<{ isConnected: boolean; isComplete: boolean }>) => {
+    connectionStateRef.current = {
+      ...connectionStateRef.current,
+      ...updates,
+    };
+  }, []);
+
   const updateAgent = useCallback(
     (agentId: string, updates: Partial<AgentProgress>) => {
       setState((prev) => ({
         ...prev,
         agents: prev.agents.map((a) =>
-          a.id === agentId ? { ...a, ...updates } : a
+          a.id === agentId || a.name === agentId || a.label === agentId ? { ...a, ...updates } : a
         ),
       }));
     },
@@ -182,34 +223,39 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
 
   const handleEvent = useCallback(
     (event: AGUIEvent) => {
+      onEvent?.(event);
+      const agentId = resolveAgentTarget(event);
+
       switch (event.event_type) {
         case 'flow.start':
+          syncConnectionState({ isConnected: true, isComplete: false });
           setState((prev) => ({ ...prev, isConnected: true, error: null }));
           onConnect?.();
           break;
 
         case 'node.start':
-          if ('node_id' in event) {
-            updateAgent(event.node_id as string, {
+          if (agentId) {
+            const agentName = getEventString(event, 'node_name', 'agent', 'task_id') || agentId;
+            updateAgent(agentId, {
               status: 'running',
               progress: 10,
-              message: `${(event as { node_name?: string }).node_name || event.node_id} 処理開始...`,
+              message: `${agentName} 処理開始...`,
             });
           }
           break;
 
         case 'progress':
-          if ('node_id' in event && 'percentage' in event) {
-            updateAgent(event.node_id as string, {
-              progress: event.percentage as number,
-              message: (event as { message?: string }).message || '',
+          if (agentId) {
+            updateAgent(agentId, {
+              progress: getEventNumber(event, 'percentage') ?? 0,
+              message: getEventString(event, 'message') || '',
             });
           }
           break;
 
         case 'node.complete':
-          if ('node_id' in event) {
-            updateAgent(event.node_id as string, {
+          if (agentId) {
+            updateAgent(agentId, {
               status: 'completed',
               progress: 100,
               message: '完了',
@@ -219,43 +265,99 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
           break;
 
         case 'node.error':
-          if ('node_id' in event) {
-            updateAgent(event.node_id as string, {
+          if (agentId) {
+            updateAgent(agentId, {
               status: 'failed',
-              message: (event as { error_message?: string }).error_message || 'エラー発生',
+              message: getEventString(event, 'error_message', 'error', 'message') || 'エラー発生',
             });
           }
           break;
 
         case 'flow.complete': {
-          const result = event.data as TResult;
+          const result = getEventResult<TResult>(event);
+          syncConnectionState({ isConnected: false, isComplete: true });
           setState((prev) => ({
             ...prev,
+            isConnected: false,
             isComplete: true,
             result,
           }));
           eventSourceRef.current?.close();
-          onComplete?.(result);
+          if (result !== null) {
+            onComplete?.(result);
+          }
           break;
         }
 
         case 'flow.error':
+          syncConnectionState({ isConnected: false, isComplete: true });
           setState((prev) => ({
             ...prev,
-            error: (event as { error_message?: string }).error_message || 'フロー実行エラー',
+            isConnected: false,
+            error: getEventString(event, 'error_message', 'error', 'message') || 'フロー実行エラー',
             isRetryable: true,
           }));
           eventSourceRef.current?.close();
-          onError?.((event as { error_message?: string }).error_message || 'エラー');
+          onError?.(getEventString(event, 'error_message', 'error', 'message') || 'エラー');
+          break;
+
+        case 'approval_required':
+          onApprovalRequired?.(event as ApprovalRequiredEvent);
+          if (agentId) {
+            updateAgent(agentId, {
+              status: 'running',
+              message: getEventString(event, 'reason', 'message') || '承認待ち',
+            });
+          }
+          break;
+
+        case 'approval_submitted':
+          onApprovalSubmitted?.(event as ApprovalSubmittedEvent);
+          if (agentId) {
+            updateAgent(agentId, {
+              message: getEventString(event, 'comment', 'message') || '承認結果を受信',
+            });
+          }
+          break;
+
+        case 'clarification.required':
+          onClarificationRequired?.(event as ClarificationRequiredEvent);
+          break;
+
+        case 'a2ui.component':
+        case 'a2ui.update':
+        case 'a2ui.clear':
+          onA2UIEvent?.(
+            event as A2UIComponentEvent | A2UIUpdateEvent | A2UIClearEvent
+          );
+          if (agentId) {
+            updateAgent(agentId, {
+              message:
+                getEventString(event, 'surface_id', 'message') ||
+                JSON.stringify(getEventRecord(event, 'component', 'updates') || {}),
+            });
+          }
           break;
       }
     },
-    [updateAgent, onConnect, onComplete, onError]
+    [
+      syncConnectionState,
+      updateAgent,
+      onA2UIEvent,
+      onApprovalRequired,
+      onApprovalSubmitted,
+      onClarificationRequired,
+      onComplete,
+      onConnect,
+      onError,
+      onEvent,
+    ]
   );
 
   const handleConnectionError = useCallback(
     (errorMessage: string, isRetryable: boolean) => {
       clearConnectionTimeout();
+      syncConnectionState({ isConnected: false });
       setState((prev) => ({
         ...prev,
         isConnected: false,
@@ -264,7 +366,7 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
       }));
       onError?.(errorMessage);
     },
-    [clearConnectionTimeout, onError]
+    [clearConnectionTimeout, onError, syncConnectionState]
   );
 
   // ========================================
@@ -290,6 +392,7 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
         agents: initialAgents,
         result: null,
       });
+      syncConnectionState({ isConnected: false, isComplete: false });
 
       // URL 構築
       const searchParams = new URLSearchParams();
@@ -307,6 +410,7 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
 
       eventSource.onopen = () => {
         clearConnectionTimeout();
+        syncConnectionState({ isConnected: true, isComplete: false });
         setState((prev) => ({
           ...prev,
           isConnected: true,
@@ -339,7 +443,7 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
 
       // タイムアウト設定
       timeoutRef.current = setTimeout(() => {
-        if (!state.isConnected && !state.isComplete) {
+        if (!connectionStateRef.current.isConnected && !connectionStateRef.current.isComplete) {
           eventSource.close();
           handleConnectionError('接続がタイムアウトしました。再試行してください。', true);
         }
@@ -352,10 +456,9 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
       connectionTimeout,
       autoReconnect,
       clearConnectionTimeout,
+      syncConnectionState,
       handleEvent,
       handleConnectionError,
-      state.isConnected,
-      state.isComplete,
     ]
   );
 
@@ -364,8 +467,9 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
     eventSourceRef.current?.close();
     eventSourceRef.current = null;
     lastParamsRef.current = null;
+    syncConnectionState({ isConnected: false });
     setState((prev) => ({ ...prev, isConnected: false }));
-  }, [clearConnectionTimeout]);
+  }, [clearConnectionTimeout, syncConnectionState]);
 
   const retry = useCallback(() => {
     const params = lastParamsRef.current;
@@ -397,4 +501,3 @@ export function useAgentStream<TResult = unknown, TParams = Record<string, unkno
     retry,
   };
 }
-

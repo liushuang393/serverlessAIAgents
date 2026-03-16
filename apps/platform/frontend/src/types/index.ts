@@ -15,6 +15,12 @@ export interface RuntimeUrls {
   database: string | null;
 }
 
+/** ランタイム bind host */
+export interface RuntimeHosts {
+  backend: string | null;
+  frontend: string | null;
+}
+
 /** DB 接続情報 */
 export interface RuntimeDatabase {
   kind: string | null;
@@ -61,6 +67,7 @@ export interface RuntimeCLIConfig {
 /** ランタイム設定 */
 export interface RuntimeConfig {
   urls: RuntimeUrls;
+  hosts: RuntimeHosts;
   database: RuntimeDatabase;
   commands: RuntimeCommands;
   cli: RuntimeCLIConfig;

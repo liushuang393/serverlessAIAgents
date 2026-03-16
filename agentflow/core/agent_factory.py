@@ -232,6 +232,7 @@ class AgentFactory:
     def from_module(
         module_path: str,
         *,
+        class_name: str | None = None,
         llm_client: Any = None,
         init_kwargs: dict[str, Any] | None = None,
         hub: LocalA2AHub | None = None,
@@ -269,25 +270,36 @@ class AgentFactory:
             raise AgentInstantiationError("(unknown)", module_path, e) from e
 
         # モジュール内の Agent サブクラスを検索
-        # 優先順位: ResilientAgent > AgentBlock > @agent デコレータ
+        # 優先順位:
+        # 1. class_name で指定された正確なクラス
+        # 2. ResilientAgent サブクラス
+        # 3. AgentBlock サブクラス
+        # 4. @agent デコレータ登録クラス
         agent_cls: type[Any] | None = None
         fallback_cls: type[Any] | None = None
         decorated_cls: type[Any] | None = None
 
-        for _attr_name, obj in inspect.getmembers(module, inspect.isclass):
-            if obj.__module__ != module_path:
-                continue
-            if issubclass(obj, ResilientAgent) and obj is not ResilientAgent:
-                agent_cls = obj
-                break
-            if issubclass(obj, AgentBlock) and obj is not AgentBlock and fallback_cls is None:
-                fallback_cls = obj
-            # @agent デコレータで登録されたクラスを検出
-            if hasattr(obj, "_agent_registered") and decorated_cls is None:
-                decorated_cls = obj
+        if class_name:
+            resolved_obj = getattr(module, class_name, None)
+            if resolved_obj is None or not inspect.isclass(resolved_obj):
+                msg = f"Class '{class_name}' not found in module '{module_path}'"
+                raise AgentInstantiationError(class_name, module_path, AttributeError(msg))
+            agent_cls = resolved_obj
+        else:
+            for _attr_name, obj in inspect.getmembers(module, inspect.isclass):
+                if obj.__module__ != module_path:
+                    continue
+                if issubclass(obj, ResilientAgent) and obj is not ResilientAgent:
+                    agent_cls = obj
+                    break
+                if issubclass(obj, AgentBlock) and obj is not AgentBlock and fallback_cls is None:
+                    fallback_cls = obj
+                # @agent デコレータで登録されたクラスを検出
+                if hasattr(obj, "_agent_registered") and decorated_cls is None:
+                    decorated_cls = obj
 
-        if agent_cls is None:
-            agent_cls = fallback_cls
+            if agent_cls is None:
+                agent_cls = fallback_cls
 
         # @agent デコレータ経由の場合: RegisteredAgent から直接インスタンスを取得
         if agent_cls is None and decorated_cls is not None:
@@ -348,6 +360,7 @@ class AgentFactory:
         *,
         llm_client: Any = None,
         hub: LocalA2AHub | None = None,
+        agent_init_overrides: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, ResilientAgent[Any, Any]]:
         """app_config.json の agents[] から全 Agent をインスタンス化.
 
@@ -374,20 +387,33 @@ class AgentFactory:
 
         for agent_entry in agents_config:
             module_path = agent_entry.get("module")
+            class_name = agent_entry.get("class_name")
             agent_name = agent_entry.get("name", "(unknown)")
 
             if module_path is None:
                 _logger.warning("Agent %s has no module path, skipping", agent_name)
                 continue
 
+            if not class_name:
+                _logger.warning(
+                    "Agent %s has no class_name; falling back to module scan compatibility path",
+                    agent_name,
+                )
+
             # app_config.json の init_kwargs を取得
             entry_init_kwargs = agent_entry.get("init_kwargs")
+            merged_init_kwargs: dict[str, Any] = {}
+            if isinstance(entry_init_kwargs, dict):
+                merged_init_kwargs.update(entry_init_kwargs)
+            override_kwargs = agent_init_overrides.get(agent_name, {}) if agent_init_overrides else {}
+            merged_init_kwargs.update(override_kwargs)
 
             try:
                 instance = AgentFactory.from_module(
                     module_path,
+                    class_name=class_name,
                     llm_client=llm_client,
-                    init_kwargs=entry_init_kwargs,
+                    init_kwargs=merged_init_kwargs,
                     hub=hub,
                 )
                 resolved_name = getattr(instance, "name", None) or agent_name

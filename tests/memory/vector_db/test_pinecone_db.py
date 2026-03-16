@@ -12,7 +12,7 @@ from agentflow.memory.vector_db.pinecone_db import PineconeDB
 @pytest.fixture
 def pinecone_db():
     """PineconeDBのフィクスチャ."""
-    with patch("agentflow.memory.vector_db.pinecone_db.Pinecone"):
+    with patch("infrastructure.memory.vector_db.pinecone_db.Pinecone"):
         db = PineconeDB(api_key="test-api-key", environment="us-west1-gcp", index_name="test-index")
         db._index = MagicMock()
         db._connected = True
@@ -42,7 +42,7 @@ def sample_embedding():
 @pytest.mark.asyncio
 async def test_connect():
     """接続テスト."""
-    with patch("agentflow.memory.vector_db.pinecone_db.Pinecone") as mock_pinecone:
+    with patch("infrastructure.memory.vector_db.pinecone_db.Pinecone") as mock_pinecone:
         mock_pc = MagicMock()
         mock_index = MagicMock()
         mock_pc.Index.return_value = mock_index
@@ -58,7 +58,7 @@ async def test_connect():
 @pytest.mark.asyncio
 async def test_connect_import_error():
     """Pineconeパッケージなしの接続テスト."""
-    with patch("agentflow.memory.vector_db.pinecone_db.Pinecone", side_effect=ImportError):
+    with patch("infrastructure.memory.vector_db.pinecone_db.Pinecone", side_effect=ImportError):
         db = PineconeDB(api_key="test-api-key", environment="us-west1-gcp", index_name="test-index")
 
         with pytest.raises(ImportError, match="pinecone-client package is required"):

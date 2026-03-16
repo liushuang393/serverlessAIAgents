@@ -186,6 +186,60 @@ class TestToolCatalogManager:
         assert "disabled_tool" not in names
 
     @pytest.mark.asyncio
+    async def test_get_for_llm_uses_custom_input_schema(self, catalog):
+        """input_schema が設定済みの場合、そのスキーマがパラメータとして使用される."""
+        custom_schema = {
+            "type": "object",
+            "properties": {
+                "expression": {"type": "string", "description": "数式"},
+            },
+            "required": ["expression"],
+        }
+        entry = CatalogEntry(
+            uri="tool://test/custom_schema",
+            name="custom_schema_tool",
+            description="カスタムスキーマツール",
+            source=CatalogSource.BUILTIN,
+            input_schema=custom_schema,
+        )
+        catalog._register(entry)
+        tools = catalog.get_for_llm()
+        matched = [t for t in tools if t["function"]["name"] == "custom_schema_tool"]
+        assert len(matched) == 1
+        params = matched[0]["function"]["parameters"]
+        assert params == custom_schema
+        # query フォールバックでないことを確認
+        assert "query" not in params.get("properties", {})
+
+    @pytest.mark.asyncio
+    async def test_get_for_llm_fallback_when_no_schema(self, catalog):
+        """input_schema が空の場合、汎用 query フォールバックが使用される."""
+        entry = CatalogEntry(
+            uri="tool://test/no_schema",
+            name="no_schema_tool",
+            description="スキーマなしツール",
+            source=CatalogSource.BUILTIN,
+        )
+        catalog._register(entry)
+        tools = catalog.get_for_llm()
+        matched = [t for t in tools if t["function"]["name"] == "no_schema_tool"]
+        assert len(matched) == 1
+        params = matched[0]["function"]["parameters"]
+        assert "query" in params["properties"]
+        assert params["properties"]["query"]["type"] == "string"
+
+    @pytest.mark.asyncio
+    async def test_catalog_entry_default_input_schema(self):
+        """CatalogEntry のデフォルト input_schema は空のオブジェクトスキーマ."""
+        entry = CatalogEntry(
+            uri="tool://test/default",
+            name="default_tool",
+            description="デフォルトツール",
+            source=CatalogSource.BUILTIN,
+        )
+        assert entry.input_schema == {"type": "object", "properties": {}}
+
+    @pytest.mark.asyncio
     async def test_get_stats(self, catalog):
         """統計情報が正しい形式."""
         await catalog.initialize()

@@ -109,6 +109,10 @@ class AGUIEventEmitter:
         except TimeoutError:
             self._logger.warning(f"Event queue full, dropping event: {event.event_type}")
 
+    async def emit(self, event: AGUIEvent) -> None:
+        """外部から AG-UI イベントを直接投入する."""
+        await self._emit_event(event)
+
     async def _on_flow_start(self, event: HookEvent) -> None:
         """フロー開始フックハンドラー.
 

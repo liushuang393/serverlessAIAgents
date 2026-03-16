@@ -44,6 +44,8 @@ class AgentInfo(BaseModel):
     Attributes:
         name: Agent 名（App 内で一意）
         module: Python モジュールパス（省略可）
+        class_name: Agent 実装クラス名（module と組で executable contract を構成）
+        init_kwargs: Agent 初期化引数
         capabilities: 能力タグ一覧
         business_base: Agent の業務基盤分類（省略時は推論）
         agent_type: Agent タイプ分類（省略時は推論）
@@ -52,6 +54,8 @@ class AgentInfo(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=100, description="Agent 名")
     module: str | None = Field(default=None, description="Python モジュールパス")
+    class_name: str | None = Field(default=None, description="Python クラス名")
+    init_kwargs: dict[str, Any] = Field(default_factory=dict, description="Agent 初期化引数")
     capabilities: list[CapabilityItem] = Field(
         default_factory=list,
         description=('能力タグ。レガシーフラット文字列（"rag"）または 3層構造 CapabilitySpec オブジェクトを混在可能。'),
@@ -76,6 +80,15 @@ class AgentInfo(BaseModel):
         if v is None:
             return None
         text = str(v).strip().lower()
+        return text or None
+
+    @field_validator("class_name", mode="before")
+    @classmethod
+    def normalize_class_name(cls, v: str | None) -> str | None:
+        """クラス名を正規化（空文字は None）."""
+        if v is None:
+            return None
+        text = str(v).strip()
         return text or None
 
 
@@ -137,6 +150,13 @@ class RuntimeUrlsConfig(BaseModel):
     frontend: str | None = Field(default=None, description="フロントエンドURL")
     health: str | None = Field(default=None, description="ヘルスチェックURL")
     database: str | None = Field(default=None, description="DB 接続URL（表示用）")
+
+
+class RuntimeHostsConfig(BaseModel):
+    """ランタイム bind host 設定."""
+
+    backend: str | None = Field(default=None, description="バックエンド bind host")
+    frontend: str | None = Field(default=None, description="フロントエンド bind host")
 
 
 class RuntimeDatabaseConfig(BaseModel):
@@ -206,6 +226,7 @@ class RuntimeConfig(BaseModel):
     """ランタイム設定."""
 
     urls: RuntimeUrlsConfig = Field(default_factory=RuntimeUrlsConfig, description="URL 設定")
+    hosts: RuntimeHostsConfig = Field(default_factory=RuntimeHostsConfig, description="bind host 設定")
     database: RuntimeDatabaseConfig = Field(
         default_factory=RuntimeDatabaseConfig,
         description="DB 接続設定",

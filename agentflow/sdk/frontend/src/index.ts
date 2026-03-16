@@ -59,6 +59,12 @@ export {
 } from './hooks/useAgentStream';
 
 export {
+  useA2UISurfaces,
+  type A2UIEvent,
+  type A2UISurfaceMap,
+} from './hooks/useA2UISurfaces';
+
+export {
   useErrorHandler,
   type UseErrorHandlerConfig,
   type UseErrorHandlerReturn,
@@ -104,6 +110,11 @@ export {
 } from './components/AgentProgress';
 
 export {
+  A2UISurface,
+  type A2UISurfaceProps,
+} from './components/A2UISurface';
+
+export {
   Notification,
   NotificationProvider,
   useNotification,
@@ -133,9 +144,20 @@ export type {
   NodeErrorEvent,
   ProgressEvent,
   LogEvent,
+  ClarificationRequiredEvent,
+  ApprovalRequiredEvent as ApprovalRequiredAGUIEvent,
+  ApprovalSubmittedEvent as ApprovalSubmittedAGUIEvent,
+  A2UIComponentNode,
+  A2UIComponentEvent,
+  A2UIUpdateEvent,
+  A2UIClearEvent,
 } from './types/events';
 
 export {
+  getEventNumber,
+  getEventRecord,
+  getEventResult,
+  getEventString,
   isFlowStartEvent,
   isFlowCompleteEvent,
   isFlowErrorEvent,
@@ -143,6 +165,7 @@ export {
   isNodeCompleteEvent,
   isNodeErrorEvent,
   isProgressEvent,
+  resolveAgentTarget,
 } from './types/events';
 
 // ========================================

@@ -120,6 +120,8 @@ class FrameworkAuditService:
         issues.extend(self._check_agent_modules(app_config))
         issues.extend(self._check_runtime_ports(app_config))
         issues.extend(self._check_entry_points(app_config, app_dir, source_text))
+        issues.extend(self._check_frontend_runtime_contract(app_config, app_dir))
+        issues.extend(self._check_compose_runtime_contract(app_config, app_dir))
         issues.extend(self._check_engine_pattern(app_config, source_text))
         issues.extend(self._check_framework_usage(app_config, source_text))
         issues.extend(self._check_contract_consistency(app_config))
@@ -151,6 +153,8 @@ class FrameworkAuditService:
 
     def _check_agent_modules(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:
         issues: list[FrameworkAuditIssue] = []
+        executable_declared = False
+        executable_count = 0
         for agent in app_config.agents:
             module = agent.module
             if not isinstance(module, str) or not module.strip():
@@ -164,11 +168,28 @@ class FrameworkAuditService:
                 )
                 continue
 
+            if not isinstance(agent.class_name, str) or not agent.class_name.strip():
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity="warning",
+                        code="AGENT_CLASS_NAME_MISSING",
+                        message=f"agent '{agent.name}' に class_name 指定がありません",
+                        hint="module + class_name を executable contract として明示してください",
+                    ),
+                )
+            else:
+                executable_declared = True
+
             if module.startswith(("apps.", "agentflow.")):
                 module_path = Path(*module.split("."))
                 file_path = module_path.with_suffix(".py")
                 package_path = module_path / "__init__.py"
-                if not file_path.is_file() and not package_path.is_file():
+                source_path: Path | None = None
+                if file_path.is_file():
+                    source_path = file_path
+                elif package_path.is_file():
+                    source_path = package_path
+                if source_path is None:
                     issues.append(
                         FrameworkAuditIssue(
                             severity="error",
@@ -177,6 +198,38 @@ class FrameworkAuditService:
                             hint="module パスを実在ファイルへ修正してください",
                         ),
                     )
+                    continue
+
+                if isinstance(agent.class_name, str) and agent.class_name.strip():
+                    source_text = source_path.read_text(encoding="utf-8")
+                    class_pattern = re.compile(rf"class\s+{re.escape(agent.class_name)}\b")
+                    if not class_pattern.search(source_text):
+                        issues.append(
+                            FrameworkAuditIssue(
+                                severity="error",
+                                code="AGENT_CLASS_NOT_FOUND",
+                                message=(
+                                    f"agent '{agent.name}' class_name が module 内で見つかりません: "
+                                    f"{module}.{agent.class_name}"
+                                ),
+                                hint="class_name を実装クラス名へ修正してください",
+                            ),
+                        )
+                    else:
+                        executable_count += 1
+
+        if executable_declared and executable_count != len(app_config.agents):
+            issues.append(
+                FrameworkAuditIssue(
+                    severity="error",
+                    code="AGENT_EXECUTABLE_COUNT_MISMATCH",
+                    message=(
+                        f"manifest agents({len(app_config.agents)}) と executable agents({executable_count}) "
+                        "の件数が一致しません"
+                    ),
+                    hint="全 agents[] に有効な module + class_name を設定してください",
+                ),
+            )
         return issues
 
     def _check_plugin_bindings(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:
@@ -384,6 +437,120 @@ class FrameworkAuditService:
                     ),
                 )
 
+        return issues
+
+    def _check_frontend_runtime_contract(
+        self,
+        app_config: AppConfig,
+        app_dir: Path | None,
+    ) -> list[FrameworkAuditIssue]:
+        """Check Vite dev server and proxy literals against the manifest."""
+        if app_dir is None:
+            return []
+
+        frontend_dir = app_dir / "frontend"
+        if not frontend_dir.is_dir():
+            return []
+
+        config_path: Path | None = None
+        for candidate in ("vite.config.ts", "vite.config.js"):
+            path = frontend_dir / candidate
+            if path.is_file():
+                config_path = path
+                break
+        if config_path is None:
+            return []
+
+        text = config_path.read_text(encoding="utf-8", errors="ignore")
+        issues: list[FrameworkAuditIssue] = []
+
+        frontend_port = app_config.ports.frontend
+        if frontend_port is not None:
+            match = re.search(r"\bport\s*:\s*(\d+)", text)
+            if match is not None and int(match.group(1)) != frontend_port:
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity="warning",
+                        code="FRONTEND_DEV_PORT_MISMATCH",
+                        message=(
+                            f"frontend Vite port ({match.group(1)}) が ports.frontend ({frontend_port}) と一致しません"
+                        ),
+                        hint="Vite dev server の port は app_config.json の ports.frontend を参照してください",
+                    )
+                )
+
+        backend_port = app_config.ports.api
+        if backend_port is not None:
+            for match in re.finditer(r"http://(?:localhost|127\.0\.0\.1):(\d+)", text):
+                actual_port = int(match.group(1))
+                if actual_port == backend_port:
+                    continue
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity="warning",
+                        code="FRONTEND_PROXY_PORT_MISMATCH",
+                        message=(
+                            f"frontend proxy target port ({actual_port}) が ports.api ({backend_port}) と一致しません"
+                        ),
+                        hint="Vite proxy target は app_config.json の ports.api から解決してください",
+                    )
+                )
+                break
+
+        return issues
+
+    def _check_compose_runtime_contract(
+        self,
+        app_config: AppConfig,
+        app_dir: Path | None,
+    ) -> list[FrameworkAuditIssue]:
+        """Check docker compose backend port drift against the manifest."""
+        if app_dir is None:
+            return []
+
+        compose_path: Path | None = None
+        for candidate in ("docker-compose.yml", "compose.yml"):
+            path = app_dir / candidate
+            if path.is_file():
+                compose_path = path
+                break
+        if compose_path is None:
+            return []
+
+        text = compose_path.read_text(encoding="utf-8", errors="ignore")
+        issues: list[FrameworkAuditIssue] = []
+        backend_port = app_config.ports.api
+        if backend_port is None:
+            return issues
+
+        port_match = re.search(r"(?P<published>\d+|\$\{[A-Z0-9_]+:-?\d+\}):(?P<target>\d+)", text)
+        if port_match is not None:
+            target_port = int(port_match.group("target"))
+            if target_port != backend_port:
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity="warning",
+                        code="COMPOSE_BACKEND_PORT_MISMATCH",
+                        message=(
+                            f"docker compose backend target port ({target_port}) が ports.api ({backend_port}) と一致しません"
+                        ),
+                        hint="backend service の listen / published port は app_config.json の ports.api と揃えてください",
+                    )
+                )
+                return issues
+
+        health_match = re.search(r"http://localhost:(\d+)/(?:health|api/health|healthz)", text)
+        if health_match is not None and int(health_match.group(1)) != backend_port:
+            issues.append(
+                FrameworkAuditIssue(
+                    severity="warning",
+                    code="COMPOSE_HEALTHCHECK_PORT_MISMATCH",
+                    message=(
+                        f"docker compose healthcheck port ({health_match.group(1)}) が ports.api ({backend_port}) と一致しません"
+                    ),
+                    hint="compose の backend healthcheck も app_config.json の ports.api に揃えてください",
+                )
+            )
         return issues
 
     def _check_contract_consistency(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:

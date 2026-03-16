@@ -30,6 +30,7 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
   "dependencies": { "database": "postgresql", "redis": false, "external": [] },
   "runtime": {
     "urls": { "backend": null, "frontend": null, "health": null, "database": null },
+    "hosts": { "backend": "0.0.0.0", "frontend": null },
     "database": { "kind": null, "url": null, "host": null, "port": null, "name": null, "user": null, "password": null, "password_env": null, "note": null },
     "commands": { "backend_dev": null, "frontend_dev": null, "publish": null, "start": null, "stop": null }
   },

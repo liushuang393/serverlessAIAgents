@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from agentflow.knowledge.resource_manager import ResourceDefinition, ResourceManager
+from agentflow.security.auth_client.client import AuthClient
 
 
 class TestResourceManager:
@@ -56,3 +57,8 @@ class TestResourceManager:
         rd = ResourceManager._to_definition(data)
         assert rd.id == "rd-abc"
         assert rd.metadata == {"key": "value"}
+
+    def test_real_auth_client_config_base_url_is_used(self) -> None:
+        """実際の AuthClient でも config.base_url を解決できる."""
+        manager = ResourceManager(auth_client=AuthClient(base_url="http://auth-service:8010/"))
+        assert manager._base_url == "http://auth-service:8010"

@@ -68,10 +68,14 @@
   },
   "runtime": {
     "urls": {
-      "backend": "http://localhost:8000",
-      "frontend": "http://localhost:3100",
-      "health": "http://localhost:8000/health",
+      "backend": "http://localhost:8900",
+      "frontend": "http://localhost:3200",
+      "health": "http://localhost:8900/health",
       "database": null
+    },
+    "hosts": {
+      "backend": "0.0.0.0",
+      "frontend": "0.0.0.0"
     },
     "database": {
       "kind": null,

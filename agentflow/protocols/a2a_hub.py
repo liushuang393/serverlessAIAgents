@@ -17,7 +17,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from agentflow.protocols.a2a_card import AgentCard, AgentSkill
+from agentflow.protocols.a2a_card import AgentCapabilities, AgentCard, AgentSkill
+
 
 if TYPE_CHECKING:
     from agentflow.core.resilient_agent import ResilientAgent
@@ -53,24 +54,29 @@ class LocalA2AHub:
 
     def register(
         self,
-        agent_instance: ResilientAgent[Any, Any],
+        agent_instance: Any,
         *,
         card: AgentCard | None = None,
+        replace: bool = False,
     ) -> AgentCard:
         """Agent をハブに登録.
 
+        ResilientAgent 以外のインスタンス（@agent デコレータ生成等）も
+        name 属性と run() メソッドがあれば登録可能。
+
         Args:
-            agent_instance: ResilientAgent インスタンス
+            agent_instance: Agent インスタンス（name/run 属性必須）
             card: 明示的な AgentCard（None の場合は自動生成）
+            replace: True の場合、既存の同名 Agent を上書き
 
         Returns:
             登録された AgentCard
 
         Raises:
-            ValueError: 同名 Agent が既に登録されている場合
+            ValueError: 同名 Agent が既に登録されていて replace=False の場合
         """
         name = getattr(agent_instance, "name", None) or type(agent_instance).__name__
-        if name in self._agents:
+        if name in self._agents and not replace:
             msg = f"Agent already registered: {name}"
             raise ValueError(msg)
 
@@ -199,11 +205,21 @@ class LocalA2AHub:
             output_schema=output_schema,
         )
 
+        # capabilities を自動設定（ストリーミング対応は run_stream の有無で判定）
+        has_streaming = hasattr(agent_instance, "run_stream") and callable(getattr(agent_instance, "run_stream", None))
+        capabilities = AgentCapabilities(
+            streaming=has_streaming,
+            push_notifications=False,
+            state_transition_history=True,
+        )
+
         return AgentCard(
             name=agent_name,
             description=getattr(agent_instance, "__doc__", "") or f"Agent: {agent_name}",
             version="1.0.0",
             skills=[skill],
+            capabilities=capabilities,
+            url=f"local://{agent_name}",
             metadata={
                 "timeout_seconds": getattr(agent_instance, "timeout_seconds", None),
                 "max_retries": getattr(agent_instance, "max_retries", None),
@@ -224,7 +240,7 @@ def get_hub() -> LocalA2AHub:
     Returns:
         LocalA2AHub インスタンス（初回呼び出し時に自動生成）
     """
-    global _global_hub  # noqa: PLW0603
+    global _global_hub
     if _global_hub is None:
         _global_hub = LocalA2AHub()
     return _global_hub
@@ -232,8 +248,7 @@ def get_hub() -> LocalA2AHub:
 
 def reset_hub() -> None:
     """グローバル LocalA2AHub をリセット（テスト用）."""
-    global _global_hub  # noqa: PLW0603
+    global _global_hub
     if _global_hub is not None:
         _global_hub.clear()
     _global_hub = None
-

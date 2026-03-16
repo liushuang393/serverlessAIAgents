@@ -158,6 +158,37 @@ const formatRuntimeStatus = (status: string | null | undefined): string => {
   }
 };
 
+const engineBadgeStatus = (
+  engine: LLMInferenceEngineConfigItem,
+  runtime: LLMEngineRuntimeStatus | undefined,
+): string => {
+  if (engine.deployment_status && ['failed', 'stop_failed', 'stopped'].includes(engine.deployment_status)) {
+    return engine.deployment_status;
+  }
+  if (runtime?.status === 'available') {
+    return 'available';
+  }
+  if (engine.deployment_status === 'running') {
+    return 'running';
+  }
+  return runtime?.status ?? engine.deployment_status ?? 'unknown';
+};
+
+const engineBadgeToneClass = (status: string): string => {
+  switch (status) {
+    case 'available':
+    case 'running':
+      return 'bg-emerald-500/10 text-emerald-300';
+    case 'stopped':
+      return 'bg-slate-700 text-slate-200';
+    case 'failed':
+    case 'stop_failed':
+      return 'bg-rose-500/10 text-rose-300';
+    default:
+      return 'bg-amber-500/10 text-amber-300';
+  }
+};
+
 const pickCatalogModel = (
   catalog: LLMCatalogResponse,
   options: {
@@ -255,52 +286,41 @@ const buildProviderEffectiveness = (
 ): { label: string; detail: string; toneClass: string } => {
   if (!provider.enabled) {
     return {
-      label: '未有効',
+      label: '利用不可',
       detail: 'provider は無効化されています。',
-      toneClass: 'bg-slate-700 text-slate-200',
-    };
-  }
-
-  if (provider.api_key_env) {
-    if (runtime?.status === 'available') {
-      return {
-        label: '確認済み',
-        detail: `${formatSecretSource(provider.secret_status.source)} から API Key を解決できました。`,
-        toneClass: 'bg-emerald-500/10 text-emerald-300',
-      };
-    }
-    return {
-      label: '未有効',
-      detail: runtime?.last_error ?? 'API Key が未設定です。',
       toneClass: 'bg-rose-500/10 text-rose-300',
     };
   }
 
   const relatedModels = models.filter((item) => item.provider === provider.name && item.enabled);
   const linkedEngineNames = uniqueStrings(relatedModels.map((item) => item.engine));
-  if (linkedEngineNames.length === 0) {
-    return {
-      label: '要確認',
-      detail: '紐づく engine がないため、/v1/models または /health を手動確認してください。',
-      toneClass: 'bg-amber-500/10 text-amber-300',
-    };
-  }
-
-  const linkedEngineStatuses = linkedEngineNames.map((engineName) => engines.find((item) => item.name === engineName));
-  const allHealthy = linkedEngineStatuses.length > 0 && linkedEngineStatuses.every((item) => item?.status === 'available');
-  if (allHealthy) {
+  if (runtime?.status === 'available') {
     return {
       label: '確認済み',
-      detail: `${linkedEngineNames.join(', ')} のヘルスチェックに成功しました。`,
+      detail: provider.api_key_env
+        ? `${formatSecretSource(provider.secret_status.source)} から API Key を解決できました。`
+        : runtime.source
+          ? `${runtime.source} の確認に成功しました。`
+          : 'runtime probe に成功しました。',
       toneClass: 'bg-emerald-500/10 text-emerald-300',
     };
   }
 
+  if (runtime?.last_error) {
+    return {
+      label: '利用不可',
+      detail: runtime.last_error,
+      toneClass: 'bg-rose-500/10 text-rose-300',
+    };
+  }
+
+  const linkedEngineStatuses = linkedEngineNames.map((engineName) => engines.find((item) => item.name === engineName));
   const failedReasons = linkedEngineStatuses
-    .map((item, index) => `${linkedEngineNames[index]}: ${item?.last_error?.trim() || 'disabled_or_unreachable'}`);
+    .map((item, index) => `${linkedEngineNames[index]}: ${item?.last_error?.trim() || 'disabled_or_unreachable'}`)
+    .filter(Boolean);
   return {
-    label: '未有効',
-    detail: failedReasons.join(' / '),
+    label: '利用不可',
+    detail: failedReasons.join(' / ') || (provider.api_key_env ? 'API Key が未設定です。' : 'runtime probe に失敗しました。'),
     toneClass: 'bg-rose-500/10 text-rose-300',
   };
 };
@@ -1546,6 +1566,7 @@ export function LLMManagement() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {overview.inference_engines.map((engine) => {
               const runtime = engineRuntime.find((item) => item.name === engine.name);
+              const status = engineBadgeStatus(engine, runtime);
               return (
                 <div key={engine.name} className="bg-slate-950/70 border border-slate-800 rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
@@ -1553,8 +1574,8 @@ export function LLMManagement() {
                       <h3 className="text-sm font-semibold text-slate-100">{engine.name}</h3>
                       <p className="text-xs text-slate-500 mt-1">{engine.engine_type} / {engine.deployment_mode}</p>
                     </div>
-                    <span className={`text-[11px] px-2 py-1 rounded-full ${runtime?.status === 'available' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'}`}>
-                      {formatRuntimeStatus(runtime?.status ?? engine.deployment_status)}
+                    <span className={`text-[11px] px-2 py-1 rounded-full ${engineBadgeToneClass(status)}`}>
+                      {formatRuntimeStatus(status)}
                     </span>
                   </div>
                   <div className="text-xs text-slate-300 space-y-1">
@@ -1564,9 +1585,16 @@ export function LLMManagement() {
                     <p>モデル: <span className="text-slate-100">{engine.served_model_name ?? '未設定'}</span></p>
                     <p>Docker イメージ: <span className="text-slate-100 break-all">{engine.docker_image ?? '未設定'}</span></p>
                     <p>Compose ファイル: <span className="text-slate-100 break-all">{engine.compose_path ?? '未生成'}</span></p>
-                    <p>確認方法: <span className="text-slate-100">まず app 側ポートと衝突していないか確認し、その後 `/health` が 2xx を返すか確認してください。</span></p>
-                    {runtime?.last_error && <p className="text-amber-300">未通過理由: {runtime.last_error}</p>}
-                    {engine.deployment_error && runtime?.status !== 'available' && (
+                    {status === 'running' && (
+                      <p className="text-amber-300">
+                        起動コマンドは成功しましたが、runtime probe はまだ通過していません。
+                        {runtime?.last_error ? ` ${runtime.last_error}` : ''}
+                      </p>
+                    )}
+                    {runtime?.last_error && status !== 'running' && status !== 'available' && (
+                      <p className="text-amber-300">未通過理由: {runtime.last_error}</p>
+                    )}
+                    {engine.deployment_error && ['failed', 'stop_failed'].includes(status) && (
                       <p className="text-red-300">エラー: {engine.deployment_error}</p>
                     )}
                   </div>
@@ -1753,7 +1781,7 @@ export function LLMManagement() {
         </div>
       </section>
 
-      {(lastPreflight || lastSwitch || diagnostics) && (
+      {(lastPreflight || lastSwitch || lastEngineAction || diagnostics) && (
         <section className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-3">
           <h2 className="text-sm font-semibold text-slate-100">直近の結果</h2>
           {diagnostics && (
@@ -1787,6 +1815,20 @@ export function LLMManagement() {
               <p className="text-xs text-slate-300">配備結果: {lastEngineAction.message}</p>
               <p className="text-xs text-slate-400">対象: {lastEngineAction.engine.name}</p>
               <p className="text-xs text-slate-400">状態: {formatRuntimeStatus(lastEngineAction.engine.deployment_status)}</p>
+              {lastEngineAction.command
+                && (lastEngineAction.command.stdout
+                  || lastEngineAction.command.stderr
+                  || lastEngineAction.command.error) && (
+                <pre className={`mt-2 whitespace-pre-wrap rounded-lg border p-3 text-[11px] ${
+                  lastEngineAction.success
+                    ? 'border-slate-700 bg-slate-950 text-slate-300'
+                    : 'border-rose-900/60 bg-rose-950/40 text-rose-200'
+                }`}>
+                  {lastEngineAction.command.stdout
+                    || lastEngineAction.command.stderr
+                    || lastEngineAction.command.error}
+                </pre>
+              )}
             </div>
           )}
         </section>

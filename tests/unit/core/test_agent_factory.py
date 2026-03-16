@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import json
+import sys
+from pathlib import Path
+
 from agentflow.core.agent_factory import (
     AgentFactorySpec,
     AgentSharedContext,
+    AgentFactory,
     TieredMemory,
     create,
 )
+from agentflow.protocols.a2a_hub import LocalA2AHub
 
 
 class InjectedAgent:
@@ -75,3 +81,67 @@ def test_create_falls_back_when_injected_kwargs_not_supported() -> None:
     assert instance.name == "fallback-agent"
     assert instance._agent_type == "specialist"
     assert hasattr(instance, "memory")
+
+
+def test_from_app_config_uses_class_name_and_init_overrides(tmp_path: Path) -> None:
+    """class_name と init override で正確に agent を生成できる."""
+    package_dir = tmp_path / "sample_agents"
+    package_dir.mkdir()
+    (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    (package_dir / "configured_agent.py").write_text(
+        "\n".join(
+            [
+                "from __future__ import annotations",
+                "from typing import Any",
+                "from pydantic import BaseModel",
+                "from agentflow.core.resilient_agent import ResilientAgent",
+                "",
+                "class DemoInput(BaseModel):",
+                "    question: str = 'demo'",
+                "",
+                "class DemoOutput(BaseModel):",
+                "    region: str",
+                "",
+                "class ConfiguredAgent(ResilientAgent[DemoInput, DemoOutput]):",
+                "    name = 'ConfiguredAgent'",
+                "    def __init__(self, *, region: str, **kwargs: Any) -> None:",
+                "        super().__init__(**kwargs)",
+                "        self.region = region",
+                "    async def process(self, input_data: DemoInput) -> DemoOutput:",
+                "        return DemoOutput(region=self.region)",
+                "    def _parse_input(self, input_data: dict[str, Any]) -> DemoInput:",
+                "        return DemoInput.model_validate(input_data)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "app_config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "agents": [
+                    {
+                        "name": "ConfiguredAgent",
+                        "module": "sample_agents.configured_agent",
+                        "class_name": "ConfiguredAgent",
+                        "init_kwargs": {},
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    sys.path.insert(0, str(tmp_path))
+    try:
+        hub = LocalA2AHub()
+        agents = AgentFactory.from_app_config(
+            config_path,
+            hub=hub,
+            agent_init_overrides={"ConfiguredAgent": {"region": "jp"}},
+        )
+    finally:
+        sys.path.remove(str(tmp_path))
+
+    instance = agents["ConfiguredAgent"]
+    assert instance.region == "jp"
+    assert hub.discover("ConfiguredAgent") is not None

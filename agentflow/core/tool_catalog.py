@@ -51,6 +51,7 @@ class CatalogEntry:
         category: 分類カテゴリ
         tags: 検索用タグ
         available: 現在利用可能か
+        input_schema: 入力パラメータのJSONスキーマ（LLM Function Calling用）
     """
 
     uri: str
@@ -60,6 +61,10 @@ class CatalogEntry:
     category: str = ""
     tags: list[str] = field(default_factory=list)
     available: bool = True
+    input_schema: dict[str, Any] = field(default_factory=lambda: {
+        "type": "object",
+        "properties": {},
+    })
 
     def matches(self, query: str) -> float:
         """クエリとのマッチスコアを計算.
@@ -154,6 +159,16 @@ class ToolCatalogManager:
             skills = loader.load_directory(builtin_dir, recursive=True)
             for skill in skills:
                 meta = skill.metadata
+                # スキルメタデータから input_schema を取得
+                skill_schema = getattr(meta, "input_schema", None) or {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": f"{meta.name} への入力",
+                        },
+                    },
+                }
                 entry = CatalogEntry(
                     uri=f"tool://skill/{meta.name}",
                     name=meta.name,
@@ -162,6 +177,7 @@ class ToolCatalogManager:
                     category="skill",
                     tags=list(meta.tags) if hasattr(meta, "tags") and meta.tags else [],
                     available=True,
+                    input_schema=skill_schema,
                 )
                 self._register(entry)
 
@@ -175,31 +191,94 @@ class ToolCatalogManager:
         SkillGateway の実体を生成せず、メタ情報のみカタログに登録。
         """
         # OS/Browser スキルの静的メタ情報(factory.py の登録内容と同期)
-        # Each tuple: (name, description, category)
-        gateway_skills: list[tuple[str, str, str]] = [
-            ("read_file", "ファイルを読み込む", "os_read"),
-            ("write_file", "ファイルを書き込む", "os_write"),
-            ("list_files", "ファイル一覧を取得", "os_read"),
-            ("search_files", "ファイルを検索", "os_read"),
-            ("delete_file", "ファイルを削除", "os_write"),
-            ("run_command", "コマンドを実行", "os_command"),
-            ("run_background", "バックグラウンド実行", "os_command"),
-            ("kill_process", "プロセスを終了", "os_process"),
-            ("get_process_list", "プロセス一覧を取得", "os_process"),
-            ("http_request", "HTTPリクエスト送信", "os_network"),
-            ("socket_connect", "ソケット接続", "os_network"),
-            ("get_system_info", "システム情報を取得", "os_system"),
-            ("get_cpu_info", "CPU情報を取得", "os_system"),
-            ("get_memory_info", "メモリ情報を取得", "os_system"),
-            ("get_disk_info", "ディスク情報を取得", "os_system"),
-            ("browser_navigate", "ブラウザでURLを開く", "browser"),
-            ("browser_click", "要素をクリック", "browser"),
-            ("browser_type", "テキストを入力", "browser"),
-            ("browser_get_text", "要素のテキストを取得", "browser"),
-            ("browser_screenshot", "スクリーンショットを取得", "browser"),
+        # 各スキルに適切な input_schema を定義
+        _path_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"path": {"type": "string", "description": "ファイルパス"}},
+            "required": ["path"],
+        }
+        _write_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "ファイルパス"},
+                "content": {"type": "string", "description": "書き込み内容"},
+            },
+            "required": ["path", "content"],
+        }
+        _cmd_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"command": {"type": "string", "description": "実行コマンド"}},
+            "required": ["command"],
+        }
+        _url_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"url": {"type": "string", "description": "URL"}},
+            "required": ["url"],
+        }
+        _selector_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"selector": {"type": "string", "description": "要素セレクタ"}},
+            "required": ["selector"],
+        }
+        _empty_schema: dict[str, Any] = {"type": "object", "properties": {}}
+
+        # Each tuple: (name, description, category, input_schema)
+        gateway_skills: list[tuple[str, str, str, dict[str, Any]]] = [
+            ("read_file", "ファイルを読み込む", "os_read", _path_schema),
+            ("write_file", "ファイルを書き込む", "os_write", _write_schema),
+            ("list_files", "ファイル一覧を取得", "os_read", _path_schema),
+            ("search_files", "ファイルを検索", "os_read", {
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string", "description": "検索パターン"},
+                    "path": {"type": "string", "description": "検索ディレクトリ"},
+                },
+                "required": ["pattern"],
+            }),
+            ("delete_file", "ファイルを削除", "os_write", _path_schema),
+            ("run_command", "コマンドを実行", "os_command", _cmd_schema),
+            ("run_background", "バックグラウンド実行", "os_command", _cmd_schema),
+            ("kill_process", "プロセスを終了", "os_process", {
+                "type": "object",
+                "properties": {"pid": {"type": "integer", "description": "プロセスID"}},
+                "required": ["pid"],
+            }),
+            ("get_process_list", "プロセス一覧を取得", "os_process", _empty_schema),
+            ("http_request", "HTTPリクエスト送信", "os_network", {
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "リクエストURL"},
+                    "method": {"type": "string", "description": "HTTPメソッド"},
+                },
+                "required": ["url"],
+            }),
+            ("socket_connect", "ソケット接続", "os_network", {
+                "type": "object",
+                "properties": {
+                    "host": {"type": "string", "description": "ホスト"},
+                    "port": {"type": "integer", "description": "ポート"},
+                },
+                "required": ["host", "port"],
+            }),
+            ("get_system_info", "システム情報を取得", "os_system", _empty_schema),
+            ("get_cpu_info", "CPU情報を取得", "os_system", _empty_schema),
+            ("get_memory_info", "メモリ情報を取得", "os_system", _empty_schema),
+            ("get_disk_info", "ディスク情報を取得", "os_system", _empty_schema),
+            ("browser_navigate", "ブラウザでURLを開く", "browser", _url_schema),
+            ("browser_click", "要素をクリック", "browser", _selector_schema),
+            ("browser_type", "テキストを入力", "browser", {
+                "type": "object",
+                "properties": {
+                    "selector": {"type": "string", "description": "要素セレクタ"},
+                    "text": {"type": "string", "description": "入力テキスト"},
+                },
+                "required": ["selector", "text"],
+            }),
+            ("browser_get_text", "要素のテキストを取得", "browser", _selector_schema),
+            ("browser_screenshot", "スクリーンショットを取得", "browser", _empty_schema),
         ]
 
-        for name, desc, category in gateway_skills:
+        for name, desc, category, schema in gateway_skills:
             entry = CatalogEntry(
                 uri=f"tool://gateway/{name}",
                 name=name,
@@ -208,6 +287,7 @@ class ToolCatalogManager:
                 category=category,
                 tags=[category.split("_")[0] if "_" in category else category],
                 available=True,
+                input_schema=schema,
             )
             self._register(entry)
 
@@ -218,14 +298,30 @@ class ToolCatalogManager:
 
     def _load_framework_builtins(self) -> None:
         """フレームワーク内蔵ツール(calculator, file_reader 等)を登録."""
-        builtins: list[tuple[str, str]] = [
-            ("file_reader", "ファイルの内容を読み取る"),
-            ("json_parser", "JSON文字列を解析する"),
-            ("calculator", "数式を計算する"),
-            ("datetime", "現在日時を取得する"),
+        # Each tuple: (name, description, input_schema)
+        builtins: list[tuple[str, str, dict[str, Any]]] = [
+            ("file_reader", "ファイルの内容を読み取る", {
+                "type": "object",
+                "properties": {"path": {"type": "string", "description": "ファイルパス"}},
+                "required": ["path"],
+            }),
+            ("json_parser", "JSON文字列を解析する", {
+                "type": "object",
+                "properties": {"json_string": {"type": "string", "description": "JSON文字列"}},
+                "required": ["json_string"],
+            }),
+            ("calculator", "数式を計算する", {
+                "type": "object",
+                "properties": {"expression": {"type": "string", "description": "数式"}},
+                "required": ["expression"],
+            }),
+            ("datetime", "現在日時を取得する", {
+                "type": "object",
+                "properties": {"format": {"type": "string", "description": "日時フォーマット"}},
+            }),
         ]
 
-        for name, desc in builtins:
+        for name, desc, schema in builtins:
             entry = CatalogEntry(
                 uri=f"tool://builtin/{name}",
                 name=name,
@@ -234,6 +330,7 @@ class ToolCatalogManager:
                 category="utility",
                 tags=["builtin", "utility"],
                 available=True,
+                input_schema=schema,
             )
             self._register(entry)
 
@@ -249,6 +346,11 @@ class ToolCatalogManager:
                 if not desc and callable(registered.func) and registered.func.__doc__:
                     desc = registered.func.__doc__.strip().split("\n")[0]
 
+                # RegisteredTool.parameters からスキーマを取得
+                schema = registered.parameters if registered.parameters else {
+                    "type": "object",
+                    "properties": {},
+                }
                 entry = CatalogEntry(
                     uri=f"tool://decorator/{name}",
                     name=name,
@@ -257,6 +359,7 @@ class ToolCatalogManager:
                     category="custom",
                     tags=["custom", "decorator"],
                     available=True,
+                    input_schema=schema,
                 )
                 self._register(entry)
 
@@ -291,6 +394,11 @@ class ToolCatalogManager:
                 t_name = str(tool_entry.get("name", ""))
                 t_server = str(tool_entry.get("server", "unknown"))
                 t_desc = str(tool_entry.get("description", ""))
+                # MCP ツールの inputSchema を取得
+                t_schema = tool_entry.get("inputSchema", {
+                    "type": "object",
+                    "properties": {},
+                })
                 entry = CatalogEntry(
                     uri=f"tool://mcp/{t_server}/{t_name}",
                     name=t_name,
@@ -299,6 +407,7 @@ class ToolCatalogManager:
                     category="mcp",
                     tags=["mcp", t_server],
                     available=True,
+                    input_schema=t_schema,
                 )
                 self._register(entry)
                 count += 1
@@ -382,6 +491,9 @@ class ToolCatalogManager:
     def get_for_llm(self) -> list[dict[str, Any]]:
         """LLM 用ツール定義を取得(OpenAI Function Calling 形式).
 
+        各エントリの input_schema を使用してパラメータ定義を生成する。
+        input_schema が空の場合はデフォルトの汎用スキーマにフォールバック。
+
         Returns:
             LLM に渡すツール定義リスト
         """
@@ -389,21 +501,25 @@ class ToolCatalogManager:
         for entry in self._entries.values():
             if not entry.available:
                 continue
+            # input_schema が有効な場合はそのまま使用、空の場合はフォールバック
+            params = entry.input_schema
+            if not params or not params.get("properties"):
+                params = {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": f"{entry.name} への入力",
+                        },
+                    },
+                }
             tools.append(
                 {
                     "type": "function",
                     "function": {
                         "name": entry.name,
                         "description": entry.description,
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "query": {
-                                    "type": "string",
-                                    "description": f"{entry.name} への入力",
-                                },
-                            },
-                        },
+                        "parameters": params,
                     },
                 }
             )

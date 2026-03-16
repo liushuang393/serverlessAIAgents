@@ -174,8 +174,7 @@ DB ルール:
 ### 1. Docker Compose による起動
 
 ```bash
-cd apps/auth_service
-docker compose up --build -d
+python apps/auth_service/scripts/compose.py publish
 ```
 
 ポート `8010/3010/5438` でサービスが開始され、DB データは `auth-db-data` ボリュームに永続化されます。
@@ -535,9 +534,9 @@ curl -X POST http://localhost:8010/auth/login \
   -d '{"username":"testuser","password":"TestPass123"}'
 
 # 4. Docker ビルド＆起動
-cd apps/auth_service && docker compose up --build -d
+python apps/auth_service/scripts/compose.py publish
 curl http://localhost:8010/health
-docker compose down
+python apps/auth_service/scripts/compose.py stop
 
 # 5. 認可テスト
 pytest tests/apps/auth_service/test_authorization_models.py -v

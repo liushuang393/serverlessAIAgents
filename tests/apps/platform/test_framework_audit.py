@@ -225,6 +225,50 @@ def test_orchestration_protocols_detects_mcp_surface_via_ast(tmp_path: Path) -> 
     assert "MCP_DECLARED_BUT_SURFACE_MISSING_UNVERIFIED" not in codes
 
 
+def test_agent_module_checks_warn_when_class_name_missing(tmp_path: Path) -> None:
+    """module はあるが class_name がない agent を警告する."""
+    service = _audit_service(tmp_path)
+    config = AppConfig.model_validate(_base_manifest())
+
+    issues = service._check_agent_modules(config)
+    codes = {issue.code for issue in issues}
+
+    assert "AGENT_CLASS_NAME_MISSING" in codes
+
+
+def test_agent_module_checks_detect_missing_class_and_count_mismatch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """class_name 不一致と executable 数不一致を検出する."""
+    service = _audit_service(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    agent_dir = tmp_path / "apps" / "sample_app" / "agents"
+    agent_dir.mkdir(parents=True, exist_ok=True)
+    (agent_dir / "worker_agent.py").write_text(
+        "class WorkerAgent:\n    pass\n",
+        encoding="utf-8",
+    )
+
+    manifest = _base_manifest()
+    manifest["agents"] = [
+        {
+            "name": "WorkerAgent",
+            "module": "apps.sample_app.agents.worker_agent",
+            "class_name": "MissingWorkerAgent",
+            "capabilities": ["execution"],
+            "pattern": "executor",
+        }
+    ]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_agent_modules(config)
+    codes = {issue.code for issue in issues}
+
+    assert "AGENT_CLASS_NOT_FOUND" in codes
+    assert "AGENT_EXECUTABLE_COUNT_MISMATCH" in codes
+
+
 def test_security_baseline_detects_plaintext_password_and_anonymous_external(
     tmp_path: Path,
 ) -> None:
@@ -254,6 +298,51 @@ def test_entry_points_reports_missing_api_module(tmp_path: Path) -> None:
     codes = {issue.code for issue in issues}
 
     assert "API_MODULE_NOT_FOUND" in codes
+
+
+def test_runtime_checks_detect_vite_and_compose_port_drift(tmp_path: Path) -> None:
+    """Vite と compose の hardcoded port drift を検出する."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["ports"]["api"] = 8100
+    manifest["ports"]["frontend"] = 3100
+    manifest["runtime"]["urls"] = {
+        "backend": "http://localhost:8100",
+        "frontend": "http://localhost:3100",
+        "health": "http://localhost:8100/health",
+        "database": None,
+    }
+    app_dir = tmp_path / "sample_app"
+    frontend_dir = app_dir / "frontend"
+    frontend_dir.mkdir(parents=True, exist_ok=True)
+    (frontend_dir / "vite.config.ts").write_text(
+        (
+            "export default { server: { port: 3010, proxy: { '/api': 'http://localhost:8010' } } };\n"
+        ),
+        encoding="utf-8",
+    )
+    (app_dir / "docker-compose.yml").write_text(
+        (
+            'services:\n'
+            '  sample:\n'
+            '    ports:\n'
+            '      - "${SAMPLE_APP_PORT:-8100}:8010"\n'
+            '    healthcheck:\n'
+            '      test: ["CMD", "curl", "http://localhost:8010/health"]\n'
+        ),
+        encoding="utf-8",
+    )
+
+    config = AppConfig.model_validate(manifest)
+    issues = [
+        *service._check_frontend_runtime_contract(config, app_dir),
+        *service._check_compose_runtime_contract(config, app_dir),
+    ]
+    codes = {issue.code for issue in issues}
+
+    assert "FRONTEND_DEV_PORT_MISMATCH" in codes
+    assert "FRONTEND_PROXY_PORT_MISMATCH" in codes
+    assert "COMPOSE_BACKEND_PORT_MISMATCH" in codes
 
 
 def test_auth_runtime_enforcement_warns_when_guard_missing(tmp_path: Path) -> None:

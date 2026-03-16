@@ -40,7 +40,7 @@ def sample_entry():
 async def test_connect(postgres_backend):
     """接続テスト。asyncpg.create_pool は async 関数なので new_callable=AsyncMock を使う。"""
     with patch(
-        "agentflow.memory.distributed.postgres_backend.asyncpg.create_pool",
+        "infrastructure.memory.distributed.postgres_backend.asyncpg.create_pool",
         new_callable=AsyncMock,
     ) as mock_create_pool:
         mock_pool = MagicMock()

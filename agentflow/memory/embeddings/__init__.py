@@ -1,17 +1,12 @@
-"""埋め込みエンジンモジュール.
+"""agentflow.memory.embeddings — re-export スタブ.
 
-OpenAI Embeddings、Sentence Transformersなどの埋め込みエンジンを提供します。
+実体: infrastructure.memory.embeddings
 """
 
-from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
-from agentflow.memory.embeddings.openai_embeddings import OpenAIEmbeddings
-from agentflow.memory.embeddings.sentence_transformer_embeddings import (
+from infrastructure.memory.embeddings import (  # noqa: F401
+    EmbeddingEngine,
+    OpenAIEmbeddings,
     SentenceTransformerEmbeddings,
 )
 
-
-__all__ = [
-    "EmbeddingEngine",
-    "OpenAIEmbeddings",
-    "SentenceTransformerEmbeddings",
-]
+__all__ = ["EmbeddingEngine", "OpenAIEmbeddings", "SentenceTransformerEmbeddings"]

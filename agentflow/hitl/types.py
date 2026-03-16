@@ -10,6 +10,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
+from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from pydantic import BaseModel, Field
 
 
@@ -44,24 +45,11 @@ class CommandType(str, Enum):
     RETRY = "retry"  # リトライ
 
 
-class ApprovalRequest(BaseModel):
+class ApprovalRequest(ContractApprovalRequest):
     """承認リクエスト.
 
     Agent が人間の承認を要求する際に使用。
     """
-
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    action: str = Field(..., description="承認対象のアクション名")
-    resource_id: str | None = Field(default=None, description="対象リソースID")
-    resource_type: str | None = Field(default=None, description="対象リソースタイプ")
-    reason: str = Field(..., description="承認が必要な理由")
-    context: dict[str, Any] = Field(default_factory=dict, description="追加コンテキスト")
-    requester: str | None = Field(default=None, description="リクエスター（Agent名等）")
-    priority: str = Field(default="normal", description="優先度: low/normal/high/critical")
-    timeout_seconds: int | None = Field(default=None, description="タイムアウト秒数")
-    expires_at: datetime | None = Field(default=None, description="有効期限")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="メタデータ")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ApprovalResponse(BaseModel):

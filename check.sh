@@ -434,6 +434,22 @@ do_lint() {
     rm -f "$ruff_output"
 
     echo ""
+    echo "[Python] Layer boundary チェック中..."
+    run_py_tool python scripts/check_layer_boundaries.py
+    if [ $? -ne 0 ]; then
+        echo "[エラー] Layer boundary チェックに失敗しました"
+        return 1
+    fi
+
+    echo ""
+    echo "[Python] Provider 直呼びチェック中..."
+    run_py_tool python scripts/check_no_direct_provider_calls.py
+    if [ $? -ne 0 ]; then
+        echo "[エラー] Provider 直呼びチェックに失敗しました"
+        return 1
+    fi
+
+    echo ""
     run_js_lint
     if [ $? -ne 0 ]; then
         return 1

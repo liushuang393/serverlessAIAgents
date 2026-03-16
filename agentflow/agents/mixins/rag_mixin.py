@@ -6,9 +6,9 @@ Graceful Degradation を実装している。
 
 使用例:
     >>> from agentflow.agents.mixins import RAGCapableMixin
-    >>> from agentflow.core.agent_block import AgentBlock
+    >>> from agentflow.core.resilient_agent import ResilientAgent
     >>>
-    >>> class MyAgent(RAGCapableMixin, AgentBlock):
+    >>> class MyAgent(RAGCapableMixin, ResilientAgent):
     ...     def __init__(self, bundle: CapabilityBundle) -> None:
     ...         super().__init__()
     ...         self.set_capability_bundle(bundle)
@@ -44,7 +44,7 @@ class RAGCapableMixin:
         - 検索例外 → ログ警告して空リスト返却
 
     使用方法:
-        1. クラス定義で RAGCapableMixin を継承（AgentBlock より先に）
+        1. クラス定義で RAGCapableMixin を継承（ResilientAgent より先に）
         2. __init__ で set_capability_bundle(bundle) を呼ぶ
         3. process() / run() 内で await self.retrieve_context(query)
     """

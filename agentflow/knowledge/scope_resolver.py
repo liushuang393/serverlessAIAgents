@@ -18,6 +18,7 @@ import httpx
 
 
 logger = logging.getLogger(__name__)
+DEFAULT_AUTH_SERVICE_URL = "http://localhost:8010"
 
 # auth_service 未接続時のフォールバック RBAC マッピング
 FALLBACK_ROLE_KB_MAP: dict[str, list[str]] = {
@@ -78,7 +79,7 @@ class ScopeResolver:
             検索対象 CollectionTarget のリスト
         """
         effective_tenant = tenant_id or "default"
-        base_url = getattr(self._auth_client, "base_url", "http://localhost:8010")
+        base_url = _resolve_auth_base_url(self._auth_client)
 
         url = f"{base_url}/auth/authorization/resolve-scopes"
         params = {
@@ -171,3 +172,21 @@ class ScopeResolver:
             許可された KB タイプのリスト
         """
         return FALLBACK_ROLE_KB_MAP.get(role, ["external"])
+
+
+def _resolve_auth_base_url(auth_client: Any) -> str:
+    """auth_client から auth_service のベース URL を解決."""
+    base_url = getattr(auth_client, "base_url", None)
+    if isinstance(base_url, str):
+        normalized = base_url.strip().rstrip("/")
+        if normalized:
+            return normalized
+
+    config = getattr(auth_client, "config", None)
+    config_base_url = getattr(config, "base_url", None)
+    if isinstance(config_base_url, str):
+        normalized = config_base_url.strip().rstrip("/")
+        if normalized:
+            return normalized
+
+    return DEFAULT_AUTH_SERVICE_URL

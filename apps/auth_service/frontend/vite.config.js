@@ -1,13 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "node:fs";
+import path from "node:path";
+
+const appConfig = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../app_config.json"), "utf-8"),
+);
+const backendUrl =
+    appConfig.runtime?.urls?.backend ?? `http://localhost:${appConfig.ports?.api ?? 8010}`;
+const frontendPort = appConfig.ports?.frontend ?? 3010;
+const frontendHost = appConfig.runtime?.hosts?.frontend ?? "0.0.0.0";
+
 export default defineConfig({
     plugins: [react()],
     server: {
-        port: 5173,
-        host: true,
+        port: frontendPort,
+        host: frontendHost,
         proxy: {
             "/auth": {
-                target: "http://localhost:8010",
+                target: backendUrl,
                 changeOrigin: true,
             },
         },

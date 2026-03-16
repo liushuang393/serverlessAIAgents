@@ -39,7 +39,7 @@ async def test_generate_routes_to_gateway() -> None:
         }
     )
 
-    with patch("agentflow.llm.llm_client.LiteLLMGateway", return_value=gateway):
+    with patch("infrastructure.llm.llm_client.LiteLLMGateway", return_value=gateway):
         client = LLMClient(LLMConfig(role="reasoning"))
         response = await client.generate(
             role="reasoning",
@@ -67,7 +67,7 @@ async def test_chat_with_tools_uses_tool_call() -> None:
         }
     )
 
-    with patch("agentflow.llm.llm_client.LiteLLMGateway", return_value=gateway):
+    with patch("infrastructure.llm.llm_client.LiteLLMGateway", return_value=gateway):
         client = LLMClient(LLMConfig(role="coding"))
         response = await client.chat(
             [LLMMessage(role="user", content="find docs")],
@@ -95,7 +95,7 @@ async def test_complete_uses_default_role() -> None:
         }
     )
 
-    with patch("agentflow.llm.llm_client.LiteLLMGateway", return_value=gateway):
+    with patch("infrastructure.llm.llm_client.LiteLLMGateway", return_value=gateway):
         client = LLMClient(LLMConfig(role="coding"))
         response = await client.complete("write code")
 
@@ -115,7 +115,7 @@ async def test_stream_supports_legacy_message_style() -> None:
     gateway.config = SimpleNamespace(models=_gateway_models())
     gateway.stream = MagicMock(return_value=_stream())
 
-    with patch("agentflow.llm.llm_client.LiteLLMGateway", return_value=gateway):
+    with patch("infrastructure.llm.llm_client.LiteLLMGateway", return_value=gateway):
         client = LLMClient(LLMConfig(role="reasoning"))
         out: list[str] = []
         async for token in client.stream([LLMMessage(role="user", content="hello")]):

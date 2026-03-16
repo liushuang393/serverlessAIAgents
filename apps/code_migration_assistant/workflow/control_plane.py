@@ -1,18 +1,22 @@
-# -*- coding: utf-8 -*-
-"""Execution control plane helpers."""
+"""実行制御プレーン補助関数."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from shared import AccessContext, build_access_context
 
 from agentflow.providers.tool_provider import RiskLevel
-from agentflow.security.policy_engine import AuthContext
+
+
+if TYPE_CHECKING:
+    from agentflow.security.policy_engine import AuthContext
 
 
 @dataclass(slots=True)
 class ExecutionOptions:
-    """Pipeline execution options."""
+    """実行オプション."""
 
     autonomy_level: str = "balanced"
     risk_profile: str = "normal"
@@ -37,7 +41,7 @@ class ExecutionOptions:
 
 
 def resolve_execution_options(inputs: dict[str, Any]) -> ExecutionOptions:
-    """Merge top-level and nested options into normalized execution options."""
+    """トップレベルと入れ子 options を正規化して統合する."""
     raw = inputs.get("options", {})
     options = raw.copy() if isinstance(raw, dict) else {}
 
@@ -91,7 +95,7 @@ def resolve_execution_options(inputs: dict[str, Any]) -> ExecutionOptions:
 
 
 def map_tool_risk_to_hitl(risk_level: RiskLevel | str) -> str:
-    """Map tool-provider risk to HITL risk levels."""
+    """Tool provider の risk を HITL 用レベルへ写像する."""
     value = str(risk_level.value if isinstance(risk_level, RiskLevel) else risk_level).lower()
     if value == "medium":
         return "normal"
@@ -103,14 +107,14 @@ def should_require_human_approval(
     tool_risk: RiskLevel | str,
     execution_options: ExecutionOptions,
 ) -> bool:
-    """Decide whether an approval gate should be triggered."""
+    """承認ゲートを起動すべきか判定する."""
     policy = execution_options.human_policy
     if policy == "manual_all":
         return True
     if policy == "auto_with_sampling":
         return False
 
-    # Default: risk_based
+    # 既定値は risk_based。
     effective_risk = map_tool_risk_to_hitl(tool_risk)
     if execution_options.risk_profile in {"high", "critical"}:
         return True
@@ -118,7 +122,7 @@ def should_require_human_approval(
 
 
 def build_auth_context(flow_context: Any, tool_name: str, action: str) -> AuthContext | None:
-    """Build AuthContext from FlowContext for governance evaluation."""
+    """ガバナンス評価用の AuthContext を FlowContext から構築する."""
     if flow_context is None:
         return None
 
@@ -149,9 +153,24 @@ def build_auth_context(flow_context: Any, tool_name: str, action: str) -> AuthCo
             ]
             subject["permissions"] = list(dict.fromkeys(default_permissions + custom_permissions))
 
-    return AuthContext(
-        subject=subject,
+    access_context = build_access_context(
+        user_id=str(subject.get("user_id", "unknown-user")),
+        permissions=[str(item) for item in subject.get("permissions", []) if isinstance(item, str)],
+        tenant_id=getattr(flow_context, "tenant_id", None),
         resource={"type": tool_name},
         action=action,
-        tenant_id=getattr(flow_context, "tenant_id", None),
+    )
+    return _to_auth_context(access_context)
+
+
+def _to_auth_context(access_context: AccessContext) -> AuthContext:
+    """共有 access 契約を既存 AuthContext へ変換する。"""
+    from agentflow.security.policy_engine import AuthContext
+
+    return AuthContext(
+        subject=access_context.subject,
+        resource=access_context.resource,
+        action=access_context.action,
+        environment=access_context.environment,
+        tenant_id=access_context.tenant_id,
     )

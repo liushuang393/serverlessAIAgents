@@ -68,6 +68,23 @@ class ToolCapableAgent(ResilientAgent[InputT, OutputT]):
         self._bound_tools = BoundTools(list(self.tools))
         self._tool_executor = ToolExecutor(list(self.tools))
 
+    def set_bound_tools(
+        self,
+        bound_tools: BoundTools,
+        tool_executor: ToolExecutor,
+    ) -> None:
+        """バインド済みツールとエグゼキュータを設定する.
+
+        ToolBinder 等の外部コンポーネントから安全にツールを注入するための
+        パブリックAPI。内部属性への直接アクセスを排除する。
+
+        Args:
+            bound_tools: バインド済みツール
+            tool_executor: ツール実行エンジン
+        """
+        self._bound_tools = bound_tools
+        self._tool_executor = tool_executor
+
     async def call_tool(self, name: str, args: dict[str, Any]) -> Any:
         """ツールを名前で呼び出す.
 

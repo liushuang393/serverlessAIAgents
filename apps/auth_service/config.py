@@ -6,13 +6,30 @@ pydantic-settings を利用した設定管理。
 
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from agentflow.runtime import resolve_app_runtime
+
 
 _AUTH_ENV_FILE = Path(__file__).resolve().parent / ".env"
+_AUTH_APP_CONFIG = Path(__file__).resolve().parent / "app_config.json"
+_AUTH_MANIFEST = json.loads(_AUTH_APP_CONFIG.read_text(encoding="utf-8"))
+_AUTH_RUNTIME = resolve_app_runtime(
+    _AUTH_APP_CONFIG,
+    env=os.environ,
+    backend_host_env="AUTH_SERVICE_HOST",
+    backend_port_env="AUTH_SERVICE_PORT",
+)
+_AUTH_BACKEND_URL = _AUTH_RUNTIME.urls.backend or f"http://localhost:{_AUTH_RUNTIME.ports.api or 8010}"
+_AUTH_DATABASE_URL = (
+    _AUTH_MANIFEST.get("runtime", {}).get("database", {}).get("url")
+    or "postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service"
+)
 
 
 class Settings(BaseSettings):
@@ -25,9 +42,9 @@ class Settings(BaseSettings):
     )
 
     # --- コア設定 ---
-    AUTH_SERVICE_PORT: int = 8010
-    AUTH_SERVICE_HOST: str = "0.0.0.0"
-    AUTH_DATABASE_URL: str = "sqlite+aiosqlite:///./auth_service.db"
+    AUTH_SERVICE_PORT: int = _AUTH_RUNTIME.ports.api or 8010
+    AUTH_SERVICE_HOST: str = _AUTH_RUNTIME.hosts.backend or "0.0.0.0"
+    AUTH_DATABASE_URL: str = _AUTH_DATABASE_URL
     AUTH_DB_AUTO_CREATE: bool = True
     AUTH_DB_ECHO: bool = False
     AUTH_DB_SEED_DEFAULTS: bool = True  # デフォルトユーザーを自動作成
@@ -47,7 +64,7 @@ class Settings(BaseSettings):
     # --- Google OAuth2 (AUTH_PROVIDER=google 時に使用) ---
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8010/auth/oauth2/google/callback"
+    GOOGLE_REDIRECT_URI: str = f"{_AUTH_BACKEND_URL}/auth/oauth2/google/callback"
 
     # --- Azure AD (AUTH_PROVIDER=azure_ad 時に使用) ---
     AZURE_CLIENT_ID: str = ""
@@ -65,7 +82,7 @@ class Settings(BaseSettings):
     # --- SAML 2.0 (AUTH_PROVIDER=saml 時に使用) ---
     SAML_IDP_METADATA_URL: str = ""
     SAML_SP_ENTITY_ID: str = "auth-service"
-    SAML_ACS_URL: str = "http://localhost:8010/auth/saml/acs"
+    SAML_ACS_URL: str = f"{_AUTH_BACKEND_URL}/auth/saml/acs"
 
     # --- Proxy Auth (AUTH_PROVIDER=proxy 時に使用) ---
     PROXY_AUTH_HEADER: str = "X-Remote-User"

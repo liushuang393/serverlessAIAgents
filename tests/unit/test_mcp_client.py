@@ -4,8 +4,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import agentflow.protocols.mcp_client as _mcp_mod
 from agentflow.protocols.mcp_client import MCPClient
 from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
+
+# テスト環境で mcp パッケージの遅延インポートを事前に完了させる。
+# これにより @patch でモジュール変数を差し替えた後、
+# _ensure_mcp_imports() が本物のクラスで上書きすることを防止する。
+_mcp_mod._ensure_mcp_imports()
 
 
 @pytest.fixture
@@ -542,3 +548,54 @@ class TestMCPClient:
 
         # description が空文字列になることを確認
         assert definitions[0]["function"]["description"] == ""
+
+
+
+class TestMCPLazyImport:
+    """MCP遅延インポートのテスト."""
+
+    def test_mcp_client_module_loads_without_mcp(self):
+        """mcp_client モジュール自体が mcp 無しでもロード可能であることを検証.
+
+        mcp パッケージのインポートは _connect_server 内でのみ行われるため、
+        モジュールのインポート時点では mcp は不要。
+        """
+        import importlib
+        import sys
+
+        # mcp_client モジュールを再ロードしてインポートエラーが出ないことを確認
+        # (mcp パッケージ自体はテスト環境にあるため、実際の ImportError は起きないが
+        #  トップレベルに mcp のインポートがないことを間接的に検証)
+        mod = importlib.import_module("agentflow.protocols.mcp_client")
+        assert hasattr(mod, "MCPClient")
+
+    def test_protocols_init_lazy_imports(self):
+        """protocols __init__ から MCPClient が遅延インポートで取得できることを検証."""
+        from agentflow import protocols
+
+        # __getattr__ 経由で取得
+        client_cls = getattr(protocols, "MCPClient")
+        assert client_cls.__name__ == "MCPClient"
+
+    def test_protocols_init_lazy_imports_lazy_mcp_client(self):
+        """LazyMCPClient が遅延インポートで取得できることを検証."""
+        from agentflow import protocols
+
+        lazy_cls = getattr(protocols, "LazyMCPClient")
+        assert lazy_cls.__name__ == "LazyMCPClient"
+
+    def test_protocols_init_lazy_imports_tool_index_entry(self):
+        """ToolIndexEntry/ToolSearchResult が遅延インポートで取得できることを検証."""
+        from agentflow import protocols
+
+        entry_cls = getattr(protocols, "ToolIndexEntry")
+        result_cls = getattr(protocols, "ToolSearchResult")
+        assert entry_cls.__name__ == "ToolIndexEntry"
+        assert result_cls.__name__ == "ToolSearchResult"
+
+    def test_protocols_init_unknown_attr_raises(self):
+        """存在しない属性はAttributeErrorを送出することを検証."""
+        from agentflow import protocols
+
+        with pytest.raises(AttributeError, match="has no attribute"):
+            getattr(protocols, "NonExistentClass")

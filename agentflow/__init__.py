@@ -521,13 +521,15 @@ from agentflow.code_intelligence import (
     register_parser,
     register_transformer,
 )
-from agentflow.runtime import (
-    RuntimeContext,
-    get_runtime_context,
-    init_agentflow,
-    set_runtime_context,
-    use_runtime_context,
-)
+# runtime は循環インポート回避のため __getattr__ で遅延ロード
+# from agentflow.runtime import RuntimeContext, get_runtime_context, ...
+_LAZY_RUNTIME_SYMBOLS = {
+    "RuntimeContext",
+    "get_runtime_context",
+    "init_agentflow",
+    "set_runtime_context",
+    "use_runtime_context",
+}
 
 # =============================================================================
 # 公開API: Agent Wizard（Meta-Agent自動生成）
@@ -909,3 +911,16 @@ __all__ = [  # noqa: RUF022 - 3層構造のため意図的な非アルファベ�
     # Agent registry helpers
     "reset_global_agent_registry",
 ]
+
+
+
+def __getattr__(name: str) -> object:
+    """遅延インポートで循環依存を回避（runtime シンボル）."""
+    if name in _LAZY_RUNTIME_SYMBOLS:
+        import importlib  # noqa: WPS433
+        _rt = importlib.import_module("kernel.runtime")
+        val = getattr(_rt, name)
+        globals()[name] = val  # キャッシュして次回は __getattr__ を呼ばない
+        return val
+    msg = f"module 'agentflow' has no attribute {name!r}"
+    raise AttributeError(msg)

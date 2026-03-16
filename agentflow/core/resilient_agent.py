@@ -153,6 +153,9 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         self._retry_prompt_hint: str | None = None
         self._retry_temperature_override: float | None = None
 
+        # A2A コンテキスト（オプション — Hub/Executor が注入）
+        self._a2a_context: Any | None = None
+
         # コード実行機能の設定
         if enable_code_execution is not None:
             self._enable_code_execution = enable_code_execution
@@ -522,6 +525,82 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
             LLM クライアントインスタンス
         """
         return self._llm
+
+    # ========================================
+    # A2A コンテキスト連携（オプション）
+    # ========================================
+
+    async def run_with_context(
+        self,
+        input_data: dict[str, Any],
+        context: Any,
+    ) -> dict[str, Any]:
+        """A2A コンテキスト付き実行.
+
+        Hub/Executor から呼ばれる。process() 内で emit_progress() / is_cancelled が利用可能になる。
+        既存の run() は完全に維持される。
+
+        Args:
+            input_data: 入力データ
+            context: A2ARequestContext インスタンス
+
+        Returns:
+            出力データ
+        """
+        self._a2a_context = context
+        try:
+            return await self.run(input_data)
+        finally:
+            self._a2a_context = None
+
+    async def emit_progress(self, text: str) -> None:
+        """process() 内から呼べる進捗通知.
+
+        A2A コンテキストが存在しない場合は無視される。
+
+        Args:
+            text: 進捗メッセージ
+        """
+        ctx = self._a2a_context
+        if ctx is not None and hasattr(ctx, "emit_status"):
+            # A2ATaskState.WORKING を遅延インポートで参照
+            from agentflow.protocols.a2a.types import A2ATaskState
+
+            await ctx.emit_status(A2ATaskState.WORKING, text)
+
+    async def emit_a2a_artifact(self, data: dict[str, Any]) -> None:
+        """process() 内から呼べるアーティファクト発行.
+
+        A2A コンテキストが存在しない場合は無視される。
+
+        Args:
+            data: 構造化データ
+        """
+        ctx = self._a2a_context
+        if ctx is not None and hasattr(ctx, "emit_data"):
+            await ctx.emit_data(data)
+
+    @property
+    def is_cancelled(self) -> bool:
+        """process() 内でキャンセル要求を確認.
+
+        A2A コンテキストが存在しない場合は常に False。
+        """
+        ctx = self._a2a_context
+        if ctx is not None and hasattr(ctx, "is_cancelled"):
+            return ctx.is_cancelled
+        return False
+
+    @property
+    def task_id(self) -> str | None:
+        """現在実行中の A2A タスク ID.
+
+        A2A コンテキストが存在しない場合は None。
+        """
+        ctx = self._a2a_context
+        if ctx is not None and hasattr(ctx, "task_id"):
+            return ctx.task_id
+        return None
 
     # ========================================
     # デバッグ / モニタリング

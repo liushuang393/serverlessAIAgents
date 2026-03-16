@@ -22,7 +22,9 @@ const appConfig = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "../app_config.json"), "utf-8"),
 );
 const API_PORT =
-  process.env.VITE_API_PORT ?? String(appConfig.ports?.api ?? 8000);
+  process.env.VITE_API_PORT ?? String(appConfig.ports?.api ?? 8900);
+const FRONTEND_PORT = appConfig.ports?.frontend ?? 3200;
+const FRONTEND_HOST = appConfig.runtime?.hosts?.frontend ?? true;
 
 export default defineConfig({
   plugins: [react()],
@@ -37,8 +39,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: appConfig.ports?.frontend ?? 3000,
-    host: true,
+    port: FRONTEND_PORT,
+    host: FRONTEND_HOST,
     proxy: {
       "/api": {
         target: `http://localhost:${API_PORT}`,

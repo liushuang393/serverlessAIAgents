@@ -159,7 +159,7 @@ agentflow = "agentflow.cli.main:cli"
 [tool.ruff]
 line-length = 120
 target-version = "py313"
-src = ["agentflow", "tests"]
+src = ["agentflow", "contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "tests"]
 extend-exclude = [
     ".venv",
     "venv",
@@ -380,9 +380,13 @@ ignore = [
 "agentflow/knowledge/reranker.py" = ["F401"]
 "agentflow/integrations/websocket_integration.py" = ["F401"]
 "agentflow/services/document_exporter.py" = ["F401"]
+"contracts/runtime/registry.py" = ["UP046"]
+"contracts/trace/__init__.py" = ["A005"]
 "apps/code_migration_assistant/mcp_tools/pdf_exporter.py" = ["F401", "PLC0415"]
+"infrastructure/queue/__init__.py" = ["A005"]
 "apps/decision_governance_engine/services/pdf_generator.py" = ["F401"]
 "apps/market_trend_monitor/backend/services/report_export_service.py" = ["F401"]
+"shared/trace/__init__.py" = ["A005"]
 "tests/integration/test_llm_tool_calling.py" = ["F401", "PLC0415"]
 "tests/unit/test_messaging_features.py" = ["F401"]
 "examples/**/*.py" = ["F401", "PLC0415", "ANN", "ARG"]
@@ -526,11 +530,17 @@ skips = ["*_test.py", "test_*.py"]
 # Hatch Configuration
 # ============================================================================
 [tool.hatch.build.targets.wheel]
-packages = ["agentflow"]
+packages = ["agentflow", "contracts", "infrastructure", "shared", "kernel", "harness", "control_plane"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/agentflow",
+    "/contracts",
+    "/infrastructure",
+    "/shared",
+    "/kernel",
+    "/harness",
+    "/control_plane",
     "/tests",
     "/README.md",
     "/LICENSE",

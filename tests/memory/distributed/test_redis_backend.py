@@ -39,7 +39,7 @@ def sample_entry():
 @pytest.mark.asyncio
 async def test_connect(redis_backend):
     """接続テスト."""
-    with patch("agentflow.memory.distributed.redis_backend.redis.asyncio.Redis") as mock_redis:
+    with patch("infrastructure.memory.distributed.redis_backend.redis.asyncio.Redis") as mock_redis:
         mock_client = AsyncMock()
         mock_redis.return_value = mock_client
         mock_client.ping = AsyncMock()

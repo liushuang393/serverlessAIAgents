@@ -294,12 +294,59 @@ cd apps/platform/frontend
 npm run dev
 ```
 
-### 実行前環境確認フロー（必須）
+### 実行環境 SOP（最優先・必須）
 
-1. コマンド実行前に `code-rules/CLAUDE.md` / 各 README / app ドキュメントを確認し、実行環境を確定する。
-2. 文書で確定できない場合のみ顧客へ確認する。同一事項を繰り返し質問しない。
-3. 顧客確認で確定した内容は、本ファイルと該当 README に追記して工程ルール化する。
-4. 本リポジトリの既定 Python 実行環境は `conda activate agentflow` とする。
+#### 0. 実行前に参照する情報源の優先順位
+
+1. `code-rules/CLAUDE.md`
+2. 対象 app / package の README・docs・`app_config.json`
+3. ユーザーが明示した実行環境・起動方法
+
+上位情報源で確定している内容を下位情報源で勝手に上書きしないこと。
+
+#### 1. コマンド実行前の判定手順
+
+1. これから実行するコマンドが `Python` / `Node` / `Docker` / `単純シェル読み取り` のどれかを先に分類する。
+2. 分類後、対応する canonical 実行環境を確定してから初めてコマンドを打つ。
+3. 実行環境が文書で確定できない場合のみユーザーへ確認する。同一事項を繰り返し質問しない。
+4. ユーザー確認で確定した内容は、本ファイルと該当 README に追記して再発防止する。
+
+#### 2. Python コマンドの canonical 実行環境
+
+- 本リポジトリの既定 Python 実行環境は `conda activate agentflow` とする。
+- AI / 自動実行では、Python 系の非対話コマンドを原則 `conda run -n agentflow <command>` で実行する。
+- 対象コマンド:
+  - `python`, `python3`
+  - `pytest`
+  - `mypy`
+  - `ruff`
+  - `uvicorn`
+  - 任意の Python スクリプト
+  - import 可否確認のための `python -c`
+- `conda activate agentflow` は人手ターミナル例、AI の実行規約は `conda run -n agentflow` を優先する。
+- `rg`, `sed`, `ls`, `git diff` などの読み取り専用シェルコマンドは conda を必須としない。
+
+#### 3. Python 実行前の準備チェック
+
+1. その turn で最初の Python コマンドを打つ前に、必要なら `conda run -n agentflow python -V` または最小 import 確認で canonical 環境を確認する。
+2. Python の検証・テスト・起動・依存確認は、system Python / base 環境 / その他の conda 環境で先に試さない。
+3. app README に別 Python 環境が明記されている場合のみ、その app に限って文書指定環境へ切り替える。
+
+#### 4. 禁止事項
+
+- Python 検証を system Python や別 conda 環境で先に乱試行すること。
+- `pytest` / `fastapi` / `mypy` / `ruff` の不足を、canonical 環境で未確認のまま報告すること。
+- 実行環境未確定のまま「とりあえず動くもの」で試すこと。
+- ユーザーの明示や文書根拠なしに、Python 実行環境を turn 中に切り替えること。
+
+#### 5. 環境不足の報告ルール
+
+- 環境不足を報告する前に、必ず canonical 環境で同じコマンドを再確認する。
+- 報告時は以下を必ず明記する:
+  - 使用した環境名
+  - 実行したコマンド
+  - 欠けていた依存または失敗内容
+- 曖昧に「環境が足りない」「依存がないかもしれない」とだけ書かない。
 
 > **注意**: ユーザーの実行中プロセス（サーバー等）を勝手に kill しないこと。
 

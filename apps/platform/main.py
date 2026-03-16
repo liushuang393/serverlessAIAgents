@@ -4,7 +4,7 @@ CLI および FastAPI サーバーのエントリーポイント。
 
 使用例:
     # サーバー起動（uvicorn 直接）
-    uvicorn apps.platform.main:app --reload --host 0.0.0.0 --port 8000
+    uvicorn apps.platform.main:app --reload --host 0.0.0.0 --port 8900
 
     # サーバー起動（CLI 経由）
     python -m apps.platform.main serve
@@ -17,8 +17,8 @@ CLI および FastAPI サーバーのエントリーポイント。
 
 import argparse
 import asyncio
-import json
 import logging
+import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -26,9 +26,6 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from apps.platform.db import close_platform_db, ensure_platform_db_ready
 from apps.platform.engine import PlatformEngine
 from apps.platform.routers import (
@@ -69,12 +66,23 @@ from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.studio_service import StudioService
 from apps.platform.services.tenant_invitation import TenantInvitationService
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from agentflow.runtime import resolve_app_runtime
 
 
 # --- app_config.json からポート設定を読み取る（単一定義元） ---
 _CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
-_app_config: dict = json.loads(_CONFIG_PATH.read_text("utf-8")) if _CONFIG_PATH.is_file() else {}
-DEFAULT_API_PORT: int = _app_config.get("ports", {}).get("api", 8000)
+_platform_runtime = resolve_app_runtime(
+    _CONFIG_PATH,
+    env=os.environ,
+    backend_host_env="HOST",
+    backend_port_env="PORT",
+    backend_url_env="PLATFORM_URL",
+)
+DEFAULT_API_HOST: str = _platform_runtime.hosts.backend or "0.0.0.0"
+DEFAULT_API_PORT: int = _platform_runtime.ports.api or 8900
 """API サーバーのデフォルトポート（app_config.json の ports.api）."""
 
 
@@ -126,10 +134,11 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     await sync_runtime_secret_cache_from_db()
 
     # agentflow → apps 逆依存を回避: コールバック登録方式
-    from agentflow.llm.gateway.config import register_platform_secret_resolver
     from apps.platform.services.llm_management_persistence import (
         resolve_platform_cached_secret,
     )
+
+    from agentflow.llm.gateway.config import register_platform_secret_resolver
 
     register_platform_secret_resolver(resolve_platform_cached_secret)
 
@@ -380,7 +389,7 @@ def main() -> None:
 
     # serve コマンド
     serve_parser = subparsers.add_parser("serve", help="APIサーバーを起動")
-    serve_parser.add_argument("--host", default="0.0.0.0", help="ホスト")
+    serve_parser.add_argument("--host", default=DEFAULT_API_HOST, help="ホスト")
     serve_parser.add_argument("--port", type=int, default=DEFAULT_API_PORT, help="ポート")
     serve_parser.add_argument(
         "--reload",

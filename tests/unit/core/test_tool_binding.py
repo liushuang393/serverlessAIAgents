@@ -3,9 +3,34 @@
 ランタイムツールバインディングのユニットテスト。
 """
 
-from unittest.mock import MagicMock
+from __future__ import annotations
+
+from typing import Any
 
 import pytest
+
+from agentflow.core.tool_binding import BoundTools, ToolExecutor
+
+
+class _StubAgent:
+    """ToolBinder テスト用スタブ Agent.
+
+    set_bound_tools() を実装し、カプセル化されたAPI経由で
+    ツールバインドが正しく行われることを検証する。
+    """
+
+    def __init__(self) -> None:
+        self._bound_tools: BoundTools | None = None
+        self._tool_executor: ToolExecutor | None = None
+
+    def set_bound_tools(
+        self,
+        bound_tools: BoundTools,
+        tool_executor: ToolExecutor,
+    ) -> None:
+        """パブリックAPIでツールを設定."""
+        self._bound_tools = bound_tools
+        self._tool_executor = tool_executor
 
 
 @pytest.fixture
@@ -48,22 +73,20 @@ class TestToolBinder:
     @pytest.mark.asyncio
     async def test_bind_tools_by_uri(self, tool_binder):
         """URIでツールをバインドするテスト."""
-        mock_agent = MagicMock()
-        mock_agent._tools = None
+        agent = _StubAgent()
 
         uris = ["tool://builtin/calculator"]
-        bound = await tool_binder.bind(mock_agent, tool_uris=uris)
+        bound = await tool_binder.bind(agent, tool_uris=uris)
 
-        assert bound._tools is not None
-        assert len(bound._tools) == 1
+        assert bound._bound_tools is not None
+        assert len(bound._bound_tools) == 1
 
     @pytest.mark.asyncio
     async def test_bind_tools_by_capability(self, tool_binder, tool_registry):
         """能力でツールをバインドするテスト."""
         from agentflow.core.capability_spec import AgentCapabilitySpec
 
-        mock_agent = MagicMock()
-        mock_agent._tools = None
+        agent = _StubAgent()
 
         cap = AgentCapabilitySpec(
             id="test",
@@ -72,41 +95,51 @@ class TestToolBinder:
             required_tools=["tool://builtin/calculator", "tool://mcp/fs/read"],
         )
 
-        bound = await tool_binder.bind_for_capability(mock_agent, cap)
+        bound = await tool_binder.bind_for_capability(agent, cap)
 
-        assert len(bound._tools) == 2
+        assert len(bound._bound_tools) == 2
 
     @pytest.mark.asyncio
     async def test_bind_validates_tool_exists(self, tool_binder):
         """存在しないツールはスキップするテスト."""
-        mock_agent = MagicMock()
-        mock_agent._tools = None
+        agent = _StubAgent()
 
         uris = ["tool://nonexistent/tool"]
-        bound = await tool_binder.bind(mock_agent, tool_uris=uris)
+        bound = await tool_binder.bind(agent, tool_uris=uris)
 
-        assert len(bound._tools) == 0
+        assert len(bound._bound_tools) == 0
 
     @pytest.mark.asyncio
     async def test_bound_tools_has_executor(self, tool_binder):
         """バインドされたツールにエグゼキュータがあるテスト."""
-        mock_agent = MagicMock()
-        mock_agent._tools = None
+        agent = _StubAgent()
 
         uris = ["tool://builtin/calculator"]
-        bound = await tool_binder.bind(mock_agent, tool_uris=uris)
+        bound = await tool_binder.bind(agent, tool_uris=uris)
 
-        assert hasattr(bound, "_tool_executor")
+        assert bound._tool_executor is not None
+        assert isinstance(bound._tool_executor, ToolExecutor)
 
     @pytest.mark.asyncio
     async def test_bind_empty_list(self, tool_binder):
         """空リストでバインドするテスト."""
-        mock_agent = MagicMock()
-        mock_agent._tools = None
+        agent = _StubAgent()
 
-        bound = await tool_binder.bind(mock_agent, tool_uris=[])
+        bound = await tool_binder.bind(agent, tool_uris=[])
 
-        assert len(bound._tools) == 0
+        assert len(bound._bound_tools) == 0
+
+    @pytest.mark.asyncio
+    async def test_bind_uses_set_bound_tools_api(self, tool_binder):
+        """set_bound_tools() パブリックAPIが使用されることを検証."""
+        agent = _StubAgent()
+
+        uris = ["tool://builtin/calculator"]
+        await tool_binder.bind(agent, tool_uris=uris)
+
+        # set_bound_tools() 経由で設定されたことを確認
+        assert agent._bound_tools is not None
+        assert agent._tool_executor is not None
 
 
 class TestBoundTools:

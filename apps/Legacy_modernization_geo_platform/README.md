@@ -34,10 +34,10 @@ GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE=1
 ### 2. バックエンドを起動する
 
 ```bash
-.venv/bin/python apps/Legacy_modernization_geo_platform/scripts/dev.py
+python  apps/Legacy_modernization_geo_platform/scripts/dev.py
 ```
 
-既定では API は `http://localhost:8010` で起動します。
+既定では API は `http://localhost:8100` で起動します。
 
 ### 3. フロントエンドを起動する
 
@@ -47,7 +47,7 @@ npm install
 npm run dev
 ```
 
-既定では Operator UI は `http://localhost:3010` で起動します。
+既定では Operator UI は `http://localhost:3100` で起動します。
 
 ### 4. 現実運用に近い操作順
 
@@ -61,13 +61,13 @@ npm run dev
 ## Docker で起動する
 
 ```bash
-docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml up -d --build
+python apps/Legacy_modernization_geo_platform/scripts/compose.py publish
 ```
 
 停止:
 
 ```bash
-docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml down
+python apps/Legacy_modernization_geo_platform/scripts/compose.py stop
 ```
 
 ## テスト

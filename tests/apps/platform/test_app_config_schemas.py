@@ -53,8 +53,16 @@ class TestAgentInfo:
 
     def test_valid_agent(self) -> None:
         """有効な Agent 情報を受け付ける."""
-        agent = AgentInfo(name="TestAgent", module="mod.test", capabilities=["rag"])
+        agent = AgentInfo(
+            name="TestAgent",
+            module="mod.test",
+            class_name="TestAgentClass",
+            init_kwargs={"region": "jp"},
+            capabilities=["rag"],
+        )
         assert agent.name == "TestAgent"
+        assert agent.class_name == "TestAgentClass"
+        assert agent.init_kwargs == {"region": "jp"}
         assert agent.capabilities == ["rag"]
 
     def test_empty_name_rejected(self) -> None:
@@ -66,6 +74,8 @@ class TestAgentInfo:
         """デフォルト値が正しい."""
         agent = AgentInfo(name="A")
         assert agent.module is None
+        assert agent.class_name is None
+        assert agent.init_kwargs == {}
         assert agent.capabilities == []
         assert agent.business_base is None
         assert agent.agent_type is None
@@ -148,6 +158,7 @@ class TestAppConfig:
         assert cfg.icon == "📦"
         assert cfg.agents == []
         assert cfg.runtime.urls.backend is None
+        assert cfg.runtime.hosts.backend is None
         assert cfg.runtime.database.user is None
         assert cfg.runtime.commands.start is None
         assert cfg.business_base is None
@@ -221,6 +232,29 @@ class TestAppConfig:
         restored = AppConfig.model_validate(dumped)
         assert original.name == restored.name
         assert len(original.agents) == len(restored.agents)
+
+    def test_runtime_hosts_roundtrip(self) -> None:
+        """runtime.hosts は round-trip 可能である."""
+        cfg = AppConfig.model_validate(
+            {
+                "name": "hosted_app",
+                "display_name": "Hosted App",
+                "product_line": "framework",
+                "surface_profile": "developer",
+                "audit_profile": "developer",
+                "plugin_bindings": [],
+                "runtime": {
+                    "hosts": {
+                        "backend": "0.0.0.0",
+                        "frontend": "127.0.0.1",
+                    }
+                },
+            }
+        )
+
+        dumped = cfg.model_dump()
+        assert dumped["runtime"]["hosts"]["backend"] == "0.0.0.0"
+        assert dumped["runtime"]["hosts"]["frontend"] == "127.0.0.1"
 
     def test_product_and_plugin_fields(self) -> None:
         """製品線/プラグイン関連フィールドを受け付ける."""

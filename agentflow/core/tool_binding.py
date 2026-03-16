@@ -197,8 +197,15 @@ class ToolBinder:
             if tool:
                 tools.append(tool)
 
-        agent._tools = BoundTools(tools)
-        agent._tool_executor = self._create_executor(tools)
+        bound = BoundTools(tools)
+        executor = self._create_executor(tools)
+        # パブリックAPIを使用してツールを注入（カプセル化を尊重）
+        if hasattr(agent, "set_bound_tools"):
+            agent.set_bound_tools(bound, executor)
+        else:
+            # フォールバック: set_bound_tools 未実装の場合
+            agent._tools = bound  # type: ignore[attr-defined]
+            agent._tool_executor = executor  # type: ignore[attr-defined]
 
         return agent
 

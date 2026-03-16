@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 import os
@@ -17,7 +16,7 @@ from apps.code_migration_assistant.backend.task_store import RedisTaskStore
 from apps.code_migration_assistant.engine import CodeMigrationEngine
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
@@ -141,6 +140,9 @@ def _create_distributed_store() -> RedisTaskStore[dict[str, Any]] | None:
     )
 
 
+_redis_store = _create_distributed_store()
+
+
 def _load_app_config() -> dict[str, Any]:
     """app_config.json を読み込む."""
     return _auth_guard.load_app_config()
@@ -260,11 +262,7 @@ async def _send_ws_event(task_id: str, event: dict[str, Any]) -> None:
     if subscribers is None:
         return
 
-    if isinstance(subscribers, set):
-        sockets = list(subscribers)
-    else:
-        sockets = [subscribers]
-
+    sockets = list(subscribers)
     stale: list[Any] = []
     for websocket in sockets:
         try:
@@ -272,12 +270,9 @@ async def _send_ws_event(task_id: str, event: dict[str, Any]) -> None:
         except Exception:
             stale.append(websocket)
 
-    if isinstance(subscribers, set):
-        for websocket in stale:
-            subscribers.discard(websocket)
-        if not subscribers:
-            task_websockets.pop(task_id, None)
-    elif stale:
+    for websocket in stale:
+        subscribers.discard(websocket)
+    if not subscribers:
         task_websockets.pop(task_id, None)
 
 
@@ -630,8 +625,6 @@ async def _redis_command_listener() -> None:
         return
 
     async for payload in store.subscribe_commands():
-        if not isinstance(payload, dict):
-            continue
         await _handle_remote_command_request(payload)
 
 
@@ -712,26 +705,6 @@ _auth_guard = ContractAuthGuard(
 )
 
 
-def _load_app_config() -> dict[str, Any]:
-    """Load app_config.json or return an empty dict."""
-    return _auth_guard.load_app_config()
-
-
-def _is_auth_required() -> bool:
-    """Evaluate whether API key auth must be enforced."""
-    return _auth_guard.is_auth_required()
-
-
-def _verify_api_key(incoming_key: str | None) -> None:
-    """Validate API key when auth is required."""
-    _auth_guard.verify_api_key(incoming_key)
-
-
-def _should_protect_http_path(path: str) -> bool:
-    """Return whether HTTP path should be protected by API key."""
-    return _auth_guard.should_protect_http_path(path)
-
-
 async def _require_http_api_key(request: Request) -> None:
     """Enforce API key for protected HTTP routes."""
     await _auth_guard.require_http(request)
@@ -741,16 +714,6 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
     """Enforce API key for websocket handshake."""
     ok, _ = await _auth_guard.require_ws(websocket)
     return ok
-
-
-class MigrationRequest(BaseModel):
-    source_code: str
-    migration_type: str = "cobol-to-java"
-
-
-class ApprovalRequest(BaseModel):
-    approved: bool
-    comment: str | None = None
 
 
 @app.middleware("http")
@@ -783,7 +746,7 @@ async def _init_knowledge_managers() -> None:
         return
     try:
         from apps.code_migration_assistant.backend.knowledge_db import (
-            get_knowledge_session,
+            get_knowledge_session_factory,
             init_knowledge_db,
         )
         from apps.code_migration_assistant.backend.knowledge_router import init_managers
@@ -792,10 +755,7 @@ async def _init_knowledge_managers() -> None:
         from agentflow.knowledge.document_manager import DocumentManager
 
         await init_knowledge_db()
-
-        async def session_factory():
-            async with get_knowledge_session() as session:
-                return session
+        session_factory = get_knowledge_session_factory()
 
         col_mgr = CollectionManager(session_factory=session_factory)
         doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=session_factory)
@@ -894,16 +854,6 @@ async def post_migration_command(task_id: str, command: TaskCommandRequest) -> d
         return await _dispatch_remote_command(task_id, command)
 
     raise HTTPException(status_code=409, detail="task is owned by another process")
-
-
-@app.post("/api/migration/execute")
-async def execute_migration(request: MigrationRequest, background_tasks: BackgroundTasks):
-    """Backward-compatible execute endpoint."""
-    response = await start_migration(request, background_tasks)
-    task_id = str(response.get("task_id", ""))
-    if task_id:
-        response["ws_url"] = f"/api/ws/{task_id}"
-    return response
 
 
 @app.websocket("/api/ws/{task_id}")

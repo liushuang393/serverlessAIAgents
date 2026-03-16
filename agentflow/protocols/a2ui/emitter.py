@@ -1,15 +1,20 @@
 """A2UI エミッター - AG-UI 統合.
 
-このモジュールは A2UI コンポーネントを AG-UI イベントとして配信します。
+このモジュールは A2UI コンポーネントを typed AG-UI イベントとして配信します。
 AGUIEventEmitter と統合して使用します。
 """
 
-import json
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import Any
 
 from agentflow.protocols.a2ui.components import A2UIComponent
+from agentflow.protocols.agui_events import (
+    A2UIClearEvent,
+    A2UIComponentEvent,
+    A2UIUpdateEvent,
+)
 
 
 class A2UIEmitter:
@@ -104,13 +109,44 @@ class A2UIEmitter:
         Args:
             event_data: イベントデータ
         """
-        # AG-UI の ProgressEvent として配信
         emitter = self._agui_emitter
-        if emitter is not None and hasattr(emitter, "emit_progress"):
-            await emitter.emit_progress(
-                message=json.dumps(event_data),
-                progress=0.0,
+        if emitter is None:
+            return
+
+        flow_id = getattr(emitter, "_flow_id", None) or "a2ui"
+        event_type = str(event_data.get("type", "")).strip()
+        if event_type == "a2ui_component":
+            agui_event = A2UIComponentEvent(
+                timestamp=time.time(),
+                flow_id=flow_id,
+                surface_id=str(event_data.get("surface_id", "main")),
+                component=dict(event_data.get("component", {})),
+                data={},
             )
+        elif event_type == "a2ui_update":
+            agui_event = A2UIUpdateEvent(
+                timestamp=time.time(),
+                flow_id=flow_id,
+                surface_id=str(event_data.get("surface_id", "main")),
+                component_id=str(event_data.get("component_id", "")),
+                updates=dict(event_data.get("updates", {})),
+                data={},
+            )
+        elif event_type == "a2ui_clear":
+            agui_event = A2UIClearEvent(
+                timestamp=time.time(),
+                flow_id=flow_id,
+                surface_id=str(event_data.get("surface_id", "main")),
+                data={},
+            )
+        else:
+            self._logger.debug("Unknown A2UI event type skipped: %s", event_type)
+            return
+
+        if hasattr(emitter, "emit"):
+            await emitter.emit(agui_event)
+        elif hasattr(emitter, "_emit_event"):
+            await emitter._emit_event(agui_event)
 
     async def stream_events(self) -> AsyncIterator[dict[str, Any]]:
         """イベントをストリーム.

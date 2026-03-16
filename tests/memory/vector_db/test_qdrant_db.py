@@ -18,7 +18,7 @@ from agentflow.memory.vector_db.qdrant_db import QdrantDB
 @pytest.fixture
 def qdrant_db():
     """QdrantDBのフィクスチャ."""
-    with patch("agentflow.memory.vector_db.qdrant_db.QdrantClient"):
+    with patch("infrastructure.memory.vector_db.qdrant_db.QdrantClient"):
         db = QdrantDB(host="localhost", port=6333, collection_name="test-collection", dimension=384)
         db._client = MagicMock()
         db._connected = True
@@ -48,7 +48,7 @@ def sample_embedding():
 @pytest.mark.asyncio
 async def test_connect():
     """接続テスト."""
-    with patch("agentflow.memory.vector_db.qdrant_db.QdrantClient") as mock_qdrant:
+    with patch("infrastructure.memory.vector_db.qdrant_db.QdrantClient") as mock_qdrant:
         mock_client = MagicMock()
         mock_collections = MagicMock()
         mock_collections.collections = []
@@ -65,7 +65,7 @@ async def test_connect():
 @pytest.mark.asyncio
 async def test_connect_existing_collection():
     """既存コレクションへの接続テスト."""
-    with patch("agentflow.memory.vector_db.qdrant_db.QdrantClient") as mock_qdrant:
+    with patch("infrastructure.memory.vector_db.qdrant_db.QdrantClient") as mock_qdrant:
         mock_client = MagicMock()
         mock_collection = MagicMock()
         mock_collection.name = "test-collection"
@@ -85,7 +85,7 @@ async def test_connect_existing_collection():
 @pytest.mark.asyncio
 async def test_connect_import_error():
     """Qdrantパッケージなしの接続テスト."""
-    with patch("agentflow.memory.vector_db.qdrant_db.QdrantClient", side_effect=ImportError):
+    with patch("infrastructure.memory.vector_db.qdrant_db.QdrantClient", side_effect=ImportError):
         db = QdrantDB(host="localhost", port=6333, collection_name="test-collection", dimension=384)
 
         with pytest.raises(ImportError, match="qdrant-client package is required"):

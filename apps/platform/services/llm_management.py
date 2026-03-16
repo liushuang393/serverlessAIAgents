@@ -6,20 +6,6 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from agentflow.llm.gateway import (
-    EngineRuntimeStatus,
-    InferenceEngineConfig,
-    LiteLLMGateway,
-    LLMGatewayConfig,
-    ModelConfig,
-    ProviderConfig,
-    ProviderRuntimeStatus,
-    RoutingPolicyConfig,
-    build_provider_runtime_statuses,
-    load_gateway_config,
-    resolve_secret_status,
-)
-from agentflow.llm.gateway.config import register_platform_secret_resolver
 from apps.platform.schemas.llm_management_schemas import (
     LLMCatalogResponse,
     LLMCostSummary,
@@ -54,6 +40,20 @@ from apps.platform.services.llm_management_persistence import (
 from apps.platform.services.llm_management_setup_manager import LLMSetupManager
 from apps.platform.services.llm_management_switch_service import LLMSwitchService
 from apps.platform.services.llm_management_validator import LLMConfigValidator
+from apps.platform.services.llm_runtime_status import resolve_provider_runtime_statuses
+
+from agentflow.llm.gateway import (
+    InferenceEngineConfig,
+    LiteLLMGateway,
+    LLMGatewayConfig,
+    ModelConfig,
+    ProviderConfig,
+    ProviderRuntimeStatus,
+    RoutingPolicyConfig,
+    load_gateway_config,
+    resolve_secret_status,
+)
+from agentflow.llm.gateway.config import register_platform_secret_resolver
 
 
 class LLMManagementService:
@@ -72,7 +72,6 @@ class LLMManagementService:
             validator=self._validator,
             config_path=self._config_path,
         )
-        self._gateway = LiteLLMGateway(config_path=self._config_path)
         self._last_preflight: LLMPreflightReport | None = None
 
     @property
@@ -82,12 +81,11 @@ class LLMManagementService:
 
     def reload(self) -> LLMGatewayConfig:
         """Reload gateway configuration from disk."""
-        self._gateway.reload()
-        return self._gateway.config
+        return self._store.load()
 
     def get_config(self) -> LLMGatewayConfig:
         """Return current gateway configuration."""
-        return self._gateway.config
+        return self._store.load()
 
     def get_config_version(self) -> str | None:
         """Return current config version digest."""
@@ -129,7 +127,7 @@ class LLMManagementService:
                 "models": [model.model_dump() for model in config.models],
                 "registry": dict(config.registry),
                 "routing_policy": config.routing_policy.model_dump(),
-                "cost_summary": self._gateway.get_cost_summary(),
+                "cost_summary": LiteLLMGateway(config=config, config_path=self._config_path).get_cost_summary(),
                 "config_version": self.get_config_version(),
             }
         )
@@ -206,7 +204,8 @@ class LLMManagementService:
 
     async def get_engine_statuses(self) -> list[LLMEngineRuntimeStatusPayload]:
         """Return runtime statuses for configured inference engines."""
-        statuses = await self._gateway.get_engine_statuses()
+        gateway = LiteLLMGateway(config=self.get_config(), config_path=self._config_path)
+        statuses = await gateway.get_engine_statuses()
         return [LLMEngineRuntimeStatusPayload.model_validate(status.model_dump()) for status in statuses]
 
     async def get_provider_runtime(self) -> list[LLMProviderRuntimeStatusPayload]:
@@ -216,7 +215,8 @@ class LLMManagementService:
 
     def get_cost_summary(self) -> LLMCostSummary:
         """Return gateway cost-tracking summary."""
-        return LLMCostSummary.model_validate(self._gateway.get_cost_summary())
+        gateway = LiteLLMGateway(config=self.get_config(), config_path=self._config_path)
+        return LLMCostSummary.model_validate(gateway.get_cost_summary())
 
     def get_catalog(self) -> LLMCatalogResponse:
         """Return provider/model/backend catalog metadata."""
@@ -289,6 +289,8 @@ class LLMManagementService:
         command_result, compose_path, compose_yaml = await self._setup_manager.deploy_engine(engine)
         success = bool(command_result.error is None and command_result.return_code == 0)
         public_base_url = engine.public_base_url or engine.base_url
+        if success:
+            self._enable_engine(engine.name)
         deployment = PlatformEngineDeploymentRecord(
             engine_name=engine.name,
             engine_type=engine.engine_type,
@@ -305,7 +307,9 @@ class LLMManagementService:
             gpu_count=engine.gpu_count,
             extra_env=dict(engine.extra_env),
             status="running" if success else "failed",
-            last_error=self._summarize_deployment_error(command_result.error or command_result.stderr or None),
+            last_error=(
+                None if success else self._summarize_deployment_error(command_result.error or command_result.stderr or None)
+            ),
             deployed_at=datetime.now(UTC).isoformat() if success else None,
             stopped_at=None,
         )
@@ -351,7 +355,9 @@ class LLMManagementService:
             gpu_count=engine.gpu_count,
             extra_env=dict(engine.extra_env),
             status="stopped" if success else "stop_failed",
-            last_error=self._summarize_deployment_error(command_result.error or command_result.stderr or None),
+            last_error=(
+                None if success else self._summarize_deployment_error(command_result.error or command_result.stderr or None)
+            ),
             deployed_at=None,
             stopped_at=datetime.now(UTC).isoformat(),
         )
@@ -487,77 +493,24 @@ class LLMManagementService:
         self,
         config: LLMGatewayConfig,
     ) -> list[ProviderRuntimeStatus]:
-        """Build provider runtime statuses with local-engine health normalization."""
-        statuses = build_provider_runtime_statuses(config, config_path=self._config_path)
-        gateway = LiteLLMGateway(config=config, config_path=self._config_path)
-        engine_statuses = await gateway.get_engine_statuses()
-        return self._normalize_local_provider_statuses(
-            statuses=statuses,
-            models=config.models,
-            engine_statuses=engine_statuses,
-        )
+        """Build provider runtime statuses with shared linked-engine and probe rules."""
+        return await resolve_provider_runtime_statuses(config, config_path=self._config_path)
 
-    @staticmethod
-    def _normalize_local_provider_statuses(
-        *,
-        statuses: list[ProviderRuntimeStatus],
-        models: list[ModelConfig],
-        engine_statuses: list[EngineRuntimeStatus],
-    ) -> list[ProviderRuntimeStatus]:
-        """Keep local provider unavailable until linked engines are healthy."""
-        by_engine = {item.name.strip().lower(): item for item in engine_statuses}
-        normalized: list[ProviderRuntimeStatus] = []
-
-        for status in statuses:
-            provider_name = status.name.strip().lower()
-            if provider_name != "local":
-                normalized.append(status)
-                continue
-
-            linked_engines = sorted(
-                {
-                    model.engine.strip().lower()
-                    for model in models
-                    if model.enabled
-                    and model.provider.strip().lower() == provider_name
-                    and isinstance(model.engine, str)
-                    and model.engine.strip()
-                }
-            )
-            if not linked_engines:
-                normalized.append(status)
-                continue
-
-            unhealthy: list[str] = []
-            for engine_name in linked_engines:
-                engine_status = by_engine.get(engine_name)
-                if engine_status is None or engine_status.status != "available":
-                    reason = engine_status.last_error if engine_status is not None else "status_missing"
-                    unhealthy.append(f"{engine_name}:{reason or 'unavailable'}")
-
-            if unhealthy:
-                normalized.append(
-                    status.model_copy(
-                        update={
-                            "status": "unavailable",
-                            "source": f"engine:{','.join(linked_engines)}",
-                            "last_error": f"linked_engine_unhealthy:{' / '.join(unhealthy)}",
-                        }
-                    )
-                )
-                continue
-
-            normalized.append(
-                status.model_copy(
-                    update={
-                        "status": "available",
-                        "source": f"engine:{','.join(linked_engines)}",
-                        "last_error": None,
-                    }
-                )
-            )
-
-        return normalized
+    def _enable_engine(self, engine_name: str) -> None:
+        """Enable an engine in gateway config after a successful deploy."""
+        config = self.get_config().model_copy(deep=True)
+        updated = False
+        config.inference_engines = [
+            engine.model_copy(update={"enabled": True}) if engine.name == engine_name and not engine.enabled else engine
+            for engine in config.inference_engines
+        ]
+        for engine in config.inference_engines:
+            if engine.name == engine_name and engine.enabled:
+                updated = True
+                break
+        if updated:
+            prepared = self._validator.prepare_config(config)
+            self._store.save(prepared)
 
     @staticmethod
     def _summarize_deployment_error(error: str | None) -> str | None:

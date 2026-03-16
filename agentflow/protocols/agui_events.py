@@ -47,6 +47,11 @@ class AGUIEventType(str, Enum):
     APPROVAL_SUBMITTED = "approval_submitted"
     APPROVAL_TIMEOUT = "approval_timeout"
 
+    # A2UI surface events
+    A2UI_COMPONENT = "a2ui.component"
+    A2UI_UPDATE = "a2ui.update"
+    A2UI_CLEAR = "a2ui.clear"
+
 
 class AGUIEvent(BaseModel):
     """AG-UI イベントベースクラス.
@@ -274,6 +279,30 @@ class ApprovalTimeoutEvent(AGUIEvent):
     action: str = Field(..., description="対象アクション")
 
 
+class A2UIComponentEvent(AGUIEvent):
+    """A2UI component mount event."""
+
+    event_type: AGUIEventType = Field(default=AGUIEventType.A2UI_COMPONENT, description="イベントタイプ")
+    surface_id: str = Field(..., description="描画先 surface ID")
+    component: dict[str, Any] = Field(..., description="A2UI component payload")
+
+
+class A2UIUpdateEvent(AGUIEvent):
+    """A2UI component partial update event."""
+
+    event_type: AGUIEventType = Field(default=AGUIEventType.A2UI_UPDATE, description="イベントタイプ")
+    surface_id: str = Field(..., description="描画先 surface ID")
+    component_id: str = Field(..., description="更新対象 component ID")
+    updates: dict[str, Any] = Field(default_factory=dict, description="差分更新 payload")
+
+
+class A2UIClearEvent(AGUIEvent):
+    """A2UI surface clear event."""
+
+    event_type: AGUIEventType = Field(default=AGUIEventType.A2UI_CLEAR, description="イベントタイプ")
+    surface_id: str = Field(..., description="クリア対象 surface ID")
+
+
 LEGACY_EVENT_TYPE_MAP: dict[AGUIEventType, str] = {
     AGUIEventType.FLOW_START: "flow_start",
     AGUIEventType.FLOW_COMPLETE: "flow_complete",
@@ -289,6 +318,9 @@ LEGACY_EVENT_TYPE_MAP: dict[AGUIEventType, str] = {
     AGUIEventType.APPROVAL_REQUIRED: "approval_required",
     AGUIEventType.APPROVAL_SUBMITTED: "approval_submitted",
     AGUIEventType.APPROVAL_TIMEOUT: "approval_timeout",
+    AGUIEventType.A2UI_COMPONENT: "a2ui_component",
+    AGUIEventType.A2UI_UPDATE: "a2ui_update",
+    AGUIEventType.A2UI_CLEAR: "a2ui_clear",
 }
 
 
@@ -311,6 +343,9 @@ __all__ = [
     "ApprovalRequiredEvent",
     "ApprovalSubmittedEvent",
     "ApprovalTimeoutEvent",
+    "A2UIClearEvent",
+    "A2UIComponentEvent",
+    "A2UIUpdateEvent",
     "ClarificationQuestion",
     "ClarificationReceivedEvent",
     "ClarificationRequiredEvent",
