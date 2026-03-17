@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from apps.platform.schemas.app_config_schemas import RuntimeCommandsConfig
-from apps.platform.services.runtime_command_resolver import RuntimeCommandResolver
+from platform.schemas.app_config_schemas import RuntimeCommandsConfig
+from platform.services.runtime_command_resolver import RuntimeCommandResolver
 
 
 class TestRuntimeCommandResolver:
@@ -42,7 +42,7 @@ class TestRuntimeCommandResolver:
             (
                 "```bash\n"
                 "python -m apps.sample_app.main --reload\n"
-                "python -m apps.platform.main publish ./apps/sample_app --target docker\n"
+                "python -m platform.main publish ./apps/sample_app --target docker\n"
                 "```\n"
             ),
             encoding="utf-8",
@@ -115,7 +115,7 @@ class TestRuntimeCommandResolver:
         (app_dir / "README.md").write_text(
             (
                 "```bash\n"
-                "python -m apps.auth_service.main\n"
+                "python -m shared.auth_service.main\n"
                 "```\n"
             ),
             encoding="utf-8",
@@ -123,7 +123,7 @@ class TestRuntimeCommandResolver:
         runtime = RuntimeCommandsConfig(
             backend_dev=(
                 "AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service} "
-                "python -m apps.auth_service.main"
+                "python -m shared.auth_service.main"
             )
         )
         resolved = RuntimeCommandResolver().resolve(
@@ -140,10 +140,10 @@ class TestRuntimeCommandResolver:
         (app_dir / "README.md").write_text(
             (
                 "```bash\n"
-                "python apps/Legacy_modernization_geo_platform/scripts/dev.py\n"
-                "python apps/Legacy_modernization_geo_platform/scripts/compose.py publish\n"
-                "python apps/Legacy_modernization_geo_platform/scripts/compose.py start\n"
-                "python apps/Legacy_modernization_geo_platform/scripts/compose.py stop\n"
+                "python apps/legacy_modernization_geo_platform/scripts/dev.py\n"
+                "python apps/legacy_modernization_geo_platform/scripts/compose.py publish\n"
+                "python apps/legacy_modernization_geo_platform/scripts/compose.py start\n"
+                "python apps/legacy_modernization_geo_platform/scripts/compose.py stop\n"
                 "```\n"
             ),
             encoding="utf-8",
@@ -155,7 +155,7 @@ class TestRuntimeCommandResolver:
             runtime_commands=RuntimeCommandsConfig(),
         )
 
-        assert resolved.backend_dev == "python apps/Legacy_modernization_geo_platform/scripts/dev.py"
-        assert resolved.publish == "python apps/Legacy_modernization_geo_platform/scripts/compose.py publish"
-        assert resolved.start == "python apps/Legacy_modernization_geo_platform/scripts/compose.py start"
-        assert resolved.stop == "python apps/Legacy_modernization_geo_platform/scripts/compose.py stop"
+        assert resolved.backend_dev == "python apps/legacy_modernization_geo_platform/scripts/dev.py"
+        assert resolved.publish == "python apps/legacy_modernization_geo_platform/scripts/compose.py publish"
+        assert resolved.start == "python apps/legacy_modernization_geo_platform/scripts/compose.py start"
+        assert resolved.stop == "python apps/legacy_modernization_geo_platform/scripts/compose.py stop"

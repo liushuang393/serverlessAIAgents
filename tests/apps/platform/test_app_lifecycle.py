@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-from apps.platform.schemas.app_config_schemas import AppConfig
-from apps.platform.services.app_lifecycle import (
+from platform.schemas.app_config_schemas import AppConfig
+from platform.services.app_lifecycle import (
     AppActionResult,
     AppLifecycleManager,
     AppStatus,
@@ -111,7 +111,7 @@ class TestAppLifecycleManager:
     ) -> None:
         """ヘルスパスなしでもフォールバックURLを試行する."""
         cfg = self._make_config(health=None)
-        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
+        with patch("platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
             mock_client = AsyncMock()
             mock_client.get.side_effect = httpx.ConnectError("refused")
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -133,7 +133,7 @@ class TestAppLifecycleManager:
             json={"status": "ok"},
             request=httpx.Request("GET", "http://localhost:8099/health"),
         )
-        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
+        with patch("platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
             mock_client = AsyncMock()
             mock_client.get.return_value = mock_resp
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -155,7 +155,7 @@ class TestAppLifecycleManager:
             500,
             request=httpx.Request("GET", "http://localhost:8099/health"),
         )
-        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
+        with patch("platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
             mock_client = AsyncMock()
             mock_client.get.return_value = mock_resp
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -173,7 +173,7 @@ class TestAppLifecycleManager:
     ) -> None:
         """接続拒否で STOPPED を返す."""
         cfg = self._make_config()
-        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
+        with patch("platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls:
             mock_client = AsyncMock()
             mock_client.get.side_effect = httpx.ConnectError("refused")
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -205,7 +205,7 @@ class TestAppLifecycleManager:
             json={"status": "ok"},
             request=httpx.Request("GET", "http://localhost:8099/health"),
         )
-        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
+        with patch("platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
             lifecycle,
             "_is_tcp_port_open",
             side_effect=lambda _host, port, _timeout: port in {3004, 5433},
@@ -247,7 +247,7 @@ class TestAppLifecycleManager:
             json={"status": "ok"},
             request=httpx.Request("GET", "http://localhost:8099/health"),
         )
-        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
+        with patch("platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
             lifecycle,
             "_is_tcp_port_open",
             side_effect=lambda _host, port, _timeout: port == 5433,
@@ -530,7 +530,7 @@ class TestAppLifecycleManager:
                 return b"", b""
 
         with patch(
-            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_shell",
+            "platform.services.app_lifecycle.asyncio.create_subprocess_shell",
             new=AsyncMock(return_value=_Proc()),
         ) as mocked, patch.object(
             lifecycle,
@@ -981,10 +981,10 @@ class TestAppLifecycleManager:
                 return b"12345\n", b""
 
         with patch(
-            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_shell",
+            "platform.services.app_lifecycle.asyncio.create_subprocess_shell",
             new=AsyncMock(return_value=_Proc()),
         ), patch(
-            "apps.platform.services.app_lifecycle.asyncio.sleep",
+            "platform.services.app_lifecycle.asyncio.sleep",
             new=AsyncMock(side_effect=asyncio.CancelledError),
         ):
             launch = await lifecycle._start_local_process(

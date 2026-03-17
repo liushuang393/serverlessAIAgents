@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from apps.platform.services.agent_aggregator import (
+from platform.services.agent_aggregator import (
     AgentAggregatorService,
     AggregatedAgent,
 )

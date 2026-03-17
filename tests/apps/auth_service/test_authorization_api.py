@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.apps.auth_service.conftest import auth_headers
+from tests.shared.auth_service.conftest import auth_headers
 
 
 pytestmark = pytest.mark.asyncio

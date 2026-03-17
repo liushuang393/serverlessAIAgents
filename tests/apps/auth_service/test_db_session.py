@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from apps.auth_service.config import get_settings
-from apps.auth_service.db import session as session_module
+from shared.auth_service.config import get_settings
+from shared.auth_service.db import session as session_module
 
 
 @pytest.mark.asyncio
@@ -31,8 +31,8 @@ async def test_ensure_database_ready_allows_seed_helpers_to_open_session(
         settings.AUTH_DB_SEED_DEFAULTS = True
         await session_module.close_db()
 
-        import apps.auth_service.db.seed as seed_module
-        import apps.auth_service.db.seed_authorization as seed_authorization_module
+        import shared.auth_service.db.seed as seed_module
+        import shared.auth_service.db.seed_authorization as seed_authorization_module
 
         monkeypatch.setattr(seed_module, "seed_default_users", fake_seed_default_users)
         monkeypatch.setattr(seed_authorization_module, "seed_authorization", fake_seed_authorization)

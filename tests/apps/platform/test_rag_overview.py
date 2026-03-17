@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from apps.platform.services.rag_overview import RAGOverviewService
+    from platform.services.rag_overview import RAGOverviewService
 
 
 class TestGetOverview:

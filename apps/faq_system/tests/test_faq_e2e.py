@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from kernel.agents.specialized.faq_agent import (
+from apps.faq_system.backend.agents.faq_agent import (
     FAQAgent,
     FAQAgentConfig,
     FAQInput,

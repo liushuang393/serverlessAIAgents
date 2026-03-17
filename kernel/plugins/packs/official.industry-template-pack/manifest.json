@@ -1,0 +1,19 @@
+{
+  "name": "official.industry-template-pack",
+  "version": "1.0.0",
+  "description": "業界別テンプレート（金融・医療・製造）",
+  "type": "template",
+  "templates": [
+    "templates/base_template.py",
+    "templates/template_manager.py",
+    "templates/finance/compliance_template.py",
+    "templates/finance/financial_analysis_template.py",
+    "templates/finance/risk_assessment_template.py",
+    "templates/healthcare/diagnostic_support_template.py",
+    "templates/healthcare/patient_analysis_template.py",
+    "templates/healthcare/treatment_planning_template.py",
+    "templates/manufacturing/production_planning_template.py",
+    "templates/manufacturing/quality_control_template.py",
+    "templates/manufacturing/supply_chain_template.py"
+  ]
+}

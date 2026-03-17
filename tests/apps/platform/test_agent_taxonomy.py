@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+from platform.services.agent_taxonomy import AgentTaxonomyService
 
 
 @pytest.mark.parametrize(

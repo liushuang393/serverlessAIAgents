@@ -7,14 +7,14 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "AppLifecycleManager": ("apps.platform.services.app_lifecycle", "AppLifecycleManager"),
-    "PortAllocatorService": ("apps.platform.services.port_allocator", "PortAllocatorService"),
+    "AppLifecycleManager": ("platform.services.app_lifecycle", "AppLifecycleManager"),
+    "PortAllocatorService": ("platform.services.port_allocator", "PortAllocatorService"),
     "ResolvedRuntimeCommands": (
-        "apps.platform.services.runtime_command_resolver",
+        "platform.services.runtime_command_resolver",
         "ResolvedRuntimeCommands",
     ),
     "RuntimeCommandResolver": (
-        "apps.platform.services.runtime_command_resolver",
+        "platform.services.runtime_command_resolver",
         "RuntimeCommandResolver",
     ),
 }

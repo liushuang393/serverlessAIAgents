@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 import pytest
-from apps.platform.services.tenant_invitation import (
+from platform.services.tenant_invitation import (
     InviteServiceError,
     TenantInvitationService,
 )

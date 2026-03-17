@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from apps.platform.agents.gallery_agent import GalleryAgent
+from platform.agents.gallery_agent import GalleryAgent
 
 
 def _make_agent(tmp_path: Path) -> GalleryAgent:
@@ -22,7 +22,7 @@ def _make_agent(tmp_path: Path) -> GalleryAgent:
             lambda self, **kw: setattr(self, "_mocked", True) or None,
         ),
         patch(
-            "apps.platform.services.gallery_service.MarketplaceClient",
+            "platform.services.gallery_service.MarketplaceClient",
             return_value=MagicMock(),
         ),
     ):
@@ -33,7 +33,7 @@ def _make_agent(tmp_path: Path) -> GalleryAgent:
 def agent(tmp_path: Path) -> GalleryAgent:
     """ファイルシステム副作用のない GalleryAgent インスタンスを返す fixture。"""
     with patch(
-        "apps.platform.services.gallery_service.MarketplaceClient",
+        "platform.services.gallery_service.MarketplaceClient",
         return_value=MagicMock(),
     ):
         return GalleryAgent()

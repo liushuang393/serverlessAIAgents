@@ -6,14 +6,14 @@ import os
 from pathlib import Path
 
 from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, ProviderConfig
-from apps.platform.schemas.llm_management_schemas import (
+from platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMPreflightRequest,
     LLMPreflightStep,
     LLMProviderKind,
     LLMSetupCommandResult,
 )
-from apps.platform.services.llm_management_setup_manager import LLMSetupManager
+from platform.services.llm_management_setup_manager import LLMSetupManager
 
 
 class StubRunner:

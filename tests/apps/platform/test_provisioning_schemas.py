@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from apps.platform.schemas.provisioning_schemas import AppCreateRequest
+from platform.schemas.provisioning_schemas import AppCreateRequest
 from pydantic import ValidationError
 
 

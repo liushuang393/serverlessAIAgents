@@ -7,22 +7,22 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "ConfigWatcherService": ("apps.platform.services.config_watcher", "ConfigWatcherService"),
+    "ConfigWatcherService": ("platform.services.config_watcher", "ConfigWatcherService"),
     "get_default_llm_management_service": (
-        "apps.platform.services.llm_management",
+        "platform.services.llm_management",
         "get_default_llm_management_service",
     ),
     "init_app_config_event_store": (
-        "apps.platform.services.app_config_event_store",
+        "platform.services.app_config_event_store",
         "init_app_config_event_store",
     ),
-    "init_rag_config_store": ("apps.platform.services.rag_config_store", "init_rag_config_store"),
+    "init_rag_config_store": ("platform.services.rag_config_store", "init_rag_config_store"),
     "resolve_platform_cached_secret": (
-        "apps.platform.services.llm_management_persistence",
+        "platform.services.llm_management_persistence",
         "resolve_platform_cached_secret",
     ),
     "sync_runtime_secret_cache_from_db": (
-        "apps.platform.services.llm_management_persistence",
+        "platform.services.llm_management_persistence",
         "sync_runtime_secret_cache_from_db",
     ),
 }

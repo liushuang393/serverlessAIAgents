@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from kernel.protocols.a2a_hub import get_hub, reset_hub
-from apps.Legacy_modernization_geo_platform.backend.schemas import (
+from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreArtifact,
     AccountScoreEntry,
     AccountSignalArtifact,
@@ -50,10 +50,10 @@ def geo_request():
 
 class TestBrandMemoryAgent:
     async def test_process_returns_artifact(self, geo_request):
-        from apps.Legacy_modernization_geo_platform.agents.brand_memory_agent import (
+        from apps.legacy_modernization_geo_platform.agents.brand_memory_agent import (
             BrandMemoryAgent,
         )
-        from apps.Legacy_modernization_geo_platform.agents._models import (
+        from apps.legacy_modernization_geo_platform.agents._models import (
             BrandMemoryInput,
         )
 
@@ -64,7 +64,7 @@ class TestBrandMemoryAgent:
         assert result.artifact.meta.task_id == "t1"
 
     async def test_hub_registration_and_call(self, geo_request):
-        from apps.Legacy_modernization_geo_platform.agents.brand_memory_agent import (
+        from apps.legacy_modernization_geo_platform.agents.brand_memory_agent import (
             BrandMemoryAgent,
         )
 
@@ -79,10 +79,10 @@ class TestBrandMemoryAgent:
 
 class TestAccountScoreAgent:
     async def test_process_returns_artifact(self, geo_request):
-        from apps.Legacy_modernization_geo_platform.agents.account_score_agent import (
+        from apps.legacy_modernization_geo_platform.agents.account_score_agent import (
             AccountScoreAgent,
         )
-        from apps.Legacy_modernization_geo_platform.agents._models import (
+        from apps.legacy_modernization_geo_platform.agents._models import (
             AccountScoreInput,
         )
 
@@ -104,10 +104,10 @@ class TestAccountScoreAgent:
 
 class TestLegacySemanticsAgent:
     async def test_process_returns_artifact(self, geo_request):
-        from apps.Legacy_modernization_geo_platform.agents.legacy_semantics_agent import (
+        from apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent import (
             LegacySemanticsAgent,
         )
-        from apps.Legacy_modernization_geo_platform.agents._models import (
+        from apps.legacy_modernization_geo_platform.agents._models import (
             LegacySemanticsInput,
         )
 

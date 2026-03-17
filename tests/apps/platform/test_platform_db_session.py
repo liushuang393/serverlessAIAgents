@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from apps.platform.db.session import _ensure_sqlite_parent_dir
+from platform.db.session import _ensure_sqlite_parent_dir
 
 
 class TestEnsureSqliteParentDir:

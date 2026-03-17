@@ -9,16 +9,16 @@ import json
 from pathlib import Path
 
 import pytest
-from apps.platform.schemas.app_config_schemas import (
+from platform.schemas.app_config_schemas import (
     AgentInfo,
     AppConfig,
     DependenciesConfig,
     EntryPointsConfig,
     PortsConfig,
 )
-from apps.platform.schemas.capability_schemas import CapabilitySpec
-from apps.platform.services.app_discovery import _flatten_capability_item
-from apps.platform.services.capability_registry import CapabilityRegistry
+from platform.schemas.capability_schemas import CapabilitySpec
+from platform.services.app_discovery import _flatten_capability_item
+from platform.services.capability_registry import CapabilityRegistry
 from pydantic import ValidationError
 
 
@@ -125,7 +125,7 @@ class TestAppConfig:
 
     def test_real_legacy_modernization_geo_platform_manifest_is_valid(self) -> None:
         """実アプリ manifest が現行 AppConfig スキーマを満たす."""
-        manifest_path = Path("apps/Legacy_modernization_geo_platform/app_config.json")
+        manifest_path = Path("apps/legacy_modernization_geo_platform/app_config.json")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         cfg = AppConfig.model_validate(manifest)
@@ -136,7 +136,7 @@ class TestAppConfig:
 
     def test_valid_full_config(self) -> None:
         """完全な設定を受け付ける."""
-        from tests.apps.platform.conftest import SAMPLE_APP_CONFIG
+        from tests.platform.conftest import SAMPLE_APP_CONFIG
 
         cfg = AppConfig.model_validate(SAMPLE_APP_CONFIG)
         assert cfg.name == "test_app"
@@ -225,7 +225,7 @@ class TestAppConfig:
 
     def test_model_dump_roundtrip(self) -> None:
         """model_dump → model_validate のラウンドトリップが成功する."""
-        from tests.apps.platform.conftest import SAMPLE_APP_CONFIG
+        from tests.platform.conftest import SAMPLE_APP_CONFIG
 
         original = AppConfig.model_validate(SAMPLE_APP_CONFIG)
         dumped = original.model_dump()

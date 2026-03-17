@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from infrastructure.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig, RoutingPolicyConfig
-from apps.platform.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
+from platform.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
 
 
 def _base_config() -> LLMGatewayConfig:

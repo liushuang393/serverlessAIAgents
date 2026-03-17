@@ -7,11 +7,11 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "AgentAggregatorService": ("apps.platform.services.agent_aggregator", "AgentAggregatorService"),
-    "MCPRegistryService": ("apps.platform.services.mcp_registry", "MCPRegistryService"),
-    "RAGOverviewService": ("apps.platform.services.rag_overview", "RAGOverviewService"),
-    "SkillCatalogService": ("apps.platform.services.skill_catalog", "SkillCatalogService"),
-    "StudioService": ("apps.platform.services.studio_service", "StudioService"),
+    "AgentAggregatorService": ("platform.services.agent_aggregator", "AgentAggregatorService"),
+    "MCPRegistryService": ("platform.services.mcp_registry", "MCPRegistryService"),
+    "RAGOverviewService": ("platform.services.rag_overview", "RAGOverviewService"),
+    "SkillCatalogService": ("platform.services.skill_catalog", "SkillCatalogService"),
+    "StudioService": ("platform.services.studio_service", "StudioService"),
 }
 
 

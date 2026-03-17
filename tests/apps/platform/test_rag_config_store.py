@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from apps.platform.services.rag_config_store import RagConfigStore
+from platform.services.rag_config_store import RagConfigStore
 
 
 @pytest.mark.asyncio

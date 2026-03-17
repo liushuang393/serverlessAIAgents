@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from apps.platform.schemas.plugin_manifest_schemas import PluginManifest
+from platform.schemas.plugin_manifest_schemas import PluginManifest
 
 
 def test_plugin_manifest_validation() -> None:

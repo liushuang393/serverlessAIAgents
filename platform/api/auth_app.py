@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 def _get_settings() -> Any:
     """auth_service 設定を取得する。"""
-    return load_symbol("apps.auth_service.config", "get_settings")()
+    return load_symbol("shared.auth_service.config", "get_settings")()
 
 
 @asynccontextmanager
@@ -29,11 +29,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger = logging.getLogger(__name__)
     logger.info("auth_service 起動中... PORT=%d", settings.AUTH_SERVICE_PORT)
 
-    ensure_database_ready = load_symbol("apps.auth_service.db.session", "ensure_database_ready")
-    close_db = load_symbol("apps.auth_service.db.session", "close_db")
-    seed_authorization = load_symbol("apps.auth_service.db.seed_authorization", "seed_authorization")
+    ensure_database_ready = load_symbol("shared.auth_service.db.session", "ensure_database_ready")
+    close_db = load_symbol("shared.auth_service.db.session", "close_db")
+    seed_authorization = load_symbol("shared.auth_service.db.seed_authorization", "seed_authorization")
     seed_faq_resource_definitions = load_symbol(
-        "apps.auth_service.db.seed_authorization",
+        "shared.auth_service.db.seed_authorization",
         "seed_faq_resource_definitions",
     )
 
@@ -53,9 +53,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     """auth_service FastAPI アプリを生成する。"""
     settings = _get_settings()
-    router = load_symbol("apps.auth_service.api.router", "router")
-    admin_router = load_symbol("apps.auth_service.api.router_admin", "router")
-    authorization_router = load_symbol("apps.auth_service.api.router_authorization", "router")
+    router = load_symbol("shared.auth_service.api.router", "router")
+    admin_router = load_symbol("shared.auth_service.api.router_admin", "router")
+    authorization_router = load_symbol("shared.auth_service.api.router_authorization", "router")
 
     app = FastAPI(
         title="Auth Service",

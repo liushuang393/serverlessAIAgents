@@ -18,8 +18,8 @@ from shared.trace.service import TraceService
 
 def _register_legacy_package_aliases() -> None:
     """旧 shared 配下の package を新しい契約層へ割り当てる。"""
-    if "shared.commerce" not in sys.modules:
-        sys.modules["shared.commerce"] = importlib.import_module("contracts.protocol.commerce")
+    if "domain.commerce" not in sys.modules:
+        sys.modules["domain.commerce"] = importlib.import_module("contracts.protocol.commerce")
 
 
 _register_legacy_package_aliases()

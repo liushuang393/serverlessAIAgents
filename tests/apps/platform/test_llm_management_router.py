@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
-from apps.platform.main import create_app
-from apps.platform.routers.llm_management import init_llm_management_service
-from apps.platform.services.llm_management import LLMManagementService
+from platform.main import create_app
+from platform.routers.llm_management import init_llm_management_service
+from platform.services.llm_management import LLMManagementService
 
 
 if TYPE_CHECKING:

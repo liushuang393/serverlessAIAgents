@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from apps.auth_service.models.authorization import ResourceDefinition
+from shared.auth_service.models.authorization import ResourceDefinition
 
 
 class TestResourceDefinitionModel:

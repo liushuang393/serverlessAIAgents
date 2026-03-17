@@ -7,8 +7,8 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "AppDiscoveryService": ("apps.platform.services.app_discovery", "AppDiscoveryService"),
-    "AppScaffolderService": ("apps.platform.services.app_scaffolder", "AppScaffolderService"),
+    "AppDiscoveryService": ("platform.services.app_discovery", "AppDiscoveryService"),
+    "AppScaffolderService": ("platform.services.app_scaffolder", "AppScaffolderService"),
 }
 
 

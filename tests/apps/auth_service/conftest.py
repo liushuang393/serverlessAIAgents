@@ -26,15 +26,15 @@ os.environ["AUTHZ_CACHE_TTL_SECONDS"] = "0"  # テストではキャッシュ無
 def auth_app():
     """テスト用 FastAPI アプリを生成."""
     # シングルトンをリセットしてテスト設定を適用
-    from apps.auth_service.service import reset_auth_service
+    from shared.auth_service.service import reset_auth_service
 
     reset_auth_service()
 
-    from apps.auth_service.core.authorization import reset_authorization_service
+    from shared.auth_service.core.authorization import reset_authorization_service
 
     reset_authorization_service()
 
-    from apps.auth_service.main import create_app
+    from shared.auth_service.main import create_app
 
     return create_app()
 
@@ -43,7 +43,7 @@ def auth_app():
 async def client(auth_app: Any) -> httpx.AsyncClient:
     """テスト用 AsyncClient を提供."""
     # DB 状態をリセットして現在のイベントループで再初期化
-    import apps.auth_service.db.session as db_mod
+    import shared.auth_service.db.session as db_mod
 
     if db_mod._is_ready:
         # 既に別のイベントループで初期化済みの場合、リセットして再初期化

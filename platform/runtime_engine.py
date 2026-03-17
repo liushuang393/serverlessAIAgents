@@ -24,7 +24,7 @@ from platform.publish.runtime import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from apps.platform.schemas.gallery_schemas import (
+    from platform.schemas.gallery_schemas import (
         FeaturedResponse,
         GalleryItem,
         GallerySearchRequest,

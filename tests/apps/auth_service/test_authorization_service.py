@@ -9,9 +9,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from apps.auth_service.core.authorization import AuthorizationService, get_authorization_service
-from apps.auth_service.db.session import ensure_database_ready, get_db_session
-from apps.auth_service.models.user import UserAccount
+from shared.auth_service.core.authorization import AuthorizationService, get_authorization_service
+from shared.auth_service.db.session import ensure_database_ready, get_db_session
+from shared.auth_service.models.user import UserAccount
 
 
 pytestmark = pytest.mark.asyncio

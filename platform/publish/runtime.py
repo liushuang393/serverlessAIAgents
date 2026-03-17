@@ -7,13 +7,13 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "ComponentEntry": ("apps.platform.services.component_library", "ComponentEntry"),
-    "ComponentLibrary": ("apps.platform.services.component_library", "ComponentLibrary"),
-    "ComponentType": ("apps.platform.services.component_library", "ComponentType"),
-    "ComponentVisibility": ("apps.platform.services.component_library", "ComponentVisibility"),
-    "GalleryService": ("apps.platform.services.gallery_service", "GalleryService"),
-    "PublishOrchestrator": ("apps.platform.services.publish_orchestrator", "PublishOrchestrator"),
-    "get_component_library": ("apps.platform.services.component_library", "get_component_library"),
+    "ComponentEntry": ("platform.services.component_library", "ComponentEntry"),
+    "ComponentLibrary": ("platform.services.component_library", "ComponentLibrary"),
+    "ComponentType": ("platform.services.component_library", "ComponentType"),
+    "ComponentVisibility": ("platform.services.component_library", "ComponentVisibility"),
+    "GalleryService": ("platform.services.gallery_service", "GalleryService"),
+    "PublishOrchestrator": ("platform.services.publish_orchestrator", "PublishOrchestrator"),
+    "get_component_library": ("platform.services.component_library", "get_component_library"),
 }
 
 

@@ -5,7 +5,7 @@ Product, Offer, Cart, Transaction, PurchaseIntent モデルの単体テスト。
 
 from datetime import datetime, timedelta
 
-from shared.commerce.models import (
+from domain.commerce.models import (
     Cart,
     CartItem,
     DirectOffer,

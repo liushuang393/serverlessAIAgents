@@ -297,7 +297,7 @@ async def cli_publish(
 
 async def cli_components_list(component_type: str | None = None, limit: int = 20) -> None:
     """CLI: コンポーネント一覧。"""
-    component_type_enum = _load_legacy_symbol("apps.platform.services.component_library", "ComponentType")
+    component_type_enum = _load_legacy_symbol("platform.services.component_library", "ComponentType")
     engine = PlatformEngine()
 
     types = None

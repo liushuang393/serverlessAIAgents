@@ -7,10 +7,10 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "AuthService": ("apps.auth_service.service", "AuthService"),
-    "UserInfo": ("apps.auth_service.api.schemas", "UserInfo"),
-    "get_auth_service": ("apps.auth_service.service", "get_auth_service"),
-    "reset_auth_service": ("apps.auth_service.service", "reset_auth_service"),
+    "AuthService": ("shared.auth_service.service", "AuthService"),
+    "UserInfo": ("shared.auth_service.api.schemas", "UserInfo"),
+    "get_auth_service": ("shared.auth_service.service", "get_auth_service"),
+    "reset_auth_service": ("shared.auth_service.service", "reset_auth_service"),
 }
 
 

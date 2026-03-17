@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from apps.platform.services.skill_catalog import (
+from platform.services.skill_catalog import (
     SKILL_CATEGORIES,
     SkillCatalogService,
     SkillInfo,

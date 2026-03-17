@@ -6,9 +6,9 @@ import json
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-from apps.platform.schemas.app_config_schemas import AppConfig
-from apps.platform.services.app_discovery import AppDiscoveryService
-from apps.platform.services.framework_audit import FrameworkAuditService
+from platform.schemas.app_config_schemas import AppConfig
+from platform.services.app_discovery import AppDiscoveryService
+from platform.services.framework_audit import FrameworkAuditService
 
 
 if TYPE_CHECKING:

@@ -9,8 +9,8 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from apps.platform.schemas.app_config_schemas import AppConfig
-from apps.platform.services.app_discovery import AppDiscoveryService
+from platform.schemas.app_config_schemas import AppConfig
+from platform.services.app_discovery import AppDiscoveryService
 
 
 if TYPE_CHECKING:

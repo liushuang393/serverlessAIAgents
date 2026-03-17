@@ -9,14 +9,14 @@ Tests cover:
 
 from datetime import UTC, datetime
 
-from apps.platform.schemas.component_schemas import (
+from platform.schemas.component_schemas import (
     ComponentCreateRequest,
     ComponentListResponse,
     ComponentResponse,
     ComponentType,
     ComponentVisibility,
 )
-from apps.platform.schemas.gallery_schemas import (
+from platform.schemas.gallery_schemas import (
     FeaturedItem,
     GalleryFilter,
     GalleryItem,
@@ -24,7 +24,7 @@ from apps.platform.schemas.gallery_schemas import (
     GallerySearchRequest,
     GallerySearchResponse,
 )
-from apps.platform.schemas.publish_schemas import (
+from platform.schemas.publish_schemas import (
     PublishMode,
     PublishPhase,
     PublishRequest,

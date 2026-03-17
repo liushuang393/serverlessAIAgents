@@ -4,7 +4,7 @@ services:
   auth-service:
     build:
       context: .
-      dockerfile: apps/auth_service/Dockerfile
+      dockerfile: shared/auth_service/Dockerfile
     ports: ["8010:8010"]
     environment:
       AUTH_DB_SEED_DEFAULTS: "true"
@@ -76,7 +76,7 @@ services:
 
   auth-admin:
     build:
-      context: apps/auth_service/frontend
+      context: shared/auth_service/frontend
       dockerfile: Dockerfile
     ports: ["3010:80"]
     depends_on:

@@ -10,7 +10,7 @@ import asyncio
 import time
 from typing import TYPE_CHECKING
 
-from apps.platform.services.app_lifecycle import AppStatus, HealthCheckResult
+from platform.services.app_lifecycle import AppStatus, HealthCheckResult
 
 
 if TYPE_CHECKING:
@@ -76,7 +76,7 @@ class TestListApps:
 
     def test_wait_for_health_true_blocks(self, test_client: TestClient) -> None:
         """wait_for_health=true はヘルス完了待機を維持する."""
-        from apps.platform.routers import apps as apps_router
+        from platform.routers import apps as apps_router
 
         lifecycle = apps_router._get_lifecycle()
         original_check_health = lifecycle.check_health
@@ -157,7 +157,7 @@ class TestGetAppDetail:
 
     def test_wait_for_health_true_blocks(self, test_client: TestClient) -> None:
         """詳細 API でも wait_for_health=true は待機する."""
-        from apps.platform.routers import apps as apps_router
+        from platform.routers import apps as apps_router
 
         lifecycle = apps_router._get_lifecycle()
         original_check_health = lifecycle.check_health

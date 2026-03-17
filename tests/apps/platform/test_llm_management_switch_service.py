@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from apps.platform.schemas.llm_management_schemas import (
+from platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMProviderKind,
     LLMSwitchRequest,
     LLMSwitchRuntimeCheck,
 )
 from infrastructure.llm.gateway import ProviderRuntimeStatus
-from apps.platform.services.llm_management_config_store import LLMConfigStore
-from apps.platform.services.llm_management_switch_service import LLMSwitchService
-from apps.platform.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
+from platform.services.llm_management_config_store import LLMConfigStore
+from platform.services.llm_management_switch_service import LLMSwitchService
+from platform.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
 
 
 def _build_service(config_path: Path) -> tuple[LLMSwitchService, LLMConfigStore, LLMConfigValidator]:
@@ -136,11 +136,11 @@ async def test_runtime_check_uses_shared_provider_status_resolver(tmp_path: Path
         return []
 
     monkeypatch.setattr(
-        "apps.platform.services.llm_management_switch_service.resolve_provider_runtime_statuses",
+        "platform.services.llm_management_switch_service.resolve_provider_runtime_statuses",
         _provider_statuses,
     )
     monkeypatch.setattr(
-        "apps.platform.services.llm_management_switch_service.LiteLLMGateway.get_engine_statuses",
+        "platform.services.llm_management_switch_service.LiteLLMGateway.get_engine_statuses",
         _engine_statuses,
     )
 

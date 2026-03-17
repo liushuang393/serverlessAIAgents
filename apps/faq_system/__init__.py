@@ -9,15 +9,15 @@ Features:
 - Streaming responses with follow-up suggestions
 
 Usage:
-    # 推奨: フレームワーク層の Agent を直接使用
-    from kernel.agents import FAQAgent, FAQAgentConfig
+    # 推奨: App 層の Agent を直接使用
+    from apps.faq_system.backend.agents.faq_agent import FAQAgent, FAQAgentConfig
 
     agent = FAQAgent(FAQAgentConfig())
     result = await agent.run({"question": "返品ポリシーは？"})
 """
 
-# フレームワーク層の Agent を再エクスポート
-from kernel.agents import FAQAgent, FAQAgentConfig
+# App 層の Agent を再エクスポート
+from apps.faq_system.backend.agents.faq_agent import FAQAgent, FAQAgentConfig
 
 
 __all__ = ["FAQAgent", "FAQAgentConfig"]

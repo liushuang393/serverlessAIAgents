@@ -15,7 +15,7 @@ class TestSeedFAQResourceDefinitions:
         """FAQ リソース定義がシードされる."""
         # seed は main.py lifespan で呼ばれているため、
         # ensure_database_ready 後に definitions が存在するはず
-        from apps.auth_service.db.seed_authorization import seed_faq_resource_definitions
+        from shared.auth_service.db.seed_authorization import seed_faq_resource_definitions
 
         await seed_faq_resource_definitions()
         # 2回目は冪等

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
-_PLATFORM_DEFAULT_URL = "sqlite+aiosqlite:///./apps/platform/data/platform.db"
+_PLATFORM_DEFAULT_URL = "sqlite+aiosqlite:///./platform/data/platform.db"
 
 
 def _db_auto_create_enabled() -> bool:

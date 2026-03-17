@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from apps.platform.schemas.provisioning_schemas import AgentBlueprintInput, AppCreateRequest
-from apps.platform.services.app_scaffolder import AppScaffolderService
+from platform.schemas.provisioning_schemas import AgentBlueprintInput, AppCreateRequest
+from platform.services.app_scaffolder import AppScaffolderService
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from apps.platform.services.app_discovery import AppDiscoveryService
+    from platform.services.app_discovery import AppDiscoveryService
 
 
 def test_create_options_contains_agent_type_and_app_template() -> None:

@@ -33,7 +33,7 @@ fi
 
 if ! docker ps --format '{{.Names}}' | grep -Fxq "${AUTH_DB_CONTAINER}"; then
   echo "[reset_admin] auth-db コンテナが未起動のため起動します..."
-  docker compose -f "${REPO_ROOT}/apps/auth_service/docker-compose.yml" up -d auth-db >/dev/null
+  docker compose -f "${REPO_ROOT}/shared/auth_service/docker-compose.yml" up -d auth-db >/dev/null
 fi
 
 for _ in $(seq 1 30); do
@@ -50,7 +50,7 @@ fi
 
 PASSWORD_ROW="$(TARGET_PASSWORD="${TARGET_PASSWORD}" "${PYTHON_CMD[@]}" -c '
 import os
-from apps.auth_service.core.password import PasswordManager
+from shared.auth_service.core.password import PasswordManager
 
 target_password = os.environ["TARGET_PASSWORD"]
 manager = PasswordManager(iterations=200000)

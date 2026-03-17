@@ -5,7 +5,7 @@
 
 import pytest
 
-from shared.commerce.interfaces import (
+from domain.commerce.interfaces import (
     ICart,
     ICommerceAI,
     ICommerceFlow,
@@ -18,12 +18,12 @@ from shared.commerce.interfaces import (
     IProduct,
     ITransaction,
 )
-from shared.commerce.interfaces.flow import (
+from domain.commerce.interfaces.flow import (
     FlowContext,
     FlowStatus,
     FlowStepType,
 )
-from shared.commerce.models import (
+from domain.commerce.models import (
     IntentType,
     PurchaseIntent,
 )

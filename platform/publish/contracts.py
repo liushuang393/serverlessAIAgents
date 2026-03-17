@@ -7,10 +7,10 @@ from typing import Any
 
 
 _EXPORT_MAP = {
-    "PublishEvent": ("apps.platform.schemas.publish_schemas", "PublishEvent"),
-    "PublishRequest": ("apps.platform.schemas.publish_schemas", "PublishRequest"),
-    "PublishResponse": ("apps.platform.schemas.publish_schemas", "PublishResponse"),
-    "PublishTarget": ("apps.platform.schemas.publish_schemas", "PublishTarget"),
+    "PublishEvent": ("platform.schemas.publish_schemas", "PublishEvent"),
+    "PublishRequest": ("platform.schemas.publish_schemas", "PublishRequest"),
+    "PublishResponse": ("platform.schemas.publish_schemas", "PublishResponse"),
+    "PublishTarget": ("platform.schemas.publish_schemas", "PublishTarget"),
 }
 
 

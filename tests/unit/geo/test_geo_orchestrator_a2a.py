@@ -19,10 +19,10 @@ def _clean_hub():
 class TestOrchestratorA2ARegistration:
     def test_agents_registered_on_init(self):
         """GeoOrchestrator 初期化時に 8 Agent が Hub に登録される."""
-        from apps.Legacy_modernization_geo_platform.backend.orchestrator import (
+        from apps.legacy_modernization_geo_platform.backend.orchestrator import (
             GeoOrchestrator,
         )
-        from apps.Legacy_modernization_geo_platform.backend.settings import (
+        from apps.legacy_modernization_geo_platform.backend.settings import (
             GeoPlatformSettings,
         )
 
@@ -47,10 +47,10 @@ class TestOrchestratorA2ARegistration:
 
     def test_invoke_routes_through_hub(self):
         """_invoke_registered_agent が Hub 経由でルーティングする."""
-        from apps.Legacy_modernization_geo_platform.backend.orchestrator import (
+        from apps.legacy_modernization_geo_platform.backend.orchestrator import (
             GeoOrchestrator,
         )
-        from apps.Legacy_modernization_geo_platform.backend.settings import (
+        from apps.legacy_modernization_geo_platform.backend.settings import (
             GeoPlatformSettings,
         )
 

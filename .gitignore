@@ -96,8 +96,6 @@ tmp-*/
 *.swp
 
 # ---- External Content (Optional)
-# products/ai_learning_platform/Hands-On-Large-Language-Models/
-models/
 apps/decision_governance_engine/.env
 apps/design_skills_engine/testimgs/*
 apps/code_migration_assistant/artifacts/
@@ -105,16 +103,11 @@ apps/code_migration_assistant/current_tasks/
 apps/code_migration_assistant/DECISIONS.md
 apps/code_migration_assistant/FAILURES.md
 .worktrees/
-.worktrees/
-memory/knowledge/knowledge.json
 .gitnexus/
-data/rag/faq_system/chunk_custom/uploads/*
-data/rag/faq_system/dup_detect/uploads/*
-data/rag/faq_system/list_docs/uploads/*
-data/rag/faq_system/upload_test/*
-data/rag/faq_system/get_doc/uploads/*
-data/rag/faq_system/chunk_preview/uploads/*
 .VSCodeCounter/*
-data/*
 a2a_investigation_comparison.html
 test_results.txt
+
+# ---- Runtime / Generated Data
+platform/data/*.db
+platform/data/*.db-journal
