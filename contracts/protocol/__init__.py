@@ -1,32 +1,5 @@
-"""プロトコル契約."""
-
-from contracts.protocol.commerce import (
-    ICart,
-    ICommerceAI,
-    ICommerceFlow,
-    ICommerceStep,
-    IDealRecommender,
-    IIntentAnalyzer,
-    IOffer,
-    IOfferProvider,
-    IPayment,
-    IProduct,
-    ITransaction,
-)
+"""Cross-layer protocol contracts."""
 from contracts.protocol.contracts import ProtocolMessage
 
 
-__all__ = [
-    "ICart",
-    "ICommerceAI",
-    "ICommerceFlow",
-    "ICommerceStep",
-    "IDealRecommender",
-    "IIntentAnalyzer",
-    "IOffer",
-    "IOfferProvider",
-    "IPayment",
-    "IProduct",
-    "ITransaction",
-    "ProtocolMessage",
-]
+__all__ = ["ProtocolMessage"]

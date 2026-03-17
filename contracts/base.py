@@ -1,4 +1,4 @@
-"""六層分離で共有する基本契約モデル。"""
+"""Base contract models shared across the seven core layers."""
 
 from __future__ import annotations
 
@@ -25,14 +25,15 @@ class ContractModel(BaseModel):
 
 
 class LayerName(str, Enum):
-    """六層の論理名。"""
+    """Logical names for the seven core layers plus the apps outer layer."""
 
     CONTRACTS = "contracts"
     INFRASTRUCTURE = "infrastructure"
     SHARED = "shared"
     KERNEL = "kernel"
     HARNESS = "harness"
-    PLATFORM = "platform"
+    DOMAIN = "domain"
+    CONTROL_PLANE = "control_plane"
     APPS = "apps"
 
 

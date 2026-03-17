@@ -1,9 +1,9 @@
-"""commerce 契約パッケージ.
+"""Compatibility exports for the commerce domain surface."""
 
-旧 ``shared/commerce`` の正本を Contract 層へ移した。
-"""
-
-from contracts.protocol.commerce.interfaces import (
+from domain.commerce import (
+    Cart,
+    CartItem,
+    DirectOffer,
     ICart,
     ICommerceAI,
     ICommerceFlow,
@@ -15,11 +15,6 @@ from contracts.protocol.commerce.interfaces import (
     IPayment,
     IProduct,
     ITransaction,
-)
-from contracts.protocol.commerce.models import (
-    Cart,
-    CartItem,
-    DirectOffer,
     IntentConfidence,
     IntentType,
     Offer,

@@ -10,7 +10,7 @@ from typing import Any
 import httpx
 import pytest
 
-from platform.ui.studio.api import create_app
+from control_plane.ui.studio.api import create_app
 
 
 class SyncASGITestClient:

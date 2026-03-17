@@ -1,4 +1,4 @@
-"""六層分離で共有する versioned 契約."""
+"""Versioned contracts shared across the seven core layers."""
 
 from contracts.base import ComponentSpec, ComponentToggle, ContractModel, LayerName
 from contracts.registry import RegisteredComponent, ToggleableFactoryRegistry

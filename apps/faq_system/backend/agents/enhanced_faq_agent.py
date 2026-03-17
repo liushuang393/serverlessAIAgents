@@ -36,7 +36,7 @@ from kernel.protocols.a2ui.rich_content import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from platform.bootstrap.capability_bundle import CapabilityBundle
+    from control_plane.bootstrap.capability_bundle import CapabilityBundle
 
 
 logger = logging.getLogger(__name__)

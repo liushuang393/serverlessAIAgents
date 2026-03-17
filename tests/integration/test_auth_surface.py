@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 def test_auth_service_shell_uses_platform_entrypoint() -> None:
-    from platform.api.auth_app import app as platform_app
+    from control_plane.api.auth_app import app as platform_app
 
     from shared.auth_service.main import app as legacy_app
 

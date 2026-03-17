@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel.skills.builtin.deployment_manager.exceptions import (
+from .exceptions import (
     BuildError,
     ConfigError,
     DomainError,

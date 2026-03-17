@@ -1,8 +1,4 @@
-"""六層アーキテクチャの import 境界テスト.
-
-依存方向: contracts(L0) ← infrastructure(L1) ← shared(L2) ← kernel(L3) ← harness(L4) ← platform(L5) ← apps(L6)
-各層は自層以下 + contracts のみ eager import 可。
-"""
+"""7コア層 + apps 外層の import 境界テスト."""
 
 from __future__ import annotations
 
@@ -53,9 +49,9 @@ def test_no_layer_boundary_violations() -> None:
 
 
 def test_no_agentflow_imports_in_layers() -> None:
-    """六層ディレクトリが agentflow.* を eager import していないことを検証."""
+    """7コア層ディレクトリが agentflow.* を eager import していないことを検証."""
 
-    layer_dirs = ["contracts", "infrastructure", "shared", "kernel", "harness", "platform"]
+    layer_dirs = ["contracts", "infrastructure", "shared", "kernel", "harness", "domain", "control_plane"]
     violations: list[str] = []
 
     for layer in layer_dirs:

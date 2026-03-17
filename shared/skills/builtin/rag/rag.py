@@ -14,7 +14,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from shared.services.unified_rag import UnifiedRAGService
 
-from kernel.skills.base import Skill
+
+
+def _get_skill_base() -> type:
+    """遅延インポート: kernel.skills.base.Skill（L2→L3 違反回避）."""
+    from kernel.skills.base import Skill as _Skill
+    return _Skill
+
 
 @dataclass
 class RAGConfig:
@@ -31,7 +37,7 @@ class RAGResult:
     sources: List[Dict[str, Any]] = field(default_factory=list)
     context_used: str = ""
 
-class RAGSkill(Skill):
+class RAGSkill(_get_skill_base()):
     """RAG Skill - 統合RAGサービスを利用した実装."""
 
     def __init__(

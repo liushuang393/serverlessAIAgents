@@ -9,7 +9,7 @@ ECharts/Chart.js互換フォーマットを出力。
 - カスタマイズ可能なスタイル
 
 使用例:
-    >>> from platform.services import ChartService
+    >>> from control_plane.services import ChartService
     >>>
     >>> service = ChartService()
     >>> result = await service.execute(

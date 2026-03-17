@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from platform.bootstrap.app_bootstrapper import AppCapabilityBootstrapper
-from platform.bootstrap.capability_bundle import CapabilityBundle
+from control_plane.bootstrap.app_bootstrapper import AppCapabilityBootstrapper
+from control_plane.bootstrap.capability_bundle import CapabilityBundle
 from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
 from kernel.protocols.mcp_client import MCPClient
 from kernel.protocols.mcp_config import MCPConfig

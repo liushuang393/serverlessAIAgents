@@ -8,7 +8,7 @@ class TestUnifiedAST:
 
     def test_ast_node_creation(self) -> None:
         """Test ASTNode creation."""
-        from platform.code_intelligence.ast.unified_ast import (
+        from apps.dev_studio.code_intelligence.ast.unified_ast import (
             ASTNode,
             ASTNodeType,
         )
@@ -23,7 +23,7 @@ class TestUnifiedAST:
 
     def test_ast_node_add_child(self) -> None:
         """Test adding child nodes."""
-        from platform.code_intelligence.ast.unified_ast import (
+        from apps.dev_studio.code_intelligence.ast.unified_ast import (
             ASTNode,
             ASTNodeType,
         )
@@ -37,7 +37,7 @@ class TestUnifiedAST:
 
     def test_unified_ast_creation(self) -> None:
         """Test UnifiedAST creation."""
-        from platform.code_intelligence.ast.unified_ast import (
+        from apps.dev_studio.code_intelligence.ast.unified_ast import (
             ASTNode,
             ASTNodeType,
             UnifiedAST,
@@ -56,7 +56,7 @@ class TestQualityGates:
     @pytest.mark.asyncio
     async def test_syntax_validator(self) -> None:
         """Test SyntaxValidator gate."""
-        from platform.code_intelligence.quality.gates import (
+        from apps.dev_studio.code_intelligence.quality.gates import (
             SyntaxValidator,
         )
 
@@ -69,7 +69,7 @@ class TestQualityGates:
     @pytest.mark.asyncio
     async def test_quality_gate_runner(self) -> None:
         """Test QualityGateRunner."""
-        from platform.code_intelligence.quality.gates import (
+        from apps.dev_studio.code_intelligence.quality.gates import (
             QualityGateRunner,
             SemanticValidator,
             SyntaxValidator,
@@ -88,7 +88,7 @@ class TestQualityGates:
     @pytest.mark.asyncio
     async def test_empty_target_fails(self) -> None:
         """Test that empty target code fails validation."""
-        from platform.code_intelligence.quality.gates import (
+        from apps.dev_studio.code_intelligence.quality.gates import (
             QualityLevel,
             SyntaxValidator,
         )
@@ -105,7 +105,7 @@ class TestMigrationProject:
 
     def test_project_creation(self) -> None:
         """Test MigrationProject creation."""
-        from platform.code_intelligence.migration.project import (
+        from apps.dev_studio.code_intelligence.migration.project import (
             MigrationPhase,
             MigrationProject,
         )
@@ -122,7 +122,7 @@ class TestMigrationProject:
 
     def test_add_file(self) -> None:
         """Test adding files to project."""
-        from platform.code_intelligence.migration.project import (
+        from apps.dev_studio.code_intelligence.migration.project import (
             MigrationProject,
             SourceFile,
         )
@@ -140,7 +140,7 @@ class TestMigrationProject:
 
     def test_phase_management(self) -> None:
         """Test phase start and complete."""
-        from platform.code_intelligence.migration.project import (
+        from apps.dev_studio.code_intelligence.migration.project import (
             MigrationPhase,
             MigrationProject,
             PhaseStatus,
@@ -165,7 +165,7 @@ class TestPipelineGenerator:
 
     def test_github_pipeline(self) -> None:
         """Test GitHub Actions pipeline generation."""
-        from platform.code_intelligence.cicd.pipeline_generator import (
+        from apps.dev_studio.code_intelligence.cicd.pipeline_generator import (
             CIPlatform,
             MigrationPipelineGenerator,
             PipelineConfig,
@@ -185,7 +185,7 @@ class TestPipelineGenerator:
 
     def test_gitlab_pipeline(self) -> None:
         """Test GitLab CI pipeline generation."""
-        from platform.code_intelligence.cicd.pipeline_generator import (
+        from apps.dev_studio.code_intelligence.cicd.pipeline_generator import (
             CIPlatform,
             MigrationPipelineGenerator,
             PipelineConfig,

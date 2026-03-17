@@ -1,4 +1,4 @@
-"""RuntimeContext 契約 — 六層すべてから参照可能な実行時コンテキスト.
+"""RuntimeContext 契約 — 7コア層すべてから参照可能な実行時コンテキスト.
 
 contracts 層は依存ゼロであるため、settings の型は Any で保持する。
 ContextVar と純粋ヘルパー (get_runtime_context, set_runtime_context, get_env) も

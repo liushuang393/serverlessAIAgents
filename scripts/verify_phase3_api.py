@@ -8,16 +8,16 @@ from pathlib import Path
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from platform.main import create_app
-from platform.routers.agents import init_agent_services
-from platform.routers.apps import init_app_services
-from platform.routers.rag import init_rag_services
-from platform.routers.skills import init_skill_services
-from platform.services.agent_aggregator import AgentAggregatorService
-from platform.services.app_discovery import AppDiscoveryService
-from platform.services.app_lifecycle import AppLifecycleManager
-from platform.services.rag_overview import RAGOverviewService
-from platform.services.skill_catalog import SkillCatalogService
+from control_plane.main import create_app
+from control_plane.routers.agents import init_agent_services
+from control_plane.routers.apps import init_app_services
+from control_plane.routers.rag import init_rag_services
+from control_plane.routers.skills import init_skill_services
+from control_plane.services.agent_aggregator import AgentAggregatorService
+from control_plane.services.app_discovery import AppDiscoveryService
+from control_plane.services.app_lifecycle import AppLifecycleManager
+from control_plane.services.rag_overview import RAGOverviewService
+from control_plane.services.skill_catalog import SkillCatalogService
 from httpx import ASGITransport, AsyncClient
 
 

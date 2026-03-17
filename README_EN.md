@@ -15,16 +15,18 @@ BizCore AI is the **full-stack enterprise development foundation** that realizes
 
 ---
 
-## Six-Layer Architecture
+## Seven Core Layers Plus Apps
 
-BizCore AI is designed with six clearly separated layers of responsibility.
+BizCore AI is organized into seven core layers, with `apps/` as the outer product-assembly layer.
 
 ```
 ┌─────────────────────────────────────────────┐
-│  BizCore Studios (Apps)                     │  ← Business Applications
+│  BizCore Studios (Apps)                     │  ← Product Assembly Layer (outside the core)
 │  Migration / FAQ / Assistant / Custom Apps  │
 ├─────────────────────────────────────────────┤
-│  BizCore Platform (Control Plane)           │  ← Management / Observability / Delivery
+│  BizCore Control Plane                      │  ← Management / Observability / Delivery
+├─────────────────────────────────────────────┤
+│  BizCore Domain                             │  ← Business Domains / Industry Templates
 ├─────────────────────────────────────────────┤
 │  BizCore Harness (Governance)               │  ← Governance / Reliability / Evaluation
 ├─────────────────────────────────────────────┤
@@ -45,10 +47,11 @@ BizCore AI is designed with six clearly separated layers of responsibility.
 | **Shared** | `shared/` | LLM Gateway, RAG, Access Control, Trace, Audit, and other shared services |
 | **BizCore Kernel** | `kernel/` | Agent Runtime, Flow Engine, Orchestration, Protocol implementations |
 | **BizCore Harness** | `harness/` | Governance, Policy, Approval, Budget, Evaluation, Guardrails |
-| **BizCore Platform** | `apps/platform/` | Control Plane — App creation, configuration, execution, observability, delivery |
-| **BizCore Studios** | `apps/*/` | Business applications — Migration / FAQ / Assistant as independent product units |
+| **BizCore Domain** | `domain/` | Industry and business-domain models, interfaces, templates, and rules |
+| **BizCore Control Plane** | `control_plane/` | The platform control plane for discovery, lifecycle, delivery, and operator UI/API |
+| **BizCore Studios** | `apps/*/` | Product layer for Migration / FAQ / Assistant / custom apps |
 
-> **Design Principle**: Lower layers never depend on upper layers. Kernel does not import Platform/App; Harness connects to Kernel only via hooks.
+> **Design Principle**: `contracts / infrastructure / shared / kernel / harness / domain` must not depend on `apps/`. `domain` must not depend on `control_plane`. `control_plane` can orchestrate lower layers but is not their source of truth.
 
 ---
 
@@ -125,13 +128,17 @@ INFRA --> PROVIDER
 
 ## Repository Structure
 
-### Six-Layer Core
+### Seven Core Layers
 - `contracts/`: Protocol and interface definitions (Versioned)
 - `infrastructure/`: Low-level foundation (LLM Provider / Storage / Cache / Queue)
 - `shared/`: Shared services (Gateway / RAG / Access / Trace / Audit)
 - `kernel/`: Agent Runtime / Flow Engine / Orchestration / Protocol
 - `harness/`: Governance / Policy / Approval / Budget / Evaluation
-- `apps/`: BizCore Platform + BizCore Studios (business application suite)
+- `domain/`: Canonical business-domain implementation
+- `control_plane/`: Canonical BizCore control-plane implementation
+
+### Product Layer
+- `apps/`: BizCore Studios and custom apps, assembled on top of the seven core layers
 
 ### Legacy Compatibility
 - `agentflow/`: Former Kernel (maintained as a re-export layer to `kernel/`)
@@ -161,14 +168,13 @@ INFRA --> PROVIDER
 
 ```bash
 # Environment setup
-conda activate agentflow
-pip install -e ".[apps,dev]"
+python3 -m pip install -e ".[apps,dev]"
 
 # Start backend (local dev port 8001)
-python -m apps.platform.main serve --port 8001
+python3 -m control_plane.main serve --port 8001
 
 # Start frontend (separate terminal)
-cd apps/platform/frontend && npm install && npm run dev
+cd control_plane/frontend && npm install && npm run dev
 ```
 
 ---

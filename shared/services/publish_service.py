@@ -52,9 +52,9 @@ class PublishService:
 
     def __init__(self) -> None:
         """初期化."""
-        from platform.codegen import CodeGenerator
-        from platform.deploy.config.manager import ConfigManager
-        from platform.deploy.executor import DeployExecutor
+        from apps.dev_studio.codegen import CodeGenerator
+        from control_plane.deploy.config.manager import ConfigManager
+        from control_plane.deploy.executor import DeployExecutor
 
         self._code_generator = CodeGenerator()
         self._deploy_executor = DeployExecutor()

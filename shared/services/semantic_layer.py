@@ -9,7 +9,7 @@
 - アクセス制御（ホワイトリスト/ブラックリスト）
 
 使用例:
-    >>> from platform.services.semantic_layer import SemanticLayerService
+    >>> from shared.services.semantic_layer import SemanticLayerService
     >>>
     >>> service = SemanticLayerService()
     >>>

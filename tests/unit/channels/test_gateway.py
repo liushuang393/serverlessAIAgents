@@ -2,7 +2,7 @@
 
 import pytest
 
-from platform.api.websocket_hub import WebSocketHub
+from control_plane.api.websocket_hub import WebSocketHub
 from shared.channels.base import MessageChannelAdapter, UserInfo
 from shared.channels.gateway import MessageGateway
 from kernel.skills.chatbot import ChatBotSkill

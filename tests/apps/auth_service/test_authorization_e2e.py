@@ -14,7 +14,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from tests.shared.auth_service.conftest import auth_headers
+from tests.apps.auth_service.conftest import auth_headers
 
 
 pytestmark = pytest.mark.asyncio

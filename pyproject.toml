@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agentflow"
+name = "bizcore"
 version = "2.0.0"
-description = "Lightweight AI Agent development framework with MCP/A2A/AG-UI protocol support"
+description = "BizCore AI enterprise development foundation with layered agent runtime and control plane"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
-    { name = "AgentFlow Team", email = "team@agentflow.dev" }
+    { name = "BizCore Team", email = "team@bizcore.dev" }
 ]
 keywords = ["ai", "agent", "mcp", "a2a", "ag-ui", "workflow", "llm"]
 classifiers = [
@@ -147,11 +147,11 @@ docs = [
 ]
 
 all = [
-    "agentflow[dev,docs,memvid,apps]",
+    "bizcore[dev,docs,memvid,apps]",
 ]
 
 [project.scripts]
-agentflow = "platform.cli.main:cli"
+bizcore = "control_plane.cli.main:cli"
 
 # ============================================================================
 # Ruff Configuration
@@ -159,7 +159,7 @@ agentflow = "platform.cli.main:cli"
 [tool.ruff]
 line-length = 120
 target-version = "py313"
-src = ["contracts", "infrastructure", "shared", "kernel", "harness", "platform", "tests"]
+src = ["contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain", "tests"]
 extend-exclude = [
     ".venv",
     "venv",
@@ -336,7 +336,7 @@ ignore = [
 "kernel/templates/**/*.py" = [
     "ALL",     # Template files - ignore all rules
 ]
-"platform/ui/studio/**/*.py" = [
+"control_plane/ui/studio/**/*.py" = [
     "ERA001",  # Commented-out code OK in studio (demo/prototype code)
     "PLC0415", # Import at top-level not required in studio
     "PTH123",  # Path.open() not required in studio
@@ -347,7 +347,7 @@ ignore = [
     "TRY300",  # Try-else OK in studio
     "B904",    # Raise without from OK in studio
 ]
-"platform/cli/**/*.py" = [
+"control_plane/cli/**/*.py" = [
     "PLR0912", # Too many branches OK in CLI
     "PLR0915", # Too many statements OK in CLI
     "TRY301",  # Raise within try OK in CLI
@@ -412,7 +412,7 @@ ignore = [
     "PTH123",
     "PLW2901",
 ]
-"platform/**/*.py" = [
+"control_plane/**/*.py" = [
     "PLC0415",
     "TRY300",
     "B904",
@@ -430,7 +430,7 @@ ignore = [
 "kernel/tools/tool_catalog.py" = [
     "PLC0415", # Lazy imports to avoid circular dependencies and reduce startup overhead
 ]
-"platform/ui/studio/server.py" = [
+"control_plane/ui/studio/server.py" = [
     "PLC0415", # Import at top-level not required (CLI entry point)
 ]
 # SDK 利用可能性チェック: try ブロック内で SDK の存在確認
@@ -438,8 +438,7 @@ ignore = [
 "infrastructure/sandbox/microsandbox_provider.py" = ["F401"]
 "shared/rag/reranker.py" = ["F401"]
 "shared/integrations/websocket_integration.py" = ["F401"]
-"platform/services/document_exporter.py" = ["F401"]
-"platform/__init__.py" = ["A005"]
+"control_plane/__init__.py" = ["A005"]
 "contracts/trace/__init__.py" = ["A005"]
 "apps/code_migration_assistant/mcp_tools/pdf_exporter.py" = ["F401", "PLC0415"]
 "infrastructure/queue/__init__.py" = ["A005"]
@@ -457,7 +456,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["contracts", "infrastructure", "shared", "kernel", "harness", "platform"]
+known-first-party = ["contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain"]
 force-single-line = false
 lines-after-imports = 2
 
@@ -538,7 +537,7 @@ addopts = [
     "--cov=shared",
     "--cov=kernel",
     "--cov=harness",
-    "--cov=platform",
+    "--cov=control_plane",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",
@@ -557,7 +556,7 @@ markers = [
 # Coverage Configuration
 # ============================================================================
 [tool.coverage.run]
-source = ["contracts", "infrastructure", "shared", "kernel", "harness", "platform"]
+source = ["contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain"]
 omit = [
     "*/tests/*",
     "*/__init__.py",
@@ -594,7 +593,7 @@ skips = ["*_test.py", "test_*.py"]
 # Hatch Configuration
 # ============================================================================
 [tool.hatch.build.targets.wheel]
-packages = ["agentflow", "contracts", "infrastructure", "shared", "kernel", "harness", "platform"]
+packages = ["agentflow", "contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -604,7 +603,8 @@ include = [
     "/shared",
     "/kernel",
     "/harness",
-    "/platform",
+    "/control_plane",
+    "/domain",
     "/tests",
     "/README.md",
     "/LICENSE",

@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 from click.testing import CliRunner
 
-from platform.cli.main import cli
+from control_plane.cli.main import cli
 
 
 class TestFlowCommand:

@@ -8,7 +8,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-from kernel.runtime import resolve_app_runtime
+
+
+def _resolve_app_runtime_lazy(*args: object, **kwargs: object) -> object:
+    """遅延インポート: kernel.runtime.resolve_app_runtime（L2→L3 違反回避）."""
+    from kernel.runtime import resolve_app_runtime as _resolve
+    return _resolve(*args, **kwargs)
 
 
 APP_DIR = Path(__file__).resolve().parents[1]
@@ -23,7 +28,7 @@ def main() -> int:
         return 2
 
     action = sys.argv[1]
-    runtime = resolve_app_runtime(
+    runtime = _resolve_app_runtime_lazy(
         APP_CONFIG_PATH,
         env=os.environ,
         backend_host_env="AUTH_SERVICE_HOST",

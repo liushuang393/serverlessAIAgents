@@ -6,7 +6,7 @@
 - 複数のデータソース（ファイル、URL、データベース）
 
 使用例:
-    >>> from platform.services import RAGService
+    >>> from shared.services.rag_service import RAGService
     >>>
     >>> # Studio/CLI/SDK 全て同一インターフェース
     >>> service = RAGService(

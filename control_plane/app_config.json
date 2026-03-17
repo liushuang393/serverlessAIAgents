@@ -1,0 +1,235 @@
+{
+  "name": "platform",
+  "display_name": "BizCore Control Plane",
+  "description": "BizCore Studios と framework surfaces を統合管理する control plane",
+  "business_base": "platform",
+  "product_line": "framework",
+  "surface_profile": "operator",
+  "audit_profile": "developer",
+  "version": "1.0.0",
+  "icon": "🏗️",
+  "ports": {
+    "api": 8900,
+    "frontend": 3200,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "control_plane.main:app",
+    "health": "/health"
+  },
+  "agents": [
+    {
+      "name": "GalleryAgent",
+      "module": "control_plane.agents.gallery_agent",
+      "capabilities": ["component_discovery", "search", "recommendation"],
+      "business_base": "platform",
+      "pattern": "router",
+      "agent_type": "router"
+    },
+    {
+      "name": "PublishAgent",
+      "module": "control_plane.agents.publish_agent",
+      "capabilities": ["publish", "deployment", "release"],
+      "business_base": "platform",
+      "pattern": "coordinator",
+      "agent_type": "planner"
+    },
+    {
+      "name": "AnalyticsAgent",
+      "module": "control_plane.agents.analytics_agent",
+      "capabilities": ["analysis", "dashboard", "recommendations"],
+      "business_base": "platform",
+      "pattern": "analyzer",
+      "agent_type": "reactor"
+    }
+  ],
+  "services": {
+    "gallery": {
+      "enabled": true
+    },
+    "components": {
+      "enabled": true
+    },
+    "publish": {
+      "enabled": true
+    },
+    "dashboard": {
+      "enabled": true
+    },
+    "app_discovery": {
+      "enabled": true
+    }
+  },
+  "dependencies": {
+    "database": null,
+    "redis": false,
+    "external": []
+  },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8900",
+      "frontend": "http://localhost:3200",
+      "health": "http://localhost:8900/health",
+      "database": null
+    },
+    "hosts": {
+      "backend": "0.0.0.0",
+      "frontend": "0.0.0.0"
+    },
+    "database": {
+      "kind": null,
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": "python control_plane/scripts/dev.py",
+      "frontend_dev": "cd control_plane/frontend && npm run dev",
+      "publish": null,
+      "start": null,
+      "stop": null
+    },
+    "cli": {
+      "preferred": ["codex", "claude"],
+      "codex": {
+        "executable": "codex",
+        "install_commands": [["npm", "install", "-g", "@openai/codex"]],
+        "auth": {
+          "status": ["codex", "login", "status"],
+          "api_key_env": "OPENAI_API_KEY",
+          "api_key_login": ["codex", "login", "--with-api-key"],
+          "interactive_login": ["codex", "login"]
+        },
+        "diagnostic_mode": "read_only",
+        "diagnostic_command": [
+          "codex",
+          "exec",
+          "--skip-git-repo-check",
+          "--sandbox",
+          "read-only"
+        ]
+      },
+      "claude": {
+        "executable": "claude",
+        "install_commands": [
+          ["npm", "install", "-g", "@anthropic-ai/claude-code"]
+        ],
+        "auth": {
+          "status": ["claude", "auth", "status", "--json"],
+          "api_key_env": "ANTHROPIC_API_KEY",
+          "api_key_login": null,
+          "interactive_login": ["claude", "auth", "login"]
+        },
+        "diagnostic_mode": "plan",
+        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"]
+      }
+    }
+  },
+  "tags": ["platform", "management", "gallery", "publish", "dashboard"],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "allow_same_tenant_sso": false,
+      "token_policy": {},
+      "session_ttl_minutes": 60
+    },
+    "llm": {
+      "enabled": true,
+      "defaults": {
+        "text": {
+          "provider": "openai",
+          "model_id": "platform_text_default",
+          "model_type": "text"
+        }
+      },
+      "agent_overrides": {},
+      "allowed_modalities": [
+        "text"
+      ],
+      "extra_model_refs": []
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "provider": null,
+      "collections": [],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": ["dev"],
+      "require_approval": true
+    }
+  },
+  "plugin_bindings": [],
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": [],
+    "app_template": "workflow_orchestrator"
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  },
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": null,
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.7,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
+  }
+}

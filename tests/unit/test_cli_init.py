@@ -4,8 +4,8 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from platform.cli.commands.init import validate_agent_id
-from platform.cli.main import cli
+from control_plane.cli.commands.init import validate_agent_id
+from control_plane.cli.main import cli
 
 
 class TestValidateAgentId:

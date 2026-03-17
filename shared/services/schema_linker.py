@@ -7,7 +7,7 @@
 - Confidence Scoring: 信頼度スコアリング
 
 使用例:
-    >>> from platform.services.schema_linker import SchemaLinker
+    >>> from shared.services.schema_linker import SchemaLinker
     >>>
     >>> linker = SchemaLinker(schema={
     ...     "sales": ["id", "amount", "date", "customer_id"],

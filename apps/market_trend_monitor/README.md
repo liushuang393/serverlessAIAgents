@@ -119,7 +119,7 @@ pip install -e ".[dev,apps]"
 
 - この app の正本は `app_config.json` の `contracts.llm` です。
 - 既定 modality は `text` と `embedding` で、Platform catalog の `platform_text_default` / `platform_embedding_default` を参照します。
-- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- Provider / model / API Key の正本は `control_plane` の `LLM Management` です。
 - `OPENAI_API_KEY` などの env は Platform 未設定時の fallback としてのみ使用します。
 
 ## 起動方法
@@ -244,7 +244,7 @@ npm test
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/market_trend_monitor --target docker
+python -m control_plane.main publish ./apps/market_trend_monitor --target docker
 ```
 
 ## ディレクトリ構造

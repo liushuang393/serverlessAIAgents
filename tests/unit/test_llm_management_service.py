@@ -7,16 +7,16 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from platform.db import close_platform_db
-from platform.schemas.llm_management_schemas import (
+from control_plane.db import close_platform_db
+from control_plane.schemas.llm_management_schemas import (
     LLMEngineDeployRequest,
     LLMInferenceEngineConfigPayload,
     LLMProviderSecretUpdateRequest,
 )
-from platform.services.llm_management import LLMManagementService
-from platform.services.llm_management_persistence import PlatformEngineDeploymentRecord
-from platform.services.llm_management_setup_manager import LLMSetupCommandResult
-from platform.services.llm_runtime_status import resolve_provider_runtime_statuses
+from control_plane.services.llm_management import LLMManagementService
+from control_plane.services.llm_management_persistence import PlatformEngineDeploymentRecord
+from control_plane.services.llm_management_setup_manager import LLMSetupCommandResult
+from control_plane.services.llm_runtime_status import resolve_provider_runtime_statuses
 
 from infrastructure.llm.gateway import EngineRuntimeStatus, ProviderConfig
 
@@ -156,7 +156,7 @@ async def test_save_provider_secret_encrypts_and_updates_overview(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db_path = tmp_path / "platform.db"
+    db_path = tmp_path / "control_plane.db"
     cache_path = tmp_path / "platform_runtime_cache.db"
     config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
 
@@ -263,7 +263,7 @@ async def test_resolve_provider_runtime_statuses_probes_custom_provider_success(
         assert url.endswith("/v1/models")
         return _Response()
 
-    monkeypatch.setattr("platform.services.llm_runtime_status.httpx.AsyncClient.get", _fake_get)
+    monkeypatch.setattr("control_plane.services.llm_runtime_status.httpx.AsyncClient.get", _fake_get)
 
     statuses = await resolve_provider_runtime_statuses(config, config_path=config_path, engine_statuses=[])
     by_name = {item.name: item for item in statuses}
@@ -297,7 +297,7 @@ async def test_resolve_provider_runtime_statuses_probes_custom_provider_failure(
             status_code = 503
         return _Response()
 
-    monkeypatch.setattr("platform.services.llm_runtime_status.httpx.AsyncClient.get", _fake_get)
+    monkeypatch.setattr("control_plane.services.llm_runtime_status.httpx.AsyncClient.get", _fake_get)
 
     statuses = await resolve_provider_runtime_statuses(config, config_path=config_path, engine_statuses=[])
     by_name = {item.name: item for item in statuses}
@@ -320,7 +320,7 @@ async def test_resolve_provider_runtime_statuses_uses_linked_engine_without_dire
         del args, kwargs
         raise AssertionError(error_message)
 
-    monkeypatch.setattr("platform.services.llm_runtime_status._probe_provider_runtime", _unexpected_probe)
+    monkeypatch.setattr("control_plane.services.llm_runtime_status._probe_provider_runtime", _unexpected_probe)
 
     statuses = await resolve_provider_runtime_statuses(
         config,
@@ -344,7 +344,7 @@ async def test_deploy_engine_generates_compose_and_persists_status(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db_path = tmp_path / "platform.db"
+    db_path = tmp_path / "control_plane.db"
     config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
 
     await close_platform_db()
@@ -383,7 +383,7 @@ async def test_deploy_engine_success_with_stderr_does_not_persist_error_and_enab
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db_path = tmp_path / "platform.db"
+    db_path = tmp_path / "control_plane.db"
     config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
 
     await close_platform_db()
@@ -416,7 +416,7 @@ async def test_stop_engine_success_with_stderr_does_not_persist_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db_path = tmp_path / "platform.db"
+    db_path = tmp_path / "control_plane.db"
     config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
 
     await close_platform_db()
@@ -444,7 +444,7 @@ async def test_get_overview_trims_oversized_deployment_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    db_path = tmp_path / "platform.db"
+    db_path = tmp_path / "control_plane.db"
     config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
 
     await close_platform_db()

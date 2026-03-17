@@ -11,7 +11,7 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 
-from kernel.skills.builtin.database_manager.exceptions import (
+from .exceptions import (
     ConnectionError,
     MigrationError,
     QueryError,

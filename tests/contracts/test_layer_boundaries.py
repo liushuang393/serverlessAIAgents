@@ -1,14 +1,12 @@
-"""六層分離アーキテクチャの依存方向を検証するテスト。
-
-設計書 §6 の依存ルール:
-  Layer 6 (apps) -> 5 (platform) -> 4 (harness) -> 3 (kernel) -> 2 (shared) -> 1 (infrastructure) -> 0 (contracts)
+"""7コア層 + apps 外層の依存方向を検証するテスト。
 
 禁止:
-  - infrastructure → kernel / harness / shared / platform / apps
-  - shared → kernel / harness / platform / apps
-  - kernel → platform / apps
-  - harness → platform / apps
-  - platform → apps（apps 内部ロジックへの直接依存）
+  - infrastructure → shared / kernel / harness / control_plane / domain / apps
+  - shared → kernel / harness / control_plane / domain / apps
+  - kernel → control_plane / apps
+  - harness → control_plane / apps
+  - domain → control_plane / apps
+  - control_plane → apps（apps 内部ロジックへの直接依存）
   - app → 他 app 内部への直接依存
 """
 
@@ -30,30 +28,28 @@ LAYER_PACKAGES: dict[str, int] = {
     "shared": 2,
     "kernel": 3,
     "harness": 4,
-    "platform": 5,
-    "apps": 6,
+    "domain": 5,
+    "control_plane": 6,
+    "apps": 7,
 }
 
 # 禁止依存ルール: (from_layer, forbidden_target_layers)
 FORBIDDEN_DEPS: list[tuple[str, list[str]]] = [
-    ("infrastructure", ["shared", "kernel", "harness", "platform", "apps"]),
-    ("shared", ["kernel", "harness", "platform", "apps"]),
-    ("kernel", ["platform", "apps"]),
-    ("harness", ["platform", "apps"]),
+    ("infrastructure", ["shared", "kernel", "harness", "control_plane", "domain", "apps"]),
+    ("shared", ["kernel", "harness", "control_plane", "domain", "apps"]),
+    ("kernel", ["control_plane", "apps"]),
+    ("harness", ["control_plane", "apps"]),
+    ("domain", ["control_plane", "apps"]),
 ]
 
 # 許可例外: (from_package, target_module_prefix) — re-export stub など
 ALLOWED_EXCEPTIONS: list[tuple[str, str]] = [
-    # platform/services/ は shared/services/ の re-export stub
-    ("platform.services", "shared.services"),
     # infrastructure の unified_tool re-export stub (実装は kernel/tools/ に移動済み)
     ("infrastructure.providers.unified_tool", "kernel.tools"),
     ("infrastructure.sandbox.unified_tool", "kernel.tools"),
+    # shared/auth_service/main.py は control_plane.api.auth_app の互換入口
+    ("shared.auth_service.main", "control_plane.api"),
 ]
-
-# stdlib モジュール名とプロジェクト層名の衝突を除外
-STDLIB_MODULES: set[str] = {"platform"}
-
 
 class Violation(NamedTuple):
     """依存違反の記録。"""
@@ -113,15 +109,10 @@ def _extract_imports(filepath: Path) -> list[tuple[int, str]]:
         if isinstance(node, ast.Import):
             if not _in_type_checking(node.lineno) and not _in_function(node.lineno):
                 for alias in node.names:
-                    # stdlib と同名のパッケージを除外 (例: import platform)
-                    if alias.name not in STDLIB_MODULES:
-                        imports.append((node.lineno, alias.name))
+                    imports.append((node.lineno, alias.name))
         elif isinstance(node, ast.ImportFrom):
             if node.module and not _in_type_checking(node.lineno) and not _in_function(node.lineno):
-                # stdlib と同名のパッケージを除外
-                top = node.module.split(".")[0]
-                if top not in STDLIB_MODULES:
-                    imports.append((node.lineno, node.module))
+                imports.append((node.lineno, node.module))
 
     return imports
 
@@ -189,7 +180,7 @@ def _get_violations() -> list[Violation]:
 
 
 class TestLayerBoundaries:
-    """六層依存方向の境界テスト。"""
+    """7コア層依存方向の境界テスト。"""
 
     def test_infrastructure_does_not_import_upper_layers(self) -> None:
         """Infrastructure (L1) は上位層を import しない。"""
@@ -205,19 +196,26 @@ class TestLayerBoundaries:
             msg = self._format_violations(vs)
             pytest.fail(f"shared → 上位層の依存違反 {len(vs)} 件:\n{msg}")
 
-    def test_kernel_does_not_import_platform_or_apps(self) -> None:
-        """Kernel (L3) は platform/apps を import しない。"""
+    def test_kernel_does_not_import_control_plane_or_apps(self) -> None:
+        """Kernel (L3) は control_plane/apps を import しない。"""
         vs = [v for v in _get_violations() if v.from_layer == "kernel"]
         if vs:
             msg = self._format_violations(vs)
-            pytest.fail(f"kernel → platform/apps の依存違反 {len(vs)} 件:\n{msg}")
+            pytest.fail(f"kernel → control_plane/apps の依存違反 {len(vs)} 件:\n{msg}")
 
-    def test_harness_does_not_import_platform_or_apps(self) -> None:
-        """Harness (L4) は platform/apps を import しない。"""
+    def test_harness_does_not_import_control_plane_or_apps(self) -> None:
+        """Harness (L4) は control_plane/apps を import しない。"""
         vs = [v for v in _get_violations() if v.from_layer == "harness"]
         if vs:
             msg = self._format_violations(vs)
-            pytest.fail(f"harness → platform/apps の依存違反 {len(vs)} 件:\n{msg}")
+            pytest.fail(f"harness → control_plane/apps の依存違反 {len(vs)} 件:\n{msg}")
+
+    def test_domain_does_not_import_control_plane_or_apps(self) -> None:
+        """Domain (L5) は control_plane/apps を import しない。"""
+        vs = [v for v in _get_violations() if v.from_layer == "domain"]
+        if vs:
+            msg = self._format_violations(vs)
+            pytest.fail(f"domain → control_plane/apps の依存違反 {len(vs)} 件:\n{msg}")
 
     def test_total_violations_decreasing(self) -> None:
         """全体の違反件数が減少傾向であることを確認する。

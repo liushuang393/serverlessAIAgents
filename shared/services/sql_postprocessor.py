@@ -6,7 +6,7 @@
 - 自己一貫性投票: 複数候補からの最適解選択
 
 使用例:
-    >>> from platform.services.sql_postprocessor import SQLPostProcessor
+    >>> from shared.services.sql_postprocessor import SQLPostProcessor
     >>>
     >>> processor = SQLPostProcessor()
     >>> await processor.start()

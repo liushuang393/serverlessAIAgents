@@ -15,16 +15,18 @@ BizCore AI はこの哲学を実現する **全スタック企業開発基盤** 
 
 ---
 
-## 六層アーキテクチャ
+## 7コア層 + Apps外層
 
-BizCore AI は責務を明確に分離した六層構造で設計されています。
+BizCore AI は 7 つのコア層と、その外側にある `apps/` 製品層で構成されます。
 
 ```
 ┌─────────────────────────────────────────────┐
-│  BizCore Studios (Apps)                     │  ← 業務アプリ層
+│  BizCore Studios (Apps)                     │  ← 製品装配・交付層（コア外）
 │  Migration / FAQ / Assistant / Custom Apps  │
 ├─────────────────────────────────────────────┤
-│  BizCore Platform (Control Plane)           │  ← 管理・観測・配信
+│  BizCore Control Plane                      │  ← 管理・観測・配信
+├─────────────────────────────────────────────┤
+│  BizCore Domain                             │  ← 業務ドメイン・業界テンプレート
 ├─────────────────────────────────────────────┤
 │  BizCore Harness (Governance)               │  ← ガバナンス・信頼性・評価
 ├─────────────────────────────────────────────┤
@@ -45,10 +47,11 @@ BizCore AI は責務を明確に分離した六層構造で設計されていま
 | **Shared** | `shared/` | LLM Gateway、RAG、Access Control、Trace、Audit 等の共通サービス |
 | **BizCore Kernel** | `kernel/` | Agent Runtime、Flow Engine、Orchestration、Protocol 実装 |
 | **BizCore Harness** | `harness/` | Governance、Policy、Approval、Budget、Evaluation、Guardrails |
-| **BizCore Platform** | `platform/` | Control Plane — App の作成・設定・実行・観測・配信を集約 |
-| **BizCore Studios** | `apps/*/` | 業務アプリ — Migration / FAQ / Assistant 等の独立製品単位 |
+| **BizCore Domain** | `domain/` | 業界/業務ドメインのモデル、インターフェース、テンプレート、ルール |
+| **BizCore Control Plane** | `control_plane/` | Platform Control Plane — 発見、ライフサイクル、配信、運用 UI/API |
+| **BizCore Studios** | `apps/*/` | 製品層。3 Studios と custom apps を装配する外側レイヤー |
 
-> **設計原則**: 下位層は上位層に依存しない。Kernel は Platform/App を import せず、Harness は hook 経由でのみ Kernel に接続する。
+> **設計原則**: `contracts / infrastructure / shared / kernel / harness / domain` は `apps/` に依存しない。`domain` は `control_plane` に依存しない。`control_plane` は下位層を統合するが、下位層の正本入口にはならない。
 
 ---
 
@@ -125,14 +128,17 @@ INFRA --> PROVIDER
 
 ## リポジトリ構造
 
-### 六層コア
+### 7コア層
 - `contracts/`: プロトコル・インターフェース定義（Versioned）
 - `infrastructure/`: 低レベル基盤（LLM Provider / Storage / Cache / Queue）
 - `shared/`: 共通サービス（Gateway / RAG / Access / Trace / Audit）
 - `kernel/`: Agent Runtime / Flow Engine / Orchestration / Protocol
 - `harness/`: Governance / Policy / Approval / Budget / Evaluation
-- `platform/`: BizCore Platform の正規実装（Control Plane）
-- `apps/`: BizCore Studios（業務アプリ群）+ `apps/platform` shell
+- `domain/`: 業界/業務ドメインの正規実装
+- `control_plane/`: BizCore Control Plane の正規実装
+
+### 製品層
+- `apps/`: BizCore Studios と custom apps。7コア層の外側で製品を構成する
 
 ### レガシー互換
 - `agentflow/`: 旧 Kernel（`kernel/` への re-export 層として維持中）
@@ -162,14 +168,13 @@ INFRA --> PROVIDER
 
 ```bash
 # 環境構築
-conda activate agentflow
-pip install -e ".[apps,dev]"
+python3 -m pip install -e ".[apps,dev]"
 
 # バックエンド起動（ローカル開発 ポート 8001）
-python -m apps.platform.main serve --port 8001
+python3 -m control_plane.main serve --port 8001
 
 # フロントエンド起動（別ターミナル）
-cd apps/platform/frontend && npm install && npm run dev
+cd control_plane/frontend && npm install && npm run dev
 ```
 
 ---

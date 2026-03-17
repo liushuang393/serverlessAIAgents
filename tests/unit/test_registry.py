@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from platform.marketplace.registry import AgentRegistryEntry, LocalRegistry
+from control_plane.marketplace.registry import AgentRegistryEntry, LocalRegistry
 
 
 class TestAgentRegistryEntry:

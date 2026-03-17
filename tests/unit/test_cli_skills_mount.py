@@ -4,7 +4,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from platform.cli.main import cli
+from control_plane.cli.main import cli
 
 
 def _write_skill(skill_dir: Path, name: str) -> None:

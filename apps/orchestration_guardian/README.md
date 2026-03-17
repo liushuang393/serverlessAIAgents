@@ -50,7 +50,7 @@ python -m apps.orchestration_guardian.main
 
 - この app の正本は `app_config.json` の `contracts.llm` です。
 - text modality は Platform catalog の `platform_text_default` を参照します。
-- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- Provider / model / API Key の正本は `control_plane` の `LLM Management` です。
 
 ## テスト/静的チェック（統一スクリプト）
 
@@ -65,7 +65,7 @@ cd <repo-root>
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/orchestration_guardian --target docker
+python -m control_plane.main publish ./apps/orchestration_guardian --target docker
 ```
 
 ## Endpoints

@@ -9,7 +9,7 @@
 - チャート自動生成
 
 使用例:
-    >>> from platform.services import Text2SQLService
+    >>> from control_plane.services import Text2SQLService
     >>>
     >>> service = Text2SQLService(
     ...     dialect="postgresql",

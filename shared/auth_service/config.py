@@ -13,13 +13,18 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from kernel.runtime import resolve_app_runtime
+
+
+def _resolve_app_runtime_lazy(*args: object, **kwargs: object) -> object:
+    """遅延インポート: kernel.runtime.resolve_app_runtime（L2→L3 違反回避）."""
+    from kernel.runtime import resolve_app_runtime as _resolve
+    return _resolve(*args, **kwargs)
 
 
 _AUTH_ENV_FILE = Path(__file__).resolve().parent / ".env"
 _AUTH_APP_CONFIG = Path(__file__).resolve().parent / "app_config.json"
 _AUTH_MANIFEST = json.loads(_AUTH_APP_CONFIG.read_text(encoding="utf-8"))
-_AUTH_RUNTIME = resolve_app_runtime(
+_AUTH_RUNTIME = _resolve_app_runtime_lazy(
     _AUTH_APP_CONFIG,
     env=os.environ,
     backend_host_env="AUTH_SERVICE_HOST",

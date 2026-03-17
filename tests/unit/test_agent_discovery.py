@@ -5,7 +5,7 @@ AgentDiscovery、AgentEntry、LoadBalanceStrategy のテスト。
 
 import pytest
 
-from platform.discovery import (
+from control_plane.discovery import (
     AgentDiscovery,
     AgentEntry,
     AgentStatus,

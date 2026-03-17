@@ -1,3 +1,24 @@
 """後方互換: apps/faq_system/backend/agents/faq_agent からの re-export."""
 
-from apps.faq_system.backend.agents.faq_agent import *  # noqa: F401,F403
+from __future__ import annotations
+
+import importlib
+from types import ModuleType
+
+
+_TARGET_MODULE = "apps.faq_system.backend.agents.faq_agent"
+
+
+def _load_target_module() -> ModuleType:
+    return importlib.import_module(_TARGET_MODULE)
+
+
+def __getattr__(name: str) -> object:
+    return getattr(_load_target_module(), name)
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(dir(_load_target_module())))
+
+
+__all__ = [name for name in dir(_load_target_module()) if not name.startswith("_")]

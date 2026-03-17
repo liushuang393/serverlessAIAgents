@@ -9,7 +9,7 @@ Tests cover:
 
 import pytest
 
-from platform.wizard.models import (
+from apps.dev_studio.wizard.models import (
     AgentSpec,
     CapabilityGap,
     EngineType,

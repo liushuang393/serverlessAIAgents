@@ -164,7 +164,7 @@ db_manager = DatabaseManager(
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
-    from platform.bootstrap import AppCapabilityBootstrapper
+    from control_plane.bootstrap import AppCapabilityBootstrapper
 
     get_faq_contract_auth_guard().reset_cache()
     await db_manager.init()

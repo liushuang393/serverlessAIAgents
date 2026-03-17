@@ -6,7 +6,7 @@
 
 ## 📋 目次
 
-1. [8層アーキテクチャ遵守](#8層アーキテクチャ遵守)
+1. [7コア層 + Apps外層遵守](#7コア層 + Apps外層遵守)
 2. [プロトコル統合パターン](#プロトコル統合パターン)
 3. [統一Provider使用](#統一provider使用)
 4. [Agent開発パターン](#agent開発パターン)
@@ -17,10 +17,10 @@
 
 ---
 
-## 🏗️ 8層アーキテクチャ遵守
+## 🏗️ 7コア層 + Apps外層遵守
 
 ### レイヤー境界の厳格遵守
-AgentFlow の8層アーキテクチャにおける依存方向を厳守します。
+AgentFlow の7コア層 + Apps外層における依存方向を厳守します。
 
 ```python
 # ✅ 正しい依存方向（上位→下位）
@@ -644,7 +644,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### 8層アーキテクチャ依存検証
+### 7コア層 + Apps外層依存検証
 ```python
 #!/usr/bin/env python3
 # scripts/validate_layer_dependencies.py
@@ -655,7 +655,7 @@ from pathlib import Path
 from typing import Dict, Set, List
 
 class LayerDependencyValidator:
-    """8層アーキテクチャの依存関係を検証."""
+    """7コア層 + Apps外層の依存関係を検証."""
 
     # レイヤー定義と許可された依存
     LAYER_HIERARCHY = {
@@ -771,7 +771,7 @@ if __name__ == "__main__":
 
 | ルール | 必須 | 例 | 理由 |
 |--------|------|-----|------|
-| **8層遵守** | ✅ | 上位→下位のみ | アーキテクチャ分離 |
+| **7コア層遵守** | ✅ | 上位→下位のみ | アーキテクチャ分離 |
 | **統一Provider** | ✅ | `get_llm()` | 松耦合設計 |
 | **@agent優先** | ✅ | `@agent class MyAgent` | シンプルさ |
 | **非同期強制** | ✅ | `async def run()` | スケーラビリティ |
@@ -779,4 +779,4 @@ if __name__ == "__main__":
 | **Skills統合** | ✅ | `SkillEngine(auto_learn=True)` | 自動進化 |
 | **Protocol活用** | ✅ | `class Tool(Protocol)` | 動的構造 |
 
-*最終更新: 2026-01-19 | AgentFlow 8層アーキテクチャ & 4プロトコル統合*
+*最終更新: 2026-01-19 | BizCore 7コア層 + Apps外層 & 4プロトコル統合*

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 六層アーキテクチャ境界チェック統合スクリプト.
+# 7コア層 + apps 外層の境界チェック統合スクリプト.
 #
 # 実行方法:
 #   bash scripts/check.sh
@@ -11,7 +11,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-PYTHON="${PYTHON:-python}"
+PYTHON="${PYTHON:-python3}"
 
 # プロジェクトルートを PYTHONPATH に追加（agentflow shim パッケージ解決用）
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
@@ -19,7 +19,7 @@ export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
 EXIT_CODE=0
 
 echo "============================================"
-echo " 六層アーキテクチャ境界チェック"
+echo " 7コア層アーキテクチャ境界チェック"
 echo "============================================"
 echo ""
 
@@ -59,10 +59,10 @@ from agentflow.context import ContextEngineer
 from agentflow.context.budget_manager import TokenBudgetManager
 from agentflow.governance.engine import GovernanceEngine
 
-# platform
-from platform.registry import AppRegistryService
-from platform.lifecycle import LifecycleService
-from platform.discovery import DiscoveryService
+# control plane
+from control_plane.registry import AppRegistryService
+from control_plane.lifecycle import LifecycleService
+from control_plane.discovery import DiscoveryService
 
 # identity checks
 from kernel import ExecutorAgent as EA2
@@ -93,4 +93,3 @@ fi
 echo "============================================"
 
 exit $EXIT_CODE
-

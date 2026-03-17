@@ -6,7 +6,7 @@
 
 ## 📋 目次
 
-1. [AgentFlow 8層アーキテクチャ](#agentflow-8層アーキテクチャ)
+1. [BizCore 7コア層 + Apps外層](#bizcore-7コア層--apps外層)
 2. [SOLID 原則](#solid-原則)
 3. [依存性管理](#依存性管理)
 4. [非同期設計パターン](#非同期設計パターン)
@@ -16,10 +16,10 @@
 
 ---
 
-## 🏗️ AgentFlow 8層アーキテクチャ
+## 🏗️ BizCore 7コア層 + Apps外層
 
 ### アーキテクチャ概要
-AgentFlow は明確な責任分離に基づく8層アーキテクチャを採用：
+BizCore は `contracts / infrastructure / shared / kernel / harness / control_plane / domain` の 7 コア層と `apps/` 製品層で責務を分離する。
 
 ```
 ┌─────────────────────────────────────────────────────────┐

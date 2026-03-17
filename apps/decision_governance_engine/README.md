@@ -234,7 +234,7 @@ python -c "from agentflow.llm.gateway import load_gateway_config; load_gateway_c
 
 > 注意:
 > - この app の正本は `app_config.json` の `contracts.llm` です。
-> - Provider / model / API Key は `apps/platform` の `LLM Management` で管理してください。
+> - Provider / model / API Key は `control_plane` の `LLM Management` で管理してください。
 > - app 層は Provider 名を直接扱わず、契約から解決された model を利用します。
 ### DB マイグレーション（必須）
 
@@ -436,7 +436,7 @@ Platform（Control Plane）に publish/deploy を統一する場合:
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/decision_governance_engine --target docker
+python -m control_plane.main publish ./apps/decision_governance_engine --target docker
 ```
 
 （この app は `apps/decision_governance_engine/app_config.json` の `runtime.commands.publish` に docker compose の発布手順を保持しています）

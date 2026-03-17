@@ -26,8 +26,12 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-# 循環インポート回避: kernel.core から直接インポート
-from kernel.agents import ResilientAgent
+
+
+def _get_resilient_agent_base() -> type:
+    """遅延インポート: kernel.agents.ResilientAgent（L2→L3 違反回避）."""
+    from kernel.agents import ResilientAgent as _RA
+    return _RA
 
 
 if TYPE_CHECKING:
@@ -93,7 +97,7 @@ class SalesOutput(BaseModel):
 # =============================================================================
 
 
-class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
+class SalesAgent(_get_resilient_agent_base()[SalesInput, SalesOutput]):
     """売上分析専門Agent（ResilientAgent 準拠）.
 
     入力:

@@ -1,0 +1,10 @@
+{
+  "name": "dev_studio",
+  "display_name": "Developer Studio",
+  "description": "開発支援ツール（コード解析、コード生成、Agentウィザード）",
+  "version": "1.0.0",
+  "blueprint": {
+    "engine_pattern": "custom"
+  },
+  "agents": []
+}

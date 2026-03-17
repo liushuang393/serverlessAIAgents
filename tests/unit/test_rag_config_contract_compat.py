@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from platform.bootstrap.config_watcher import _extract_contracts_rag
-from platform.bootstrap.rag_builder import _normalize_rag_payload
+from control_plane.bootstrap.config_watcher import _extract_contracts_rag
+from control_plane.bootstrap.rag_builder import _normalize_rag_payload
 
 
 def test_extract_contracts_rag_prefers_canonical() -> None:

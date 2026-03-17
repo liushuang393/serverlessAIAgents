@@ -11,7 +11,7 @@ Studio/CLI/SDK/API 全てで同一インターフェース。
 - セッション管理
 
 使用例:
-    >>> from platform.services import AuthService
+    >>> from control_plane.services import AuthService
     >>>
     >>> service = AuthService()
     >>>

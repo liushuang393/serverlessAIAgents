@@ -9,7 +9,7 @@
 - JSON
 
 使用例:
-    >>> from platform.services import DocumentExporter
+    >>> from control_plane.services import DocumentExporter
     >>>
     >>> exporter = DocumentExporter()
     >>> # HTMLエクスポート

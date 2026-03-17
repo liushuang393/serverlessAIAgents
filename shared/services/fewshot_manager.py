@@ -6,7 +6,7 @@
 - 動的示例選択
 
 使用例:
-    >>> from platform.services.fewshot_manager import FewshotManager
+    >>> from shared.services.fewshot_manager import FewshotManager
     >>>
     >>> manager = FewshotManager()
     >>> manager.add_example(

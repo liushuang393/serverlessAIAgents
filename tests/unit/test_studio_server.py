@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from platform.ui.studio.server import StudioServer, main
+from control_plane.ui.studio.server import StudioServer, main
 
 
 @pytest.fixture

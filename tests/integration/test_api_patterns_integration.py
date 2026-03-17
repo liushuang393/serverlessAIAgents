@@ -24,7 +24,7 @@ import pytest
 # =============================================================================
 # API 層（新規作成）
 # =============================================================================
-from platform.api import (
+from control_plane.api import (
     APIResponse,
     ErrorCode,
     PagedResponse,

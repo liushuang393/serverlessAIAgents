@@ -11,7 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel.skills.builtin.stripe_payment.exceptions import (
+from .exceptions import (
     CustomerError,
     PaymentError,
     RefundError,

@@ -584,7 +584,7 @@ def save_gateway_config(config: LLMGatewayConfig, config_path: Path | None = Non
 # ---------------------------------------------------------------------------
 # プラットフォーム暗号化シークレット解決コールバック
 # agentflow → apps の逆依存を回避するため、コールバック登録方式を採用。
-# apps/platform が起動時に register_platform_secret_resolver() を呼ぶ。
+# control_plane が起動時に register_platform_secret_resolver() を呼ぶ。
 # ---------------------------------------------------------------------------
 from collections.abc import Callable
 
@@ -598,7 +598,7 @@ def register_platform_secret_resolver(
 ) -> None:
     """プラットフォーム暗号化シークレット解決コールバックを登録.
 
-    apps/platform が起動時にこの関数を呼び出して、
+    control_plane が起動時にこの関数を呼び出して、
     resolve_platform_cached_secret 相当の関数を注入する。
 
     Args:

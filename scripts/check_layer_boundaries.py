@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""新しい六層パッケージの import 境界を検証する.
+"""7コア層 + apps 外層の import 境界を検証する.
 
-六層構成:
+7コア層構成:
   L0: contracts (全層が参照可)
   L1: infrastructure
   L2: shared
   L3: kernel
   L4: harness
-  L5: platform
-  L6: apps
+  L5: domain
+  L6: control_plane
+  L7: apps
 
 ルール:
   - 各層は自層以下＋ contracts のみ eager import 可
@@ -24,9 +25,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# stdlib モジュール名で六層パッケージ名と衝突するもの（誤検知回避）
-_STDLIB_NAMES: set[str] = {"platform"}
-
 # 後方互換shimファイル: 下位層から上位層への re-export のみを行うファイル。
 # これらは移行期間中の互換性維持のため意図的に境界を越えるので検査対象外とする。
 _SHIM_EXCLUSIONS: set[str] = {
@@ -41,34 +39,6 @@ _SHIM_EXCLUSIONS: set[str] = {
 }
 
 
-def _is_stdlib_import(
-    imported_root: str, source_path: Path, *, is_bare_import: bool = False
-) -> bool:
-    """imported_root がプロジェクトパッケージではなく stdlib を指すか判定.
-
-    Args:
-        imported_root: インポート先のルートパッケージ名
-        source_path: インポート元ファイルのパス
-        is_bare_import: ``import platform`` のような bare import かどうか。
-            bare import の場合、ソースが同名パッケージ外なら stdlib と判定する。
-            ``from platform.xxx import ...`` の場合はプロジェクトパッケージ。
-    """
-    if imported_root not in _STDLIB_NAMES:
-        return False
-    # ソースファイルが同名パッケージ内なら自パッケージ import
-    project_pkg = ROOT / imported_root
-    try:
-        source_path.relative_to(project_pkg)
-        return False  # 自パッケージ内 → プロジェクト import
-    except ValueError:
-        pass
-    # bare import (例: ``import platform``) はパッケージ外からなら stdlib
-    if is_bare_import:
-        return True
-    # ``from platform.xxx import ...`` はプロジェクトパッケージ
-    return not (project_pkg.is_dir() and (project_pkg / "__init__.py").exists())
-
-
 # 検査対象レイヤー
 LAYER_ROOTS: dict[str, Path] = {
     "contracts": ROOT / "contracts",
@@ -76,16 +46,18 @@ LAYER_ROOTS: dict[str, Path] = {
     "shared": ROOT / "shared",
     "kernel": ROOT / "kernel",
     "harness": ROOT / "harness",
-    "platform": ROOT / "platform",
+    "domain": ROOT / "domain",
+    "control_plane": ROOT / "control_plane",
 }
 
 # 層ごとの禁止 eager import 先（トップレベルパッケージ名）
 FORBIDDEN_IMPORTS: dict[str, set[str]] = {
-    "infrastructure": {"shared", "kernel", "harness", "platform", "apps"},
-    "shared": {"kernel", "harness", "platform", "apps"},
-    "kernel": {"harness", "platform", "apps", "agentflow"},
-    "harness": {"platform", "apps"},
-    "platform": {"apps"},
+    "infrastructure": {"shared", "kernel", "harness", "domain", "control_plane", "apps"},
+    "shared": {"kernel", "harness", "domain", "control_plane", "apps"},
+    "kernel": {"harness", "control_plane", "apps", "agentflow"},
+    "harness": {"control_plane", "apps"},
+    "domain": {"control_plane", "apps"},
+    "control_plane": {"apps"},
 }
 
 
@@ -128,14 +100,14 @@ def _is_inside_function(node: ast.AST, parent_map: dict[int, ast.AST]) -> bool:
     return False
 
 
-def _eager_imported_roots(tree: ast.Module) -> list[tuple[int, str, bool]]:
+def _eager_imported_roots(tree: ast.Module) -> list[tuple[int, str]]:
     """トップレベルの eager import のルートパッケージ名を返す.
 
     Returns:
-        (行番号, ルートパッケージ名, bare import かどうか) のリスト
+        (行番号, ルートパッケージ名) のリスト
     """
     parent_map = _build_parent_map(tree)
-    roots: list[tuple[int, str, bool]] = []
+    roots: list[tuple[int, str]] = []
     for node in ast.walk(tree):
         if not isinstance(node, (ast.Import, ast.ImportFrom)):
             continue
@@ -147,11 +119,9 @@ def _eager_imported_roots(tree: ast.Module) -> list[tuple[int, str, bool]]:
             continue
         if isinstance(node, ast.Import):
             for alias in node.names:
-                name = alias.name
-                is_bare = "." not in name
-                roots.append((node.lineno, name.split(".")[0], is_bare))
+                roots.append((node.lineno, alias.name.split(".")[0]))
         elif isinstance(node, ast.ImportFrom) and node.module:
-            roots.append((node.lineno, node.module.split(".")[0], False))
+            roots.append((node.lineno, node.module.split(".")[0]))
     return roots
 
 
@@ -177,12 +147,8 @@ def find_violations() -> list[tuple[str, int, str]]:
                 tree = ast.parse(source, filename=str(path))
             except SyntaxError:
                 continue
-            for line_number, imported_root, is_bare in _eager_imported_roots(tree):
+            for line_number, imported_root in _eager_imported_roots(tree):
                 if imported_root not in forbidden:
-                    continue
-                if _is_stdlib_import(
-                    imported_root, path, is_bare_import=is_bare
-                ):
                     continue
                 violations.append(
                     (str(path.relative_to(ROOT)), line_number, imported_root)

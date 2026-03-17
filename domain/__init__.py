@@ -1,6 +1,1 @@
-"""Domain 固有処理パッケージ.
-
-業務ドメインに依存するテンプレート・ロジックを集約する。
-六層構成において kernel/shared から分離された業務固有コード。
-"""
-
+"""Business-domain layer for industry models, interfaces, templates, and rules."""

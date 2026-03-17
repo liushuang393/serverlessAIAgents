@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel.skills.builtin.auth_provider.exceptions import (
+from .exceptions import (
     AuthError,
     EmailNotConfirmedError,
     InvalidCredentialsError,

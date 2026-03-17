@@ -113,7 +113,7 @@ curl -sf http://localhost:8188/prompt && echo "✓ ComfyUI 起動成功"
 export COMFYUI_URL=http://localhost:8188
 
 # LLM 強化モードは Platform 主導 LLM 管理を前提にします
-# 正本は apps/platform の LLM Management と app_config.json の contracts.llm です
+# 正本は control_plane の LLM Management と app_config.json の contracts.llm です
 # 下記 key は Platform 未設定時の fallback 用です
 export OPENAI_API_KEY=
 ```
@@ -156,7 +156,7 @@ Platform に統一する場合（推奨）:
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/design_skills_engine --target docker
+python -m control_plane.main publish ./apps/design_skills_engine --target docker
 ```
 
 この app は `apps/design_skills_engine/app_config.json` に `docker compose` の publish/start/stop 手順を保持しています。

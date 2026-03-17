@@ -1,0 +1,432 @@
+"""FrameworkAuditService の追加ルール検証テスト."""
+
+from __future__ import annotations
+
+import json
+from copy import deepcopy
+from typing import TYPE_CHECKING
+
+from control_plane.schemas.app_config_schemas import AppConfig
+from control_plane.services.app_discovery import AppDiscoveryService
+from control_plane.services.framework_audit import FrameworkAuditService
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def _base_manifest() -> dict:
+    """監査テスト用の最小 manifest を返す."""
+    return {
+        "name": "sample_app",
+        "display_name": "Sample App",
+        "business_base": "operations",
+        "product_line": "framework",
+        "surface_profile": "developer",
+        "audit_profile": "developer",
+        "plugin_bindings": [],
+        "version": "1.0.0",
+        "ports": {"api": None, "frontend": None, "db": None, "redis": None},
+        "entry_points": {"api_module": None, "health": None},
+        "agents": [
+            {
+                "name": "CoordinatorAgent",
+                "module": "local.coordinator",
+                "capabilities": ["coordination"],
+                "pattern": "coordinator",
+            },
+            {
+                "name": "WorkerAgent",
+                "module": "local.worker",
+                "capabilities": ["execution"],
+                "pattern": "executor",
+            },
+        ],
+        "services": {},
+        "dependencies": {"database": None, "redis": False, "external": []},
+        "runtime": {
+            "database": {
+                "kind": None,
+                "url": None,
+                "host": None,
+                "port": None,
+                "name": None,
+                "user": None,
+                "password": None,
+                "password_env": "DB_PASSWORD",
+                "note": None,
+            },
+        },
+        "contracts": {
+            "auth": {"enabled": False, "allow_anonymous": True},
+            "rag": {"enabled": False, "collections": []},
+            "skills": {"default_skills": []},
+        },
+        "blueprint": {
+            "engine_pattern": "coordinator",
+            "default_skills": [],
+            "mcp_servers": [],
+        },
+        "visibility": {"mode": "private", "tenants": []},
+    }
+
+
+def _audit_service(tmp_path: Path) -> FrameworkAuditService:
+    """テスト用監査サービスを構築."""
+    discovery = AppDiscoveryService(apps_dir=tmp_path)
+    return FrameworkAuditService(discovery)
+
+
+def _write_app_source(
+    tmp_path: Path,
+    source: str,
+    *,
+    app_name: str = "sample_app",
+) -> Path:
+    app_dir = tmp_path / app_name
+    app_dir.mkdir(parents=True, exist_ok=True)
+    (app_dir / "main.py").write_text(source, encoding="utf-8")
+    return app_dir
+
+
+def _write_plugin_manifest(
+    tmp_path: Path,
+    *,
+    plugin_id: str,
+    version: str = "1.0.0",
+    product_lines: list[str] | None = None,
+) -> None:
+    """テスト用 plugin manifest を配置する."""
+    plugin_dir = tmp_path.parent / "plugins" / plugin_id
+    plugin_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "id": plugin_id,
+        "version": version,
+        "type": "tool",
+        "capabilities": ["test.capability"],
+        "risk_tier": "medium",
+        "side_effects": ["network.egress"],
+        "required_permissions": ["network.egress"],
+        "signature": {
+            "algorithm": "ed25519",
+            "issuer": "test",
+            "key_id": "k1",
+        },
+        "compatibility": {
+            "kernel": ">=2.0.0",
+            "product_lines": product_lines or ["framework"],
+        },
+        "tests_required": ["unit"],
+    }
+    (plugin_dir / "plugin_manifest.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def test_contract_consistency_detects_rag_and_mcp_mismatch(tmp_path: Path) -> None:
+    """RAG/MCP 契約の齟齬を検出できる."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["contracts"]["rag"] = {"enabled": True, "collections": ["contract_docs"]}
+    manifest["services"] = {
+        "rag": {"collections": ["service_docs"]},
+        "mcp": {"tools": ["search_docs"]},
+    }
+
+    config = AppConfig.model_validate(manifest)
+    issues = service._check_contract_consistency(config)
+    codes = {issue.code for issue in issues}
+
+    assert "RAG_COLLECTION_MISMATCH" in codes
+    assert "MCP_SERVICE_WITHOUT_SERVER_BINDING" in codes
+
+
+def test_orchestration_protocols_warn_when_stream_and_a2a_missing(tmp_path: Path) -> None:
+    """coordinator 編成で stream/A2A がなければ警告を出す."""
+    service = _audit_service(tmp_path)
+    config = AppConfig.model_validate(_base_manifest())
+    app_dir = _write_app_source(tmp_path, "class CoordinatorAgent:\n    pass\n")
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="class CoordinatorAgent:\n    pass\n",
+        app_dir=app_dir,
+        audit_profile="developer",
+    )
+    codes = {issue.code for issue in issues}
+
+    assert "ORCHESTRATION_STREAM_SURFACE_MISSING" in codes
+    assert "A2A_SURFACE_NOT_FOUND" in codes
+
+
+def test_orchestration_protocols_business_profile_skips_protocol_surface_checks(
+    tmp_path: Path,
+) -> None:
+    """business profile では stream/A2A/MCP の面チェックを強制しない."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["services"] = {"mcp": {"tools": ["search_docs"]}}
+    manifest["blueprint"]["mcp_servers"] = ["filesystem"]
+    config = AppConfig.model_validate(manifest)
+    app_dir = _write_app_source(tmp_path, "class CoordinatorAgent:\n    pass\n")
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="class CoordinatorAgent:\n    pass\n",
+        app_dir=app_dir,
+        audit_profile="business",
+    )
+    codes = {issue.code for issue in issues}
+    assert "ORCHESTRATION_STREAM_SURFACE_MISSING" not in codes
+    assert "A2A_SURFACE_NOT_FOUND" not in codes
+    assert "MCP_DECLARED_BUT_SURFACE_MISSING" not in codes
+
+
+def test_orchestration_protocols_ast_parse_warning_and_unverified_error(tmp_path: Path) -> None:
+    """AST 解析不能時は警告 + 判定不能 error を返す."""
+    service = _audit_service(tmp_path)
+    config = AppConfig.model_validate(_base_manifest())
+    app_dir = _write_app_source(tmp_path, "def broken(:\n    pass\n")
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="def broken(:\n    pass\n",
+        app_dir=app_dir,
+        audit_profile="developer",
+    )
+    issue_map = {issue.code: issue.severity for issue in issues}
+
+    assert issue_map["AST_PARSE_WARNING"] == "warning"
+    assert issue_map["ORCHESTRATION_STREAM_SURFACE_MISSING_UNVERIFIED"] == "error"
+    assert issue_map["A2A_SURFACE_NOT_FOUND_UNVERIFIED"] == "error"
+
+
+def test_orchestration_protocols_detects_mcp_surface_via_ast(tmp_path: Path) -> None:
+    """MCP 利用シグナルを AST で検出できる."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["services"] = {"mcp": {"tools": ["search_docs"]}}
+    manifest["blueprint"]["mcp_servers"] = ["filesystem"]
+    config = AppConfig.model_validate(manifest)
+    app_dir = _write_app_source(
+        tmp_path,
+        "from kernel.protocols import MCPClient\nclient = MCPClient\n",
+    )
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="",
+        app_dir=app_dir,
+        audit_profile="developer",
+    )
+    codes = {issue.code for issue in issues}
+    assert "MCP_DECLARED_BUT_SURFACE_MISSING" not in codes
+    assert "MCP_DECLARED_BUT_SURFACE_MISSING_UNVERIFIED" not in codes
+
+
+def test_agent_module_checks_warn_when_class_name_missing(tmp_path: Path) -> None:
+    """module はあるが class_name がない agent を警告する."""
+    service = _audit_service(tmp_path)
+    config = AppConfig.model_validate(_base_manifest())
+
+    issues = service._check_agent_modules(config)
+    codes = {issue.code for issue in issues}
+
+    assert "AGENT_CLASS_NAME_MISSING" in codes
+
+
+def test_agent_module_checks_detect_missing_class_and_count_mismatch(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """class_name 不一致と executable 数不一致を検出する."""
+    service = _audit_service(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    agent_dir = tmp_path / "apps" / "sample_app" / "agents"
+    agent_dir.mkdir(parents=True, exist_ok=True)
+    (agent_dir / "worker_agent.py").write_text(
+        "class WorkerAgent:\n    pass\n",
+        encoding="utf-8",
+    )
+
+    manifest = _base_manifest()
+    manifest["agents"] = [
+        {
+            "name": "WorkerAgent",
+            "module": "apps.sample_app.agents.worker_agent",
+            "class_name": "MissingWorkerAgent",
+            "capabilities": ["execution"],
+            "pattern": "executor",
+        }
+    ]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_agent_modules(config)
+    codes = {issue.code for issue in issues}
+
+    assert "AGENT_CLASS_NOT_FOUND" in codes
+    assert "AGENT_EXECUTABLE_COUNT_MISMATCH" in codes
+
+
+def test_security_baseline_detects_plaintext_password_and_anonymous_external(
+    tmp_path: Path,
+) -> None:
+    """平文パスワードと匿名外部公開の組み合わせを検出."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["runtime"]["database"]["password"] = "dev-secret"
+    manifest["dependencies"]["external"] = ["slack_api"]
+
+    config = AppConfig.model_validate(manifest)
+    issues = service._check_security_baseline(config)
+    codes = {issue.code for issue in issues}
+
+    assert "PLAINTEXT_DB_PASSWORD_IN_MANIFEST" in codes
+    assert "EXTERNAL_DEP_WITH_ANONYMOUS_ACCESS" in codes
+
+
+def test_entry_points_reports_missing_api_module(tmp_path: Path) -> None:
+    """api_module が不正な場合に error を返す."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["ports"]["api"] = 8010
+    manifest["entry_points"]["api_module"] = "apps.not_exist.main:app"
+
+    config = AppConfig.model_validate(manifest)
+    issues = service._check_entry_points(config, app_dir=None, source_text="")
+    codes = {issue.code for issue in issues}
+
+    assert "API_MODULE_NOT_FOUND" in codes
+
+
+def test_runtime_checks_detect_vite_and_compose_port_drift(tmp_path: Path) -> None:
+    """Vite と compose の hardcoded port drift を検出する."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["ports"]["api"] = 8100
+    manifest["ports"]["frontend"] = 3100
+    manifest["runtime"]["urls"] = {
+        "backend": "http://localhost:8100",
+        "frontend": "http://localhost:3100",
+        "health": "http://localhost:8100/health",
+        "database": None,
+    }
+    app_dir = tmp_path / "sample_app"
+    frontend_dir = app_dir / "frontend"
+    frontend_dir.mkdir(parents=True, exist_ok=True)
+    (frontend_dir / "vite.config.ts").write_text(
+        (
+            "export default { server: { port: 3010, proxy: { '/api': 'http://localhost:8010' } } };\n"
+        ),
+        encoding="utf-8",
+    )
+    (app_dir / "docker-compose.yml").write_text(
+        (
+            'services:\n'
+            '  sample:\n'
+            '    ports:\n'
+            '      - "${SAMPLE_APP_PORT:-8100}:8010"\n'
+            '    healthcheck:\n'
+            '      test: ["CMD", "curl", "http://localhost:8010/health"]\n'
+        ),
+        encoding="utf-8",
+    )
+
+    config = AppConfig.model_validate(manifest)
+    issues = [
+        *service._check_frontend_runtime_contract(config, app_dir),
+        *service._check_compose_runtime_contract(config, app_dir),
+    ]
+    codes = {issue.code for issue in issues}
+
+    assert "FRONTEND_DEV_PORT_MISMATCH" in codes
+    assert "FRONTEND_PROXY_PORT_MISMATCH" in codes
+    assert "COMPOSE_BACKEND_PORT_MISMATCH" in codes
+
+
+def test_auth_runtime_enforcement_warns_when_guard_missing(tmp_path: Path) -> None:
+    """auth 必須宣言なのに実装ガードがなければ警告を返す."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["contracts"]["auth"] = {
+        "enabled": True,
+        "allow_anonymous": False,
+    }
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_auth_runtime_enforcement(
+        config,
+        source_text="def endpoint():\n    pass\n",
+    )
+    codes = {issue.code for issue in issues}
+    assert "AUTH_CONTRACT_WITHOUT_RUNTIME_GUARD" in codes
+
+
+def test_auth_runtime_enforcement_accepts_api_key_guard(tmp_path: Path) -> None:
+    """API key 検証シグナルがあれば警告しない."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["contracts"]["auth"] = {
+        "enabled": True,
+        "allow_anonymous": False,
+    }
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_auth_runtime_enforcement(
+        config,
+        source_text="def _require_api_key(request):\n    pass\n",
+    )
+    codes = {issue.code for issue in issues}
+    assert "AUTH_CONTRACT_WITHOUT_RUNTIME_GUARD" not in codes
+
+
+def test_plugin_binding_missing_manifest_is_error_for_strict_product_line(tmp_path: Path) -> None:
+    """migration/faq/assistant では未登録 plugin を error として検出する."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["product_line"] = "migration"
+    manifest["plugin_bindings"] = [{"id": "missing.plugin", "version": "1.0.0"}]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_plugin_bindings(config)
+    issue_map = {issue.code: issue.severity for issue in issues}
+    assert issue_map["PLUGIN_MANIFEST_NOT_FOUND"] == "error"
+
+
+def test_plugin_binding_version_mismatch_warns_for_framework(tmp_path: Path) -> None:
+    """framework では plugin version 不一致を warning として検出する."""
+    _write_plugin_manifest(
+        tmp_path,
+        plugin_id="official.test-framework-pack",
+        version="2.0.0",
+        product_lines=["framework"],
+    )
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["plugin_bindings"] = [{"id": "official.test-framework-pack", "version": "1.0.0"}]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_plugin_bindings(config)
+    issue_map = {issue.code: issue.severity for issue in issues}
+    assert issue_map["PLUGIN_BINDING_VERSION_MISMATCH"] == "warning"
+
+
+def test_plugin_binding_product_line_mismatch_is_error_for_strict_line(tmp_path: Path) -> None:
+    """strict product_line では互換外 plugin の利用を error で検出する."""
+    _write_plugin_manifest(
+        tmp_path,
+        plugin_id="official.test-faq-pack",
+        version="1.0.0",
+        product_lines=["faq"],
+    )
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["product_line"] = "assistant"
+    manifest["security_mode"] = "approval_required"
+    manifest["plugin_bindings"] = [{"id": "official.test-faq-pack", "version": "1.0.0"}]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_plugin_bindings(config)
+    issue_map = {issue.code: issue.severity for issue in issues}
+    assert issue_map["PLUGIN_PRODUCT_LINE_MISMATCH"] == "error"

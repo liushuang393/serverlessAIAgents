@@ -109,7 +109,7 @@
 
 ### 主要特徴
 
-- **8層アーキテクチャ**: アプリ・UI・フロー・Agent・ツール・Provider・プロトコル・インフラの明確分離
+- **7コア層 + Apps外層**: contracts / infrastructure / shared / kernel / harness / control_plane / domain を中核に、apps を外側の製品層として分離
 - **統一プロトコル**: 4つの標準プロトコルを1つのAPIで利用
 - **非同期優先**: すべてのI/Oをasync/await前提で設計
 - **型安全**: 100%型アノテーション、mypyとRuffを標準化
@@ -127,7 +127,7 @@
 - **バックエンド**: Python 3.13+, FastAPI, Pydantic, Uvicorn
 - **フロントエンド**: React, Vite, TypeScript, ESLint, Prettier（studio / apps/\*/frontend）
 - **AI 関連**: MCP, A2A, AG-UI, A2UI, LLM プロバイダ
-- **アーキテクチャ**: 8層クリーンアーキテクチャ
+- **アーキテクチャ**: 7コア層 + Apps外層
 - **インフラ**: Supabase/PostgreSQL/Turso, Pinecone/Qdrant, Redis
 - **品質**: Ruff, mypy, pytest（80%+ カバレッジ）, ESLint, tsc, pre-commit
 - **依存更新**: Dependabot グループ化・週次一括マージ（[依存関係管理](project/dependency-management.md)）
@@ -169,11 +169,11 @@
 | 領域                    | チェック             | コマンド例                                   |
 | ----------------------- | -------------------- | -------------------------------------------- |
 | **Python**              | フォーマット・リント | `ruff format .` / `ruff check .`             |
-| **Python**              | 型チェック           | `mypy agentflow`                             |
-| **Python**              | テスト               | `pytest --cov=agentflow --cov-fail-under=80` |
-| **フロント (React/TS)** | リント               | `cd studio && npm run lint`                  |
-| **フロント (React/TS)** | 型チェック           | `cd studio && npm run type-check`            |
-| **フロント (React/TS)** | ビルド               | `cd studio && npm run build`                 |
+| **Python**              | 型チェック           | `mypy contracts infrastructure shared kernel harness control_plane domain apps tests` |
+| **Python**              | テスト               | `pytest --cov=control_plane --cov-fail-under=80` |
+| **フロント (React/TS)** | リント               | `cd control_plane/frontend && npm run lint` |
+| **フロント (React/TS)** | 型チェック           | `cd control_plane/frontend && npm run type-check` |
+| **フロント (React/TS)** | ビルド               | `cd control_plane/frontend && npm run build` |
 | **共通**                | 軽量フック           | `pre-commit run --all-files`                 |
 
 依存関係を更新した場合（Dependabot マージ含む）も上記を実行すること。詳細は [依存関係管理](project/dependency-management.md) を参照。
@@ -195,18 +195,18 @@
 **必須（推奨は `./check.sh all` で一括）:**
 
 - [ ] **Python**: `ruff format .` / `ruff check .` - フォーマット・リント
-- [ ] **Python**: `mypy agentflow` - 型チェック（未解消時は `./check.sh all --no-type-check` で他を通したうえで [check-errors-analysis.md](tools/check-errors-analysis.md) を参照）
-- [ ] **Python**: `pytest --cov=agentflow --cov-fail-under=80` - テスト
-- [ ] **フロント (studio)**: `cd studio && npm run lint` - ESLint
-- [ ] **フロント (studio)**: `cd studio && npm run type-check` - TypeScript
-- [ ] **フロント (studio)**: `cd studio && npm run build` - ビルド成功確認
+- [ ] **Python**: `mypy contracts infrastructure shared kernel harness control_plane domain apps tests` - 型チェック（未解消時は `./check.sh all --no-type-check` で他を通したうえで [check-errors-analysis.md](tools/check-errors-analysis.md) を参照）
+- [ ] **Python**: `pytest --cov=control_plane --cov-fail-under=80` - テスト
+- [ ] **フロント (control_plane/frontend)**: `cd control_plane/frontend && npm run lint` - ESLint
+- [ ] **フロント (control_plane/frontend)**: `cd control_plane/frontend && npm run type-check` - TypeScript
+- [ ] **フロント (control_plane/frontend)**: `cd control_plane/frontend && npm run build` - ビルド成功確認
 - [ ] **共通**: `pre-commit run --all-files` - フック（Ruff, Prettier, YAML, シークレット等）
 
 **AI がコードを書く・修正する際:** 型エラーを出さないため [Mypy 回避パターン](global/mypy-avoid-patterns.md) に必ず従うこと。
 
 **推奨（マージ前・依存更新後）:**
 
-- [ ] **フロント**: `cd studio && npm audit --audit-level=high` - 脆弱性確認（失敗時は対応または記録）
+- [ ] **フロント**: `cd control_plane/frontend && npm audit --audit-level=high` - 脆弱性確認（失敗時は対応または記録）
 - [ ] 他フロント（`apps/*/frontend`, `agentflow/sdk/frontend`）を変更した場合は、当該ディレクトリで同様に lint / type-check / build を実行
 
 #### マージ前チェック (Pre-merge)
@@ -287,10 +287,10 @@
 ```bash
 # バックエンド（ローカル開発 ポート 8001）
 conda activate agentflow
-python -m apps.platform.main serve --port 8001
+python -m control_plane.main serve --port 8001
 
 # フロントエンド（別ターミナル）
-cd apps/platform/frontend
+cd control_plane/frontend
 npm run dev
 ```
 

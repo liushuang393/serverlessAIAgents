@@ -186,7 +186,7 @@ vim apps/messaging_hub/.env
 
 補足:
 
-- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- Provider / model / API Key の正本は `control_plane` の `LLM Management` です。
 - `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` は Platform 未設定時の fallback としてのみ利用します。
 
 ### 3. サービスの起動
@@ -247,13 +247,13 @@ PWA（インストール）手順:
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/messaging_hub --target docker
+python -m control_plane.main publish ./apps/messaging_hub --target docker
 ```
 
 発布時の補足（PWA）:
 
 - `admin_ui` のビルド成果物に `manifest.webmanifest` / `sw.js` / `public/icons/*` が含まれる。
-- 追加の publish 手順は不要（既存の `apps.platform.main publish` で同梱される）。
+- 追加の publish 手順は不要（既存の `control_plane.main publish` で同梱される）。
 
 ## 🤖 プラットフォーム設定
 

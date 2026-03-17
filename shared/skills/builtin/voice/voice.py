@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from infrastructure.llm.gateway import LiteLLMGateway
-from kernel.runtime import get_runtime_context
+from contracts.runtime.context import get_runtime_context
 
 
 logger = logging.getLogger(__name__)

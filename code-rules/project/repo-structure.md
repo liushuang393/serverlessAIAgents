@@ -56,8 +56,8 @@ agentflow/
 
 ## 📦 モジュール組織化
 
-### 8層アーキテクチャの反映
-各層を独立したパッケージとして組織化します。
+### 7コア層 + Apps外層の反映
+`contracts / infrastructure / shared / kernel / harness / control_plane / domain` をコア層、`apps/` を製品層として組織化します。
 
 #### Core層（安定インターフェース）
 ```

@@ -113,7 +113,7 @@ cd apps/code_migration_assistant
 - Provider SDK 直呼びは使用せず、Platform 管理の LiteLLM Gateway を経由します。
 - app の正本は `apps/code_migration_assistant/app_config.json` の `contracts.llm` です。
 - 既定は `platform_text_default` / `platform_embedding_default`、コード変換系 agent は `coding_openai` を override 参照します。
-- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- Provider / model / API Key の正本は `control_plane` の `LLM Management` です。
 - `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` は Platform 未設定時の fallback としてのみ使います。
 
 > 2026-03 統合更新: `migration_studio` の UI/移行APIを `code_migration_assistant` に統合し、同一サーバーで配信します。
@@ -195,7 +195,7 @@ cd <repo-root>
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/code_migration_assistant --target docker
+python -m control_plane.main publish ./apps/code_migration_assistant --target docker
 ```
 
 自動化する場合は Platform API（`POST /api/studios/framework/publish/deploy`）を使用します。

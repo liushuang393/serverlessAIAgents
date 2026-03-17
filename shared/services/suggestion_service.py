@@ -8,7 +8,7 @@
 - アクション提案
 
 使用例:
-    >>> from platform.services import SuggestionService
+    >>> from control_plane.services import SuggestionService
     >>>
     >>> service = SuggestionService()
     >>> result = await service.execute(

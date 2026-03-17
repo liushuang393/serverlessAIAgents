@@ -15,16 +15,18 @@ BizCore AI 正是实现这一哲学的 **全栈企业开发基盘**。
 
 ---
 
-## 六层架构
+## 7 个核心层 + Apps 外层
 
-BizCore AI 以职责明确分离的六层结构设计。
+BizCore AI 由 7 个核心层组成，`apps/` 作为外侧的产品装配与交付层存在。
 
 ```
 ┌─────────────────────────────────────────────┐
-│  BizCore Studios (Apps)                     │  ← 业务应用层
+│  BizCore Studios (Apps)                     │  ← 产品装配层（不计入核心层）
 │  Migration / FAQ / Assistant / Custom Apps  │
 ├─────────────────────────────────────────────┤
-│  BizCore Platform (Control Plane)           │  ← 管理・观测・分发
+│  BizCore Control Plane                      │  ← 管理・观测・分发
+├─────────────────────────────────────────────┤
+│  BizCore Domain                             │  ← 业务域模型・行业模板
 ├─────────────────────────────────────────────┤
 │  BizCore Harness (Governance)               │  ← 治理・可靠性・评估
 ├─────────────────────────────────────────────┤
@@ -45,10 +47,11 @@ BizCore AI 以职责明确分离的六层结构设计。
 | **Shared** | `shared/` | LLM Gateway、RAG、Access Control、Trace、Audit 等共享服务 |
 | **BizCore Kernel** | `kernel/` | Agent Runtime、Flow Engine、Orchestration、Protocol 实现 |
 | **BizCore Harness** | `harness/` | Governance、Policy、Approval、Budget、Evaluation、Guardrails |
-| **BizCore Platform** | `apps/platform/` | Control Plane — App 的创建・配置・执行・观测・分发 |
-| **BizCore Studios** | `apps/*/` | 业务应用 — Migration / FAQ / Assistant 等独立产品单元 |
+| **BizCore Domain** | `domain/` | 行业/业务域模型、接口、模板与规则 |
+| **BizCore Control Plane** | `control_plane/` | 平台控制面，负责发现、生命周期、分发与运营 UI/API |
+| **BizCore Studios** | `apps/*/` | 产品层，用于装配 Migration / FAQ / Assistant / custom apps |
 
-> **设计原则**: 下层不依赖上层。Kernel 不 import Platform/App，Harness 仅通过 hook 接入 Kernel。
+> **设计原则**: `contracts / infrastructure / shared / kernel / harness / domain` 不得依赖 `apps/`。`domain` 不得依赖 `control_plane`。`control_plane` 只能编排下层，不能反向成为下层的正本入口。
 
 ---
 
@@ -125,13 +128,17 @@ INFRA --> PROVIDER
 
 ## 仓库结构
 
-### 六层核心
+### 7 个核心层
 - `contracts/`: 协议・接口定义（Versioned）
 - `infrastructure/`: 底层基础设施（LLM Provider / Storage / Cache / Queue）
 - `shared/`: 共享服务（Gateway / RAG / Access / Trace / Audit）
 - `kernel/`: Agent Runtime / Flow Engine / Orchestration / Protocol
 - `harness/`: Governance / Policy / Approval / Budget / Evaluation
-- `apps/`: BizCore Platform + BizCore Studios（业务应用群）
+- `domain/`: 业务域的正本实现
+- `control_plane/`: BizCore Control Plane 的正本实现
+
+### 产品层
+- `apps/`: BizCore Studios 与 custom apps，位于 7 个核心层之外
 
 ### 旧版兼容
 - `agentflow/`: 旧 Kernel（作为 `kernel/` 的 re-export 层维护中）
@@ -161,14 +168,13 @@ INFRA --> PROVIDER
 
 ```bash
 # 环境搭建
-conda activate agentflow
-pip install -e ".[apps,dev]"
+python3 -m pip install -e ".[apps,dev]"
 
 # 后端启动（本地开发端口 8001）
-python -m apps.platform.main serve --port 8001
+python3 -m control_plane.main serve --port 8001
 
 # 前端启动（另开终端）
-cd apps/platform/frontend && npm install && npm run dev
+cd control_plane/frontend && npm install && npm run dev
 ```
 
 ---

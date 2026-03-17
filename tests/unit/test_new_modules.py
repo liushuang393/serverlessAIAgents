@@ -332,7 +332,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_docker_config_defaults(self):
         """DockerConfig デフォルト値テスト."""
-        from platform.deploy.docker_generator import DockerConfig
+        from control_plane.deploy.docker_generator import DockerConfig
 
         config = DockerConfig()
         self.assertEqual(config.python_version, "3.13")
@@ -340,7 +340,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_generate_dockerfile(self):
         """Dockerfile 生成テスト."""
-        from platform.deploy.docker_generator import DockerConfig, generate_dockerfile
+        from control_plane.deploy.docker_generator import DockerConfig, generate_dockerfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(app_name="test-app")
@@ -353,7 +353,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_generate_github_actions(self):
         """GitHub Actions 生成テスト."""
-        from platform.deploy.ci_cd_generator import CICDConfig, generate_github_actions
+        from control_plane.deploy.ci_cd_generator import CICDConfig, generate_github_actions
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(app_name="test-app")

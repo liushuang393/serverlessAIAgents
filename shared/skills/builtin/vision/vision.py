@@ -31,10 +31,15 @@ from typing import Any, cast
 
 import httpx
 
-from kernel import get_llm
 
 
 logger = logging.getLogger(__name__)
+
+
+def _get_llm_func() -> Any:
+    """遅延インポート: kernel.get_llm（L2→L3 違反回避）."""
+    from kernel import get_llm as _get_llm
+    return _get_llm
 
 
 class VisionProvider(str, Enum):
@@ -155,7 +160,7 @@ class VisionSkill:
 
         # LLM で分析
         try:
-            llm = get_llm(temperature=0.3)
+            llm = _get_llm_func()(temperature=0.3)
             response = await self._call_vision_api(llm, image_data, full_prompt)
 
             return self._parse_response(response, extract_objects, extract_text)
@@ -259,7 +264,7 @@ class VisionSkill:
 
         # マルチ画像分析
         try:
-            llm = get_llm(temperature=0.3)
+            llm = _get_llm_func()(temperature=0.3)
             response = await self._call_vision_api_multi(llm, image_data_list, comparison_prompt)
             return str(response.get("content", ""))
         except Exception as e:

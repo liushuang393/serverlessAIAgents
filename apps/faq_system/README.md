@@ -135,7 +135,7 @@ Platform（Control Plane）に publish/deploy を統一する場合:
 
 ```bash
 conda activate agentflow
-python -m apps.platform.main publish ./apps/faq_system --target docker
+python -m control_plane.main publish ./apps/faq_system --target docker
 ```
 
 （この app は `apps/faq_system/app_config.json` の `runtime.commands.publish` に docker compose の発布手順を保持しています）
@@ -148,7 +148,7 @@ python -m apps.platform.main publish ./apps/faq_system --target docker
 
 - この app の正本は `app_config.json` の `contracts.llm` です。
 - FAQ は `text` と `embedding` を使用し、Platform catalog の `platform_text_default` / `platform_embedding_default` を参照します。
-- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- Provider / model / API Key の正本は `control_plane` の `LLM Management` です。
 - `OPENAI_API_KEY` などの env は Platform 未設定時の fallback としてのみ利用します。
 
 **統合済み機能:**
@@ -944,7 +944,7 @@ docker compose -f docker-compose.auth-faq.yml up --build -d
 注記:
 
 - 以下の Provider API キーは Platform 未設定時の fallback としてのみ利用します。
-- 正本は `apps/platform` の `LLM Management` と `contracts.llm` です。
+- 正本は `control_plane` の `LLM Management` と `contracts.llm` です。
 
 | 変数名                             | 説明                                                  | デフォルト                                                     | 必須   |
 | ---------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- | ------ |
