@@ -117,3 +117,4 @@ data/rag/faq_system/chunk_preview/uploads/*
 .VSCodeCounter/*
 data/*
 a2a_investigation_comparison.html
+test_results.txt
