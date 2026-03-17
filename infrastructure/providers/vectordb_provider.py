@@ -898,7 +898,8 @@ def get_vectordb(
     if _vectordb_instance is not None and context is None and not _new_instance:
         return _vectordb_instance
 
-    from kernel.runtime import get_env, resolve_settings
+    from contracts.runtime.context import get_env
+    from infrastructure.config import resolve_settings
 
     settings = resolve_settings(context) if context is not None else None
 

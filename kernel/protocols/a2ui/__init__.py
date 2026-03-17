@@ -35,7 +35,7 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "TextComponent": ("kernel.protocols.a2ui.components", "TextComponent"),
     # emitter
     "A2UIEmitter": ("kernel.protocols.a2ui.emitter", "A2UIEmitter"),
-    # renderer（agentflow.core.registry に依存するため遅延必須）
+    # renderer（kernel.core.registry に依存するため遅延必須）
     "A2UIRenderer": ("kernel.protocols.a2ui.renderer", "A2UIRenderer"),
     "ComponentRegistry": ("kernel.protocols.a2ui.renderer", "ComponentRegistry"),
     # rich_content

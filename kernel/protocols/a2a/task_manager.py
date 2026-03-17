@@ -65,7 +65,7 @@ class A2ATaskManager:
         self._store = store or InMemoryA2ATaskStore()
         self._queue_manager = queue_manager or A2AQueueManager()
         self._observer = observer
-        self._logger = logging.getLogger("agentflow.a2a.task_manager")
+        self._logger = logging.getLogger("kernel.a2a.task_manager")
 
     async def create_task(
         self,

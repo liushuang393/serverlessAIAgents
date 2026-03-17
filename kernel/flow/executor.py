@@ -63,7 +63,7 @@ class FlowExecutor:
             max_revisions: 最大リビジョン回数
             honor_termination: 終了判定を尊重して中断するか
         """
-        self._logger = logging.getLogger("agentflow.flow.executor")
+        self._logger = logging.getLogger("kernel.flow.executor")
         self._graph = graph
         self._enable_progress = enable_progress
         self._max_revisions = max_revisions

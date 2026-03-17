@@ -167,7 +167,7 @@ class AgentPipeline:
             config: パイプライン設定（オプション）
             agent_metas: Agentメタデータリスト（オプション、後方互換）
         """
-        self._logger = logging.getLogger("agentflow.pipeline")
+        self._logger = logging.getLogger("kernel.pipeline")
         self.config = config or PipelineConfig(flow_id=flow_id)
         self.flow_id = self.config.flow_id or f"pipeline-{uuid.uuid4().hex[:8]}"
 

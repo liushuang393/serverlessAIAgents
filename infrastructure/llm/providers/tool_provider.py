@@ -5,4 +5,5 @@
 """
 
 from infrastructure.providers.tool_provider import *  # noqa: F403
+from infrastructure.providers.tool_provider import _tool_registry  # noqa: F401
 

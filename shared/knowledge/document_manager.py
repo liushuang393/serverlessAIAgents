@@ -243,7 +243,7 @@ class DocumentManager:
             raise ValueError(msg)
 
         # RAGService で実際に embedding + vector DB 保存
-        from platform.services.rag_service import RAGService
+        from shared.services.rag_service import RAGService
 
         service = RAGService(rag_config)
         result = await service.execute(

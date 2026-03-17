@@ -2,13 +2,17 @@
 
 from kernel.patterns.deep_agent.da_compressor import ContextCompressor
 from kernel.patterns.deep_agent.da_coordinator import DeepAgentCoordinator
+from kernel.patterns.deep_agent.da_dynamic import ConversationManager, DynamicAgent, Evolver
 from kernel.patterns.deep_agent.da_evolver import SelfEvolver
 from kernel.patterns.deep_agent.da_models import (
     AgentMessage,
     AgentType,
     CognitiveAnalysis,
     CompactionStrategy,
+    EvolutionRecord,
     MessageType,
+    ParallelGroup,
+    QualityDimension,
     QualityReview,
     TaskStatus,
     TodoItem,
@@ -24,11 +28,17 @@ __all__ = [
     "CognitiveAnalysis",
     "CompactionStrategy",
     "ContextCompressor",
+    "ConversationManager",
     "DeepAgentCoordinator",
+    "DynamicAgent",
+    "EvolutionRecord",
+    "Evolver",
     "MemoryEvolutionStore",
     "MemoryRuntimeStore",
     "MessageType",
+    "ParallelGroup",
     "ProgressManager",
+    "QualityDimension",
     "QualityReview",
     "SelfEvolver",
     "TaskStatus",

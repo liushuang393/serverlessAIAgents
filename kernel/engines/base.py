@@ -141,7 +141,7 @@ class BaseEngine(ABC):
             config: Engine設定、Noneの場合はデフォルト設定を使用
         """
         self._config = config or EngineConfig()
-        self._logger = logging.getLogger(f"agentflow.engines.{self._config.name}")
+        self._logger = logging.getLogger(f"kernel.engines.{self._config.name}")
         self._flow_id: str | None = None
         self._initialized = False
         self._progress_emitter: ProgressEmitter | None = None

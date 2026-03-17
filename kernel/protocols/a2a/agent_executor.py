@@ -128,7 +128,7 @@ class ResilientAgentExecutor(A2AAgentExecutor):
             agent: ラップする ResilientAgent インスタンス
         """
         self._agent = agent
-        self._logger = logging.getLogger(f"agentflow.a2a.executor.{agent.name}")
+        self._logger = logging.getLogger(f"kernel.a2a.executor.{agent.name}")
 
     async def execute(self, context: A2ARequestContext) -> None:
         """A2A コンテキスト付きで Agent を実行.

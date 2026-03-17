@@ -503,7 +503,7 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
         if self._initialized:
             return
 
-        from platform.services import SQLDialect, Text2SQLConfig, Text2SQLService
+        from shared.services import SQLDialect, Text2SQLConfig, Text2SQLService
         from kernel.skills.builtin.knowledge_qa import (
             AnswerGenerator,
             GapAnalyzer,
@@ -525,7 +525,7 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
             )
         )
 
-        from platform.services import SuggestionConfig, SuggestionService
+        from shared.services import SuggestionConfig, SuggestionService
 
         self._suggestion_service = SuggestionService(
             SuggestionConfig(

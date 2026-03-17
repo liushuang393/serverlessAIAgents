@@ -38,7 +38,7 @@ from apps.market_trend_monitor.backend.services.registry import (
 from kernel import Flow, create_flow
 from kernel.agents.agent_factory import AgentFactorySpec
 from kernel.agents.agent_factory import create as create_agent
-from infrastructure.security import SafetyMixin
+from harness.guardrails.safety_mixin import SafetyMixin
 
 
 logger = logging.getLogger(__name__)

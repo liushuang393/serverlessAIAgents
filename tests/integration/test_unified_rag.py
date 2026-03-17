@@ -1,6 +1,6 @@
 import pytest
 import asyncio
-from platform.services.unified_rag import UnifiedRAGService
+from shared.services.unified_rag import UnifiedRAGService
 
 @pytest.mark.asyncio
 async def test_unified_rag_service_flow():

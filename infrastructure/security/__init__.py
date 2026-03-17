@@ -1,5 +1,5 @@
-"""infrastructure.security 後方互換shim → harness.guardrails."""
+"""infrastructure.security — セキュリティモジュール.
 
-from harness.guardrails.safety_mixin import SafetyMixin
-
-__all__ = ["SafetyMixin"]
+SafetyMixin は harness.guardrails.safety_mixin に移行済み。
+PolicyEngine は harness.security.policy_engine に移行済み。
+"""

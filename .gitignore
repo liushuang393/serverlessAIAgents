@@ -115,3 +115,5 @@ data/rag/faq_system/upload_test/*
 data/rag/faq_system/get_doc/uploads/*
 data/rag/faq_system/chunk_preview/uploads/*
 .VSCodeCounter/*
+data/*
+a2a_investigation_comparison.html

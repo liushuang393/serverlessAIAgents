@@ -14,7 +14,7 @@ from kernel.engines.base import BaseEngine, EngineConfig
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
-    from platform.services.unified_rag import UnifiedRAGService
+    from shared.services.unified_rag import UnifiedRAGService
 
 class RAGEngine(BaseEngine):
     """RAG拡張Agentエンジン."""
@@ -34,7 +34,7 @@ class RAGEngine(BaseEngine):
         self._collection_name = vector_store if isinstance(vector_store, str) else "default"
         self._top_k = top_k
         self.rag_service = UnifiedRAGService(collection_name=self._collection_name)
-        self._logger = logging.getLogger("agentflow.engines.rag")
+        self._logger = logging.getLogger("kernel.engines.rag")
 
     async def _initialize(self) -> None:
         """初期化."""

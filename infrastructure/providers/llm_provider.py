@@ -286,7 +286,7 @@ def get_llm(
     global _default_llm
 
     if context is not None or role is not None or temperature is not None or max_tokens is not None or _new_instance:
-        from kernel.runtime import resolve_settings
+        from infrastructure.config import resolve_settings
 
         return LLMProvider(
             role=role,

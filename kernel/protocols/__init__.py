@@ -8,7 +8,7 @@ from kernel.protocols.a2a_card import AgentCard, AgentSkill
 from kernel.protocols.a2a_client import A2AClient
 from kernel.protocols.a2a_server import A2AServer
 
-# A2UI Protocol — 遅延インポート（agentflow.core.registry 循環回避）
+# A2UI Protocol — 遅延インポート（kernel.core.registry 循環回避）
 _A2UI_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "A2UIComponent": ("kernel.protocols.a2ui.components", "A2UIComponent"),
     "A2UIEmitter": ("kernel.protocols.a2ui.emitter", "A2UIEmitter"),
@@ -22,7 +22,7 @@ _A2UI_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "ListComponent": ("kernel.protocols.a2ui.components", "ListComponent"),
     "TextComponent": ("kernel.protocols.a2ui.components", "TextComponent"),
 }
-# AG-UI emitter（agentflow.core.engine に依存するため遅延必須）
+# AG-UI emitter（kernel.core.engine に依存するため遅延必須）
 _AGUI_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "AGUIEventEmitter": ("kernel.protocols.agui_emitter", "AGUIEventEmitter"),
 }

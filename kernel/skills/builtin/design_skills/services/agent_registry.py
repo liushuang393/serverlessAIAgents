@@ -45,7 +45,7 @@ class DesignAgentRegistry:
     DEFAULT_YAML_PATH = Path(__file__).parent.parent / "agents" / "agent_definitions.yaml"
 
     # Agentクラスマッピング -- 遅延インポート用
-    _AGENTS_PKG = "agentflow.skills.builtin.design_skills.agents"
+    _AGENTS_PKG = "kernel.skills.builtin.design_skills.agents"
     AGENT_CLASS_MAP: ClassVar[dict[str, str]] = {
         "IntentAnalyzerAgent": f"{_AGENTS_PKG}.intent_analyzer_agent",
         "PromptPlannerAgent": f"{_AGENTS_PKG}.prompt_planner_agent",

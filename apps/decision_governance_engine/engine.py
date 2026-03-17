@@ -58,7 +58,7 @@ from apps.decision_governance_engine.services.deep_agent_adapter import (
 from kernel.engines import EngineConfig, PipelineEngine
 from kernel.engines.pipeline_engine import StageConfig
 from infrastructure.llm.providers import get_llm
-from infrastructure.security import SafetyMixin
+from harness.guardrails.safety_mixin import SafetyMixin
 
 
 if TYPE_CHECKING:

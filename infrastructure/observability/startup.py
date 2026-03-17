@@ -70,8 +70,8 @@ def log_startup_info(
     Returns:
         設定情報辞書（プログラムで使用可能）
     """
-    # 遅延インポート: L1 (infrastructure) → agentflow.config の静的依存を回避
-    from shared.config import get_settings
+    # 遅延インポート: infrastructure 内部参照
+    from infrastructure.config import get_settings
 
     settings = get_settings()
     info: dict[str, Any] = {}

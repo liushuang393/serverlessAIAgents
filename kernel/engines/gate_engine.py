@@ -72,7 +72,7 @@ class GateEngine(BaseEngine):
         self._main_instance: Any = None
         self._gate_check = gate_check or (lambda r: r.get("passed", False))
         self._on_reject = on_reject or self._default_reject_response
-        self._logger = logging.getLogger("agentflow.engines.gate")
+        self._logger = logging.getLogger("kernel.engines.gate")
 
     def _default_reject_response(self, gate_result: dict[str, Any]) -> dict[str, Any]:
         """デフォルト拒否レスポンス."""

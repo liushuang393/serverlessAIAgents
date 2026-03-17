@@ -204,7 +204,7 @@ class SkillGateway:
         GatewayConfig.max_calls_per_minute を AuthService のレート制限設定として使用。
         """
         if self._auth_service is None:
-            from platform.services.auth_service import AuthConfig, AuthService
+            from shared.services.auth_service import AuthConfig, AuthService
 
             auth_config = AuthConfig(
                 rate_limit_requests=self._config.max_calls_per_minute,

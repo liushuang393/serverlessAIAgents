@@ -41,10 +41,13 @@ if TYPE_CHECKING:
     from kernel.reviewer import ResultVerifier, VerificationResult, VerificationStrategy
     from kernel.router import Intent, IntentCategory, IntentRouter, RouterConfig
     from kernel.runtime import RuntimeContext, get_runtime_context, set_runtime_context, use_runtime_context
+    from kernel.agents.resilient_agent import ResilientAgent
     from kernel.tools import KernelToolExecutor
 
 
 __all__ = [
+    # agents
+    "ResilientAgent",
     # events
     "EventSink",
     "EventType",
@@ -153,6 +156,10 @@ def __getattr__(name: str) -> object:
         "set_runtime_context": "kernel.runtime",
         "use_runtime_context": "kernel.runtime",
         "KernelToolExecutor": "kernel.tools",
+        # agents
+        "ResilientAgent": "kernel.agents.resilient_agent",
+        # LLM ファクトリ
+        "get_llm": "infrastructure.providers.llm_provider",
         # デコレーター
         "agent": "kernel.agent_decorator",
         "AgentClient": "kernel.agent_decorator",

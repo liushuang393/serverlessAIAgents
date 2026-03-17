@@ -82,7 +82,7 @@ class FlowContext(BaseModel):
 
     def model_post_init(self, _context: Any) -> None:
         """初期化後処理."""
-        self._logger = logging.getLogger("agentflow.flow.context")
+        self._logger = logging.getLogger("kernel.flow.context")
         # flow_idが未設定の場合は自動生成
         if not self.flow_id:
             self.flow_id = f"flow-{uuid.uuid4().hex[:8]}"

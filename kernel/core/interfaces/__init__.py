@@ -1,9 +1,9 @@
-"""interfaces パッケージ — コアインターフェース定義."""
+"""interfaces パッケージ — コアインターフェース定義.
 
-from kernel.core.interfaces.code_generator import ICodeGenerator
-from kernel.core.interfaces.config_manager import IConfigManager
-from kernel.core.interfaces.deploy_executor import IDeployExecutor
-from kernel.core.interfaces.types import (
+型定義とプロトコルは contracts.core (L0) から re-export する。
+"""
+
+from contracts.core import (
     CodeGenOptions,
     CodeOutputType,
     ConfigField,
@@ -17,11 +17,14 @@ from kernel.core.interfaces.types import (
     ExecutionEvent,
     FilePreview,
     GeneratedCode,
+    IWorkflowRunner,
     NodeDefinition,
     ValidationResult,
     WorkflowDefinition,
 )
-from kernel.core.interfaces.workflow_runner import IWorkflowRunner
+from kernel.core.interfaces.code_generator import ICodeGenerator
+from kernel.core.interfaces.config_manager import IConfigManager
+from kernel.core.interfaces.deploy_executor import IDeployExecutor
 
 __all__ = [
     "CodeGenOptions",

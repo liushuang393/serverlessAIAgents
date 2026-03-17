@@ -50,7 +50,7 @@ class LocalA2AHub:
         """ハブを初期化."""
         self._agents: dict[str, ResilientAgent[Any, Any]] = {}
         self._cards: dict[str, AgentCard] = {}
-        self._logger = logging.getLogger("agentflow.a2a_hub")
+        self._logger = logging.getLogger("kernel.a2a_hub")
 
     def register(
         self,

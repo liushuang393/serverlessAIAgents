@@ -164,7 +164,7 @@ class AdaptiveCoordinator:
     _agents: dict[str, Any] = field(default_factory=dict)
     _profiles: dict[str, AgentProfile] = field(default_factory=dict)
     load_balance_threshold: float = 0.8
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.patterns.coordinator"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("kernel.patterns.coordinator"))
 
     def register_agent(
         self,

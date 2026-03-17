@@ -1,11 +1,15 @@
 """RuntimeContext 契約 — 六層すべてから参照可能な実行時コンテキスト.
 
 contracts 層は依存ゼロであるため、settings の型は Any で保持する。
-kernel/runtime/context.py がヘルパー関数と共に本クラスを re-export する。
+ContextVar と純粋ヘルパー (get_runtime_context, set_runtime_context, get_env) も
+stdlib のみに依存するため contracts 層に配置する。
+kernel/runtime/context.py が resolve_settings 等を追加し re-export する。
 """
 
 from __future__ import annotations
 
+import os
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -31,4 +35,46 @@ class RuntimeContext:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-__all__ = ["RuntimeContext"]
+# ---------------------------------------------------------------------------
+# ContextVar — 全層から参照可能
+# ---------------------------------------------------------------------------
+
+_current_context: ContextVar[RuntimeContext | None] = ContextVar(
+    "agentflow_runtime_context", default=None,
+)
+
+
+def get_runtime_context() -> RuntimeContext | None:
+    """Get current runtime context."""
+    return _current_context.get()
+
+
+def set_runtime_context(context: RuntimeContext | None) -> None:
+    """Set current runtime context."""
+    _current_context.set(context)
+
+
+# ---------------------------------------------------------------------------
+# 環境変数ヘルパー (stdlib のみ依存)
+# ---------------------------------------------------------------------------
+
+
+def get_env(
+    key: str,
+    default: str | None = None,
+    *,
+    context: RuntimeContext | None = None,
+) -> str | None:
+    """Get environment variable with optional runtime override."""
+    if context is not None and key in context.env_overrides:
+        return context.env_overrides[key]
+    return os.getenv(key, default)
+
+
+__all__ = [
+    "RuntimeContext",
+    "_current_context",
+    "get_env",
+    "get_runtime_context",
+    "set_runtime_context",
+]

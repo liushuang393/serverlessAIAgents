@@ -48,7 +48,7 @@ class ProgressTracker:
             graph: フローグラフ
             flow_id: フローインスタンスID
         """
-        self._logger = logging.getLogger("agentflow.flow.progress")
+        self._logger = logging.getLogger("kernel.flow.progress")
         self._graph = graph
         self._flow_id = flow_id
         self._completed: int = 0

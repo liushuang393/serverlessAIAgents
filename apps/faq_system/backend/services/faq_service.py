@@ -23,8 +23,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from infrastructure.security import SafetyMixin
-from platform.services.base import (
+from harness.guardrails.safety_mixin import SafetyMixin
+from shared.services.base import (
     ServiceBase,
     ServiceEvent,
 )
@@ -146,7 +146,7 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
             return
 
         from infrastructure.llm.providers import get_llm
-        from platform.services.rag_service import RAGConfig, RAGService
+        from shared.services.rag_service import RAGConfig, RAGService
 
         # RAG サービス初期化
         rag_config = RAGConfig(

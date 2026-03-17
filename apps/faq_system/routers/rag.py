@@ -31,7 +31,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from shared.rag.rag_access_control import RAGAccessControl
-from platform.services import RAGConfig, RAGService
+from shared.services import RAGConfig, RAGService
 
 
 if TYPE_CHECKING:

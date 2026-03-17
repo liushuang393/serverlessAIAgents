@@ -67,7 +67,7 @@ class SimpleEngine(BaseEngine):
         self._agent_instance: Any = None
         self._skills = skills or []
         self._tools = tools or []
-        self._logger = logging.getLogger("agentflow.engines.simple")
+        self._logger = logging.getLogger("kernel.engines.simple")
 
     async def _initialize(self) -> None:
         """Agentインスタンスを初期化し、ツールをバインド."""

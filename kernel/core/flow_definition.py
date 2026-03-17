@@ -244,7 +244,7 @@ class FlowDefinition(BaseModel):
             import re
 
             snake_name = re.sub(r"(?<!^)(?=[A-Z])", "_", agent_def.class_name).lower()
-            module_path = f"agentflow.agents.{snake_name}"
+            module_path = f"kernel.agents.{snake_name}"
 
         init_kwargs = {**kwargs}
         if llm_client is not None:
@@ -456,7 +456,7 @@ class FlowDefinitionRegistry:
     """
 
     _instance: "FlowDefinitionRegistry | None" = None
-    _logger = logging.getLogger("agentflow.flow_definition")
+    _logger = logging.getLogger("kernel.flow_definition")
 
     def __init__(self) -> None:
         """初期化."""

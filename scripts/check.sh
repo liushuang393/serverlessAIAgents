@@ -13,6 +13,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PYTHON="${PYTHON:-python}"
 
+# プロジェクトルートを PYTHONPATH に追加（agentflow shim パッケージ解決用）
+export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
+
 EXIT_CODE=0
 
 echo "============================================"

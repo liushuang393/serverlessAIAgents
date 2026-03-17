@@ -186,7 +186,7 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
         if self._services_initialized:
             return
 
-        from platform.services import (
+        from shared.services import (
             ChartConfig,
             ChartService,
             SemanticLayerConfig,
@@ -195,9 +195,9 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
             SuggestionService,
             SuggestionType,
         )
-        from platform.services.fewshot_manager import FewshotManager
-        from platform.services.schema_linker import SchemaLinker, SchemaLinkerConfig
-        from platform.services.sql_postprocessor import SQLPostProcessor
+        from shared.services.fewshot_manager import FewshotManager
+        from shared.services.schema_linker import SchemaLinker, SchemaLinkerConfig
+        from shared.services.sql_postprocessor import SQLPostProcessor
 
         # SemanticLayerService
         semantic_config = SemanticLayerConfig()

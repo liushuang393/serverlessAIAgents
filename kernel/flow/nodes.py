@@ -50,7 +50,7 @@ class FlowNode(ABC):
     icon: str = ""
 
     def __post_init__(self) -> None:
-        self._logger = logging.getLogger(f"agentflow.flow.node.{self.id}")
+        self._logger = logging.getLogger(f"kernel.flow.node.{self.id}")
         if not self.label:
             self.label = self.name
 

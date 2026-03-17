@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from platform.services.unified_rag import UnifiedRAGService
+    from shared.services.unified_rag import UnifiedRAGService
 
 from kernel.skills.base import Skill
 

@@ -18,7 +18,7 @@ from shared.rag.reranker import (
     register_reranker,
     unregister_reranker,
 )
-from platform.services.rag_service import RAGConfig, RAGService
+from shared.services.rag_service import RAGConfig, RAGService
 
 
 def _build_docs(count: int) -> list[dict[str, Any]]:

@@ -41,6 +41,9 @@ from infrastructure.llm.providers.tool_provider import (
     tool,
 )
 
+# 後方互換: DB プロバイダの re-export
+from infrastructure.providers.db_provider import get_db, reset_db
+
 # 後方互換: embedding / vectordb プロバイダの re-export
 from infrastructure.providers.embedding_provider import (
     EmbeddingProvider,
@@ -76,7 +79,9 @@ __all__ = [
     "ToolExecutor",
     "ToolProvider",
     "ToolResult",
+    "get_db",
     "get_llm",
+    "reset_db",
     "reset_llm",
     "tool",
     # embedding / vectordb

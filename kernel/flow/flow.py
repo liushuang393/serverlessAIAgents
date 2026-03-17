@@ -83,7 +83,7 @@ class Flow:
             graph: フローグラフ
             config: 設定
         """
-        self._logger = logging.getLogger("agentflow.flow")
+        self._logger = logging.getLogger("kernel.flow")
         self.flow_id = flow_id
         self.name = name
         self._graph = graph

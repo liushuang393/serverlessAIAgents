@@ -27,6 +27,19 @@ ROOT = Path(__file__).resolve().parents[1]
 # stdlib モジュール名で六層パッケージ名と衝突するもの（誤検知回避）
 _STDLIB_NAMES: set[str] = {"platform"}
 
+# 後方互換shimファイル: 下位層から上位層への re-export のみを行うファイル。
+# これらは移行期間中の互換性維持のため意図的に境界を越えるので検査対象外とする。
+_SHIM_EXCLUSIONS: set[str] = {
+    "infrastructure/providers/unified_tool.py",
+    "infrastructure/sandbox/unified_tool.py",
+    "infrastructure/security/policy_engine.py",
+    "infrastructure/secrets/security/policy_engine.py",
+    "infrastructure/secrets/security/__init__.py",
+    "shared/rag/isolated_kb.py",
+    "shared/rag/rag_access_control.py",
+    "shared/knowledge/isolated_kb.py",
+}
+
 
 def _is_stdlib_import(
     imported_root: str, source_path: Path, *, is_bare_import: bool = False
@@ -76,32 +89,42 @@ FORBIDDEN_IMPORTS: dict[str, set[str]] = {
 }
 
 
-def _is_inside_type_checking(node: ast.AST, tree: ast.Module) -> bool:
+def _build_parent_map(tree: ast.Module) -> dict[int, ast.AST]:
+    """各ノードの id() → 親ノードのマップを1パスで構築する."""
+    parent: dict[int, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parent[id(child)] = node
+    return parent
+
+
+def _is_inside_type_checking(node: ast.AST, parent_map: dict[int, ast.AST]) -> bool:
     """node が TYPE_CHECKING ブロック内かどうかを判定する."""
-    for top_node in ast.iter_child_nodes(tree):
-        if not isinstance(top_node, ast.If):
-            continue
-        # if TYPE_CHECKING: パターン
-        test = top_node.test
-        is_tc = (
-            (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING")
-            or (isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
-        )
-        if is_tc:
-            for child in ast.walk(top_node):
-                if child is node:
-                    return True
+    cur: ast.AST | None = node
+    while cur is not None:
+        p = parent_map.get(id(cur))
+        if p is None:
+            break
+        if isinstance(p, ast.If):
+            test = p.test
+            if (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING") or (
+                isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
+            ):
+                return True
+        cur = p
     return False
 
 
-def _is_inside_function(node: ast.AST, tree: ast.Module) -> bool:
+def _is_inside_function(node: ast.AST, parent_map: dict[int, ast.AST]) -> bool:
     """node が関数/メソッド内かどうかを判定する."""
-    for top_node in ast.walk(tree):
-        if not isinstance(top_node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        for child in ast.walk(top_node):
-            if child is node:
-                return True
+    cur: ast.AST | None = node
+    while cur is not None:
+        p = parent_map.get(id(cur))
+        if p is None:
+            break
+        if isinstance(p, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return True
+        cur = p
     return False
 
 
@@ -111,15 +134,16 @@ def _eager_imported_roots(tree: ast.Module) -> list[tuple[int, str, bool]]:
     Returns:
         (行番号, ルートパッケージ名, bare import かどうか) のリスト
     """
+    parent_map = _build_parent_map(tree)
     roots: list[tuple[int, str, bool]] = []
     for node in ast.walk(tree):
         if not isinstance(node, (ast.Import, ast.ImportFrom)):
             continue
         # TYPE_CHECKING ブロック内 → スキップ
-        if _is_inside_type_checking(node, tree):
+        if _is_inside_type_checking(node, parent_map):
             continue
         # 関数内ローカルインポート → スキップ
-        if _is_inside_function(node, tree):
+        if _is_inside_function(node, parent_map):
             continue
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -141,6 +165,10 @@ def find_violations() -> list[tuple[str, int, str]]:
         if not forbidden:
             continue
         for path in layer_root.rglob("*.py"):
+            # shimファイルは境界違反検査をスキップ
+            rel = str(path.relative_to(ROOT))
+            if rel in _SHIM_EXCLUSIONS:
+                continue
             try:
                 source = path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):

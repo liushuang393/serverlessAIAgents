@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 if TYPE_CHECKING:
-    from platform.services.rag_service import ChunkStrategy as ServiceChunkStrategy
-    from platform.services.rag_service import RAGConfig, RerankerType
+    from shared.services.rag_service import ChunkStrategy as ServiceChunkStrategy
+    from shared.services.rag_service import RAGConfig, RerankerType
 
 logger = logging.getLogger(__name__)
 

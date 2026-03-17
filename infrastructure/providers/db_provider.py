@@ -556,7 +556,8 @@ def get_db(
     if _db_instance is not None and not _new_instance and context is None:
         return _db_instance
 
-    from kernel.runtime import get_env, resolve_settings
+    from contracts.runtime.context import get_env
+    from infrastructure.config import resolve_settings
 
     settings = resolve_settings(context) if context is not None else None
     provider: DBProvider

@@ -54,7 +54,7 @@ class FlowBuilder:
             flow_id: フロー一意ID
             name: フロー表示名（デフォルトはIDと同じ）
         """
-        self._logger = logging.getLogger("agentflow.flow.builder")
+        self._logger = logging.getLogger("kernel.flow.builder")
         self.flow_id = flow_id
         self.name = name or flow_id
 

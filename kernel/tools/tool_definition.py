@@ -131,7 +131,7 @@ class ToolDefinition(BaseModel):
         """
         # Skill オブジェクトの場合は属性から取得
         if hasattr(skill_data, "metadata"):
-            # agentflow.skills.base.Skill オブジェクト
+            # kernel.skills.base.Skill オブジェクト
             metadata = skill_data.metadata
             name = metadata.name
             description = metadata.description

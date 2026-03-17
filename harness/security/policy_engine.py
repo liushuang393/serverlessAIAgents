@@ -8,7 +8,7 @@ Supported Modes:
 - PBAC: ポリシーベースアクセス制御（明示的なポリシールールで判定）
 
 Example:
-    >>> from infrastructure.security.policy_engine import PolicyEngine, AuthContext
+    >>> from harness.security.policy_engine import PolicyEngine, AuthContext
     >>>
     >>> engine = PolicyEngine()
     >>>

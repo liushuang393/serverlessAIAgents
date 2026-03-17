@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-# 循環インポート回避: agentflow.core から直接インポート
+# 循環インポート回避: kernel.core から直接インポート
 from kernel.agents import ResilientAgent
 
 
@@ -135,7 +135,7 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
         if self._services_initialized:
             return
 
-        from platform.services import (
+        from shared.services import (
             SQLDialect,
             SuggestionConfig,
             SuggestionService,

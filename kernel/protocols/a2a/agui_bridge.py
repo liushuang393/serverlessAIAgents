@@ -60,7 +60,7 @@ class A2AToAGUIBridge:
         self._agui_emitter = agui_emitter
         self._a2ui_emitter = a2ui_emitter
         self._flow_id = flow_id
-        self._logger = logging.getLogger("agentflow.a2a.agui_bridge")
+        self._logger = logging.getLogger("kernel.a2a.agui_bridge")
         # イベントバッファ（emitter がない場合の記録用）
         self._event_buffer: list[AGUIEvent] = []
 

@@ -1,5 +1,3 @@
-"""services パッケージ — Platform 層サービス統合エントリポイント."""
+"""後方互換: shared/services/ からの re-export."""
 
-from platform.services.workflow_service import WorkflowService
-
-__all__ = ["WorkflowService"]
+from shared.services import *  # noqa: F401,F403

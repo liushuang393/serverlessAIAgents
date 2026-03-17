@@ -178,7 +178,7 @@ class PipelineEngine(BaseEngine):
         self._stage_instances: dict[str, list[Any]] = {}
         self._results: dict[str, Any] = {}
         self._inputs: dict[str, Any] = {}
-        self._logger = logging.getLogger("agentflow.engines.pipeline")
+        self._logger = logging.getLogger("kernel.engines.pipeline")
 
     def _parse_stages(self, stages: list[dict[str, Any] | StageConfig]) -> list[StageConfig]:
         """ステージ設定を解析."""

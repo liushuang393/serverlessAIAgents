@@ -18,7 +18,7 @@ from shared.rag.models import (
     Base,
     DocumentStatus,
 )
-from platform.services.rag_service import RerankerType
+from shared.services.rag_service import RerankerType
 
 
 # ---------------------------------------------------------------------------

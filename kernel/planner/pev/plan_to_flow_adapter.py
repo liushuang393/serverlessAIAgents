@@ -56,7 +56,7 @@ class PlanToFlowAdapter:
     default_agent: AgentProtocol | None = None
     strict: bool = False
     _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.pev.plan_to_flow"),
+        default_factory=lambda: logging.getLogger("kernel.pev.plan_to_flow"),
     )
 
     def convert(

@@ -110,7 +110,7 @@ class ExecutionMonitor:
     _start_time: float | None = None
     _last_progress: float = 0.0
     _stall_count: int = 0
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.monitor"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("kernel.pev.monitor"))
 
     def start(self) -> None:
         """監視開始."""
@@ -155,7 +155,7 @@ class MonitoredExecutor:
     max_concurrent: int = 5
     on_anomaly: Callable[[ExecutionEvent], None] | None = None
     _monitor: ExecutionMonitor = field(default_factory=ExecutionMonitor)
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.executor"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("kernel.pev.executor"))
 
     async def execute(
         self,

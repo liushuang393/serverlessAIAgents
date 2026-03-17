@@ -147,7 +147,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         self._llm = llm_client
         self._prompts_dir = prompts_dir
         self._skills_dir = skills_dir
-        self._logger = logging.getLogger(f"agentflow.{self.name}")
+        self._logger = logging.getLogger(f"kernel.{self.name}")
         self._cached_skill_prompt: str | None = None
         self._tool_provider: Any = None
         self._tool_catalog: Any = tool_catalog

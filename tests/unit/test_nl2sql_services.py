@@ -7,18 +7,18 @@ from __future__ import annotations
 
 import pytest
 
-from platform.services.fewshot_manager import (
+from shared.services.fewshot_manager import (
     BM25,
     FewshotExample,
     FewshotManager,
     FewshotManagerConfig,
 )
-from platform.services.schema_linker import (
+from shared.services.schema_linker import (
     SchemaLinker,
     SchemaLinkerConfig,
     SchemaLinkResult,
 )
-from platform.services.sql_postprocessor import (
+from shared.services.sql_postprocessor import (
     PostProcessorConfig,
     PostProcessResult,
     SQLPostProcessor,
@@ -413,7 +413,7 @@ class TestQueryDSL:
     @pytest.mark.asyncio
     async def test_nl_to_dsl_sales_query(self) -> None:
         """売上クエリのNL→DSL変換."""
-        from platform.services.semantic_layer import SemanticLayerService
+        from shared.services.semantic_layer import SemanticLayerService
 
         service = SemanticLayerService()
         dsl = await service.nl_to_dsl("今月の売上TOP10")
@@ -429,7 +429,7 @@ class TestQueryDSL:
     @pytest.mark.asyncio
     async def test_nl_to_dsl_region_query(self) -> None:
         """地域クエリのNL→DSL変換."""
-        from platform.services.semantic_layer import SemanticLayerService
+        from shared.services.semantic_layer import SemanticLayerService
 
         service = SemanticLayerService()
         dsl = await service.nl_to_dsl("地域別の注文数")
@@ -442,7 +442,7 @@ class TestQueryDSL:
     @pytest.mark.asyncio
     async def test_dsl_to_sql(self) -> None:
         """DSL→SQL変換."""
-        from platform.services.semantic_layer import (
+        from shared.services.semantic_layer import (
             OrderByDSL,
             QueryDSL,
             SemanticLayerService,
@@ -469,7 +469,7 @@ class TestQueryDSL:
     @pytest.mark.asyncio
     async def test_full_dsl_pipeline(self) -> None:
         """完全NL→DSL→SQLパイプライン."""
-        from platform.services.semantic_layer import SemanticLayerService
+        from shared.services.semantic_layer import SemanticLayerService
 
         service = SemanticLayerService()
         sql, dsl = await service.nl_to_sql_via_dsl("今月の売上TOP10")
@@ -484,7 +484,7 @@ class TestQueryDSL:
 
     def test_dsl_to_dict(self) -> None:
         """DSL辞書変換."""
-        from platform.services.semantic_layer import (
+        from shared.services.semantic_layer import (
             FilterDSL,
             FilterOperator,
             QueryDSL,
@@ -506,7 +506,7 @@ class TestQueryDSL:
 
     def test_dsl_from_dict(self) -> None:
         """辞書からDSL生成."""
-        from platform.services.semantic_layer import QueryDSL
+        from shared.services.semantic_layer import QueryDSL
 
         data = {
             "metrics": ["revenue"],

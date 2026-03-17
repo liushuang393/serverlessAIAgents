@@ -31,24 +31,24 @@ from pydantic import BaseModel, Field
 
 from kernel.core import ResilientAgent
 from harness.policies.policy_engine import PolicyEngine
-from platform.services.fewshot_manager import (
+from shared.services.fewshot_manager import (
     FewshotExample,
     FewshotManager,
     FewshotManagerConfig,
 )
 
 # NL2SQL 増強コンポーネント
-from platform.services.schema_linker import (
+from shared.services.schema_linker import (
     SchemaLinker,
     SchemaLinkerConfig,
     SchemaLinkResult,
 )
-from platform.services.semantic_layer import (
+from shared.services.semantic_layer import (
     ResolvedQuery,
     SemanticLayerConfig,
     SemanticLayerService,
 )
-from platform.services.sql_postprocessor import (
+from shared.services.sql_postprocessor import (
     PostProcessorConfig,
     SQLPostProcessor,
 )

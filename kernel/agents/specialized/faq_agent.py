@@ -37,7 +37,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-# 循環インポート回避: agentflow.core から直接インポート
+# 循環インポート回避: kernel.core から直接インポート
 from kernel.agents import ResilientAgent
 from kernel.protocols.a2a_card import AgentCard, AgentSkill
 from kernel.protocols.a2ui.rich_content import (
@@ -1193,7 +1193,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             return
 
         from infrastructure.security.ai_safety_guard import AISafetyGuard, GuardConfig
-        from platform.services import (
+        from shared.services import (
             ChartConfig,
             ChartService,
             ChunkStrategy,

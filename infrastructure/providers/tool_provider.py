@@ -42,7 +42,7 @@ from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
-    from infrastructure.security.policy_engine import AuthContext
+    from harness.security.policy_engine import AuthContext
 
 
 # ツールレジストリ（グローバル）
@@ -332,7 +332,7 @@ class ToolProvider:
         >>> result = await tools.call("search_database", query="test")
         >>>
         >>> # セキュリティチェック付き呼び出し
-        >>> from infrastructure.security.policy_engine import AuthContext
+        >>> from harness.security.policy_engine import AuthContext
         >>> auth = AuthContext(user_id="user-123", roles=["admin"])
         >>> result = await tools.call_secure("update_order", auth, order_id="o-1")
     """

@@ -35,11 +35,13 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from shared.knowledge.rag_pipeline import RAGConfig, RAGPipeline
-from infrastructure.security.policy_engine import AuthContext, AuthMode, PolicyEngine
 
+
+if TYPE_CHECKING:
+    from harness.security.policy_engine import PolicyEngine
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +214,11 @@ class IsolatedKBManager:
             policy_engine: ポリシーエンジン
         """
         self._configs = configs or self.DEFAULT_KB_CONFIGS.copy()
-        self._policy_engine = policy_engine or PolicyEngine()
+        if policy_engine is None:
+            from harness.security.policy_engine import PolicyEngine
+
+            policy_engine = PolicyEngine()
+        self._policy_engine = policy_engine
         self._pipelines: dict[KBType, RAGPipeline] = {}
         self._access_logs: list[KBAccessLog] = []
         self._started = False
@@ -492,7 +498,9 @@ class IsolatedKBManager:
         if user_role not in config.allowed_roles:
             return False
 
-        # PolicyEngine でのチェック
+        # PolicyEngine でのチェック（遅延import: shared→harness 依存回避）
+        from harness.security.policy_engine import AuthContext, AuthMode
+
         auth_context = AuthContext(
             subject={
                 "user_id": user_context.get("user_id", ""),

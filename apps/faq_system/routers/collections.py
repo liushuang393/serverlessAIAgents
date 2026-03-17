@@ -260,7 +260,7 @@ async def test_query(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    from platform.services import RAGService
+    from shared.services import RAGService
 
     rag_config.top_k = request.top_k
     service = RAGService(rag_config)

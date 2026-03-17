@@ -34,7 +34,7 @@ class FlowGraph:
 
     def __init__(self) -> None:
         """初期化."""
-        self._logger = logging.getLogger("agentflow.flow.graph")
+        self._logger = logging.getLogger("kernel.flow.graph")
         self._nodes: list[FlowNode] = []
         self._node_map: dict[str, FlowNode] = {}
 

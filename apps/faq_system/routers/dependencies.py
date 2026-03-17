@@ -39,7 +39,7 @@ from kernel.agents import (
 )
 from kernel.agents.agent_factory import AgentFactorySpec
 from kernel.agents.agent_factory import create as create_agent
-from platform.services import (
+from shared.services import (
     ChunkStrategy,
     RAGConfig,
     RAGService,

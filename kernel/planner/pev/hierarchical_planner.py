@@ -180,7 +180,7 @@ class HierarchicalPlanner:
     llm_client: Any = None
     max_depth: int = 3
     max_goals_per_level: int = 10
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.planner"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("kernel.pev.planner"))
 
     async def create_plan(
         self,

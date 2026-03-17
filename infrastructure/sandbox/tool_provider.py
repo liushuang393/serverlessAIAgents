@@ -42,7 +42,7 @@ from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
-    from infrastructure.security.policy_engine import AuthContext
+    from harness.security.policy_engine import AuthContext
 
 
 # ツールレジストリ（グローバル）

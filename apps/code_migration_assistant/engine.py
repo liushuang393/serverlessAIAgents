@@ -64,7 +64,7 @@ from infrastructure.llm.providers.tool_provider import (
     RiskLevel,
 )
 from kernel.runtime import LightningTrainingRequest, TrajectoryAdapter
-from infrastructure.security import SafetyMixin
+from harness.guardrails.safety_mixin import SafetyMixin
 from harness.policies.policy_engine import AuthContext
 
 

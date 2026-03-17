@@ -10,11 +10,11 @@ from typing import Any
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from platform.services.chart_service import ChartService
-    from platform.services.rag_service import RAGService
-    from platform.services.semantic_layer import SemanticLayerService
-    from platform.services.suggestion_service import SuggestionService
-    from platform.services.text2sql_service import Text2SQLService
+    from shared.services.chart_service import ChartService
+    from shared.services.rag_service import RAGService
+    from shared.services.semantic_layer import SemanticLayerService
+    from shared.services.suggestion_service import SuggestionService
+    from shared.services.text2sql_service import Text2SQLService
 
 
 

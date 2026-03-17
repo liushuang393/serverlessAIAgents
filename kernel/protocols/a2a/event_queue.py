@@ -79,7 +79,7 @@ class A2AQueueManager:
     def __init__(self) -> None:
         """初期化."""
         self._queues: dict[str, A2AEventQueue] = {}
-        self._logger = logging.getLogger("agentflow.a2a.queue_manager")
+        self._logger = logging.getLogger("kernel.a2a.queue_manager")
 
     def create_queue(self, task_id: str, *, maxsize: int = 0) -> A2AEventQueue:
         """タスク用のイベントキューを作成.

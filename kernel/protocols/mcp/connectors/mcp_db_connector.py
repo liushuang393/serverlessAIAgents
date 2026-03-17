@@ -11,7 +11,7 @@ from typing import Any
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from platform.services.schema_linker import SchemaLinker, SchemaLinkerConfig
+    from shared.services.schema_linker import SchemaLinker, SchemaLinkerConfig
 
 
 

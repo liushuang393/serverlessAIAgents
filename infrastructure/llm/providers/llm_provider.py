@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from shared.config import AgentFlowSettings
+    from infrastructure.config import AgentFlowSettings
     from infrastructure.llm.llm_client import LLMClient
     from contracts.runtime.context import RuntimeContext
 
@@ -44,7 +44,7 @@ def _detect_provider_from_env(
     settings: AgentFlowSettings | None = None,
 ) -> tuple[str, str, str | None, str | None, int]:
     """Detect active provider info from settings for diagnostics/compatibility."""
-    from shared.config import get_settings
+    from infrastructure.config import get_settings
 
     active_settings = settings or get_settings()
     llm_config = active_settings.get_active_llm_config()
@@ -286,7 +286,7 @@ def get_llm(
     global _default_llm
 
     if context is not None or role is not None or temperature is not None or max_tokens is not None or _new_instance:
-        from kernel.runtime import resolve_settings
+        from infrastructure.config import resolve_settings
 
         return LLMProvider(
             role=role,

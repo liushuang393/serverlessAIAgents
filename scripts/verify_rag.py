@@ -6,7 +6,7 @@ import os
 # プロジェクトルートをパスに追加
 sys.path.append(os.getcwd())
 
-from platform.services.unified_rag import UnifiedRAGService
+from shared.services.unified_rag import UnifiedRAGService
 from infrastructure.llm.providers.embedding_provider import MockEmbeddingProvider
 
 async def verify_unified_rag():

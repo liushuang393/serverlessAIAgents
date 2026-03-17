@@ -109,7 +109,7 @@ class PEVEngine:
     _planner: HierarchicalPlanner | None = None
     _executor: MonitoredExecutor | None = None
     _verifier: ResultVerifier | None = None
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.engine"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("kernel.pev.engine"))
 
     def __post_init__(self) -> None:
         """初期化後処理.

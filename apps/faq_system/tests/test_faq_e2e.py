@@ -17,7 +17,7 @@ from kernel.agents.specialized.faq_agent import (
     FAQOutput,
 )
 from kernel.router import IntentCategory, IntentRouter
-from platform.services import ServiceResult
+from shared.services import ServiceResult
 
 
 # ---------------------------------------------------------------------------

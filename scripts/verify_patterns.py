@@ -1,7 +1,7 @@
 
 import asyncio
 import logging
-from platform.services.unified_rag import UnifiedRAGService, RAGPattern
+from shared.services.unified_rag import UnifiedRAGService, RAGPattern
 from infrastructure.llm.providers import EmbeddingProvider, VectorDBProvider, LLMProvider, get_llm
 from infrastructure.llm.providers.embedding_provider import MockEmbeddingProvider
 from infrastructure.llm.providers.vectordb_provider import MockVectorDBProvider

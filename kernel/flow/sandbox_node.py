@@ -77,7 +77,7 @@ class SandboxNode:
 
     def __post_init__(self) -> None:
         """初期化."""
-        self._logger = logging.getLogger(f"agentflow.flow.sandbox_node.{self.id}")
+        self._logger = logging.getLogger(f"kernel.flow.sandbox_node.{self.id}")
         if not self.label:
             self.label = self.name
 
@@ -175,7 +175,7 @@ class WorkspaceNode:
 
     def __post_init__(self) -> None:
         """初期化."""
-        self._logger = logging.getLogger(f"agentflow.flow.workspace_node.{self.id}")
+        self._logger = logging.getLogger(f"kernel.flow.workspace_node.{self.id}")
         if not self.label:
             self.label = self.name
 
