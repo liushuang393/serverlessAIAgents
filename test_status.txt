@@ -1,0 +1,3 @@
+2 /home/liush/projects/serverlessAIAgents/test_out.txt
+nohup: ignoring input
+ALLDONE
