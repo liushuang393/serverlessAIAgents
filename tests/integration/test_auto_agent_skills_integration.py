@@ -6,8 +6,8 @@ ToolDiscoveryService、AgentRegistry、SimpleEngine、ToolBinder の
 
 import pytest
 
-from agentflow.core.agent_registry import reset_global_agent_registry
-from agentflow.core.tool_registry import reset_global_tool_registry
+from kernel.agents.agent_registry import reset_global_agent_registry
+from kernel.tools.tool_registry import reset_global_tool_registry
 
 
 @pytest.fixture(autouse=True)
@@ -24,12 +24,12 @@ def reset_registries():
 @pytest.mark.asyncio
 async def test_full_auto_agent_skills_workflow():
     """Auto-Agent + Skills の完全統合ワークフロー."""
-    from agentflow import agent
-    from agentflow.core.agent_registry import get_global_agent_registry
-    from agentflow.core.capability_spec import CapabilityRequirement
-    from agentflow.core.tool_discovery import ToolDiscoveryService
-    from agentflow.core.tool_registry import get_global_tool_registry
-    from agentflow.engines import SimpleEngine
+    from kernel import agent
+    from kernel.agents.agent_registry import get_global_agent_registry
+    from kernel.agents.capability_spec import CapabilityRequirement
+    from kernel.tools.tool_discovery import ToolDiscoveryService
+    from kernel.tools.tool_registry import get_global_tool_registry
+    from kernel.engines import SimpleEngine
 
     # Step 1: Skills を発見
     tool_registry = get_global_tool_registry()
@@ -76,9 +76,9 @@ async def test_full_auto_agent_skills_workflow():
 @pytest.mark.asyncio
 async def test_skill_discovery_registers_all_sources():
     """スキル発見が全ソースを登録することを確認."""
-    from agentflow.core.tool_definition import ToolSource
-    from agentflow.core.tool_discovery import ToolDiscoveryService
-    from agentflow.core.tool_registry import get_global_tool_registry
+    from kernel.tools.tool_definition import ToolSource
+    from kernel.tools.tool_discovery import ToolDiscoveryService
+    from kernel.tools.tool_registry import get_global_tool_registry
 
     tool_registry = get_global_tool_registry()
     service = ToolDiscoveryService(tool_registry)
@@ -100,9 +100,9 @@ async def test_skill_discovery_registers_all_sources():
 @pytest.mark.asyncio
 async def test_agent_capability_matching():
     """Agent能力マッチングが正しく動作することを確認."""
-    from agentflow import agent
-    from agentflow.core.agent_registry import get_global_agent_registry
-    from agentflow.core.capability_spec import CapabilityRequirement
+    from kernel import agent
+    from kernel.agents.agent_registry import get_global_agent_registry
+    from kernel.agents.capability_spec import CapabilityRequirement
 
     # 複数の Agent を定義
     @agent(skills=["rag", "search"])

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.protocols.a2a_hub import get_hub, reset_hub
+from kernel.protocols.a2a_hub import get_hub, reset_hub
 from apps.Legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreArtifact,
     AccountScoreEntry,

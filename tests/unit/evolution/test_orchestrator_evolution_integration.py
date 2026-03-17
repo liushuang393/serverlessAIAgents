@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.evolution.recorder import InMemoryExecutionRecorder
-from agentflow.evolution.types import (
+from shared.evolution.recorder import InMemoryExecutionRecorder
+from shared.evolution.types import (
     RetrievalMode,
     StrategyCapsule,
     StrategyDecision,
     StrategyScope,
 )
-from agentflow.orchestration.orchestrator import Orchestrator
-from agentflow.orchestration.planner import ExecutionPlan, PlanStep, StepType
+from kernel.executor.orchestrator import Orchestrator
+from kernel.planner.planner import ExecutionPlan, PlanStep, StepType
 
 
 class _DummyLLM:

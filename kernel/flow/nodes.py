@@ -20,7 +20,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from agentflow.core.type_safe import safe_enum
 from kernel.flow.types import (
     AgentProtocol,
     NextAction,
@@ -294,6 +293,8 @@ class ReviewNode(FlowNode):
                 verdict_str = str(verdict_raw).strip().upper()
                 if verdict_str.startswith("REVIEWVERDICT."):
                     verdict_str = verdict_str.replace("REVIEWVERDICT.", "")
+                from kernel.core.type_safe import safe_enum  # noqa: PLC0415
+
                 verdict = safe_enum(
                     ReviewVerdict,
                     verdict_str,

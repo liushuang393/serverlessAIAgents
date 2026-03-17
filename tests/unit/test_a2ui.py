@@ -5,7 +5,7 @@
 
 import pytest
 
-from agentflow.protocols.a2ui import (
+from kernel.protocols.a2ui import (
     A2UIComponent,
     A2UIEmitter,
     ButtonComponent,
@@ -18,7 +18,7 @@ from agentflow.protocols.a2ui import (
     ListComponent,
     TextComponent,
 )
-from agentflow.protocols.agui_events import AGUIEventType
+from kernel.protocols.agui_events import AGUIEventType
 
 
 class TestComponentType:

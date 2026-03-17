@@ -17,7 +17,7 @@ Decision Governance Engine に DeepAgent の機能を統合するアダプター
 import logging
 from typing import Any
 
-from agentflow.patterns.deep_agent import (
+from kernel.patterns.deep_agent import (
     AgentMessage,
     CognitiveAnalysis,
     CompactionStrategy,

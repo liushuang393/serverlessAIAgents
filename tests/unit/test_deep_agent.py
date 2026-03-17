@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agentflow.patterns.deep_agent import (
+from kernel.patterns.deep_agent import (
     AgentMessage,
     AgentPool,
     AgentType,
@@ -674,7 +674,7 @@ class TestDeepAgentCoordinator:
 
     def test_pattern_property(self, coordinator: DeepAgentCoordinator) -> None:
         """パターンプロパティ."""
-        from agentflow.patterns.coordinator import CoordinationPattern
+        from kernel.patterns.coordinator import CoordinationPattern
 
         assert coordinator.pattern == CoordinationPattern.HIERARCHICAL
 

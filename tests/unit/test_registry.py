@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from agentflow.marketplace.registry import AgentRegistryEntry, LocalRegistry
+from platform.marketplace.registry import AgentRegistryEntry, LocalRegistry
 
 
 class TestAgentRegistryEntry:

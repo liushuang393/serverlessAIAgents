@@ -31,7 +31,7 @@ class TestCognitiveGateAgentInit:
 
     def test_agent_inherits_resilient_agent(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
         """Test that CognitiveGateAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(cognitive_gate_agent, ResilientAgent)
 

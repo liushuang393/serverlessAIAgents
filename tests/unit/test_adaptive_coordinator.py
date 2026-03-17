@@ -5,7 +5,7 @@ AdaptiveCoordinator, AgentProfile, TaskRequirementの機能をテストする。
 
 import pytest
 
-from agentflow.patterns.adaptive_coordinator import (
+from kernel.patterns.adaptive_coordinator import (
     AdaptiveCoordinator,
     AgentCapability,
     AgentProfile,

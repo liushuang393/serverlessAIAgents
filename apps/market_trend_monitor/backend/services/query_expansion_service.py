@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from agentflow import get_llm
+from kernel import get_llm
 
 
 class QueryExpansionService:

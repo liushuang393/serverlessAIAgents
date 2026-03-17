@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentflow.knowledge.rag_access_control import RAGAccessControl
-from agentflow.knowledge.scope_resolver import CollectionTarget, ScopeResolver
+from shared.rag.rag_access_control import RAGAccessControl
+from shared.rag.scope_resolver import CollectionTarget, ScopeResolver
 
 
 class TestRAGAccessControl:

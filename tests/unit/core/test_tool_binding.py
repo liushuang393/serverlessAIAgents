@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from agentflow.core.tool_binding import BoundTools, ToolExecutor
+from kernel.tools.tool_binding import BoundTools, ToolExecutor
 
 
 class _StubAgent:
@@ -36,8 +36,8 @@ class _StubAgent:
 @pytest.fixture
 def tool_registry():
     """ツールが登録されたToolRegistryを作成."""
-    from agentflow.core.tool_definition import ToolDefinition, ToolSource
-    from agentflow.core.tool_registry import ToolRegistry
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_registry import ToolRegistry
 
     registry = ToolRegistry()
     registry.register(
@@ -62,7 +62,7 @@ def tool_registry():
 @pytest.fixture
 def tool_binder(tool_registry):
     """ToolBinderを作成."""
-    from agentflow.core.tool_binding import ToolBinder
+    from kernel.tools.tool_binding import ToolBinder
 
     return ToolBinder(tool_registry)
 
@@ -84,7 +84,7 @@ class TestToolBinder:
     @pytest.mark.asyncio
     async def test_bind_tools_by_capability(self, tool_binder, tool_registry):
         """能力でツールをバインドするテスト."""
-        from agentflow.core.capability_spec import AgentCapabilitySpec
+        from kernel.agents.capability_spec import AgentCapabilitySpec
 
         agent = _StubAgent()
 
@@ -147,8 +147,8 @@ class TestBoundTools:
 
     def test_bound_tools_len(self):
         """BoundToolsの長さテスト."""
-        from agentflow.core.tool_binding import BoundTools
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_binding import BoundTools
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         tools = [
             ToolDefinition(
@@ -171,8 +171,8 @@ class TestBoundTools:
 
     def test_bound_tools_get(self):
         """BoundToolsの取得テスト."""
-        from agentflow.core.tool_binding import BoundTools
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_binding import BoundTools
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         tool = ToolDefinition(
             uri="tool://builtin/t1",
@@ -188,8 +188,8 @@ class TestBoundTools:
 
     def test_bound_tools_to_mcp_format(self):
         """BoundToolsのMCP形式変換テスト."""
-        from agentflow.core.tool_binding import BoundTools
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_binding import BoundTools
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         tool = ToolDefinition(
             uri="tool://builtin/calculator",

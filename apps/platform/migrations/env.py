@@ -5,7 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from apps.platform.db.models import Base
 
-from agentflow.database import MigrationEnv
+from infrastructure.database import MigrationEnv
 
 
 if context.config.config_file_name is not None:

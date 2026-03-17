@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import agentflow.protocols.mcp_client as _mcp_mod
-from agentflow.protocols.mcp_config import LazyLoadingConfig, MCPConfig, MCPServerConfig
-from agentflow.protocols.mcp_lazy_client import (
+import kernel.protocols.mcp_client as _mcp_mod
+from kernel.protocols.mcp_config import LazyLoadingConfig, MCPConfig, MCPServerConfig
+from kernel.protocols.mcp_lazy_client import (
     LazyMCPClient,
     ToolIndexEntry,
     ToolSearchResult,

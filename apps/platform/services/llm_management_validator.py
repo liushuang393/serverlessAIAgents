@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from agentflow.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig
+    from infrastructure.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig
 
 
 _CANONICAL_PROVIDER_MAP: dict[str, str] = {

@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from agentflow.memory.importance_adjuster import ImportanceAdjuster
-from agentflow.memory.types import (
+from shared.memory.importance_adjuster import ImportanceAdjuster
+from infrastructure.memory.types import (
     MemoryEntry,
     MemoryStability,
     MemoryType,

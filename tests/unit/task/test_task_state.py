@@ -1,4 +1,4 @@
-from agentflow.task.task_state import TaskState, can_transition, is_terminal
+from kernel.task.task_state import TaskState, can_transition, is_terminal
 
 
 def test_valid_transition():
@@ -20,7 +20,7 @@ def test_terminal_states():
 
 def test_all_states_have_transitions():
     """Every state should be defined in TASK_TRANSITIONS."""
-    from agentflow.task.task_state import TASK_TRANSITIONS
+    from kernel.task.task_state import TASK_TRANSITIONS
 
     for state in TaskState:
         assert state in TASK_TRANSITIONS

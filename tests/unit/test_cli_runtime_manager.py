@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from agentflow.tools.cli import runtime_manager as runtime_mod
-from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
+from kernel.tools.cli import runtime_manager as runtime_mod
+from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 @pytest.mark.asyncio

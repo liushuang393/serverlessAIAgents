@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agentflow.core.security import (
+from kernel.core.security import (
     AuditLogger,
     CSRFProtection,
     ParameterValidator,

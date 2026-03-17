@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.knowledge.rag_access_control import RAGAccessControl
-from agentflow.knowledge.scope_resolver import FALLBACK_ROLE_KB_MAP, ScopeResolver
+from shared.rag.rag_access_control import RAGAccessControl
+from shared.rag.scope_resolver import FALLBACK_ROLE_KB_MAP, ScopeResolver
 
 
 # ===========================================================================

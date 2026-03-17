@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from agentflow.integrations.context_bridge import FlowContext, SourceSystemType
+from shared.integrations.context_bridge import FlowContext, SourceSystemType
 from apps.code_migration_assistant.backend import app as backend_app
 from apps.code_migration_assistant.engine import CodeMigrationEngine
 

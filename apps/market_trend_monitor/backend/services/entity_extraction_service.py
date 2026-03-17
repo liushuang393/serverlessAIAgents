@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from agentflow import get_llm
+from kernel import get_llm
 
 
 class EntityType(str, Enum):

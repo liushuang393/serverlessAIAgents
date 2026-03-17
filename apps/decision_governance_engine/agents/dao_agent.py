@@ -30,9 +30,9 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     SolutionRoute,
 )
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
-from agentflow.core.type_safe import safe_enum, safe_int
+from kernel import ResilientAgent
+from kernel.core.exceptions import AgentOutputValidationError
+from kernel.core.type_safe import safe_enum, safe_int
 
 
 class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
@@ -354,7 +354,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(response)
 

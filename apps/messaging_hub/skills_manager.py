@@ -19,11 +19,11 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from agentflow.providers import get_llm
+from infrastructure.llm.providers import get_llm
 
 
 if TYPE_CHECKING:
-    from agentflow.skills.gateway import SkillGateway
+    from kernel.skills.gateway import SkillGateway
 
 
 class WorkflowStatus(str, Enum):

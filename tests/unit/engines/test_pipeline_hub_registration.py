@@ -5,9 +5,9 @@ from typing import Any
 
 import pytest
 
-from agentflow.core.resilient_agent import ResilientAgent
-from agentflow.engines.pipeline_engine import PipelineEngine
-from agentflow.protocols.a2a_hub import get_hub, reset_hub
+from kernel.agents.resilient_agent import ResilientAgent
+from kernel.engines.pipeline_engine import PipelineEngine
+from kernel.protocols.a2a_hub import get_hub, reset_hub
 from pydantic import BaseModel
 
 

@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from agentflow.governance import (
+from harness.governance import (
     AuditEvent,
     AuditLogger,
     GovernanceDecision,
     GovernanceEngine,
     ToolExecutionContext,
 )
-from agentflow.governance.plugin_registry import PluginRegistry
-from agentflow.providers.tool_provider import OperationType, RegisteredTool
-from agentflow.security.policy_engine import AuthContext, AuthMode
+from harness.governance.plugin_registry import PluginRegistry
+from infrastructure.llm.providers.tool_provider import OperationType, RegisteredTool
+from harness.policies.policy_engine import AuthContext, AuthMode
 
 
 if TYPE_CHECKING:

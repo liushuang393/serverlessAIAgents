@@ -9,7 +9,7 @@ class TestDesignBriefInput:
 
     def test_minimal_input(self) -> None:
         """最小限の入力でインスタンス生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
 
         brief = DesignBriefInput(brief="Bluetoothスピーカーの商品画像を生成")
         assert brief.brief == "Bluetoothスピーカーの商品画像を生成"
@@ -19,7 +19,7 @@ class TestDesignBriefInput:
 
     def test_full_input(self) -> None:
         """全フィールド指定でインスタンス生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
 
         brief = DesignBriefInput(
             brief="Bluetoothスピーカーの商品画像",
@@ -34,14 +34,14 @@ class TestDesignBriefInput:
 
     def test_num_images_lower_bound(self) -> None:
         """num_imagesが0以下の場合バリデーションエラー."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
 
         with pytest.raises(ValidationError):
             DesignBriefInput(brief="test", num_images=0)
 
     def test_num_images_upper_bound(self) -> None:
         """num_imagesが20超の場合バリデーションエラー."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
 
         with pytest.raises(ValidationError):
             DesignBriefInput(brief="test", num_images=25)
@@ -52,7 +52,7 @@ class TestGlobalStyle:
 
     def test_creation(self) -> None:
         """正常にインスタンス生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import GlobalStyle
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import GlobalStyle
 
         style = GlobalStyle(
             color_palette=["black", "dark blue", "neon accent"],
@@ -66,7 +66,7 @@ class TestGlobalStyle:
 
     def test_default_base_model(self) -> None:
         """デフォルトベースモデルが設定されていること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import GlobalStyle
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import GlobalStyle
 
         style = GlobalStyle(
             color_palette=["black"],
@@ -83,7 +83,7 @@ class TestImageSpec:
 
     def test_creation(self) -> None:
         """正常にインスタンス生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             ImageRole,
             ImageSpec,
         )
@@ -100,7 +100,7 @@ class TestImageSpec:
 
     def test_default_values(self) -> None:
         """デフォルト値が正しく設定されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             ImageRole,
             ImageSpec,
         )
@@ -118,7 +118,7 @@ class TestImageSpec:
 
     def test_cfg_scale_bounds(self) -> None:
         """cfg_scaleの範囲外でバリデーションエラー."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             ImageRole,
             ImageSpec,
         )
@@ -137,7 +137,7 @@ class TestPromptPlanOutput:
 
     def test_creation(self) -> None:
         """プロンプト計画を正常に生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,
@@ -172,7 +172,7 @@ class TestWorkflowResult:
 
     def test_creation(self) -> None:
         """ワークフロー結果を正常に生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GeneratedImage,
             ImageRole,
             WorkflowResult,
@@ -196,7 +196,7 @@ class TestWorkflowResult:
 
     def test_errors_default_empty(self) -> None:
         """エラーリストのデフォルトが空であること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import WorkflowResult
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import WorkflowResult
 
         result = WorkflowResult(
             images=[],
@@ -211,7 +211,7 @@ class TestPromptPlanInput:
 
     def test_creation(self) -> None:
         """正常に入力を生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignCategory,
             ImageRole,
             IntentAnalysis,
@@ -235,7 +235,7 @@ class TestWorkflowExecutorInput:
 
     def test_creation(self) -> None:
         """正常に入力を生成できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,

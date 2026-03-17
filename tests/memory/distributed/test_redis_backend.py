@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from agentflow.memory.distributed.redis_backend import RedisBackend
-from agentflow.memory.types import MemoryEntry, MemoryType
+from infrastructure.memory.distributed.redis_backend import RedisBackend
+from infrastructure.memory.types import MemoryEntry, MemoryType
 
 
 @pytest.fixture

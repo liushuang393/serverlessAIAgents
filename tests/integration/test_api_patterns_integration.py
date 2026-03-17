@@ -24,7 +24,7 @@ import pytest
 # =============================================================================
 # API 層（新規作成）
 # =============================================================================
-from agentflow.api import (
+from platform.api import (
     APIResponse,
     ErrorCode,
     PagedResponse,
@@ -40,12 +40,12 @@ from agentflow.api import (
 # =============================================================================
 # Core
 # =============================================================================
-from agentflow.core.agent_block import AgentBlock
+from kernel.agents.agent_block import AgentBlock
 
 # =============================================================================
 # Patterns
 # =============================================================================
-from agentflow.patterns import (
+from kernel.patterns import (
     # 3. AgentComposer
     AgentComposer,
     AgentConfig,

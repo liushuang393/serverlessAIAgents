@@ -8,8 +8,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from agentflow.security.auth_client.client import RemoteUser
-from agentflow.runtime import resolve_app_runtime
+from infrastructure.security.auth_client.client import RemoteUser
+from kernel.runtime import resolve_app_runtime
 from apps.Legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest, TaskEvent, TaskStatus
 from apps.Legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
 from apps.Legacy_modernization_geo_platform.main import create_app

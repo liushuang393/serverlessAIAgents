@@ -1,1 +1,36 @@
-"""Layer 1 の browser 用プレースホルダーパッケージ。"""
+"""ブラウザ制御スキルパッケージ.
+
+安全なブラウザ操作API群を提供。Playwright ベースの実装。
+
+設計原則:
+- Agent は直接ブラウザを操作できない
+- 全てのセキュリティはコード制御
+- ドメインホワイトリスト制限
+- ヘッドレスモード強制（デフォルト）
+
+使用例:
+    >>> from infrastructure.browser import BrowserSkillConfig, BrowserSkill
+    >>> config = BrowserSkillConfig(domain_whitelist=["example.com"])
+    >>> browser = BrowserSkill(config)
+    >>> await browser.start()
+    >>> page = await browser.navigate("https://example.com")
+    >>> await browser.stop()
+"""
+
+from infrastructure.browser.base import BrowserSkillBase, BrowserSkillError
+from infrastructure.browser.browser_skill import BrowserSkill
+from infrastructure.browser.config import BrowserSkillConfig
+from infrastructure.browser.playwright_skill import create_browser_skill_definitions
+
+
+__all__ = [
+    # スキル
+    "BrowserSkill",
+    # 基底クラス
+    "BrowserSkillBase",
+    # 設定
+    "BrowserSkillConfig",
+    "BrowserSkillError",
+    # SkillGateway 統合
+    "create_browser_skill_definitions",
+]

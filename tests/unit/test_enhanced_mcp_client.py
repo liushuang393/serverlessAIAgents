@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from agentflow.core.security import AuditLogger, ParameterValidator, ToolWhitelist
-from agentflow.protocols.mcp_client import (
+from kernel.core.security import AuditLogger, ParameterValidator, ToolWhitelist
+from kernel.protocols.mcp_client import (
     MCPClient,
     ToolNotAllowedError,
     ToolValidationError,
 )
-from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
+from kernel.protocols.mcp_config import MCPConfig, MCPServerConfig
 
 
 @pytest.fixture

@@ -33,7 +33,7 @@ class TestWorkflowExecutorAgent:
 
     def _make_agent(self, mock_comfyui):
         """テスト用Agentインスタンスを生成."""
-        from agentflow.skills.builtin.design_skills.agents.workflow_executor_agent import (
+        from kernel.skills.builtin.design_skills.agents.workflow_executor_agent import (
             WorkflowExecutorAgent,
         )
 
@@ -43,7 +43,7 @@ class TestWorkflowExecutorAgent:
 
     def _make_sample_plan(self):
         """テスト用PromptPlanOutputを生成."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,
@@ -78,7 +78,7 @@ class TestWorkflowExecutorAgent:
 
     async def test_execute_single_image(self, tmp_path) -> None:
         """単一画像の生成が正しく実行されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             WorkflowExecutorInput,
         )
 
@@ -100,7 +100,7 @@ class TestWorkflowExecutorAgent:
 
     async def test_execute_multiple_images(self, tmp_path) -> None:
         """複数画像の生成が正しく実行されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,
@@ -139,7 +139,7 @@ class TestWorkflowExecutorAgent:
 
     async def test_handles_comfyui_error_gracefully(self, tmp_path) -> None:
         """ComfyUIエラー時にグレースフルに処理すること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             WorkflowExecutorInput,
         )
 
@@ -164,7 +164,7 @@ class TestWorkflowExecutorAgent:
 
     async def test_partial_failure(self, tmp_path) -> None:
         """一部の画像生成失敗時に他の画像は正常に生成されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,

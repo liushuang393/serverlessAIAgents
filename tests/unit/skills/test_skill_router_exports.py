@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.skills import SkillRouter
+from kernel.skills import SkillRouter
 
 
 @pytest.mark.asyncio

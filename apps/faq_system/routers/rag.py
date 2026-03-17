@@ -30,8 +30,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from agentflow.knowledge.rag_access_control import RAGAccessControl
-from agentflow.services import RAGConfig, RAGService
+from shared.rag.rag_access_control import RAGAccessControl
+from platform.services import RAGConfig, RAGService
 
 
 if TYPE_CHECKING:

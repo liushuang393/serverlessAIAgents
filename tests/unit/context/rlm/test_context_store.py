@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.context.rlm.context_store import (
+from harness.context.rlm.context_store import (
     ContextHandle,
     ContextStore,
     StructureInfo,

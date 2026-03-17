@@ -1,4 +1,4 @@
-from agentflow.security.local_first import (
+from infrastructure.security.local_first import (
     ExecutionLocation,
     LocalFirstEnforcer,
     LocalFirstPolicy,

@@ -5,7 +5,7 @@ agentflow/protocols/mcp_tool.py のテスト。
 
 import pytest
 
-from agentflow.protocols.mcp_tool import (
+from kernel.protocols.mcp_tool import (
     MCPTool,
     MCPToolClient,
     MCPToolRequest,

@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from agentflow.protocols.a2a_card import AgentCard, AgentSkill
-from agentflow.protocols.a2a_server import A2AServer
+from kernel.protocols.a2a_card import AgentCard, AgentSkill
+from kernel.protocols.a2a_server import A2AServer
 
 
 @pytest.fixture

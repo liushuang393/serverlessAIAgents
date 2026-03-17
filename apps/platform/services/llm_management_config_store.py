@@ -10,7 +10,7 @@ from tempfile import NamedTemporaryFile
 from typing import Iterator
 
 import yaml
-from agentflow.llm.gateway import LLMGatewayConfig, load_gateway_config
+from infrastructure.llm.gateway import LLMGatewayConfig, load_gateway_config
 
 try:
     import fcntl

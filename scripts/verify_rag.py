@@ -6,8 +6,8 @@ import os
 # プロジェクトルートをパスに追加
 sys.path.append(os.getcwd())
 
-from agentflow.services.unified_rag import UnifiedRAGService
-from agentflow.providers.embedding_provider import MockEmbeddingProvider
+from platform.services.unified_rag import UnifiedRAGService
+from infrastructure.llm.providers.embedding_provider import MockEmbeddingProvider
 
 async def verify_unified_rag():
     logging.basicConfig(level=logging.INFO)

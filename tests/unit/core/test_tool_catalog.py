@@ -6,7 +6,7 @@ LLMフォーマット変換、シングルトンアクセサのテスト。
 
 import pytest
 
-from agentflow.core.tool_catalog import (
+from kernel.tools.tool_catalog import (
     CatalogEntry,
     CatalogSource,
     ToolCatalogManager,

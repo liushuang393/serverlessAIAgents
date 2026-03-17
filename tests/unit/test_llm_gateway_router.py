@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from agentflow.llm.gateway.config import (
+from infrastructure.llm.gateway.config import (
     GatewayRuntimeConfig,
     LLMGatewayConfig,
     ModelConfig,
@@ -14,7 +14,7 @@ from agentflow.llm.gateway.config import (
     ProviderConfig,
     RoutingPolicyConfig,
 )
-from agentflow.llm.gateway.router import LiteLLMGateway
+from infrastructure.llm.gateway.router import LiteLLMGateway
 
 
 def _build_config(*, priority: str = "quality", strategy: str = "round_robin") -> LLMGatewayConfig:

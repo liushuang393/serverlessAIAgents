@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.security.policy_engine import (
+from harness.policies.policy_engine import (
     AuthContext,
     AuthDecision,
     AuthMode,

@@ -9,7 +9,7 @@ from typing import Any
 
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
 
-from agentflow.protocols.a2ui.components import (
+from kernel.protocols.a2ui.components import (
     A2UIComponent,
     ButtonComponent,
     CardComponent,

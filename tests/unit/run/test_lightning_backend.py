@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.run import (
+from kernel.runtime import (
     LightningRuntimeConfig,
     PromptRewardSample,
     resolve_lightning_store,

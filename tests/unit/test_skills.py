@@ -8,7 +8,7 @@ from textwrap import dedent
 
 import pytest
 
-from agentflow.skills import (
+from kernel.skills import (
     Skill,
     SkillLoader,
     SkillMatcher,

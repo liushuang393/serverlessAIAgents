@@ -13,7 +13,7 @@ from typing import Any
 
 from apps.platform.services.gallery_service import GalleryService
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class _GalleryInput:

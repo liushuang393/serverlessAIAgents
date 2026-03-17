@@ -33,7 +33,7 @@ class TestDaoAgentInit:
 
     def test_agent_inherits_resilient_agent(self, dao_agent: DaoAgent) -> None:
         """Test that DaoAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(dao_agent, ResilientAgent)
 

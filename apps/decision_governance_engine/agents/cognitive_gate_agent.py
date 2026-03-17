@@ -21,8 +21,8 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     IrreversibilityLevel,
 )
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
+from kernel import ResilientAgent
+from kernel.core.exceptions import AgentOutputValidationError
 
 
 class CognitiveGateAgent(ResilientAgent[CognitiveGateInput, CognitiveGateOutput]):
@@ -108,7 +108,7 @@ JSON形式で出力してください。"""
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(response)
 

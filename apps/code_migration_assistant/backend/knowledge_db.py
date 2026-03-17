@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import StaticPool
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from agentflow.knowledge.models import Base as RAGBase
+from shared.rag.models import Base as RAGBase
 
 
 if TYPE_CHECKING:

@@ -50,7 +50,7 @@ class TestFaAgentInit:
 
     def test_agent_inherits_resilient_agent(self, fa_agent: FaAgent) -> None:
         """Test that FaAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(fa_agent, ResilientAgent)
 

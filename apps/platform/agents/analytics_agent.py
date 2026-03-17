@@ -13,7 +13,7 @@ from typing import Any
 
 from apps.platform.services.tenant_dashboard import TenantDashboard
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class AnalyticsAgent(ResilientAgent):  # type: ignore[type-arg]

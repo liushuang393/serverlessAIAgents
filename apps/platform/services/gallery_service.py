@@ -30,7 +30,7 @@ from apps.platform.services.component_library import (
     get_component_library,
 )
 
-from agentflow.marketplace.client import MarketplaceAgent, MarketplaceClient
+from platform.marketplace.client import MarketplaceAgent, MarketplaceClient
 
 
 class GalleryService:

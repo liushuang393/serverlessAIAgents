@@ -15,9 +15,9 @@ collect_ignore_glob = [
     "test_phase2_task*.py",
 ]
 
-from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.types import WorkflowConfig
-from agentflow.providers.llm_provider import reset_llm
+from kernel.core.engine import AgentFlowEngine
+from kernel.core.types import WorkflowConfig
+from infrastructure.llm.providers.llm_provider import reset_llm
 
 
 @pytest.fixture(autouse=True)

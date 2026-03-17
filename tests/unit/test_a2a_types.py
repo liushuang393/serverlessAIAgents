@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from agentflow.protocols.a2a.types import (
+from kernel.protocols.a2a.types import (
     A2ATask,
     A2ATaskState,
     Artifact,

@@ -14,7 +14,7 @@ from typing import Any
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishStatus, PublishTarget
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class PublishAgent(ResilientAgent):  # type: ignore[type-arg]

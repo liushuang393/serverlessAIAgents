@@ -35,7 +35,7 @@ from apps.platform.services.runtime_command_resolver import (
     RuntimeCommandResolver,
 )
 
-from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
+from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 if TYPE_CHECKING:

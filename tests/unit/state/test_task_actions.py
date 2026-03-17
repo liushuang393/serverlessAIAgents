@@ -1,5 +1,5 @@
-from agentflow.state.actions import ActionType, create_action
-from agentflow.state.store import GlobalStateStore
+from kernel.state.actions import ActionType, create_action
+from kernel.state.store import GlobalStateStore
 
 
 def test_task_created_action():

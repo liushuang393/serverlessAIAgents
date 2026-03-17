@@ -7,13 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentflow.skills.chatbot import (
+from kernel.skills.chatbot import (
     ChatBotConfig,
     ChatBotSkill,
     ChatMessage,
     ChatSession,
 )
-from agentflow.skills.rag import RAGConfig, RAGResult, RAGSkill
+from kernel.skills.rag import RAGConfig, RAGResult, RAGSkill
 
 
 def _make_mock_llm() -> MagicMock:

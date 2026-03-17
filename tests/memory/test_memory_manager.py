@@ -5,7 +5,7 @@
 
 import pytest
 
-from agentflow.memory import MemoryManager
+from shared.memory import MemoryManager
 
 
 @pytest.mark.asyncio
@@ -159,7 +159,7 @@ async def test_memory_manager_delete() -> None:
     """MemoryManager.delete() が長期記憶からエントリを削除することを確認."""
     import datetime
 
-    from agentflow.memory.types import MemoryEntry, MemoryType
+    from infrastructure.memory.types import MemoryEntry, MemoryType
 
     manager = MemoryManager(token_threshold=1000)
     await manager.start()
@@ -197,8 +197,8 @@ async def test_long_term_memory_delete() -> None:
     """LongTermMemory.delete() が記憶と更新キューを両方削除することを確認."""
     import datetime
 
-    from agentflow.memory.long_term_memory import LongTermMemory
-    from agentflow.memory.types import MemoryEntry, MemoryType
+    from shared.memory.long_term_memory import LongTermMemory
+    from infrastructure.memory.types import MemoryEntry, MemoryType
 
     ltm = LongTermMemory(enable_auto_consolidation=False)
     await ltm.start()

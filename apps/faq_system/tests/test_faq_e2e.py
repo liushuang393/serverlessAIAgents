@@ -10,14 +10,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agentflow.agents.faq_agent import (
+from kernel.agents.specialized.faq_agent import (
     FAQAgent,
     FAQAgentConfig,
     FAQInput,
     FAQOutput,
 )
-from agentflow.routing import IntentCategory, IntentRouter
-from agentflow.services import ServiceResult
+from kernel.router import IntentCategory, IntentRouter
+from platform.services import ServiceResult
 
 
 # ---------------------------------------------------------------------------

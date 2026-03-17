@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentflow.knowledge.resource_manager import ResourceDefinition, ResourceManager
-from agentflow.security.auth_client.client import AuthClient
+from shared.rag.resource_manager import ResourceDefinition, ResourceManager
+from infrastructure.security.auth_client.client import AuthClient
 
 
 class TestResourceManager:

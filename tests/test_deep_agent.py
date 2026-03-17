@@ -12,7 +12,7 @@
 
 import pytest
 
-from agentflow.patterns.deep_agent import (
+from kernel.patterns.deep_agent import (
     AgentMessage,
     AgentPool,
     AgentType,

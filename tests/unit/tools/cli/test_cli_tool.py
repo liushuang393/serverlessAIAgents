@@ -1,7 +1,7 @@
 import pytest
 
-from agentflow.tools.cli.base import CLIToolConfig
-from agentflow.tools.cli.validators import CLIValidator
+from kernel.tools.cli.base import CLIToolConfig
+from kernel.tools.cli.validators import CLIValidator
 
 
 def test_cli_tool_config_creation():

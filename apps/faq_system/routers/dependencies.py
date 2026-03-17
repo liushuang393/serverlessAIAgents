@@ -31,15 +31,15 @@ from apps.faq_system.backend.services.rag_runtime_config import (
     load_rag_runtime_config,
 )
 
-from agentflow.agents import (
+from kernel.agents import (
     FAQAgent,
     FAQAgentConfig,
     SalesAgent,
     SalesAgentConfig,
 )
-from agentflow.core.agent_factory import AgentFactorySpec
-from agentflow.core.agent_factory import create as create_agent
-from agentflow.services import (
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from platform.services import (
     ChunkStrategy,
     RAGConfig,
     RAGService,
@@ -244,7 +244,7 @@ def get_suggestion_service() -> SuggestionService:
 
 def get_faq_agent() -> FAQAgent:
     """FAQAgent取得（遅延初期化 + A2AHub 登録）."""
-    from agentflow.protocols.a2a_hub import get_hub
+    from kernel.protocols.a2a_hub import get_hub
 
     if "faq_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()
@@ -274,7 +274,7 @@ def get_faq_agent() -> FAQAgent:
 
 def get_sales_agent() -> SalesAgent:
     """SalesAgent取得（遅延初期化 + A2AHub 登録）."""
-    from agentflow.protocols.a2a_hub import get_hub
+    from kernel.protocols.a2a_hub import get_hub
 
     if "sales_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()

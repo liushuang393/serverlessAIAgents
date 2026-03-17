@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.core.exceptions import AgentBlockNotFoundError, AgentBlockValidationError
-from agentflow.core.manager import AgentBlockManager, AgentInfo
-from agentflow.core.metadata import (
+from kernel.agents.agent_block import AgentBlock
+from kernel.core.exceptions import AgentBlockNotFoundError, AgentBlockValidationError
+from kernel.agents.manager import AgentBlockManager, AgentInfo
+from kernel.core.metadata import (
     AgentMetadata,
     DependencySpec,
     InputField,
@@ -20,7 +20,7 @@ from agentflow.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from agentflow.core.validator import ValidationResult
+from kernel.agents.validator import ValidationResult
 
 
 class TestAgentInfo:

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentflow.context.rlm.config import RLMConfig, StopReason
-from agentflow.context.rlm.controller import RLMController, RLMResult
+from harness.context.rlm.config import RLMConfig, StopReason
+from harness.context.rlm.controller import RLMController, RLMResult
 
 
 class MockLLMClient:
@@ -107,7 +107,7 @@ class TestRLMController:
         callback = MagicMock()
         # Need to initialize event emitter first by running
         controller._flow_id = "test"
-        from agentflow.context.rlm.events import RLMEventEmitter
+        from harness.context.rlm.events import RLMEventEmitter
 
         controller._event_emitter = RLMEventEmitter("test")
 

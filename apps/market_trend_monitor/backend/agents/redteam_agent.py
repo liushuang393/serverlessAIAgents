@@ -25,7 +25,7 @@ from apps.market_trend_monitor.backend.services.redteam_service import (
 )
 from pydantic import BaseModel, Field
 
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 
 
 # ============================================================

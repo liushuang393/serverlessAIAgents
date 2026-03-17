@@ -10,14 +10,14 @@ Features:
 
 Usage:
     # 推奨: フレームワーク層の Agent を直接使用
-    from agentflow.agents import FAQAgent, FAQAgentConfig
+    from kernel.agents import FAQAgent, FAQAgentConfig
 
     agent = FAQAgent(FAQAgentConfig())
     result = await agent.run({"question": "返品ポリシーは？"})
 """
 
 # フレームワーク層の Agent を再エクスポート
-from agentflow.agents import FAQAgent, FAQAgentConfig
+from kernel.agents import FAQAgent, FAQAgentConfig
 
 
 __all__ = ["FAQAgent", "FAQAgentConfig"]

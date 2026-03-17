@@ -55,10 +55,10 @@ from apps.decision_governance_engine.services.deep_agent_adapter import (
     DeepAgentAdapter,
 )
 
-from agentflow.engines import EngineConfig, PipelineEngine
-from agentflow.engines.pipeline_engine import StageConfig
-from agentflow.providers import get_llm
-from agentflow.security import SafetyMixin
+from kernel.engines import EngineConfig, PipelineEngine
+from kernel.engines.pipeline_engine import StageConfig
+from infrastructure.llm.providers import get_llm
+from infrastructure.security import SafetyMixin
 
 
 if TYPE_CHECKING:

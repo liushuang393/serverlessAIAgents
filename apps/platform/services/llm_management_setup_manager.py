@@ -10,7 +10,7 @@ from typing import Protocol
 import httpx
 import yaml
 
-from agentflow.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, resolve_secret
+from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, resolve_secret
 from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMPreflightReport,

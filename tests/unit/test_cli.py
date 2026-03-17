@@ -2,7 +2,7 @@
 
 from click.testing import CliRunner
 
-from agentflow.cli.main import cli
+from platform.cli.main import cli
 
 
 class TestCLI:

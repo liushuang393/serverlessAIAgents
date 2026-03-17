@@ -20,7 +20,7 @@ class TestGatekeeperAgentInit:
 
     def test_agent_inherits_resilient_agent(self, gatekeeper_agent: GatekeeperAgent) -> None:
         """Test that GatekeeperAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(gatekeeper_agent, ResilientAgent)
 

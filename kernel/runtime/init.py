@@ -32,14 +32,14 @@ def init_agentflow(
             pass
 
     if settings_overrides:
-        from agentflow.config import AgentFlowSettings
+        from infrastructure.config import AgentFlowSettings
 
         settings = AgentFlowSettings(**settings_overrides)
         settings.configure_logging()
         return
 
     # Default: configure logging via standard settings
-    from agentflow.config import get_settings
+    from infrastructure.config import get_settings
 
     get_settings()
 

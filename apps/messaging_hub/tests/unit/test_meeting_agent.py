@@ -9,7 +9,7 @@ from apps.messaging_hub.agents.meeting_agent import (
     MeetingNotes,
 )
 
-from agentflow.skills.calendar import CalendarSkill
+from kernel.skills.calendar import CalendarSkill
 
 
 class TestMeetingBrief:

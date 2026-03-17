@@ -111,7 +111,7 @@ class TestReviewAgentInit:
 
     def test_agent_inherits_resilient_agent(self, review_agent: ReviewAgent) -> None:
         """Test that ReviewAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(review_agent, ResilientAgent)
 

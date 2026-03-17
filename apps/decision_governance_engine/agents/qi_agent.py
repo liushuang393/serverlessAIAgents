@@ -26,7 +26,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ShuOutput,
 )
 
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 
 
 class QiAgent(ResilientAgent[QiInput, QiOutput]):
@@ -179,7 +179,7 @@ JSON形式で出力してください。"""
             return self._create_default_output(shu_result)
 
         # JSONパース: 失敗ならフォールバック
-        from agentflow.utils import extract_json
+        from shared.utils import extract_json
 
         data = extract_json(response)
         if data is None:

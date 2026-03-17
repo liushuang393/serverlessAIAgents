@@ -15,7 +15,7 @@ from apps.Legacy_modernization_geo_platform.backend.schemas import (
     ContentBlueprintPage,
 )
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 def _slugify(value: str) -> str:

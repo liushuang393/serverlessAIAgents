@@ -83,8 +83,8 @@ from apps.faq_system.routers.dependencies import (
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agentflow.database import DatabaseConfig, DatabaseManager
-from agentflow.observability.startup import log_startup_info
+from infrastructure.database import DatabaseConfig, DatabaseManager
+from infrastructure.observability.startup import log_startup_info
 
 
 logging.basicConfig(level=logging.INFO)
@@ -164,7 +164,7 @@ db_manager = DatabaseManager(
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
-    from agentflow.bootstrap import AppCapabilityBootstrapper
+    from platform.bootstrap import AppCapabilityBootstrapper
 
     get_faq_contract_auth_guard().reset_cache()
     await db_manager.init()
@@ -178,8 +178,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # CollectionManager / DocumentManager 初期化
     from apps.faq_system.routers.collections import init_managers as init_collection_managers
 
-    from agentflow.knowledge.collection_manager import CollectionManager
-    from agentflow.knowledge.document_manager import DocumentManager
+    from shared.rag.collection_manager import CollectionManager
+    from shared.rag.document_manager import DocumentManager
 
     session_factory = get_rag_session_factory()
     col_mgr = CollectionManager(session_factory=session_factory)

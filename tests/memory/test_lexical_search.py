@@ -9,10 +9,10 @@ from datetime import datetime
 
 import pytest
 
-from agentflow.memory.context_builder import ContextBuilder, MemoryNeedLevel
-from agentflow.memory.memory_manager import MemoryManager
-from agentflow.memory.types import MemoryEntry, MemorySemanticLevel, MemoryType
-from agentflow.memory.vector_search import VectorSearch
+from shared.memory.context_builder import ContextBuilder, MemoryNeedLevel
+from shared.memory.memory_manager import MemoryManager
+from infrastructure.memory.types import MemoryEntry, MemorySemanticLevel, MemoryType
+from infrastructure.memory.vector_search import VectorSearch
 
 
 def _make_entry(entry_id: str, content: str, topic: str = "test") -> MemoryEntry:
@@ -106,7 +106,7 @@ class TestMultiViewRetrieval:
         await manager.start()
         try:
             # セマンティックレベルの記憶を保存（フィルタをパスするため）
-            from agentflow.memory.types import MemorySemanticLevel
+            from infrastructure.memory.types import MemorySemanticLevel
 
             entry = _make_entry("e1", "architecture design patterns for AI agents")
             entry.semantic_level = MemorySemanticLevel.SEMANTIC
@@ -128,7 +128,7 @@ class TestMultiViewRetrieval:
         manager = MemoryManager(enable_vector_search=True)
         await manager.start()
         try:
-            from agentflow.memory.types import MemorySemanticLevel
+            from infrastructure.memory.types import MemorySemanticLevel
 
             # 複数の記憶を保存
             entries = [
@@ -161,7 +161,7 @@ class TestMultiViewRetrieval:
         manager = MemoryManager(enable_vector_search=True)
         await manager.start()
         try:
-            from agentflow.memory.types import MemorySemanticLevel
+            from infrastructure.memory.types import MemorySemanticLevel
 
             entry = _make_entry("e1", "test content for recall")
             entry.semantic_level = MemorySemanticLevel.SEMANTIC

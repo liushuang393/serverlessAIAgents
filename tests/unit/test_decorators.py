@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.metadata import (
+from kernel.core.engine import AgentFlowEngine
+from kernel.core.metadata import (
     A2AConfig,
     AgentMetadata,
     AGUIConfig,
@@ -19,10 +19,10 @@ from agentflow.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from agentflow.core.schemas import SchemaLoader
-from agentflow.decorators import auto_adapt
-from agentflow.protocols.a2a_card import AgentCard
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
+from kernel.core.schemas import SchemaLoader
+from kernel.decorators import auto_adapt
+from kernel.protocols.a2a_card import AgentCard
+from kernel.protocols.agui_emitter import AGUIEventEmitter
 
 
 class TestAutoAdaptDecorator:

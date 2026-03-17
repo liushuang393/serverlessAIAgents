@@ -2,10 +2,10 @@
 
 import pytest
 
-from agentflow.config import AgentFlowSettings
-from agentflow.core.result_store import MemoryResultStore, ResultStoreManager
-from agentflow.providers import get_db, get_llm, reset_db, reset_llm
-from agentflow.runtime import RuntimeContext, get_runtime_context, use_runtime_context
+from shared.config import AgentFlowSettings
+from kernel.core.result_store import MemoryResultStore, ResultStoreManager
+from infrastructure.llm.providers import get_db, get_llm, reset_db, reset_llm
+from kernel.runtime import RuntimeContext, get_runtime_context, use_runtime_context
 
 
 @pytest.fixture(autouse=True)

@@ -11,7 +11,7 @@ class TestDataLakeImports:
 
     def test_core_imports(self):
         """コアモジュールのインポート."""
-        from agentflow.datalake import (
+        from shared.datalake import (
             DataItem,
             DataLake,
         )
@@ -21,15 +21,15 @@ class TestDataLakeImports:
 
     def test_connector_imports(self):
         """コネクタのインポート."""
-        from agentflow.datalake import DataConnector
-        from agentflow.datalake.connectors import LocalFileConnector
+        from shared.datalake import DataConnector
+        from shared.datalake.connectors import LocalFileConnector
 
         assert DataConnector is not None
         assert LocalFileConnector is not None
 
     def test_cloud_connector_imports(self):
         """クラウドコネクタのインポート."""
-        from agentflow.datalake.connectors import (
+        from shared.datalake.connectors import (
             DatabaseConnector,
             GoogleDriveConnector,
             OneDriveConnector,
@@ -41,7 +41,7 @@ class TestDataLakeImports:
 
     def test_auth_imports(self):
         """認証モジュールのインポート."""
-        from agentflow.datalake import (
+        from shared.datalake import (
             AuthCredentials,
             AuthProvider,
         )
@@ -51,7 +51,7 @@ class TestDataLakeImports:
 
     def test_format_handler_imports(self):
         """フォーマットハンドラのインポート."""
-        from agentflow.datalake import (
+        from shared.datalake import (
             CSVHandler,
             JSONHandler,
         )
@@ -66,7 +66,7 @@ class TestLocalFileConnector:
     @pytest.fixture
     def connector(self):
         """コネクタインスタンス."""
-        from agentflow.datalake.connectors import LocalFileConnector
+        from shared.datalake.connectors import LocalFileConnector
 
         return LocalFileConnector()
 
@@ -135,7 +135,7 @@ class TestFormatHandlers:
     @pytest.mark.asyncio
     async def test_csv_handler(self):
         """CSVハンドラ."""
-        from agentflow.datalake import CSVHandler
+        from shared.datalake import CSVHandler
 
         handler = CSVHandler()
         data = [{"name": "Alice", "age": "30"}, {"name": "Bob", "age": "25"}]
@@ -152,7 +152,7 @@ class TestFormatHandlers:
     @pytest.mark.asyncio
     async def test_json_handler(self):
         """JSONハンドラ."""
-        from agentflow.datalake import JSONHandler
+        from shared.datalake import JSONHandler
 
         handler = JSONHandler()
         data = {"key": "value", "number": 42}
@@ -173,8 +173,8 @@ class TestDataLake:
     @pytest.fixture
     def datalake(self):
         """DataLakeインスタンス."""
-        from agentflow.datalake import DataLake, reset_datalake
-        from agentflow.datalake.connectors import LocalFileConnector
+        from shared.datalake import DataLake, reset_datalake
+        from shared.datalake.connectors import LocalFileConnector
 
         reset_datalake()
         dl = DataLake()
@@ -206,7 +206,7 @@ class TestConnectorConfigs:
 
     def test_onedrive_config(self):
         """OneDrive設定."""
-        from agentflow.datalake.connectors.onedrive import OneDriveConfig
+        from shared.datalake.connectors.onedrive import OneDriveConfig
 
         config = OneDriveConfig(
             client_id="test-client-id",
@@ -217,7 +217,7 @@ class TestConnectorConfigs:
 
     def test_gdrive_config(self):
         """Google Drive設定."""
-        from agentflow.datalake.connectors.gdrive import GoogleDriveConfig
+        from shared.datalake.connectors.gdrive import GoogleDriveConfig
 
         config = GoogleDriveConfig(
             client_id="test-client-id",
@@ -228,7 +228,7 @@ class TestConnectorConfigs:
 
     def test_database_config(self):
         """データベース設定."""
-        from agentflow.datalake.connectors.database import DatabaseConfig
+        from shared.datalake.connectors.database import DatabaseConfig
 
         config = DatabaseConfig(
             connection_string="postgresql+asyncpg://user:pass@localhost/db",
@@ -243,28 +243,28 @@ class TestConnectorSchemes:
 
     def test_local_scheme(self):
         """ローカルファイルスキーム."""
-        from agentflow.datalake.connectors import LocalFileConnector
+        from shared.datalake.connectors import LocalFileConnector
 
         connector = LocalFileConnector()
         assert connector.scheme == "file"
 
     def test_onedrive_scheme(self):
         """OneDriveスキーム."""
-        from agentflow.datalake.connectors import OneDriveConnector
+        from shared.datalake.connectors import OneDriveConnector
 
         connector = OneDriveConnector()
         assert connector.scheme == "onedrive"
 
     def test_gdrive_scheme(self):
         """Google Driveスキーム."""
-        from agentflow.datalake.connectors import GoogleDriveConnector
+        from shared.datalake.connectors import GoogleDriveConnector
 
         connector = GoogleDriveConnector()
         assert connector.scheme == "gdrive"
 
     def test_database_scheme(self):
         """データベーススキーム."""
-        from agentflow.datalake.connectors import DatabaseConnector
+        from shared.datalake.connectors import DatabaseConnector
 
         connector = DatabaseConnector()
         assert connector.scheme == "db"

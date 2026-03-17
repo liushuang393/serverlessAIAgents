@@ -20,7 +20,7 @@ class TestFrameworkCompliance(unittest.TestCase):
         """Verify all agents have AgentCard definitions exported."""
         import apps.code_migration_assistant.agents as agents_pkg
 
-        from agentflow.protocols.a2a_card import AgentCard
+        from kernel.protocols.a2a_card import AgentCard
 
         expected_cards = [
             "legacy_analysis_card",

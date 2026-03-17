@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agentflow.hitl import (
+from harness.approval import (
     CheckpointData,
     Checkpointer,
     MemoryCheckpointer,
@@ -33,7 +33,7 @@ class TestGetCheckpointer:
 
     def test_redis_backend_returns_redis_checkpointer(self) -> None:
         """redis backend 指定で RedisCheckpointer を返す."""
-        from agentflow.hitl.redis_checkpointer import RedisCheckpointer
+        from harness.approval.redis_checkpointer import RedisCheckpointer
 
         cp = get_checkpointer(backend="redis")
         # RedisCheckpointer は import 可能だが、実行時には redis パッケージが必要
@@ -41,7 +41,7 @@ class TestGetCheckpointer:
 
     def test_postgres_backend_returns_postgres_checkpointer(self) -> None:
         """postgres backend 指定で PostgresCheckpointer を返す."""
-        from agentflow.hitl.postgres_checkpointer import PostgresCheckpointer
+        from harness.approval.postgres_checkpointer import PostgresCheckpointer
 
         cp = get_checkpointer(backend="postgres")
         # PostgresCheckpointer は import 可能だが、実行時には asyncpg パッケージが必要

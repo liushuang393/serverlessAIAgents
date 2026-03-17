@@ -27,8 +27,8 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ShuOutput,
 )
 
-from agentflow import ResilientAgent
-from agentflow.core.type_safe import safe_enum, safe_float
+from kernel import ResilientAgent
+from kernel.core.type_safe import safe_enum, safe_float
 
 
 class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
@@ -186,7 +186,7 @@ JSON形式で出力してください。"""
         self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
 
         try:
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(response)
 

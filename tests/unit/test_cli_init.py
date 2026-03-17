@@ -4,8 +4,8 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from agentflow.cli.commands.init import validate_agent_id
-from agentflow.cli.main import cli
+from platform.cli.commands.init import validate_agent_id
+from platform.cli.main import cli
 
 
 class TestValidateAgentId:

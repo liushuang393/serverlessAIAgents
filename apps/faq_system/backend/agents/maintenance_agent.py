@@ -26,7 +26,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.core import ResilientAgent
+from kernel.core import ResilientAgent
 
 
 logger = logging.getLogger(__name__)

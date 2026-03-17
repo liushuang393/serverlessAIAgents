@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.skills.builtin.bi_analytics.analyzer import (
+from kernel.skills.builtin.bi_analytics.analyzer import (
     AnalysisResult,
     AnalysisType,
     BIAnalyzer,
 )
-from agentflow.skills.builtin.bi_analytics.connector import (
+from kernel.skills.builtin.bi_analytics.connector import (
     DataConnector,
     DataFrame,
     MemoryConnector,
 )
-from agentflow.skills.builtin.bi_analytics.visualizer import (
+from kernel.skills.builtin.bi_analytics.visualizer import (
     Chart,
     ChartGenerator,
     ChartType,

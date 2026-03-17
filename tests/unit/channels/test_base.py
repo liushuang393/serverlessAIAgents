@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.channels.base import (
+from shared.channels.base import (
     ChannelMessage,
     MessageChannelAdapter,
     MessageMetadata,

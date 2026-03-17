@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 def test_tool_definition_creation():
     """基本的なToolDefinition作成のテスト."""
-    from agentflow.core.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
     tool = ToolDefinition(
         uri="tool://builtin/calculator",
@@ -27,7 +27,7 @@ def test_tool_definition_creation():
 
 def test_tool_definition_uri_validation():
     """URI検証のテスト - tool://スキーム必須."""
-    from agentflow.core.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
     with pytest.raises(ValidationError, match="uri"):
         ToolDefinition(
@@ -40,7 +40,7 @@ def test_tool_definition_uri_validation():
 
 def test_tool_definition_from_mcp():
     """MCPツール形式からToolDefinition作成のテスト."""
-    from agentflow.core.tool_definition import ToolDefinition
+    from kernel.tools.tool_definition import ToolDefinition
 
     mcp_tool = {
         "name": "read_file",
@@ -57,7 +57,7 @@ def test_tool_definition_from_mcp():
 
 def test_tool_definition_from_skill():
     """Skill形式からToolDefinition作成のテスト."""
-    from agentflow.core.tool_definition import ToolDefinition
+    from kernel.tools.tool_definition import ToolDefinition
 
     skill_data = {
         "name": "code_review",
@@ -73,7 +73,7 @@ def test_tool_definition_from_skill():
 
 def test_tool_definition_from_builtin():
     """@toolデコレータからToolDefinition作成のテスト."""
-    from agentflow.core.tool_definition import ToolDefinition
+    from kernel.tools.tool_definition import ToolDefinition
 
     tool = ToolDefinition.from_builtin(
         name="search",
@@ -87,7 +87,7 @@ def test_tool_definition_from_builtin():
 
 def test_tool_definition_to_mcp_format():
     """MCP形式への変換テスト."""
-    from agentflow.core.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
     tool = ToolDefinition(
         uri="tool://builtin/search",
@@ -106,7 +106,7 @@ def test_tool_definition_to_mcp_format():
 
 def test_tool_definition_matches_query():
     """クエリマッチングのテスト."""
-    from agentflow.core.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
     tool = ToolDefinition(
         uri="tool://builtin/calculator",
@@ -126,7 +126,7 @@ def test_tool_definition_matches_query():
 
 def test_tool_source_enum():
     """ToolSourceの列挙値テスト."""
-    from agentflow.core.tool_definition import ToolSource
+    from kernel.tools.tool_definition import ToolSource
 
     assert ToolSource.BUILTIN.value == "builtin"
     assert ToolSource.MCP.value == "mcp"

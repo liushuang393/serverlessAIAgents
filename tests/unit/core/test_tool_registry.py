@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def tool_registry():
     """新しいToolRegistryインスタンスを作成."""
-    from agentflow.core.tool_registry import ToolRegistry
+    from kernel.tools.tool_registry import ToolRegistry
 
     return ToolRegistry()
 
@@ -17,7 +17,7 @@ def tool_registry():
 @pytest.fixture
 def sample_tool():
     """サンプルToolDefinitionを作成."""
-    from agentflow.core.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
     return ToolDefinition(
         uri="tool://builtin/test_tool",
@@ -47,7 +47,7 @@ class TestToolRegistry:
 
     def test_list_all_tools(self, tool_registry, sample_tool):
         """全ツールリストのテスト."""
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         tool2 = ToolDefinition(
             uri="tool://mcp/server/tool2",
@@ -65,7 +65,7 @@ class TestToolRegistry:
 
     def test_search_by_query(self, tool_registry, sample_tool):
         """クエリ検索のテスト."""
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         calc_tool = ToolDefinition(
             uri="tool://builtin/calculator",
@@ -84,7 +84,7 @@ class TestToolRegistry:
 
     def test_filter_by_source(self, tool_registry):
         """ソースでフィルタリングのテスト."""
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         builtin = ToolDefinition(
             uri="tool://builtin/b1",
@@ -126,7 +126,7 @@ class TestToolRegistry:
 
     def test_register_duplicate_replaces(self, tool_registry, sample_tool):
         """重複URI登録で置換されるテスト."""
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         tool_registry.register(sample_tool)
 
@@ -168,7 +168,7 @@ class TestToolRegistry:
 
     def test_search_with_limit(self, tool_registry):
         """検索結果数制限のテスト."""
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
         for i in range(10):
             tool = ToolDefinition(

@@ -17,9 +17,9 @@ from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
-from agentflow.knowledge.collection_manager import CollectionManager
-from agentflow.knowledge.document_manager import DocumentManager
-from agentflow.knowledge.rag_access_control import RAGAccessControl
+from shared.rag.collection_manager import CollectionManager
+from shared.rag.document_manager import DocumentManager
+from shared.rag.rag_access_control import RAGAccessControl
 
 
 logger = logging.getLogger("decision_api.knowledge_collections")
@@ -277,7 +277,7 @@ async def test_query(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    from agentflow.services import RAGService
+    from platform.services import RAGService
 
     rag_config.top_k = request.top_k
     service = RAGService(rag_config)

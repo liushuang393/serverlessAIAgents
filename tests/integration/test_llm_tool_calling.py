@@ -21,7 +21,7 @@ import os
 
 import pytest
 
-from agentflow.llm import LLMClient, LLMConfig, LLMMessage
+from infrastructure.llm import LLMClient, LLMConfig, LLMMessage
 
 
 # 標準ツール定義（OpenAI 形式）

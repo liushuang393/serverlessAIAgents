@@ -12,8 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentflow.marketplace import AgentRegistryEntry, LocalRegistry, MarketplaceClient
-from agentflow.marketplace.client import MarketplaceAgent
+from platform.marketplace import AgentRegistryEntry, LocalRegistry, MarketplaceClient
+from platform.marketplace.client import MarketplaceAgent
 
 # テスト用サンプルエージェント
 _SAMPLE_AGENTS = [

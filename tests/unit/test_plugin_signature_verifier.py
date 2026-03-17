@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-from agentflow.governance.plugin_signature import (
+from harness.governance.plugin_signature import (
     PluginSignatureVerifier,
     canonical_manifest_bytes,
 )

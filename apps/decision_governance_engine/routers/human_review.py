@@ -37,10 +37,10 @@ from apps.decision_governance_engine.services.human_review_policy import (
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from agentflow.core.agent_factory import AgentFactorySpec
-from agentflow.core.agent_factory import create as create_agent
-from agentflow.providers import get_llm
-from agentflow.utils import extract_json
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from infrastructure.llm.providers import get_llm
+from shared.utils import extract_json
 
 
 logger = logging.getLogger(__name__)

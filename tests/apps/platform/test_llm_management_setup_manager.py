@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from agentflow.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, ProviderConfig
+from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, ProviderConfig
 from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMPreflightRequest,

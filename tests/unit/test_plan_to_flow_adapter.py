@@ -9,14 +9,14 @@ from typing import Any
 
 import pytest
 
-from agentflow.flow.flow import Flow
-from agentflow.pev.hierarchical_planner import (
+from kernel.flow.flow import Flow
+from kernel.planner.pev.hierarchical_planner import (
     GoalStatus,
     HierarchicalPlan,
     PlanLevel,
     SubGoal,
 )
-from agentflow.pev.plan_to_flow_adapter import PlanToFlowAdapter, PlanToFlowError
+from kernel.planner.pev.plan_to_flow_adapter import PlanToFlowAdapter, PlanToFlowError
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import pytest
 
-from agentflow.task.task_id import TaskID
+from kernel.task.task_id import TaskID
 
 
 def test_task_id_generation():

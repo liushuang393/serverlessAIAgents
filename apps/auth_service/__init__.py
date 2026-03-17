@@ -1,1 +1,1 @@
-"""auth_service - スタンドアロン認証サービスパッケージ."""
+"""auth_service shell パッケージ."""

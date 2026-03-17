@@ -1,4 +1,4 @@
-from agentflow.perception.events import PerceptionEvent, PerceptionEventType
+from kernel.perception.events import PerceptionEvent, PerceptionEventType
 
 
 def test_perception_event_creation():

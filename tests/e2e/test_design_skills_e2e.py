@@ -12,14 +12,14 @@ from pathlib import Path
 import httpx
 import pytest
 
-from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+from kernel.skills.builtin.design_skills.schemas.design_schemas import (
     DesignBriefInput,
     GlobalStyle,
     ImageRole,
     ImageSpec,
     PromptPlanInput,
 )
-from agentflow.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
+from kernel.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
 
 
 # PNG マジックバイト (8 bytes)
@@ -142,10 +142,10 @@ class TestFullPipeline:
         comfyui_client: ComfyUIClient,
     ) -> None:
         """自然言語ブリーフからComfyUI画像生成まで通しで実行."""
-        from agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent import (
+        from kernel.skills.builtin.design_skills.agents.intent_analyzer_agent import (
             IntentAnalyzerAgent,
         )
-        from agentflow.skills.builtin.design_skills.agents.prompt_planner_agent import (
+        from kernel.skills.builtin.design_skills.agents.prompt_planner_agent import (
             PromptPlannerAgent,
         )
 

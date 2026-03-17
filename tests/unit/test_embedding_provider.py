@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from agentflow.providers.embedding_provider import OllamaEmbeddingProvider
+from infrastructure.llm.providers.embedding_provider import OllamaEmbeddingProvider
 
 
 def _build_async_client(responses: list[httpx.Response]) -> MagicMock:

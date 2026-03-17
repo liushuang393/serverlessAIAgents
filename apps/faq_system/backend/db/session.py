@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.db.models import Base
 
-from agentflow.database import DatabaseConfig, DatabaseManager
+from infrastructure.database import DatabaseConfig, DatabaseManager
 
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ async def _is_fresh_database() -> bool:
         # 同期エンジンで確認（SQLite は同期モードで動作）
         from sqlalchemy import create_engine, pool
 
-        from agentflow.database.url_utils import to_sync_url
+        from infrastructure.database.url_utils import to_sync_url
 
         engine = create_engine(to_sync_url(url), poolclass=pool.NullPool)
         try:
@@ -259,7 +259,7 @@ async def init_rag_tables() -> None:
 
     既存テーブルがある場合は何もしない（checkfirst=True）。
     """
-    from agentflow.knowledge.models import Base as RAGBase
+    from shared.rag.models import Base as RAGBase
 
     await _db.init()
 
@@ -267,7 +267,7 @@ async def init_rag_tables() -> None:
         from sqlalchemy import create_engine
         from sqlalchemy import pool as sa_pool
 
-        from agentflow.database.url_utils import to_sync_url
+        from infrastructure.database.url_utils import to_sync_url
 
         engine = create_engine(to_sync_url(_db.resolved_url), poolclass=sa_pool.NullPool)
         try:

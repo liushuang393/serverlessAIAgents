@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from agentflow.providers.llm_provider import LLMProvider
+    from infrastructure.llm.providers.llm_provider import LLMProvider
 
 
 class NoOpLLMBackend:
@@ -87,7 +87,7 @@ class AgentFlowLLMBackend:
     def __init__(self, provider: LLMProvider | None = None) -> None:
         if provider is None:
             # 遅延インポート: L1 → 上位層への静的依存を回避
-            from agentflow.providers.llm_provider import get_llm
+            from infrastructure.llm.providers.llm_provider import get_llm
 
             provider = get_llm(_new_instance=True)
         self._provider = provider

@@ -1,4 +1,4 @@
-from agentflow.reasoner.constraints import (
+from kernel.reasoner.constraints import (
     ConstraintType,
     StructuredConstraint,
     StructuredConstraints,

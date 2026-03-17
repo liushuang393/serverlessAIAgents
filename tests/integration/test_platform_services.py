@@ -1,10 +1,11 @@
-"""Layer 5 control plane サービスのテスト."""
+"""Layer 5 platform サービスのテスト."""
 
 from __future__ import annotations
 
 import json
+import platform as platform_module
+from platform import AppRegistryService, DiscoveryService, LifecycleService
 
-from control_plane import AppRegistryService, DiscoveryService, LifecycleService
 from shared import load_app_manifest
 
 from contracts import AppManifest
@@ -91,3 +92,9 @@ def test_lifecycle_service_builds_command_plan() -> None:
 
     assert service.build_command_plan(manifest, "start") == ["python -m demo.start"]
     assert service.build_command_plan(manifest, "stop") == ["pkill -f demo"]
+
+
+def test_platform_package_keeps_stdlib_surface() -> None:
+    """top-level platform package が stdlib platform API を透過すること."""
+    assert callable(platform_module.system)
+    assert isinstance(platform_module.python_version(), str)

@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy import Column, Integer, MetaData, String, Table, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agentflow.database import (
+from infrastructure.database import (
     DatabaseConfig,
     DatabaseManager,
     get_dialect,

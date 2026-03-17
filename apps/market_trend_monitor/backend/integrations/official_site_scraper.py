@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 from apps.market_trend_monitor.backend.models import Article, SourceType
 
-from agentflow import get_llm
+from kernel import get_llm
 
 try:
     import httpx

@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from agentflow.integrations.context_bridge import FlowContext, SourceSystemType
+from shared.integrations.context_bridge import FlowContext, SourceSystemType
 from apps.code_migration_assistant.agents.business_semantics_agent import BusinessSemanticsAgent
 from apps.code_migration_assistant.agents.migration_design_agent import MigrationDesignAgent
 from apps.code_migration_assistant.engine import CodeMigrationEngine, MIGRATION_ANALYSIS

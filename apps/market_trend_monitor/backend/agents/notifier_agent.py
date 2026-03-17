@@ -14,7 +14,7 @@ from typing import Any
 
 from apps.market_trend_monitor.backend.models import Notification, NotificationPriority, Trend
 
-from agentflow.core.agent_block import AgentBlock
+from kernel.agents.agent_block import AgentBlock
 
 try:
     import httpx
@@ -178,7 +178,7 @@ class NotifierAgent(AgentBlock):
         """辞書からTrendオブジェクトを生成."""
         from apps.market_trend_monitor.backend.models import SentimentType
 
-        from agentflow.utils.type_helpers import convert_enum
+        from shared.utils.type_helpers import convert_enum
 
         return Trend(
             id=data["id"],

@@ -16,9 +16,9 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import StaticPool
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from agentflow.knowledge.collection_manager import CollectionManager
-from agentflow.knowledge.document_manager import DocumentManager
-from agentflow.knowledge.models import Base as RAGBase
+from shared.rag.collection_manager import CollectionManager
+from shared.rag.document_manager import DocumentManager
+from shared.rag.models import Base as RAGBase
 
 
 # ---------------------------------------------------------------------------

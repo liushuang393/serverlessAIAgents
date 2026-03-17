@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentflow.sandbox.base import ExecutionResult, SandboxConfig, SandboxState
-from agentflow.sandbox.lifecycle import EventType, ManagedSandbox, SandboxEvent
-from agentflow.sandbox.manager import SandboxManager
-from agentflow.sandbox.workspace import Workspace, WorkspaceState
+from infrastructure.sandbox.base import ExecutionResult, SandboxConfig, SandboxState
+from infrastructure.sandbox.lifecycle import EventType, ManagedSandbox, SandboxEvent
+from infrastructure.sandbox.manager import SandboxManager
+from infrastructure.sandbox.workspace import Workspace, WorkspaceState
 
 
 class TestSandboxState:

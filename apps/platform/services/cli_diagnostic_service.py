@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any
 
-from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
+from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 if TYPE_CHECKING:

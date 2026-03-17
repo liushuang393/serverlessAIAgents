@@ -28,7 +28,7 @@ class TestRootSkillsDirectory:
 
     def test_load_from_root_skills_directory(self):
         """ルートスキルディレクトリからの読み込みテスト."""
-        from agentflow.skills.loader import SkillLoader
+        from kernel.skills.loader import SkillLoader
 
         loader = SkillLoader()
         root_dir = next((path for path in self._skill_dir_candidates() if path.exists()), None)

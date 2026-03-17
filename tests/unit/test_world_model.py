@@ -3,7 +3,7 @@
 CausalModel, ConstraintSolver, WorldStateの機能をテストする。
 """
 
-from agentflow.world_model import (
+from shared.world_model import (
     CausalModel,
     ConstraintSolver,
     WorldState,
@@ -169,7 +169,7 @@ class TestCausalModelDefaultEffects:
 
     def test_relation_type_increases(self) -> None:
         """INCREASES関係タイプのテスト."""
-        from agentflow.world_model import RelationType
+        from shared.world_model import RelationType
 
         model = CausalModel()
         model.add_node("heater_on", initial_value=False)
@@ -191,7 +191,7 @@ class TestCausalModelDefaultEffects:
 
     def test_relation_type_decreases(self) -> None:
         """DECREASES関係タイプのテスト."""
-        from agentflow.world_model import RelationType
+        from shared.world_model import RelationType
 
         model = CausalModel()
         model.add_node("cooling_on", initial_value=False)
@@ -213,7 +213,7 @@ class TestCausalModelDefaultEffects:
 
     def test_relation_type_enables(self) -> None:
         """ENABLES関係タイプのテスト."""
-        from agentflow.world_model import RelationType
+        from shared.world_model import RelationType
 
         model = CausalModel()
         model.add_node("key_inserted", initial_value=False)
@@ -234,7 +234,7 @@ class TestCausalModelDefaultEffects:
 
     def test_relation_type_prevents(self) -> None:
         """PREVENTS関係タイプのテスト."""
-        from agentflow.world_model import RelationType
+        from shared.world_model import RelationType
 
         model = CausalModel()
         model.add_node("locked", initial_value=True)
@@ -255,7 +255,7 @@ class TestCausalModelDefaultEffects:
 
     def test_relation_type_triggers(self) -> None:
         """TRIGGERS関係タイプのテスト."""
-        from agentflow.world_model import RelationType
+        from shared.world_model import RelationType
 
         model = CausalModel()
         model.add_node("button_pressed", initial_value=False)

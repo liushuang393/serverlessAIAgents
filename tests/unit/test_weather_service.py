@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any
 import httpx
 import pytest
 
-from agentflow.services import weather_service as weather_module
-from agentflow.services.weather_service import WeatherService
+from platform.services import weather_service as weather_module
+from platform.services.weather_service import WeatherService
 
 
 if TYPE_CHECKING:

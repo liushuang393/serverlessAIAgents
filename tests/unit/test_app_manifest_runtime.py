@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from agentflow.runtime import resolve_app_runtime
+from kernel.runtime import resolve_app_runtime
 
 
 if TYPE_CHECKING:

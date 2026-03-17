@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from agentflow.protocols.a2a_client import A2AClient
+from kernel.protocols.a2a_client import A2AClient
 
 
 @pytest.fixture

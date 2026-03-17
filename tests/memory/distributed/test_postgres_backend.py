@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentflow.memory.distributed.postgres_backend import PostgresBackend
-from agentflow.memory.types import MemoryEntry, MemoryType
+from infrastructure.memory.distributed.postgres_backend import PostgresBackend
+from infrastructure.memory.types import MemoryEntry, MemoryType
 
 
 @pytest.fixture

@@ -29,26 +29,26 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.core import ResilientAgent
-from agentflow.security.policy_engine import PolicyEngine
-from agentflow.services.fewshot_manager import (
+from kernel.core import ResilientAgent
+from harness.policies.policy_engine import PolicyEngine
+from platform.services.fewshot_manager import (
     FewshotExample,
     FewshotManager,
     FewshotManagerConfig,
 )
 
 # NL2SQL 増強コンポーネント
-from agentflow.services.schema_linker import (
+from platform.services.schema_linker import (
     SchemaLinker,
     SchemaLinkerConfig,
     SchemaLinkResult,
 )
-from agentflow.services.semantic_layer import (
+from platform.services.semantic_layer import (
     ResolvedQuery,
     SemanticLayerConfig,
     SemanticLayerService,
 )
-from agentflow.services.sql_postprocessor import (
+from platform.services.sql_postprocessor import (
     PostProcessorConfig,
     SQLPostProcessor,
 )
@@ -647,7 +647,7 @@ ORDER BY total_sales DESC""",
         Returns:
             生成された SQL
         """
-        from agentflow.providers import get_llm
+        from infrastructure.llm.providers import get_llm
 
         llm = get_llm(temperature=self._config.temperature)
 
@@ -741,7 +741,7 @@ SQLクエリのみを出力してください（説明不要）:
     async def _execute_sql(self, sql: str) -> tuple[list[dict[str, Any]], list[str]]:
         """SQL実行（実DB連携）."""
         if self._db is None:
-            from agentflow.providers import get_db
+            from infrastructure.llm.providers import get_db
 
             self._db = get_db()
             await self._db.connect()

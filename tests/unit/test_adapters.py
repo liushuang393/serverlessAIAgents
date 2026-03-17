@@ -2,9 +2,9 @@
 
 import pytest
 
-from agentflow.adapters.protocol_adapter import ProtocolAdapter
-from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.metadata import (
+from kernel.adapters.protocol_adapter import ProtocolAdapter
+from kernel.core.engine import AgentFlowEngine
+from kernel.core.metadata import (
     A2AConfig,
     AgentMetadata,
     AGUIConfig,
@@ -18,8 +18,8 @@ from agentflow.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from agentflow.protocols.a2a_card import AgentCard
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
+from kernel.protocols.a2a_card import AgentCard
+from kernel.protocols.agui_emitter import AGUIEventEmitter
 
 
 class TestProtocolAdapter:

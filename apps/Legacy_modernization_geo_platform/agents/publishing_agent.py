@@ -11,7 +11,7 @@ from apps.Legacy_modernization_geo_platform.agents._models import (
 from apps.Legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.Legacy_modernization_geo_platform.backend.settings import APP_ROOT, GeoPlatformSettings
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class PublishingAgent(ResilientAgent[PublishingInput, PublishingOutput]):

@@ -28,10 +28,10 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.core import ResilientAgent
-from agentflow.integrations.ticket_generator import TicketGenerator
-from agentflow.knowledge.isolated_kb import IsolatedKBManager, KBType
-from agentflow.security.policy_engine import AuthContext, AuthMode, PolicyEngine
+from kernel.core import ResilientAgent
+from shared.integrations.ticket_generator import TicketGenerator
+from shared.rag.isolated_kb import IsolatedKBManager, KBType
+from harness.policies.policy_engine import AuthContext, AuthMode, PolicyEngine
 
 
 if TYPE_CHECKING:
@@ -614,7 +614,7 @@ class InternalKBAgent(ResilientAgent):
             await self._kb_manager.start()
 
         if self._llm is None:
-            from agentflow.providers import get_llm
+            from infrastructure.llm.providers import get_llm
 
             self._llm = get_llm(temperature=self._config.temperature)
 

@@ -21,7 +21,7 @@ TARGET_DIRS = [
     ROOT / "shared",
     ROOT / "kernel",
     ROOT / "harness",
-    ROOT / "control_plane",
+    ROOT / "platform",
 ]
 
 ALLOWED_PATH_PREFIXES = [

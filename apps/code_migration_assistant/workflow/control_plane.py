@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any
 
 from shared import AccessContext, build_access_context
 
-from agentflow.providers.tool_provider import RiskLevel
+from infrastructure.llm.providers.tool_provider import RiskLevel
 
 
 if TYPE_CHECKING:
-    from agentflow.security.policy_engine import AuthContext
+    from harness.policies.policy_engine import AuthContext
 
 
 @dataclass(slots=True)
@@ -165,7 +165,7 @@ def build_auth_context(flow_context: Any, tool_name: str, action: str) -> AuthCo
 
 def _to_auth_context(access_context: AccessContext) -> AuthContext:
     """共有 access 契約を既存 AuthContext へ変換する。"""
-    from agentflow.security.policy_engine import AuthContext
+    from harness.policies.policy_engine import AuthContext
 
     return AuthContext(
         subject=access_context.subject,

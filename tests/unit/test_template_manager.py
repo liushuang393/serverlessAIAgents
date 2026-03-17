@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agentflow.templates.template_manager import (
+from kernel.templates.template_manager import (
     TemplateManager,
     TemplateMetadata,
     TemplateParameter,

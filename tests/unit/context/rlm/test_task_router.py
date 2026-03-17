@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentflow.context.rlm.config import RLMConfig
-from agentflow.context.rlm.task_router import (
+from harness.context.rlm.config import RLMConfig
+from harness.context.rlm.task_router import (
     ActivationDecision,
     TaskRouter,
 )

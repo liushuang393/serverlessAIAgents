@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from agentflow.providers.llm_provider import get_llm, reset_llm
+from infrastructure.llm.providers.llm_provider import get_llm, reset_llm
 
 
 def _require_enabled() -> None:

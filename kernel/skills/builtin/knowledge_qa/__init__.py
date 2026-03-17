@@ -1,0 +1,1 @@
+"""knowledge_qa スキル."""

@@ -59,7 +59,7 @@ class TestQiAgentInit:
 
     def test_agent_inherits_resilient_agent(self, qi_agent: QiAgent) -> None:
         """Test that QiAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(qi_agent, ResilientAgent)
 

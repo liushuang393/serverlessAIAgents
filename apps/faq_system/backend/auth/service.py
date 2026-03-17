@@ -24,13 +24,13 @@ from apps.faq_system.backend.db.session import ensure_database_ready, get_db_ses
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
-from agentflow.security.auth_middleware import AuthMiddleware, AuthUser, JWTConfig
-from agentflow.security.mfa import TimeBasedMFA
-from agentflow.security.oauth2_provider import ExternalIdentity as OAuth2Identity
+from infrastructure.security.auth_middleware import AuthMiddleware, AuthUser, JWTConfig
+from infrastructure.security.mfa import TimeBasedMFA
+from infrastructure.security.oauth2_provider import ExternalIdentity as OAuth2Identity
 
 
 if TYPE_CHECKING:
-    from agentflow.security.oauth2_provider import ExternalIdentity as OAuth2Identity
+    from infrastructure.security.oauth2_provider import ExternalIdentity as OAuth2Identity
 
 
 logger = logging.getLogger(__name__)

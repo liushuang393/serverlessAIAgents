@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 import yaml
 
-from agentflow.core.metadata import (
+from kernel.core.metadata import (
     A2AConfig,
     AgentMetadata,
     DependencySpec,
@@ -19,7 +19,7 @@ from agentflow.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from agentflow.core.schemas import SchemaLoader, SchemaValidationError
+from kernel.core.schemas import SchemaLoader, SchemaValidationError
 
 
 class TestSchemaLoader:

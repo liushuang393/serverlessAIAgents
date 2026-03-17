@@ -9,7 +9,7 @@ from urllib.parse import urlparse, urlunparse
 
 import httpx
 
-from agentflow.llm.gateway import (
+from infrastructure.llm.gateway import (
     EngineRuntimeStatus,
     LiteLLMGateway,
     LLMGatewayConfig,

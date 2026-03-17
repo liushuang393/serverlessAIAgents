@@ -36,10 +36,10 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     TwoStageRocket,
 )
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
-from agentflow.core.type_safe import safe_enum
-from agentflow.skills import RAGConfig, RAGSkill
+from kernel import ResilientAgent
+from kernel.core.exceptions import AgentOutputValidationError
+from kernel.core.type_safe import safe_enum
+from kernel.skills import RAGConfig, RAGSkill
 
 
 class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
@@ -326,7 +326,7 @@ JSON形式で出力してください。"""
         self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
 
         try:
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(response)
 

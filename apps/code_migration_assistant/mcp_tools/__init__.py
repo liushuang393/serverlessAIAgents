@@ -17,7 +17,7 @@ from apps.code_migration_assistant.mcp_tools.java_generator import JavaGenerator
 from apps.code_migration_assistant.mcp_tools.memory_system import MemorySystem
 from apps.code_migration_assistant.mcp_tools.reflection_pattern import ReflectionPattern
 
-from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
+from kernel import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 __all__ = [

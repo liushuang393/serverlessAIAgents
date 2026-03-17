@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock
 
-from agentflow.protocols.a2a.agui_bridge import A2AToAGUIBridge
-from agentflow.protocols.a2a.types import (
+from kernel.protocols.a2a.agui_bridge import A2AToAGUIBridge
+from kernel.protocols.a2a.types import (
     A2ATaskState,
     Artifact,
     FilePart,
@@ -11,7 +11,7 @@ from agentflow.protocols.a2a.types import (
     Role,
     TaskStatus,
 )
-from agentflow.protocols.agui_events import AGUIEventType
+from kernel.protocols.agui_events import AGUIEventType
 
 
 # ============================================================

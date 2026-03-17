@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from agentflow.llm.gateway.config import build_provider_runtime_statuses, load_gateway_config, resolve_secret
+from infrastructure.llm.gateway.config import build_provider_runtime_statuses, load_gateway_config, resolve_secret
 
 
 def test_resolve_secret_prefers_env_over_dotenv(tmp_path: Path, monkeypatch) -> None:

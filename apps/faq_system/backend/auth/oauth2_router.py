@@ -6,9 +6,9 @@ from apps.faq_system.backend.auth.service import get_auth_service
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from agentflow.security.oauth2_provider import OAuth2Provider
-from agentflow.security.providers.azure_ad import AzureADOAuth2Provider
-from agentflow.security.providers.google import GoogleOAuth2Provider
+from infrastructure.security.oauth2_provider import OAuth2Provider
+from infrastructure.security.providers.azure_ad import AzureADOAuth2Provider
+from infrastructure.security.providers.google import GoogleOAuth2Provider
 
 
 router = APIRouter(prefix="/api/auth/oauth2", tags=["OAuth2"])

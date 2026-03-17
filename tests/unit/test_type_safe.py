@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-from agentflow.core.type_safe import safe_enum, safe_float, safe_int
+from kernel.core.type_safe import safe_enum, safe_float, safe_int
 
 
 class _Mode(str, Enum):

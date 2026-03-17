@@ -16,7 +16,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from agentflow.llm.contracts import LLMContractsConfig
+from infrastructure.llm.contracts import LLMContractsConfig
 from apps.platform.schemas.capability_schemas import CapabilitySpec
 
 

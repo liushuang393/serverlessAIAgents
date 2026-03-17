@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.core.metadata import (
+from kernel.agents.agent_block import AgentBlock
+from kernel.core.metadata import (
     A2AConfig,
     AgentMetadata,
     AGUIConfig,
@@ -23,12 +23,12 @@ from agentflow.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from agentflow.core.schemas import SchemaLoader
-from agentflow.protocols.a2a_server import A2AServer
+from kernel.core.schemas import SchemaLoader
+from kernel.protocols.a2a_server import A2AServer
 
 
 if TYPE_CHECKING:
-    from agentflow.protocols.agui_events import AGUIEvent
+    from kernel.protocols.agui_events import AGUIEvent
 
 
 class TestProtocolIntegration:

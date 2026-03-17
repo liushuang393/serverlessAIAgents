@@ -6,7 +6,7 @@ class TestPromptPlannerAgent:
 
     def _make_agent(self):
         """テスト用Agentインスタンスを生成."""
-        from agentflow.skills.builtin.design_skills.agents.prompt_planner_agent import (
+        from kernel.skills.builtin.design_skills.agents.prompt_planner_agent import (
             PromptPlannerAgent,
         )
 
@@ -14,7 +14,7 @@ class TestPromptPlannerAgent:
 
     def _make_sample_intent(self):
         """テスト用IntentAnalysisを生成."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignCategory,
             ImageRole,
             IntentAnalysis,
@@ -41,7 +41,7 @@ class TestPromptPlannerAgent:
 
     async def test_generates_prompt_plan(self) -> None:
         """プロンプト計画が正しく生成されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
 
         agent = self._make_agent()
         intent = self._make_sample_intent()
@@ -59,7 +59,7 @@ class TestPromptPlannerAgent:
 
     async def test_all_images_share_seed(self) -> None:
         """全画像が同じ一貫性シードを共有すること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
 
         agent = self._make_agent()
         intent = self._make_sample_intent()
@@ -77,7 +77,7 @@ class TestPromptPlannerAgent:
 
     async def test_hero_image_prompt_contains_subject(self) -> None:
         """ヒーロー画像のプロンプトに被写体が含まれること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             ImageRole,
             PromptPlanInput,
         )
@@ -93,7 +93,7 @@ class TestPromptPlannerAgent:
 
     async def test_feature_images_use_different_features(self) -> None:
         """フィーチャー画像が異なる特徴キーワードを使用すること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             ImageRole,
             PromptPlanInput,
         )
@@ -110,7 +110,7 @@ class TestPromptPlannerAgent:
 
     async def test_aspect_ratio_resolution(self) -> None:
         """アスペクト比が正しい解像度に変換されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
 
         agent = self._make_agent()
         intent = self._make_sample_intent()
@@ -123,7 +123,7 @@ class TestPromptPlannerAgent:
 
     async def test_dark_style_lighting(self) -> None:
         """ダーク系スタイル指定時のライティングが適切であること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
 
         agent = self._make_agent()
         intent = self._make_sample_intent()  # style_direction = "tech, dark, minimal"
@@ -134,7 +134,7 @@ class TestPromptPlannerAgent:
 
     async def test_brand_colors_in_palette(self) -> None:
         """ブランドカラーがパレットに反映されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import PromptPlanInput
 
         agent = self._make_agent()
         intent = self._make_sample_intent()

@@ -13,7 +13,7 @@ from apps.Legacy_modernization_geo_platform.backend.schemas import (
     LegacySemanticsArtifact,
 )
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class LegacySemanticsAgent(

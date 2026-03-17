@@ -733,7 +733,7 @@ async def test_health_endpoint_db_healthy(client: httpx.AsyncClient) -> None:
 
 def test_settings_ollama_model_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """AgentFlowSettings の ollama_model デフォルト値が llama3.2 であること."""
-    from agentflow.config.settings import AgentFlowSettings
+    from shared.config.settings import AgentFlowSettings
 
     # 環境変数と .env ファイル読み込みの両方を無効化してデフォルト値を検証
     monkeypatch.delenv("OLLAMA_MODEL", raising=False)
@@ -743,7 +743,7 @@ def test_settings_ollama_model_default(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_settings_ollama_model_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """環境変数 OLLAMA_MODEL で ollama_model を上書きできること."""
-    from agentflow.config.settings import AgentFlowSettings
+    from shared.config.settings import AgentFlowSettings
 
     monkeypatch.setenv("OLLAMA_MODEL", "qwen3:4b")
     settings = AgentFlowSettings()

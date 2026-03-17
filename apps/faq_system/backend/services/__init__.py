@@ -47,8 +47,8 @@ from apps.faq_system.backend.services.glossary_service import (
     TermType,
 )
 
-from agentflow.agents import FAQAgent as FAQService
-from agentflow.agents import FAQAgentConfig as FAQConfig
+from kernel.agents import FAQAgent as FAQService
+from kernel.agents import FAQAgentConfig as FAQConfig
 
 
 __all__ = [

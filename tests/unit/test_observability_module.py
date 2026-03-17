@@ -18,7 +18,7 @@ class TestLogLevel(unittest.TestCase):
 
     def test_all_levels(self):
         """所有日志级别测试."""
-        from agentflow.observability.logging import LogLevel
+        from infrastructure.observability.logging import LogLevel
 
         self.assertEqual(LogLevel.DEBUG.value, "DEBUG")
         self.assertEqual(LogLevel.INFO.value, "INFO")
@@ -32,7 +32,7 @@ class TestLogConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.observability.logging import LogConfig, LogLevel
+        from infrastructure.observability.logging import LogConfig, LogLevel
 
         config = LogConfig()
         self.assertEqual(config.level, LogLevel.INFO)
@@ -44,7 +44,7 @@ class TestLogConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.observability.logging import LogConfig, LogLevel
+        from infrastructure.observability.logging import LogConfig, LogLevel
 
         config = LogConfig(
             level=LogLevel.DEBUG,
@@ -60,7 +60,7 @@ class TestJSONFormatter(unittest.TestCase):
 
     def test_format_basic(self):
         """基本格式化测试."""
-        from agentflow.observability.logging import JSONFormatter
+        from infrastructure.observability.logging import JSONFormatter
 
         formatter = JSONFormatter()
         record = logging.LogRecord(
@@ -83,7 +83,7 @@ class TestJSONFormatter(unittest.TestCase):
 
     def test_mask_sensitive_data(self):
         """敏感数据掩码测试."""
-        from agentflow.observability.logging import JSONFormatter
+        from infrastructure.observability.logging import JSONFormatter
 
         formatter = JSONFormatter(mask_patterns=["password", "secret"])
 
@@ -100,14 +100,14 @@ class TestTextFormatter(unittest.TestCase):
 
     def test_format_with_timestamp(self):
         """带时间戳格式化测试."""
-        from agentflow.observability.logging import TextFormatter
+        from infrastructure.observability.logging import TextFormatter
 
         formatter = TextFormatter(include_timestamp=True)
         self.assertIn("asctime", formatter._fmt)
 
     def test_format_without_timestamp(self):
         """不带时间戳格式化测试."""
-        from agentflow.observability.logging import TextFormatter
+        from infrastructure.observability.logging import TextFormatter
 
         formatter = TextFormatter(include_timestamp=False)
         self.assertNotIn("asctime", formatter._fmt)
@@ -118,7 +118,7 @@ class TestAgentFlowLogger(unittest.TestCase):
 
     def test_create_logger(self):
         """创建日志记录器测试."""
-        from agentflow.observability.logging import AgentFlowLogger
+        from infrastructure.observability.logging import AgentFlowLogger
 
         logger = AgentFlowLogger("test-logger")
         self.assertIsNotNone(logger)
@@ -126,7 +126,7 @@ class TestAgentFlowLogger(unittest.TestCase):
 
     def test_log_methods(self):
         """日志方法测试."""
-        from agentflow.observability.logging import AgentFlowLogger, LogConfig, LogLevel
+        from infrastructure.observability.logging import AgentFlowLogger, LogConfig, LogLevel
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
             config = LogConfig(level=LogLevel.DEBUG, output=f.name, format="text")
@@ -142,7 +142,7 @@ class TestAgentFlowLogger(unittest.TestCase):
 
     def test_context_manager(self):
         """上下文管理器测试."""
-        from agentflow.observability.logging import AgentFlowLogger
+        from infrastructure.observability.logging import AgentFlowLogger
 
         logger = AgentFlowLogger("test")
 
@@ -157,7 +157,7 @@ class TestSetupLogging(unittest.TestCase):
 
     def test_setup_logging(self):
         """设置日志测试."""
-        from agentflow.observability.logging import LogLevel, setup_logging
+        from infrastructure.observability.logging import LogLevel, setup_logging
 
         setup_logging(level=LogLevel.DEBUG, format="json")
         root_logger = logging.getLogger()
@@ -169,7 +169,7 @@ class TestGetLogger(unittest.TestCase):
 
     def test_get_logger(self):
         """获取日志记录器测试."""
-        from agentflow.observability.logging import get_logger
+        from infrastructure.observability.logging import get_logger
 
         logger1 = get_logger("test")
         logger2 = get_logger("test")
@@ -184,7 +184,7 @@ class TestCounter(unittest.TestCase):
 
     def test_basic_increment(self):
         """基本增量测试."""
-        from agentflow.observability.metrics import Counter
+        from infrastructure.observability.metrics import Counter
 
         counter = Counter("test_counter", "Test counter")
         self.assertEqual(counter.get(), 0)
@@ -197,7 +197,7 @@ class TestCounter(unittest.TestCase):
 
     def test_increment_with_labels(self):
         """带标签增量测试."""
-        from agentflow.observability.metrics import Counter
+        from infrastructure.observability.metrics import Counter
 
         counter = Counter("requests", "Requests", label_names=["method"])
 
@@ -210,7 +210,7 @@ class TestCounter(unittest.TestCase):
 
     def test_negative_increment_raises(self):
         """负数增量异常测试."""
-        from agentflow.observability.metrics import Counter
+        from infrastructure.observability.metrics import Counter
 
         counter = Counter("test", "Test")
 
@@ -219,7 +219,7 @@ class TestCounter(unittest.TestCase):
 
     def test_properties(self):
         """属性测试."""
-        from agentflow.observability.metrics import Counter
+        from infrastructure.observability.metrics import Counter
 
         counter = Counter("my_counter", "My description")
         self.assertEqual(counter.name, "my_counter")
@@ -231,7 +231,7 @@ class TestGauge(unittest.TestCase):
 
     def test_set_and_get(self):
         """设置和获取测试."""
-        from agentflow.observability.metrics import Gauge
+        from infrastructure.observability.metrics import Gauge
 
         gauge = Gauge("test_gauge", "Test gauge")
 
@@ -243,7 +243,7 @@ class TestGauge(unittest.TestCase):
 
     def test_inc_and_dec(self):
         """增减测试."""
-        from agentflow.observability.metrics import Gauge
+        from infrastructure.observability.metrics import Gauge
 
         gauge = Gauge("test_gauge", "Test gauge")
 
@@ -262,7 +262,7 @@ class TestGauge(unittest.TestCase):
 
     def test_with_labels(self):
         """带标签测试."""
-        from agentflow.observability.metrics import Gauge
+        from infrastructure.observability.metrics import Gauge
 
         gauge = Gauge("connections", "Active connections", label_names=["server"])
 
@@ -278,7 +278,7 @@ class TestHistogram(unittest.TestCase):
 
     def test_observe(self):
         """观测测试."""
-        from agentflow.observability.metrics import Histogram
+        from infrastructure.observability.metrics import Histogram
 
         histogram = Histogram("request_duration", "Request duration")
 
@@ -295,7 +295,7 @@ class TestHistogram(unittest.TestCase):
 
     def test_time_context_manager(self):
         """时间上下文管理器测试."""
-        from agentflow.observability.metrics import Histogram
+        from infrastructure.observability.metrics import Histogram
 
         histogram = Histogram("duration", "Duration")
 
@@ -308,7 +308,7 @@ class TestHistogram(unittest.TestCase):
 
     def test_empty_stats(self):
         """空统计测试."""
-        from agentflow.observability.metrics import Histogram
+        from infrastructure.observability.metrics import Histogram
 
         histogram = Histogram("empty", "Empty")
         stats = histogram.get_stats()
@@ -319,7 +319,7 @@ class TestHistogram(unittest.TestCase):
 
     def test_custom_buckets(self):
         """自定义桶测试."""
-        from agentflow.observability.metrics import Histogram
+        from infrastructure.observability.metrics import Histogram
 
         buckets = (0.1, 0.5, 1.0, 5.0)
         histogram = Histogram("custom", "Custom", buckets=buckets)
@@ -338,7 +338,7 @@ class TestMetricsCollector(unittest.TestCase):
 
     def test_counter_creation(self):
         """创建计数器测试."""
-        from agentflow.observability.metrics import MetricsCollector
+        from infrastructure.observability.metrics import MetricsCollector
 
         collector = MetricsCollector(prefix="test")
         counter = collector.counter("requests", "Total requests")
@@ -351,7 +351,7 @@ class TestMetricsCollector(unittest.TestCase):
 
     def test_gauge_creation(self):
         """创建 Gauge 测试."""
-        from agentflow.observability.metrics import MetricsCollector
+        from infrastructure.observability.metrics import MetricsCollector
 
         collector = MetricsCollector(prefix="test")
         gauge = collector.gauge("connections", "Active connections")
@@ -360,7 +360,7 @@ class TestMetricsCollector(unittest.TestCase):
 
     def test_histogram_creation(self):
         """创建 Histogram 测试."""
-        from agentflow.observability.metrics import MetricsCollector
+        from infrastructure.observability.metrics import MetricsCollector
 
         collector = MetricsCollector(prefix="test")
         histogram = collector.histogram("duration", "Duration")
@@ -369,7 +369,7 @@ class TestMetricsCollector(unittest.TestCase):
 
     def test_collect(self):
         """收集指标测试."""
-        from agentflow.observability.metrics import MetricsCollector
+        from infrastructure.observability.metrics import MetricsCollector
 
         collector = MetricsCollector(prefix="app")
         counter = collector.counter("requests", "Requests")
@@ -382,7 +382,7 @@ class TestMetricsCollector(unittest.TestCase):
 
     def test_to_prometheus(self):
         """Prometheus 格式输出测试."""
-        from agentflow.observability.metrics import MetricsCollector
+        from infrastructure.observability.metrics import MetricsCollector
 
         collector = MetricsCollector(prefix="app")
         counter = collector.counter("requests", "Total requests")
@@ -398,7 +398,7 @@ class TestSetupMetrics(unittest.TestCase):
 
     def test_setup_and_get(self):
         """设置和获取测试."""
-        from agentflow.observability.metrics import get_metrics, setup_metrics
+        from infrastructure.observability.metrics import get_metrics, setup_metrics
 
         collector = setup_metrics(prefix="myapp")
         self.assertEqual(collector._prefix, "myapp")
@@ -412,7 +412,7 @@ class TestSpanContext(unittest.TestCase):
 
     def test_generate_root(self):
         """生成根上下文测试."""
-        from agentflow.observability.tracing import SpanContext
+        from infrastructure.observability.tracing import SpanContext
 
         ctx = SpanContext.generate()
         self.assertIsNotNone(ctx.trace_id)
@@ -421,7 +421,7 @@ class TestSpanContext(unittest.TestCase):
 
     def test_generate_child(self):
         """生成子上下文测试."""
-        from agentflow.observability.tracing import SpanContext
+        from infrastructure.observability.tracing import SpanContext
 
         parent = SpanContext.generate()
         child = SpanContext.generate(parent)
@@ -436,7 +436,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_creation(self):
         """Span 创建测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         ctx = SpanContext.generate()
         span = Span(name="test-span", context=ctx)
@@ -447,7 +447,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_attributes(self):
         """Span 属性测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         span = Span(name="test", context=SpanContext.generate())
         span.set_attribute("key", "value")
@@ -456,7 +456,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_events(self):
         """Span 事件测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         span = Span(name="test", context=SpanContext.generate())
         span.add_event("event1", {"detail": "test"})
@@ -466,7 +466,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_status(self):
         """Span 状态测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         span = Span(name="test", context=SpanContext.generate())
         span.set_status("error", "Something went wrong")
@@ -476,7 +476,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_end(self):
         """Span 结束测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         span = Span(name="test", context=SpanContext.generate())
         self.assertIsNone(span.end_time)
@@ -486,7 +486,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_duration(self):
         """Span 持续时间测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         span = Span(name="test", context=SpanContext.generate())
         time.sleep(0.01)
@@ -496,7 +496,7 @@ class TestSpan(unittest.TestCase):
 
     def test_span_to_dict(self):
         """Span 转字典测试."""
-        from agentflow.observability.tracing import Span, SpanContext
+        from infrastructure.observability.tracing import Span, SpanContext
 
         span = Span(name="test", context=SpanContext.generate())
         span.end()
@@ -514,14 +514,14 @@ class TestTracer(unittest.TestCase):
 
     def test_tracer_creation(self):
         """Tracer 创建测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("my-service")
         self.assertEqual(tracer._service_name, "my-service")
 
     def test_span_context_manager(self):
         """Span 上下文管理器测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test")
 
@@ -533,7 +533,7 @@ class TestTracer(unittest.TestCase):
 
     def test_span_exception_handling(self):
         """Span 异常处理测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test")
 
@@ -550,7 +550,7 @@ class TestTracer(unittest.TestCase):
 
     def test_nested_spans(self):
         """嵌套 Span 测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test")
 
@@ -561,7 +561,7 @@ class TestTracer(unittest.TestCase):
 
     def test_get_current_span(self):
         """获取当前 Span 测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test")
 
@@ -573,7 +573,7 @@ class TestTracer(unittest.TestCase):
 
     def test_get_spans(self):
         """获取所有 Span 测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test")
 
@@ -587,7 +587,7 @@ class TestTracer(unittest.TestCase):
 
     def test_clear(self):
         """清除 Span 测试."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test")
 
@@ -603,7 +603,7 @@ class TestSetupTracing(unittest.TestCase):
 
     def test_setup_and_get(self):
         """设置和获取测试."""
-        from agentflow.observability.tracing import get_tracer, setup_tracing
+        from infrastructure.observability.tracing import get_tracer, setup_tracing
 
         tracer = setup_tracing(service_name="myapp")
         self.assertEqual(tracer._service_name, "myapp")
@@ -617,28 +617,28 @@ class TestSentryIntegration(unittest.TestCase):
 
     def test_setup_without_dsn(self):
         """无 DSN 设置测试."""
-        from agentflow.observability.sentry_integration import setup_sentry
+        from infrastructure.observability.sentry_integration import setup_sentry
 
         result = setup_sentry(dsn=None)
         self.assertFalse(result)
 
     def test_is_sentry_initialized(self):
         """检查 Sentry 初始化状态."""
-        from agentflow.observability.sentry_integration import is_sentry_initialized
+        from infrastructure.observability.sentry_integration import is_sentry_initialized
 
         # Without setting up, should be False
         self.assertFalse(is_sentry_initialized())
 
     def test_capture_exception_not_initialized(self):
         """未初始化时捕获异常测试."""
-        from agentflow.observability.sentry_integration import capture_exception
+        from infrastructure.observability.sentry_integration import capture_exception
 
         result = capture_exception(ValueError("test"))
         self.assertIsNone(result)
 
     def test_capture_message_not_initialized(self):
         """未初始化时捕获消息测试."""
-        from agentflow.observability.sentry_integration import capture_message
+        from infrastructure.observability.sentry_integration import capture_message
 
         result = capture_message("test message")
         self.assertIsNone(result)
@@ -649,7 +649,7 @@ class TestSetupObservability(unittest.TestCase):
 
     def test_basic_setup(self):
         """基本设置测试."""
-        from agentflow.observability.setup import setup_observability
+        from infrastructure.observability.setup import setup_observability
 
         result = setup_observability(
             service_name="test-service",
@@ -665,7 +665,7 @@ class TestSetupObservability(unittest.TestCase):
 
     def test_setup_with_string_log_level(self):
         """字符串日志级别设置测试."""
-        from agentflow.observability.setup import setup_observability
+        from infrastructure.observability.setup import setup_observability
 
         result = setup_observability(
             service_name="test",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from agentflow.templates.template_manager import (
+from kernel.templates.template_manager import (
     TemplateManager,
     TemplateMetadata,
     TemplateParameter,

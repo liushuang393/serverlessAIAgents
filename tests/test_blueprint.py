@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from agentflow.core.blueprint import (
+from kernel.agents.blueprint import (
     AgentBlueprint,
     AgentBlueprintModel,
     ConstraintsConfig,

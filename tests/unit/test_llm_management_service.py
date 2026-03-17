@@ -18,7 +18,7 @@ from apps.platform.services.llm_management_persistence import PlatformEngineDepl
 from apps.platform.services.llm_management_setup_manager import LLMSetupCommandResult
 from apps.platform.services.llm_runtime_status import resolve_provider_runtime_statuses
 
-from agentflow.llm.gateway import EngineRuntimeStatus, ProviderConfig
+from infrastructure.llm.gateway import EngineRuntimeStatus, ProviderConfig
 
 
 class StubDeployRunner:

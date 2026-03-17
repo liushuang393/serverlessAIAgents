@@ -11,7 +11,7 @@ from kernel.events.sinks import EventSink, NoOpEventSink
 
 
 if TYPE_CHECKING:
-    from agentflow.providers.tool_provider import ToolProvider
+    from infrastructure.sandbox.tool_provider import ToolProvider
 
 
 class KernelToolExecutor:

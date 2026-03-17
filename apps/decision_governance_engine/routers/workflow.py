@@ -20,8 +20,8 @@ from apps.decision_governance_engine.services.agent_registry import AgentRegistr
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from agentflow.core.flow_definition import FlowDefinitionRegistry
-from agentflow.core.result_store import ResultStoreManager
+from kernel.core.flow_definition import FlowDefinitionRegistry
+from kernel.core.result_store import ResultStoreManager
 
 
 logger = logging.getLogger("decision_api.workflow")
@@ -92,7 +92,7 @@ async def get_agent_definitions() -> dict[str, Any]:
 @router.get("/api/a2a/agents")
 async def list_a2a_agents() -> list[dict[str, Any]]:
     """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
-    from agentflow.protocols.a2a_hub import get_hub
+    from kernel.protocols.a2a_hub import get_hub
 
     hub = get_hub()
     return [card.to_a2a_format() for card in hub.list_agents()]

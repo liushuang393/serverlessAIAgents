@@ -13,8 +13,8 @@ from apps.faq_system.routers.dependencies import invalidate_service_cache, is_ra
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
-from agentflow.knowledge.collection_manager import CollectionManager
-from agentflow.knowledge.document_manager import DocumentManager
+from shared.rag.collection_manager import CollectionManager
+from shared.rag.document_manager import DocumentManager
 
 
 if TYPE_CHECKING:
@@ -260,7 +260,7 @@ async def test_query(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    from agentflow.services import RAGService
+    from platform.services import RAGService
 
     rag_config.top_k = request.top_k
     service = RAGService(rag_config)

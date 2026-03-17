@@ -10,7 +10,7 @@ from apps.platform.schemas.llm_management_schemas import (
     LLMSwitchRequest,
     LLMSwitchRuntimeCheck,
 )
-from agentflow.llm.gateway import ProviderRuntimeStatus
+from infrastructure.llm.gateway import ProviderRuntimeStatus
 from apps.platform.services.llm_management_config_store import LLMConfigStore
 from apps.platform.services.llm_management_switch_service import LLMSwitchService
 from apps.platform.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator

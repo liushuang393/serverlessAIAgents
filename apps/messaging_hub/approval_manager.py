@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from agentflow.skills.gateway import RiskLevel
+from kernel.skills.gateway import RiskLevel
 
 
 if TYPE_CHECKING:

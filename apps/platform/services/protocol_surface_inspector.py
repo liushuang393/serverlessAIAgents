@@ -117,9 +117,9 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
 
         if "agentflow.protocols" in module:
             if "AgentCard" in imported_names:
-                self._record("a2a", node, "from agentflow.protocols import AgentCard")
+                self._record("a2a", node, "from kernel.protocols import AgentCard")
             if {"MCPClient", "MCPTool", "MCPToolClient"} & imported_names:
-                self._record("mcp", node, "from agentflow.protocols import MCP*")
+                self._record("mcp", node, "from kernel.protocols import MCP*")
 
         if "fastapi.responses" in module and "StreamingResponse" in imported_names:
             self._record("sse", node, "from fastapi.responses import StreamingResponse")

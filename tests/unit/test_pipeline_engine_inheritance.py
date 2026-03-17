@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from agentflow.engines import EngineConfig, PipelineEngine
+from kernel.engines import EngineConfig, PipelineEngine
 
 
 # ============================================================

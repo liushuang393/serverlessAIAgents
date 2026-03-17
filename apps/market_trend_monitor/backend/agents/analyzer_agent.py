@@ -27,8 +27,8 @@ from apps.market_trend_monitor.backend.models import (
 )
 from apps.market_trend_monitor.backend.services.evidence_service import EvidenceService
 
-from agentflow import ResilientAgent
-from agentflow.skills import Skill, SkillRouter, SkillRuntime
+from kernel import ResilientAgent
+from kernel.skills import Skill, SkillRouter, SkillRuntime
 
 
 class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):

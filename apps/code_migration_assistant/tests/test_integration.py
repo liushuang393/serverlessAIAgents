@@ -6,7 +6,7 @@ import pytest
 from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
 
-from agentflow import MCPToolClient as MCPClient
+from kernel import MCPToolClient as MCPClient
 
 
 @pytest.mark.asyncio

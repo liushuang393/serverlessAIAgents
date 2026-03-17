@@ -5,12 +5,12 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
-from agentflow.protocols.a2a.agent_executor import (
+from kernel.protocols.a2a.agent_executor import (
     A2ARequestContext,
     ResilientAgentExecutor,
 )
-from agentflow.protocols.a2a.task_manager import A2ATaskManager
-from agentflow.protocols.a2a.types import (
+from kernel.protocols.a2a.task_manager import A2ATaskManager
+from kernel.protocols.a2a.types import (
     A2ATaskState,
     DataPart,
     Message,

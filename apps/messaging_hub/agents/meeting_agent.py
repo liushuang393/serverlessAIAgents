@@ -18,13 +18,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from agentflow.core.resilient_agent import ResilientAgent
-from agentflow.providers import get_llm
-from agentflow.skills.calendar import CalendarEvent
+from kernel.agents.resilient_agent import ResilientAgent
+from infrastructure.llm.providers import get_llm
+from kernel.skills.calendar import CalendarEvent
 
 
 if TYPE_CHECKING:
-    from agentflow.skills import CalendarSkill
+    from kernel.skills import CalendarSkill
 
 
 @dataclass

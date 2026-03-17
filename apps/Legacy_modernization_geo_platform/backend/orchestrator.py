@@ -48,7 +48,7 @@ from apps.Legacy_modernization_geo_platform.backend.settings import GeoPlatformS
 from fastapi import WebSocket
 from pydantic import BaseModel
 
-from agentflow.core.app_agent_runtime import AppAgentRuntime
+from kernel.agents.app_agent_runtime import AppAgentRuntime
 
 
 logger = logging.getLogger(__name__)
@@ -268,7 +268,7 @@ class GeoOrchestrator:
         from apps.Legacy_modernization_geo_platform.agents.legacy_semantics_agent import LegacySemanticsAgent
         from apps.Legacy_modernization_geo_platform.agents.question_graph_agent import QuestionGraphAgent
 
-        from agentflow.protocols.a2a_hub import get_hub
+        from kernel.protocols.a2a_hub import get_hub
 
         hub = get_hub()
         agents = [
@@ -618,7 +618,7 @@ class GeoOrchestrator:
 
     def _invoke_registered_agent(self, agent_name: str, input_data: dict[str, Any]) -> dict[str, Any] | None:
         """A2AHub 経由で Agent を同期呼び出し（スレッドセーフ）."""
-        from agentflow.protocols.a2a_hub import get_hub
+        from kernel.protocols.a2a_hub import get_hub
 
         hub = get_hub()
         if hub.discover(agent_name) is not None:

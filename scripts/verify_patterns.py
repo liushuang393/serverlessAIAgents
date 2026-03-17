@@ -1,10 +1,10 @@
 
 import asyncio
 import logging
-from agentflow.services.unified_rag import UnifiedRAGService, RAGPattern
-from agentflow.providers import EmbeddingProvider, VectorDBProvider, LLMProvider, get_llm
-from agentflow.providers.embedding_provider import MockEmbeddingProvider
-from agentflow.providers.vectordb_provider import MockVectorDBProvider
+from platform.services.unified_rag import UnifiedRAGService, RAGPattern
+from infrastructure.llm.providers import EmbeddingProvider, VectorDBProvider, LLMProvider, get_llm
+from infrastructure.llm.providers.embedding_provider import MockEmbeddingProvider
+from infrastructure.llm.providers.vectordb_provider import MockVectorDBProvider
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("verify_patterns")

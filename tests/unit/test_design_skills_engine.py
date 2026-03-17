@@ -33,14 +33,14 @@ class TestDesignSkillsEngine:
 
     async def test_engine_initializes(self) -> None:
         """エンジンが正常に初期化されること."""
-        from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
+        from kernel.skills.builtin.design_skills.engine import DesignSkillsEngine
 
         engine = DesignSkillsEngine(llm_client=None)
         assert engine is not None
 
     async def test_engine_has_correct_config(self) -> None:
         """エンジンの設定が正しいこと."""
-        from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
+        from kernel.skills.builtin.design_skills.engine import DesignSkillsEngine
 
         engine = DesignSkillsEngine(llm_client=None)
         assert engine._config.name == "design-skills-engine"

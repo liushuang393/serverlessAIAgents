@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.memory.fact_atomizer import FactAtomizer
-from agentflow.memory.memory_manager import MemoryManager
-from agentflow.memory.sensory_memory import SensoryMemory
-from agentflow.memory.types import MemoryEntry
+from shared.memory.fact_atomizer import FactAtomizer
+from shared.memory.memory_manager import MemoryManager
+from shared.memory.sensory_memory import SensoryMemory
+from infrastructure.memory.types import MemoryEntry
 
 
 class TestMemoryEntryProvenanceFields:
@@ -20,7 +20,7 @@ class TestMemoryEntryProvenanceFields:
         """MemoryEntry に source_id フィールドが存在すること."""
         from datetime import datetime
 
-        from agentflow.memory.types import MemoryType
+        from infrastructure.memory.types import MemoryType
 
         entry = MemoryEntry(
             id="test-id",
@@ -36,7 +36,7 @@ class TestMemoryEntryProvenanceFields:
         """MemoryEntry に source_excerpt フィールドが存在すること."""
         from datetime import datetime
 
-        from agentflow.memory.types import MemoryType
+        from infrastructure.memory.types import MemoryType
 
         entry = MemoryEntry(
             id="test-id",
@@ -52,7 +52,7 @@ class TestMemoryEntryProvenanceFields:
         """MemoryEntry に SPO フィールドが存在すること."""
         from datetime import datetime
 
-        from agentflow.memory.types import MemoryType
+        from infrastructure.memory.types import MemoryType
 
         entry = MemoryEntry(
             id="test-id",
@@ -72,7 +72,7 @@ class TestMemoryEntryProvenanceFields:
         """MemoryEntry に needs_coreference フィールドが存在すること."""
         from datetime import datetime
 
-        from agentflow.memory.types import MemoryType
+        from infrastructure.memory.types import MemoryType
 
         entry = MemoryEntry(
             id="test-id",
@@ -88,7 +88,7 @@ class TestMemoryEntryProvenanceFields:
         """デフォルト値が None/False であること."""
         from datetime import datetime
 
-        from agentflow.memory.types import MemoryType
+        from infrastructure.memory.types import MemoryType
 
         entry = MemoryEntry(
             id="test-id",
@@ -108,7 +108,7 @@ class TestMemoryEntryProvenanceFields:
         """to_dict() に出典フィールドが含まれること."""
         from datetime import datetime
 
-        from agentflow.memory.types import MemoryType
+        from infrastructure.memory.types import MemoryType
 
         entry = MemoryEntry(
             id="test-id",

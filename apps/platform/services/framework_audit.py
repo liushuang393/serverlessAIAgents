@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 from apps.platform.services.protocol_surface_inspector import inspect_protocol_surface
 
-from agentflow.governance.plugin_registry import PluginRegistry
+from harness.governance.plugin_registry import PluginRegistry
 
 
 if TYPE_CHECKING:

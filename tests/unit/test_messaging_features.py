@@ -15,17 +15,17 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentflow.channels.signal import SignalAdapter
-from agentflow.channels.teams import TeamsAdapter
-from agentflow.channels.whatsapp import WhatsAppAdapter
-from agentflow.skills.conversation_export import (
+from shared.channels.signal import SignalAdapter
+from shared.channels.teams import TeamsAdapter
+from shared.channels.whatsapp import WhatsAppAdapter
+from kernel.skills.conversation_export import (
     ConversationExportSkill,
     ExportConfig,
     ExportFormat,
     ExportMessage,
 )
-from agentflow.skills.vision import VisionConfig, VisionProvider, VisionResult, VisionSkill
-from agentflow.skills.voice import TTSVoice, VoiceConfig, VoiceProvider, VoiceSkill
+from kernel.skills.vision import VisionConfig, VisionProvider, VisionResult, VisionSkill
+from kernel.skills.voice import TTSVoice, VoiceConfig, VoiceProvider, VoiceSkill
 
 
 # =============================================================================

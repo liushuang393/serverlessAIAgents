@@ -35,10 +35,10 @@ from apps.market_trend_monitor.backend.services.registry import (
     source_reliability_tracker,
 )
 
-from agentflow import Flow, create_flow
-from agentflow.core.agent_factory import AgentFactorySpec
-from agentflow.core.agent_factory import create as create_agent
-from agentflow.security import SafetyMixin
+from kernel import Flow, create_flow
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from infrastructure.security import SafetyMixin
 
 
 logger = logging.getLogger(__name__)

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.patterns.composer import (
+from kernel.agents.agent_block import AgentBlock
+from kernel.patterns.composer import (
     AgentComposer,
     AgentNode,
     AgentRole,

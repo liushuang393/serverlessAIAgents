@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agentflow.knowledge.api_ingestion import APIIngestor, APIIngestResult
+from shared.rag.api_ingestion import APIIngestor, APIIngestResult
 
 
 async def test_ingest_json_api_returns_typed_result() -> None:

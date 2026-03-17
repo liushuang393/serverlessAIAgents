@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow import agent
+from kernel import agent
 
 from apps.code_migration_assistant.agents.prompts import BUSINESS_SEMANTICS_PROMPT
 from apps.code_migration_assistant.workflow.models import (

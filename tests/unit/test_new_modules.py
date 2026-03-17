@@ -18,7 +18,7 @@ class TestDocumentLoader(unittest.TestCase):
 
     def test_document_chunk_create(self):
         """DocumentChunk の作成テスト."""
-        from agentflow.knowledge.document_loader import DocumentChunk
+        from shared.rag.document_loader import DocumentChunk
 
         chunk = DocumentChunk.create(
             content="Test content",
@@ -35,7 +35,7 @@ class TestDocumentLoader(unittest.TestCase):
 
     def test_text_loader_supports(self):
         """TextLoader のサポート判定テスト."""
-        from agentflow.knowledge.document_loader import TextLoader
+        from shared.rag.document_loader import TextLoader
 
         loader = TextLoader()
         self.assertTrue(loader.supports("test.txt"))
@@ -44,7 +44,7 @@ class TestDocumentLoader(unittest.TestCase):
 
     def test_markdown_loader_supports(self):
         """MarkdownLoader のサポート判定テスト."""
-        from agentflow.knowledge.document_loader import MarkdownLoader
+        from shared.rag.document_loader import MarkdownLoader
 
         loader = MarkdownLoader()
         self.assertTrue(loader.supports("test.md"))
@@ -57,7 +57,7 @@ class TestRAGConfig(unittest.TestCase):
 
     def test_rag_config_defaults(self):
         """RAGConfig のデフォルト値テスト."""
-        from agentflow.knowledge.rag_pipeline import RAGConfig
+        from shared.rag.rag_pipeline import RAGConfig
 
         config = RAGConfig()
         self.assertEqual(config.top_k, 5)
@@ -66,7 +66,7 @@ class TestRAGConfig(unittest.TestCase):
 
     def test_rag_result(self):
         """RAGResult の作成テスト."""
-        from agentflow.knowledge.rag_pipeline import RAGResult
+        from shared.rag.rag_pipeline import RAGResult
 
         result = RAGResult(
             answer="Test answer",
@@ -84,7 +84,7 @@ class TestObservabilityLogging(unittest.TestCase):
 
     def test_log_level_enum(self):
         """LogLevel 列挙型テスト."""
-        from agentflow.observability.logging import LogLevel
+        from infrastructure.observability.logging import LogLevel
 
         self.assertEqual(LogLevel.DEBUG.value, "DEBUG")
         self.assertEqual(LogLevel.INFO.value, "INFO")
@@ -92,7 +92,7 @@ class TestObservabilityLogging(unittest.TestCase):
 
     def test_logger_creation(self):
         """AgentFlowLogger の作成テスト."""
-        from agentflow.observability.logging import AgentFlowLogger
+        from infrastructure.observability.logging import AgentFlowLogger
 
         logger = AgentFlowLogger("test-logger")
         self.assertIsNotNone(logger)
@@ -103,7 +103,7 @@ class TestMetrics(unittest.TestCase):
 
     def test_counter_increment(self):
         """Counter のインクリメントテスト."""
-        from agentflow.observability.metrics import Counter
+        from infrastructure.observability.metrics import Counter
 
         counter = Counter("test_counter", "Test counter")
         counter.inc()
@@ -113,7 +113,7 @@ class TestMetrics(unittest.TestCase):
 
     def test_gauge_set(self):
         """Gauge の設定テスト."""
-        from agentflow.observability.metrics import Gauge
+        from infrastructure.observability.metrics import Gauge
 
         gauge = Gauge("test_gauge", "Test gauge")
         gauge.set(10)
@@ -125,7 +125,7 @@ class TestMetrics(unittest.TestCase):
 
     def test_histogram_observe(self):
         """Histogram の観測テスト."""
-        from agentflow.observability.metrics import Histogram
+        from infrastructure.observability.metrics import Histogram
 
         histogram = Histogram("test_histogram", "Test histogram")
         histogram.observe(0.5)
@@ -143,7 +143,7 @@ class TestTracing(unittest.TestCase):
 
     def test_span_context_generate(self):
         """SpanContext の生成テスト."""
-        from agentflow.observability.tracing import SpanContext
+        from infrastructure.observability.tracing import SpanContext
 
         context = SpanContext.generate()
         self.assertIsNotNone(context.trace_id)
@@ -152,7 +152,7 @@ class TestTracing(unittest.TestCase):
 
     def test_span_context_with_parent(self):
         """親付きSpanContext の生成テスト."""
-        from agentflow.observability.tracing import SpanContext
+        from infrastructure.observability.tracing import SpanContext
 
         parent = SpanContext.generate()
         child = SpanContext.generate(parent)
@@ -162,7 +162,7 @@ class TestTracing(unittest.TestCase):
 
     def test_tracer_span(self):
         """Tracer のスパンテスト."""
-        from agentflow.observability.tracing import Tracer
+        from infrastructure.observability.tracing import Tracer
 
         tracer = Tracer("test-service")
         with tracer.span("test-operation") as span:
@@ -178,7 +178,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_generate_api_key(self):
         """API Key 生成テスト."""
-        from agentflow.security.api_key import generate_api_key
+        from infrastructure.security.api_key import generate_api_key
 
         key = generate_api_key()
         self.assertTrue(key.startswith("sk-"))
@@ -186,7 +186,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_api_key_manager_create_validate(self):
         """API Key の作成と検証テスト."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         raw_key, _api_key = manager.create_key("test-key", scopes=["read", "write"])
@@ -199,7 +199,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_api_key_manager_revoke(self):
         """API Key の無効化テスト."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         raw_key, api_key = manager.create_key("test-key")
@@ -217,7 +217,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_rate_limiter_allow(self):
         """レート制限（許可）テスト."""
-        from agentflow.security.rate_limiter import RateLimiter
+        from infrastructure.security.rate_limiter import RateLimiter
 
         limiter = RateLimiter(requests_per_minute=10)
 
@@ -232,7 +232,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_rate_limiter_deny(self):
         """レート制限（拒否）テスト."""
-        from agentflow.security.rate_limiter import RateLimiter
+        from infrastructure.security.rate_limiter import RateLimiter
 
         limiter = RateLimiter(requests_per_minute=2)
 
@@ -254,7 +254,7 @@ class TestRBAC(unittest.TestCase):
 
     def test_rbac_default_roles(self):
         """デフォルトロールテスト."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         rbac = RBACManager()
         roles = rbac.list_roles()
@@ -266,7 +266,7 @@ class TestRBAC(unittest.TestCase):
 
     def test_rbac_permission_check(self):
         """パーミッションチェックテスト."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         rbac = RBACManager()
         rbac.assign_role("user-1", "admin")
@@ -282,7 +282,7 @@ class TestMockLLM(unittest.TestCase):
 
     def test_mock_llm_response(self):
         """Mock LLM レスポンステスト."""
-        from agentflow.testing.mock_llm import create_mock_llm
+        from harness.testing.mock_llm import create_mock_llm
 
         mock = create_mock_llm("Hello, I'm a mock!")
 
@@ -296,7 +296,7 @@ class TestMockLLM(unittest.TestCase):
 
     def test_mock_llm_pattern_response(self):
         """Mock LLM パターンレスポンステスト."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         mock = MockLLMProvider()
         mock.set_response("Default response")
@@ -312,7 +312,7 @@ class TestMockLLM(unittest.TestCase):
 
     def test_mock_llm_call_tracking(self):
         """Mock LLM 呼び出し追跡テスト."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         mock = MockLLMProvider()
 
@@ -332,7 +332,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_docker_config_defaults(self):
         """DockerConfig デフォルト値テスト."""
-        from agentflow.deploy.docker_generator import DockerConfig
+        from platform.deploy.docker_generator import DockerConfig
 
         config = DockerConfig()
         self.assertEqual(config.python_version, "3.13")
@@ -340,7 +340,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_generate_dockerfile(self):
         """Dockerfile 生成テスト."""
-        from agentflow.deploy.docker_generator import DockerConfig, generate_dockerfile
+        from platform.deploy.docker_generator import DockerConfig, generate_dockerfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(app_name="test-app")
@@ -353,7 +353,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_generate_github_actions(self):
         """GitHub Actions 生成テスト."""
-        from agentflow.deploy.ci_cd_generator import CICDConfig, generate_github_actions
+        from platform.deploy.ci_cd_generator import CICDConfig, generate_github_actions
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(app_name="test-app")

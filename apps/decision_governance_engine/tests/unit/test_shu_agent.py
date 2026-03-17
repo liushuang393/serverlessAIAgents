@@ -54,7 +54,7 @@ class TestShuAgentInit:
 
     def test_agent_inherits_resilient_agent(self, shu_agent: ShuAgent) -> None:
         """Test that ShuAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(shu_agent, ResilientAgent)
 

@@ -47,7 +47,7 @@ from apps.decision_governance_engine.startup import log_startup_info
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agentflow import LogLevel, setup_logging
+from kernel import LogLevel, setup_logging
 
 
 logger = logging.getLogger("decision_api")
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
         # RAG 管理テーブルの初期化
         try:
-            from agentflow.knowledge.models import Base as RAGBase
+            from shared.rag.models import Base as RAGBase
             from apps.decision_governance_engine.repositories.database import _db
 
             async with _db.engine.begin() as conn:
@@ -83,8 +83,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
         # CollectionManager / DocumentManager の初期化
         try:
-            from agentflow.knowledge.collection_manager import CollectionManager
-            from agentflow.knowledge.document_manager import DocumentManager
+            from shared.rag.collection_manager import CollectionManager
+            from shared.rag.document_manager import DocumentManager
             from apps.decision_governance_engine.repositories.database import get_db_session
             from apps.decision_governance_engine.routers.knowledge_collections import (
                 init_managers as init_collection_managers,

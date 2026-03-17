@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.context.retrieval_gate import RetrievalGate, RetrievalReason
-from agentflow.evolution.types import RetrievalDecisionInput, RetrievalMode, StalenessRisk
+from harness.context.retrieval_gate import RetrievalGate, RetrievalReason
+from shared.evolution.types import RetrievalDecisionInput, RetrievalMode, StalenessRisk
 
 
 @pytest.mark.asyncio

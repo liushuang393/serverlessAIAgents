@@ -1,6 +1,6 @@
 """Unit tests for RLM config module."""
 
-from agentflow.context.rlm.config import (
+from harness.context.rlm.config import (
     ActionType,
     RLMConfig,
     StopReason,

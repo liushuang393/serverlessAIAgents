@@ -16,8 +16,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
-from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from kernel.skills.builtin.design_skills.engine import DesignSkillsEngine
 
 
 if TYPE_CHECKING:
@@ -111,7 +111,7 @@ async def health() -> dict[str, Any]:
 @app.get("/api/a2a/agents")
 async def list_a2a_agents() -> list[dict[str, Any]]:
     """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
-    from agentflow.protocols.a2a_hub import get_hub
+    from kernel.protocols.a2a_hub import get_hub
 
     hub = get_hub()
     return [card.to_a2a_format() for card in hub.list_agents()]

@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.state.actions import (
+from kernel.state.actions import (
     ActionType,
     add_result,
     create_action,
@@ -12,7 +12,7 @@ from agentflow.state.actions import (
     update_context,
     update_progress,
 )
-from agentflow.state.selectors import (
+from kernel.state.selectors import (
     StateSelector,
     select,
     select_context,
@@ -20,7 +20,7 @@ from agentflow.state.selectors import (
     select_progress,
     select_results,
 )
-from agentflow.state.store import GlobalStateStore
+from kernel.state.store import GlobalStateStore
 
 
 class TestActions:

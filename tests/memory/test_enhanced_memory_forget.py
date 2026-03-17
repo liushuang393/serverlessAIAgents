@@ -4,7 +4,7 @@ import datetime
 
 import pytest
 
-from agentflow.memory.enhanced_memory import EnhancedMemoryManager, MemoryConfig
+from shared.memory.enhanced_memory import EnhancedMemoryManager, MemoryConfig
 
 
 @pytest.mark.asyncio
@@ -71,7 +71,7 @@ class TestForgetLowImportance:
         memory_id = entry.id
 
         # 長期記憶に強制書き込み（内部テスト用）
-        from agentflow.memory.types import MemoryEntry, MemoryType
+        from infrastructure.memory.types import MemoryEntry, MemoryType
 
         lt_entry = MemoryEntry(
             id=memory_id,

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentflow.protocols.a2a_hub import get_hub, reset_hub
+from kernel.protocols.a2a_hub import get_hub, reset_hub
 
 
 @pytest.fixture(autouse=True)
@@ -19,7 +19,7 @@ def _clean_hub():
 class TestDGEHubRegistration:
     def test_get_agent_registers_to_hub(self):
         """AgentRegistry.get_agent() が A2AHub に登録することを検証."""
-        from agentflow.protocols.a2a_hub import get_hub
+        from kernel.protocols.a2a_hub import get_hub
 
         hub = get_hub()
 

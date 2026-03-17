@@ -45,7 +45,7 @@ BizCore AI は責務を明確に分離した六層構造で設計されていま
 | **Shared** | `shared/` | LLM Gateway、RAG、Access Control、Trace、Audit 等の共通サービス |
 | **BizCore Kernel** | `kernel/` | Agent Runtime、Flow Engine、Orchestration、Protocol 実装 |
 | **BizCore Harness** | `harness/` | Governance、Policy、Approval、Budget、Evaluation、Guardrails |
-| **BizCore Platform** | `apps/platform/` | Control Plane — App の作成・設定・実行・観測・配信を集約 |
+| **BizCore Platform** | `platform/` | Control Plane — App の作成・設定・実行・観測・配信を集約 |
 | **BizCore Studios** | `apps/*/` | 業務アプリ — Migration / FAQ / Assistant 等の独立製品単位 |
 
 > **設計原則**: 下位層は上位層に依存しない。Kernel は Platform/App を import せず、Harness は hook 経由でのみ Kernel に接続する。
@@ -131,7 +131,8 @@ INFRA --> PROVIDER
 - `shared/`: 共通サービス（Gateway / RAG / Access / Trace / Audit）
 - `kernel/`: Agent Runtime / Flow Engine / Orchestration / Protocol
 - `harness/`: Governance / Policy / Approval / Budget / Evaluation
-- `apps/`: BizCore Platform + BizCore Studios（業務アプリ群）
+- `platform/`: BizCore Platform の正規実装（Control Plane）
+- `apps/`: BizCore Studios（業務アプリ群）+ `apps/platform` shell
 
 ### レガシー互換
 - `agentflow/`: 旧 Kernel（`kernel/` への re-export 層として維持中）

@@ -13,7 +13,7 @@ class TestDockerConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.deploy.docker_generator import DockerConfig
+        from platform.deploy.docker_generator import DockerConfig
 
         config = DockerConfig()
         self.assertEqual(config.app_name, "agentflow-app")
@@ -26,7 +26,7 @@ class TestDockerConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.deploy.docker_generator import DockerConfig
+        from platform.deploy.docker_generator import DockerConfig
 
         config = DockerConfig(
             app_name="my-app",
@@ -47,7 +47,7 @@ class TestGenerateDockerfile(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.docker_generator import DockerConfig, generate_dockerfile
+        from platform.deploy.docker_generator import DockerConfig, generate_dockerfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(python_version="3.13", port=8000)
@@ -62,7 +62,7 @@ class TestGenerateDockerfile(unittest.TestCase):
 
     def test_with_kwargs(self):
         """使用 kwargs 测试."""
-        from agentflow.deploy.docker_generator import generate_dockerfile
+        from platform.deploy.docker_generator import generate_dockerfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_dockerfile(tmpdir, app_name="custom-app")
@@ -76,7 +76,7 @@ class TestGenerateDockerCompose(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.docker_generator import generate_docker_compose
+        from platform.deploy.docker_generator import generate_docker_compose
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_docker_compose(tmpdir, app_name="myapp", port=8000)
@@ -90,7 +90,7 @@ class TestGenerateDockerCompose(unittest.TestCase):
 
     def test_with_env_vars(self):
         """带环境变量测试."""
-        from agentflow.deploy.docker_generator import DockerConfig, generate_docker_compose
+        from platform.deploy.docker_generator import DockerConfig, generate_docker_compose
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(
@@ -109,7 +109,7 @@ class TestGenerateDockerIgnore(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.docker_generator import generate_dockerignore
+        from platform.deploy.docker_generator import generate_dockerignore
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_dockerignore(tmpdir)
@@ -128,7 +128,7 @@ class TestServerlessConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.deploy.serverless_generator import ServerlessConfig
+        from platform.deploy.serverless_generator import ServerlessConfig
 
         config = ServerlessConfig()
         self.assertEqual(config.app_name, "agentflow-app")
@@ -141,7 +141,7 @@ class TestServerlessConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.deploy.serverless_generator import ServerlessConfig
+        from platform.deploy.serverless_generator import ServerlessConfig
 
         config = ServerlessConfig(
             app_name="custom-app",
@@ -162,7 +162,7 @@ class TestGenerateVercelConfig(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.serverless_generator import generate_vercel_config
+        from platform.deploy.serverless_generator import generate_vercel_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_vercel_config(tmpdir)
@@ -177,7 +177,7 @@ class TestGenerateVercelConfig(unittest.TestCase):
 
     def test_with_env_vars(self):
         """带环境变量测试."""
-        from agentflow.deploy.serverless_generator import ServerlessConfig, generate_vercel_config
+        from platform.deploy.serverless_generator import ServerlessConfig, generate_vercel_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
             serverless_config = ServerlessConfig(env_vars={"API_KEY": "secret"})
@@ -193,7 +193,7 @@ class TestGenerateAWSLambdaConfig(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.serverless_generator import generate_aws_lambda_config
+        from platform.deploy.serverless_generator import generate_aws_lambda_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_aws_lambda_config(tmpdir)
@@ -207,7 +207,7 @@ class TestGenerateAWSLambdaConfig(unittest.TestCase):
 
     def test_with_config(self):
         """带配置测试."""
-        from agentflow.deploy.serverless_generator import (
+        from platform.deploy.serverless_generator import (
             ServerlessConfig,
             generate_aws_lambda_config,
         )
@@ -231,7 +231,7 @@ class TestGenerateRequirementsTxt(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.serverless_generator import generate_requirements_txt
+        from platform.deploy.serverless_generator import generate_requirements_txt
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_requirements_txt(tmpdir)
@@ -245,7 +245,7 @@ class TestGenerateRequirementsTxt(unittest.TestCase):
 
     def test_with_extra_packages(self):
         """带额外包测试."""
-        from agentflow.deploy.serverless_generator import generate_requirements_txt
+        from platform.deploy.serverless_generator import generate_requirements_txt
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_requirements_txt(tmpdir, extra_packages=["redis", "celery"])
@@ -260,7 +260,7 @@ class TestCICDConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.deploy.ci_cd_generator import CICDConfig
+        from platform.deploy.ci_cd_generator import CICDConfig
 
         config = CICDConfig()
         self.assertEqual(config.app_name, "agentflow-app")
@@ -273,7 +273,7 @@ class TestCICDConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.deploy.ci_cd_generator import CICDConfig
+        from platform.deploy.ci_cd_generator import CICDConfig
 
         config = CICDConfig(
             app_name="my-app",
@@ -291,7 +291,7 @@ class TestGenerateGitHubActions(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.ci_cd_generator import generate_github_actions
+        from platform.deploy.ci_cd_generator import generate_github_actions
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_github_actions(tmpdir)
@@ -306,7 +306,7 @@ class TestGenerateGitHubActions(unittest.TestCase):
 
     def test_with_config(self):
         """带配置生成测试."""
-        from agentflow.deploy.ci_cd_generator import CICDConfig, generate_github_actions
+        from platform.deploy.ci_cd_generator import CICDConfig, generate_github_actions
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(
@@ -325,7 +325,7 @@ class TestGenerateGitLabCI(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.ci_cd_generator import generate_gitlab_ci
+        from platform.deploy.ci_cd_generator import generate_gitlab_ci
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_gitlab_ci(tmpdir)
@@ -339,7 +339,7 @@ class TestGenerateGitLabCI(unittest.TestCase):
 
     def test_with_config(self):
         """带配置生成测试."""
-        from agentflow.deploy.ci_cd_generator import CICDConfig, generate_gitlab_ci
+        from platform.deploy.ci_cd_generator import CICDConfig, generate_gitlab_ci
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(python_version="3.12")
@@ -354,7 +354,7 @@ class TestGeneratePreCommitConfig(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.ci_cd_generator import generate_pre_commit_config
+        from platform.deploy.ci_cd_generator import generate_pre_commit_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
             path = generate_pre_commit_config(tmpdir)
@@ -372,7 +372,7 @@ class TestDeployModuleExports(unittest.TestCase):
 
     def test_imports(self):
         """导入测试."""
-        from agentflow.deploy import (
+        from platform.deploy import (
             generate_all,
             generate_docker_compose,
             generate_dockerfile,
@@ -389,7 +389,7 @@ class TestGenerateAll(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy import generate_all
+        from platform.deploy import generate_all
 
         with tempfile.TemporaryDirectory() as tmpdir:
             result = generate_all(tmpdir, app_name="myapp")

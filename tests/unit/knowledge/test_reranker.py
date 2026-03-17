@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from agentflow.knowledge.reranker import (
+from shared.rag.reranker import (
     BaseReranker,
     BM25Reranker,
     CrossEncoderRuriReranker,
@@ -18,7 +18,7 @@ from agentflow.knowledge.reranker import (
     register_reranker,
     unregister_reranker,
 )
-from agentflow.services.rag_service import RAGConfig, RAGService
+from platform.services.rag_service import RAGConfig, RAGService
 
 
 def _build_docs(count: int) -> list[dict[str, Any]]:

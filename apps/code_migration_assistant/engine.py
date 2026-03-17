@@ -46,26 +46,26 @@ from apps.code_migration_assistant.workflow.models import (
     build_meta,
 )
 
-from agentflow.core.agent_factory import AgentFactorySpec
-from agentflow.core.agent_factory import create as create_agent
-from agentflow.engines.base import BaseEngine, EngineConfig
-from agentflow.governance.engine import GovernanceEngine, ToolExecutionContext
-from agentflow.governance.enterprise_audit import (
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from kernel.engines.base import BaseEngine, EngineConfig
+from harness.governance.engine import GovernanceEngine, ToolExecutionContext
+from harness.governance.enterprise_audit import (
     AuditEventType,
     AuditSeverity,
     EnterpriseAuditEvent,
     EnterpriseAuditLogger,
 )
-from agentflow.hitl.approval_flow import ApprovalFlow
-from agentflow.integrations.context_bridge import get_current_context
-from agentflow.providers.tool_provider import (
+from harness.approval.approval_flow import ApprovalFlow
+from shared.integrations.context_bridge import get_current_context
+from infrastructure.llm.providers.tool_provider import (
     OperationType,
     RegisteredTool,
     RiskLevel,
 )
-from agentflow.run import LightningTrainingRequest, TrajectoryAdapter
-from agentflow.security import SafetyMixin
-from agentflow.security.policy_engine import AuthContext
+from kernel.runtime import LightningTrainingRequest, TrajectoryAdapter
+from infrastructure.security import SafetyMixin
+from harness.policies.policy_engine import AuthContext
 
 
 # =============================================================================

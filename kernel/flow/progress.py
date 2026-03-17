@@ -13,7 +13,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from agentflow.protocols.agui_events import (
+from kernel.protocols.agui_events import (
     FlowCompleteEvent,
     FlowErrorEvent,
     FlowStartEvent,

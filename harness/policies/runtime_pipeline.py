@@ -20,8 +20,8 @@ if TYPE_CHECKING:
     from contracts.policy import EvalResult
     from contracts.tool import ToolRequest, ToolResult
 
-    from agentflow.governance import ToolExecutionContext
-    from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
+    from harness.governance import ToolExecutionContext
+    from infrastructure.sandbox.tool_provider import RegisteredTool, ToolProvider
 
 
 class HarnessedToolRuntime:

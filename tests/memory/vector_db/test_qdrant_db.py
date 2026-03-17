@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentflow.memory.types import MemoryEntry, MemoryType
-from agentflow.memory.vector_db.qdrant_db import QdrantDB
+from infrastructure.memory.types import MemoryEntry, MemoryType
+from infrastructure.memory.vector_db.qdrant_db import QdrantDB
 
 
 @pytest.fixture

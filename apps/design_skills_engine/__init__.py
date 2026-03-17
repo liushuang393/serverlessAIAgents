@@ -4,7 +4,7 @@
 このモジュールは後方互換性のための再エクスポートを提供する。
 
 クイックスタート:
-    >>> from agentflow.skills.builtin.design_skills import DesignSkillsEngine
+    >>> from kernel.skills.builtin.design_skills import DesignSkillsEngine
     >>>
     >>> engine = DesignSkillsEngine()
     >>> result = await engine.run({
@@ -16,7 +16,7 @@
     IntentAnalyzerAgent → PromptPlannerAgent → WorkflowExecutorAgent
 """
 
-from agentflow.skills.builtin.design_skills import DesignSkillsEngine
+from kernel.skills.builtin.design_skills import DesignSkillsEngine
 
 
 __all__ = ["DesignSkillsEngine"]

@@ -3,7 +3,7 @@
 import pytest
 from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 
-from agentflow import MCPToolRequest
+from kernel import MCPToolRequest
 
 
 @pytest.mark.asyncio

@@ -20,7 +20,7 @@ from apps.market_trend_monitor.backend.models import (
 from apps.market_trend_monitor.backend.services import EvidenceService
 from pydantic import BaseModel, Field
 
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 
 
 # ============================================================

@@ -3,8 +3,8 @@
 import stat
 from pathlib import Path
 
-from agentflow.skills.core.base import Skill
-from agentflow.skills.core.runtime import SkillRuntime
+from kernel.skills.core.base import Skill
+from kernel.skills.core.runtime import SkillRuntime
 
 
 def _make_skill(tmp_path: Path, scripts: dict[str, str]) -> Skill:

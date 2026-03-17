@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentflow.protocols.a2a_hub import get_hub, reset_hub
+from kernel.protocols.a2a_hub import get_hub, reset_hub
 
 
 @pytest.fixture(autouse=True)

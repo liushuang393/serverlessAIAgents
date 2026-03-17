@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from apps.auth_service.models.user import Base
 
-from agentflow.database import DatabaseConfig, DatabaseManager
+from infrastructure.database import DatabaseConfig, DatabaseManager
 
 
 if TYPE_CHECKING:

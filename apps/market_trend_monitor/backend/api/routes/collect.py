@@ -22,9 +22,9 @@ from apps.market_trend_monitor.backend.workflow import run as run_workflow
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from agentflow.core.agent_factory import AgentFactorySpec
-from agentflow.core.agent_factory import create as create_agent
-from agentflow.protocols.a2a_hub import get_hub
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from kernel.protocols.a2a_hub import get_hub
 
 
 router = APIRouter(prefix="/api", tags=["データ収集"])

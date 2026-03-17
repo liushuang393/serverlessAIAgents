@@ -103,7 +103,7 @@ class RAGNode(ServiceNode):
 
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """RAG検索を実行."""
-        from agentflow.services import RAGConfig, RAGService
+        from platform.services import RAGConfig, RAGService
 
         try:
             config = self.config if isinstance(self.config, RAGConfig) else RAGConfig()
@@ -144,7 +144,7 @@ class RAGNode(ServiceNode):
     @classmethod
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
-        from agentflow.services import RAGConfig
+        from platform.services import RAGConfig
 
         return {
             "type": "rag",
@@ -192,7 +192,7 @@ class Text2SQLNode(ServiceNode):
 
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """Text2SQLを実行."""
-        from agentflow.services import Text2SQLConfig, Text2SQLService
+        from platform.services import Text2SQLConfig, Text2SQLService
 
         try:
             config = self.config if isinstance(self.config, Text2SQLConfig) else Text2SQLConfig()
@@ -232,7 +232,7 @@ class Text2SQLNode(ServiceNode):
     @classmethod
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
-        from agentflow.services import Text2SQLConfig
+        from platform.services import Text2SQLConfig
 
         return {
             "type": "text2sql",
@@ -281,7 +281,7 @@ class ChartNode(ServiceNode):
 
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """チャートを生成."""
-        from agentflow.services import ChartConfig, ChartService
+        from platform.services import ChartConfig, ChartService
 
         try:
             config = self.config if isinstance(self.config, ChartConfig) else ChartConfig()
@@ -325,7 +325,7 @@ class ChartNode(ServiceNode):
     @classmethod
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
-        from agentflow.services import ChartConfig
+        from platform.services import ChartConfig
 
         return {
             "type": "chart",
@@ -375,7 +375,7 @@ class SuggestionNode(ServiceNode):
 
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """提案を生成."""
-        from agentflow.services import SuggestionConfig, SuggestionService
+        from platform.services import SuggestionConfig, SuggestionService
 
         try:
             config = self.config if isinstance(self.config, SuggestionConfig) else SuggestionConfig()
@@ -409,7 +409,7 @@ class SuggestionNode(ServiceNode):
     @classmethod
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
-        from agentflow.services import SuggestionConfig
+        from platform.services import SuggestionConfig
 
         return {
             "type": "suggestion",
@@ -460,7 +460,7 @@ class FAQNode(ServiceNode):
 
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """FAQ処理を実行."""
-        from agentflow.services import (
+        from platform.services import (
             RAGConfig,
             RAGService,
             SuggestionConfig,
@@ -559,7 +559,7 @@ class FAQNode(ServiceNode):
     @classmethod
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
-        from agentflow.services import RAGConfig, Text2SQLConfig
+        from platform.services import RAGConfig, Text2SQLConfig
 
         return {
             "type": "faq",

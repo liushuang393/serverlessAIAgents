@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agentflow.knowledge.scope_resolver import CollectionTarget, ScopeResolver
-from agentflow.security.auth_client.client import AuthClient
+from shared.rag.scope_resolver import CollectionTarget, ScopeResolver
+from infrastructure.security.auth_client.client import AuthClient
 
 
 class TestScopeResolver:

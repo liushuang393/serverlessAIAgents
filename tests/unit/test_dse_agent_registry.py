@@ -6,7 +6,7 @@ class TestDesignAgentRegistry:
 
     def _make_registry(self):
         """テスト用Registryインスタンスを生成."""
-        from agentflow.skills.builtin.design_skills.services.agent_registry import (
+        from kernel.skills.builtin.design_skills.services.agent_registry import (
             DesignAgentRegistry,
         )
 

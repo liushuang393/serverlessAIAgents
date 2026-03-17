@@ -12,13 +12,13 @@ import pytest
 from sqlalchemy import StaticPool, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from agentflow.knowledge.collection_manager import CollectionManager
-from agentflow.knowledge.document_manager import DocumentManager
-from agentflow.knowledge.models import (
+from shared.rag.collection_manager import CollectionManager
+from shared.rag.document_manager import DocumentManager
+from shared.rag.models import (
     Base,
     DocumentStatus,
 )
-from agentflow.services.rag_service import RerankerType
+from platform.services.rag_service import RerankerType
 
 
 # ---------------------------------------------------------------------------

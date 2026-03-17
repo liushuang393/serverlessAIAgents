@@ -8,6 +8,7 @@ from contracts.context import ContextPack
 from contracts.flow import AgentRoleSpec, FlowDefinition, FlowExecutionState, FlowStatus
 from contracts.policy import ApprovalRequest, EvalResult, PolicyDecision
 from contracts.protocol import ProtocolMessage
+from contracts.runtime.context import RuntimeContext
 from contracts.tool import ToolCallStatus, ToolRequest, ToolResult
 from contracts.trace import TraceRecord
 
@@ -30,6 +31,7 @@ __all__ = [
     "PolicyDecision",
     "ProtocolMessage",
     "RegisteredComponent",
+    "RuntimeContext",
     "ToolCallStatus",
     "ToggleableFactoryRegistry",
     "ToolRequest",

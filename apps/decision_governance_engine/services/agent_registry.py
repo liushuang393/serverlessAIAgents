@@ -26,14 +26,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from agentflow.core.agent_factory import AgentFactorySpec
-from agentflow.core.agent_factory import create as create_agent
-from agentflow.core.flow_definition import (
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from kernel.core.flow_definition import (
     AgentDefinition,
     FlowDefinition,
     FlowDefinitionRegistry,
 )
-from agentflow.patterns.progress_emitter import AgentMeta
+from kernel.patterns.progress_emitter import AgentMeta
 
 
 class AgentRegistry:
@@ -188,7 +188,7 @@ class AgentRegistry:
         self._agents[agent_id] = agent
 
         # A2AHub に登録（未登録の場合のみ）
-        from agentflow.protocols.a2a_hub import get_hub
+        from kernel.protocols.a2a_hub import get_hub
 
         hub = get_hub()
         agent_name = getattr(agent, "name", None) or type(agent).__name__

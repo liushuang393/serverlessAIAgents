@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import agentflow.protocols.mcp_client as _mcp_mod
-from agentflow.protocols.mcp_client import MCPClient
-from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
+import kernel.protocols.mcp_client as _mcp_mod
+from kernel.protocols.mcp_client import MCPClient
+from kernel.protocols.mcp_config import MCPConfig, MCPServerConfig
 
 # テスト環境で mcp パッケージの遅延インポートを事前に完了させる。
 # これにより @patch でモジュール変数を差し替えた後、
@@ -571,7 +571,7 @@ class TestMCPLazyImport:
 
     def test_protocols_init_lazy_imports(self):
         """protocols __init__ から MCPClient が遅延インポートで取得できることを検証."""
-        from agentflow import protocols
+        from kernel import protocols
 
         # __getattr__ 経由で取得
         client_cls = getattr(protocols, "MCPClient")
@@ -579,14 +579,14 @@ class TestMCPLazyImport:
 
     def test_protocols_init_lazy_imports_lazy_mcp_client(self):
         """LazyMCPClient が遅延インポートで取得できることを検証."""
-        from agentflow import protocols
+        from kernel import protocols
 
         lazy_cls = getattr(protocols, "LazyMCPClient")
         assert lazy_cls.__name__ == "LazyMCPClient"
 
     def test_protocols_init_lazy_imports_tool_index_entry(self):
         """ToolIndexEntry/ToolSearchResult が遅延インポートで取得できることを検証."""
-        from agentflow import protocols
+        from kernel import protocols
 
         entry_cls = getattr(protocols, "ToolIndexEntry")
         result_cls = getattr(protocols, "ToolSearchResult")
@@ -595,7 +595,7 @@ class TestMCPLazyImport:
 
     def test_protocols_init_unknown_attr_raises(self):
         """存在しない属性はAttributeErrorを送出することを検証."""
-        from agentflow import protocols
+        from kernel import protocols
 
         with pytest.raises(AttributeError, match="has no attribute"):
             getattr(protocols, "NonExistentClass")

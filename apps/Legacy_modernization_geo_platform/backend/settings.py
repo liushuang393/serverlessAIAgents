@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from agentflow.runtime import resolve_app_runtime
+from kernel.runtime import resolve_app_runtime
 
 
 APP_ROOT = Path(__file__).resolve().parents[1]

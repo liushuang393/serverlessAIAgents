@@ -16,7 +16,7 @@ from typing import Any
 
 from apps.decision_governance_engine.services.report_generator import ReportGenerator
 
-from agentflow.engines.report_builder import (
+from kernel.engines.report_builder import (
     ExecutiveSummary,
     ReportSection,
     SectionedReportBuilder,

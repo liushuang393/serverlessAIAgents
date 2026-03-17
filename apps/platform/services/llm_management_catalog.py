@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, get_args
 
-from agentflow.llm.gateway import load_gateway_config
-from agentflow.llm.models import MODELS
+from infrastructure.llm.gateway import load_gateway_config
+from infrastructure.llm.models import MODELS
 from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMCatalogBackend,

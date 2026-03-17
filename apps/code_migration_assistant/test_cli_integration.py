@@ -53,7 +53,7 @@ async def test_mcp_tools() -> bool:
             MCPToolRequest,
         )
 
-        from agentflow import MCPToolClient as MCPClient
+        from kernel import MCPToolClient as MCPClient
 
         # MCPClientを作成
         client = MCPClient()

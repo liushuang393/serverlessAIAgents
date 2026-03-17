@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from agentflow.observability.startup import log_startup_info as _framework_log_startup
+from infrastructure.observability.startup import log_startup_info as _framework_log_startup
 
 
 def _load_agent_config() -> dict[str, Any]:

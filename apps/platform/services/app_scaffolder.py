@@ -871,7 +871,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow.flow import create_flow
+from kernel.flow import create_flow
 from apps.{request.name}.agents import {primary_agent_class}
 
 

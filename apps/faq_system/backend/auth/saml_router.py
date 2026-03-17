@@ -6,7 +6,7 @@ from apps.faq_system.backend.auth.service import get_auth_service
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from agentflow.security.saml import SAMLProvider
+from infrastructure.security.saml import SAMLProvider
 
 
 router = APIRouter(prefix="/auth/saml", tags=["SAML"])
@@ -91,7 +91,7 @@ async def saml_acs(request: Request):
     service = get_auth_service()
 
     # マッピングロジック (IdP ごとに属性名が異なるため適宜調整が必要)
-    from agentflow.security.oauth2_provider import ExternalIdentity
+    from infrastructure.security.oauth2_provider import ExternalIdentity
 
     attrs = identity.attributes
     # 例: OKTA や Azure AD の一般的な属性名

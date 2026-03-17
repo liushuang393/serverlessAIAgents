@@ -18,7 +18,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from agentflow.llm.contracts import (
+from infrastructure.llm.contracts import (
     LLMContractsConfig,
     resolve_known_model_ids,
     resolve_known_providers,

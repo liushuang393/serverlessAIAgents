@@ -14,7 +14,7 @@ from apps.Legacy_modernization_geo_platform.backend.schemas import (
     SignalEntry,
 )
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class DemandSignalAgent(ResilientAgent[DemandSignalInput, DemandSignalOutput]):

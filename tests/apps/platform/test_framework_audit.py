@@ -211,7 +211,7 @@ def test_orchestration_protocols_detects_mcp_surface_via_ast(tmp_path: Path) -> 
     config = AppConfig.model_validate(manifest)
     app_dir = _write_app_source(
         tmp_path,
-        "from agentflow.protocols import MCPClient\nclient = MCPClient\n",
+        "from kernel.protocols import MCPClient\nclient = MCPClient\n",
     )
 
     issues = service._check_orchestration_protocols(

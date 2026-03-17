@@ -5,7 +5,7 @@
 
 import pytest
 
-from agentflow.commerce.interfaces import (
+from shared.commerce.interfaces import (
     ICart,
     ICommerceAI,
     ICommerceFlow,
@@ -18,12 +18,12 @@ from agentflow.commerce.interfaces import (
     IProduct,
     ITransaction,
 )
-from agentflow.commerce.interfaces.flow import (
+from shared.commerce.interfaces.flow import (
     FlowContext,
     FlowStatus,
     FlowStepType,
 )
-from agentflow.commerce.models import (
+from shared.commerce.models import (
     IntentType,
     PurchaseIntent,
 )

@@ -5,7 +5,7 @@ from datetime import datetime
 
 import pytest
 
-from agentflow.hitl import (
+from harness.approval import (
     ApprovalManager,
     ApprovalRequest,
     ApprovalResponse,

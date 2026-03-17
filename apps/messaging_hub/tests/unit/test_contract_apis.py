@@ -16,7 +16,7 @@ from apps.messaging_hub.execution_tracker import ExecutionTracker
 from apps.messaging_hub.skills_manager import SkillsManager
 from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 
-from agentflow.skills import RiskLevel
+from kernel.skills import RiskLevel
 
 
 @pytest_asyncio.fixture()

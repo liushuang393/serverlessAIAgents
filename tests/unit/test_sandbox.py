@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.sandbox import (
+from infrastructure.sandbox import (
     ExecutionResult,
     MockSandbox,
     SandboxConfig,

@@ -9,7 +9,7 @@ from datetime import datetime
 
 import pytest
 
-from agentflow.memory.fact_atomizer import AtomicFact, FactAtomizer, IngestionResult
+from shared.memory.fact_atomizer import AtomicFact, FactAtomizer, IngestionResult
 
 
 class TestHeuristicGate:

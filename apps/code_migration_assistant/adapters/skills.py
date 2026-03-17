@@ -1,4 +1,4 @@
-from agentflow.protocols.a2a_card import AgentSkill
+from kernel.protocols.a2a_card import AgentSkill
 
 
 # Source Language Skills

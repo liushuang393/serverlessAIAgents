@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 # Logging setup

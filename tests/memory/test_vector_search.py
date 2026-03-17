@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentflow.memory.types import MemoryEntry, MemoryType
-from agentflow.memory.vector_search import VectorSearch
+from infrastructure.memory.types import MemoryEntry, MemoryType
+from infrastructure.memory.vector_search import VectorSearch
 
 
 class TestVectorSearch:

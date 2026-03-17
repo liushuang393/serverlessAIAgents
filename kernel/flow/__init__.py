@@ -9,6 +9,9 @@ from kernel.flow.builder import FlowBuilder, create_flow
 from kernel.flow.context import FlowContext, FlowMetadata
 from kernel.flow.executor import FlowExecutor
 from kernel.flow.flow import Flow, MemoryAccessor
+
+# 後方互換エイリアス
+FlowWrapper = Flow
 from kernel.flow.graph import FlowGraph
 from kernel.flow.nodes import (
     AgentNode,
@@ -51,6 +54,7 @@ __all__ = [
     "CleanableAgent",
     "FAQNode",
     "Flow",
+    "FlowWrapper",
     "FlowBuilder",
     "FlowConfig",
     "FlowContext",

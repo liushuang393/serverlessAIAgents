@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from agentflow.flow import (
+from kernel.flow import (
     Flow,
     FlowBuilder,
     create_flow,

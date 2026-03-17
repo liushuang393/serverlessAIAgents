@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
-from agentflow.engines.base import BaseEngine, EngineConfig
-from agentflow.run import (
+from kernel.engines.base import BaseEngine, EngineConfig
+from kernel.runtime import (
     LightningTracer,
     LightningTrainingRequest,
     MemoryLightningStore,

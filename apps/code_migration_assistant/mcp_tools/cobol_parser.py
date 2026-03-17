@@ -14,7 +14,7 @@ from typing import Any
 
 from apps.code_migration_assistant.parsers import PLYCobolParser
 
-from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
+from kernel import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 class COBOLParser(MCPTool):

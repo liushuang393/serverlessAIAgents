@@ -2,11 +2,11 @@
 
 import pytest
 
-from agentflow.context.rlm.context_ops import (
+from harness.context.rlm.context_ops import (
     ContextOps,
     create_context_ops_prompt,
 )
-from agentflow.context.rlm.context_store import ContextStore
+from harness.context.rlm.context_store import ContextStore
 
 
 class TestContextOps:

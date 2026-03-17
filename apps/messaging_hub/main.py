@@ -58,8 +58,8 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from agentflow import WebSocketHub, get_llm
-from agentflow.channels import (
+from kernel import WebSocketHub, get_llm
+from shared.channels import (
     DiscordAdapter,
     MessageGateway,
     SignalAdapter,
@@ -68,15 +68,15 @@ from agentflow.channels import (
     TelegramAdapter,
     WhatsAppAdapter,
 )
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
-from agentflow.skills import (
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from kernel.skills import (
     ChatBotSkill,
     ConversationExportSkill,
     ExportFormat,
     RiskLevel,
     create_skill_gateway,
 )
-from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
+from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 # 配置日志
@@ -280,7 +280,7 @@ _lazy_tool_loader = LazyToolLoader(
 _file_organizer_agent = FileOrganizerAgent(gateway=_skill_gateway)
 
 # A2AHub に Agent を登録
-from agentflow.protocols.a2a_hub import get_hub as _get_a2a_hub
+from kernel.protocols.a2a_hub import get_hub as _get_a2a_hub
 
 
 _a2a_hub = _get_a2a_hub()
@@ -1312,7 +1312,7 @@ async def get_a2a_card() -> dict[str, Any]:
 @app.get("/api/a2a/agents")
 async def list_a2a_agents() -> list[dict[str, Any]]:
     """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
-    from agentflow.protocols.a2a_hub import get_hub
+    from kernel.protocols.a2a_hub import get_hub
 
     hub = get_hub()
     cards = hub.list_agents()

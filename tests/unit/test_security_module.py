@@ -13,7 +13,7 @@ class TestGenerateAPIKey(unittest.TestCase):
 
     def test_default_format(self):
         """默认格式测试."""
-        from agentflow.security.api_key import generate_api_key
+        from infrastructure.security.api_key import generate_api_key
 
         key = generate_api_key()
         # 默认前缀是 "sk"，格式是 "{prefix}-{token}"
@@ -21,14 +21,14 @@ class TestGenerateAPIKey(unittest.TestCase):
 
     def test_custom_prefix(self):
         """自定义前缀测试."""
-        from agentflow.security.api_key import generate_api_key
+        from infrastructure.security.api_key import generate_api_key
 
         key = generate_api_key(prefix="custom")
         self.assertTrue(key.startswith("custom-"))
 
     def test_custom_length(self):
         """自定义长度测试."""
-        from agentflow.security.api_key import generate_api_key
+        from infrastructure.security.api_key import generate_api_key
 
         key = generate_api_key(length=16)
         # 长度会因为 url_safe base64 编码而变化
@@ -40,7 +40,7 @@ class TestHashAPIKey(unittest.TestCase):
 
     def test_hashing(self):
         """哈希测试."""
-        from agentflow.security.api_key import hash_api_key
+        from infrastructure.security.api_key import hash_api_key
 
         key = "sk-test123"
         hashed = hash_api_key(key)
@@ -50,7 +50,7 @@ class TestHashAPIKey(unittest.TestCase):
 
     def test_consistent_hashing(self):
         """一致性哈希测试."""
-        from agentflow.security.api_key import hash_api_key
+        from infrastructure.security.api_key import hash_api_key
 
         key = "sk-test123"
         hash1 = hash_api_key(key)
@@ -60,7 +60,7 @@ class TestHashAPIKey(unittest.TestCase):
 
     def test_hashing_with_salt(self):
         """带盐哈希测试."""
-        from agentflow.security.api_key import hash_api_key
+        from infrastructure.security.api_key import hash_api_key
 
         key = "sk-test123"
         hash_no_salt = hash_api_key(key)
@@ -74,7 +74,7 @@ class TestAPIKey(unittest.TestCase):
 
     def test_creation_with_defaults(self):
         """默认值创建测试."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         key = APIKey(
             id="key-123",
@@ -91,7 +91,7 @@ class TestAPIKey(unittest.TestCase):
 
     def test_creation_with_all_params(self):
         """全参数创建测试."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         now = datetime.now(UTC)
         key = APIKey(
@@ -110,21 +110,21 @@ class TestAPIKey(unittest.TestCase):
 
     def test_is_valid_enabled(self):
         """有效性检查 - 启用状态."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         key = APIKey(id="1", name="test", key_hash="h")
         self.assertTrue(key.is_valid())
 
     def test_is_valid_disabled(self):
         """有效性检查 - 禁用状态."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         key = APIKey(id="1", name="test", key_hash="h", enabled=False)
         self.assertFalse(key.is_valid())
 
     def test_is_valid_expired(self):
         """有效性检查 - 过期."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         past = datetime.now(UTC) - timedelta(days=1)
         key = APIKey(id="1", name="test", key_hash="h", expires_at=past)
@@ -132,7 +132,7 @@ class TestAPIKey(unittest.TestCase):
 
     def test_has_scope(self):
         """作用域检查."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         key = APIKey(id="1", name="test", key_hash="h", scopes=["read", "write"])
         self.assertTrue(key.has_scope("read"))
@@ -140,14 +140,14 @@ class TestAPIKey(unittest.TestCase):
 
     def test_has_scope_wildcard(self):
         """通配符作用域检查."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         key = APIKey(id="1", name="test", key_hash="h", scopes=["*"])
         self.assertTrue(key.has_scope("anything"))
 
     def test_to_dict(self):
         """转字典测试."""
-        from agentflow.security.api_key import APIKey
+        from infrastructure.security.api_key import APIKey
 
         key = APIKey(id="1", name="test", key_hash="h")
         data = key.to_dict()
@@ -162,7 +162,7 @@ class TestAPIKeyConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.security.api_key import APIKeyConfig
+        from infrastructure.security.api_key import APIKeyConfig
 
         config = APIKeyConfig()
         self.assertEqual(config.key_prefix, "sk")
@@ -175,7 +175,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_create_key(self):
         """创建密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         raw_key, api_key = manager.create_key(name="test-key")
@@ -185,7 +185,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_create_key_with_scopes(self):
         """带权限范围创建测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         _raw_key, api_key = manager.create_key(name="scoped-key", scopes=["read", "write"])
@@ -194,7 +194,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_create_key_with_expiration(self):
         """带过期时间创建测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         expires = datetime.now(UTC) + timedelta(hours=1)
@@ -204,7 +204,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_validate(self):
         """验证测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         raw_key, _ = manager.create_key(name="test-key")
@@ -215,7 +215,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_validate_invalid_key(self):
         """验证无效密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         validated = manager.validate("invalid_key")
@@ -223,7 +223,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_revoke(self):
         """撤销密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         raw_key, api_key = manager.create_key(name="to-revoke")
@@ -236,7 +236,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_revoke_nonexistent(self):
         """撤销不存在的密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         result = manager.revoke("nonexistent")
@@ -244,7 +244,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_list_keys(self):
         """列出密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         manager.create_key(name="key1")
@@ -255,7 +255,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_list_keys_filter_disabled(self):
         """列出启用的密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         _, _api_key1 = manager.create_key(name="active")
@@ -268,7 +268,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_get_key(self):
         """获取密钥信息测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         _, api_key = manager.create_key(name="info-key")
@@ -279,7 +279,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_get_key_not_found(self):
         """获取不存在的密钥信息测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         fetched = manager.get_key("nonexistent")
@@ -287,7 +287,7 @@ class TestAPIKeyManager(unittest.TestCase):
 
     def test_delete(self):
         """删除密钥测试."""
-        from agentflow.security.api_key import APIKeyManager
+        from infrastructure.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
         _, api_key = manager.create_key(name="to-delete")
@@ -304,7 +304,7 @@ class TestRateLimitConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.security.rate_limiter import RateLimitConfig
+        from infrastructure.security.rate_limiter import RateLimitConfig
 
         config = RateLimitConfig()
         self.assertEqual(config.requests_per_minute, 60)
@@ -315,7 +315,7 @@ class TestRateLimitConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.security.rate_limiter import RateLimitConfig
+        from infrastructure.security.rate_limiter import RateLimitConfig
 
         config = RateLimitConfig(
             requests_per_minute=30,
@@ -330,7 +330,7 @@ class TestRateLimitInfo(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.rate_limiter import RateLimitInfo
+        from infrastructure.security.rate_limiter import RateLimitInfo
 
         info = RateLimitInfo(
             remaining=50,
@@ -348,7 +348,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_allow_under_limit(self):
         """限制内允许测试."""
-        from agentflow.security.rate_limiter import RateLimitConfig, RateLimiter
+        from infrastructure.security.rate_limiter import RateLimitConfig, RateLimiter
 
         config = RateLimitConfig(
             requests_per_minute=10,
@@ -367,7 +367,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_deny_over_limit(self):
         """超限拒绝测试."""
-        from agentflow.security.rate_limiter import RateLimitConfig, RateLimiter
+        from infrastructure.security.rate_limiter import RateLimitConfig, RateLimiter
 
         config = RateLimitConfig(
             requests_per_minute=2,
@@ -388,7 +388,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_separate_identifiers(self):
         """独立标识符测试."""
-        from agentflow.security.rate_limiter import RateLimitConfig, RateLimiter
+        from infrastructure.security.rate_limiter import RateLimitConfig, RateLimiter
 
         config = RateLimitConfig(requests_per_minute=2)
         limiter = RateLimiter(config)
@@ -406,7 +406,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_get_info(self):
         """获取限制信息测试."""
-        from agentflow.security.rate_limiter import RateLimiter
+        from infrastructure.security.rate_limiter import RateLimiter
 
         limiter = RateLimiter(requests_per_minute=10)
 
@@ -424,7 +424,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_reset(self):
         """重置测试."""
-        from agentflow.security.rate_limiter import RateLimiter
+        from infrastructure.security.rate_limiter import RateLimiter
 
         limiter = RateLimiter(requests_per_minute=10)
 
@@ -440,7 +440,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_reset_all(self):
         """全部重置测试."""
-        from agentflow.security.rate_limiter import RateLimiter
+        from infrastructure.security.rate_limiter import RateLimiter
 
         limiter = RateLimiter(requests_per_minute=10)
 
@@ -462,7 +462,7 @@ class TestRateLimitExceeded(unittest.TestCase):
 
     def test_exception_creation(self):
         """异常创建测试."""
-        from agentflow.security.rate_limiter import RateLimitExceeded
+        from infrastructure.security.rate_limiter import RateLimitExceeded
 
         exc = RateLimitExceeded(
             message="Rate limit exceeded",
@@ -480,7 +480,7 @@ class TestJWTConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.security.auth_middleware import JWTConfig
+        from infrastructure.security.auth_middleware import JWTConfig
 
         config = JWTConfig()
         self.assertEqual(config.algorithm, "HS256")
@@ -493,7 +493,7 @@ class TestAuthUser(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.auth_middleware import AuthUser
+        from infrastructure.security.auth_middleware import AuthUser
 
         user = AuthUser(
             id="user-123",
@@ -507,7 +507,7 @@ class TestAuthUser(unittest.TestCase):
 
     def test_has_role(self):
         """角色检查测试."""
-        from agentflow.security.auth_middleware import AuthUser
+        from infrastructure.security.auth_middleware import AuthUser
 
         user = AuthUser(id="1", roles=["admin", "user"])
 
@@ -516,7 +516,7 @@ class TestAuthUser(unittest.TestCase):
 
     def test_has_permission(self):
         """权限检查测试."""
-        from agentflow.security.auth_middleware import AuthUser
+        from infrastructure.security.auth_middleware import AuthUser
 
         user = AuthUser(id="1", permissions=["read", "write"])
 
@@ -525,14 +525,14 @@ class TestAuthUser(unittest.TestCase):
 
     def test_has_permission_wildcard(self):
         """通配符权限检查测试."""
-        from agentflow.security.auth_middleware import AuthUser
+        from infrastructure.security.auth_middleware import AuthUser
 
         user = AuthUser(id="1", permissions=["*"])
         self.assertTrue(user.has_permission("anything"))
 
     def test_has_permission_prefix(self):
         """前缀权限检查测试."""
-        from agentflow.security.auth_middleware import AuthUser
+        from infrastructure.security.auth_middleware import AuthUser
 
         user = AuthUser(id="1", permissions=["users:*"])
         self.assertTrue(user.has_permission("users:read"))
@@ -544,15 +544,15 @@ class TestAuthMiddleware(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.auth_middleware import AuthMiddleware
+        from infrastructure.security.auth_middleware import AuthMiddleware
 
         middleware = AuthMiddleware()
         self.assertIsNotNone(middleware)
 
     def test_authenticate_api_key(self):
         """API Key 认证测试."""
-        from agentflow.security.api_key import APIKeyManager
-        from agentflow.security.auth_middleware import AuthMiddleware
+        from infrastructure.security.api_key import APIKeyManager
+        from infrastructure.security.auth_middleware import AuthMiddleware
 
         manager = APIKeyManager()
         raw_key, _ = manager.create_key(name="test", scopes=["read"])
@@ -569,7 +569,7 @@ class TestAuthMiddleware(unittest.TestCase):
 
     def test_authenticate_external_authenticator(self):
         """外部認証ハンドラ経由で認証できる."""
-        from agentflow.security.auth_middleware import AuthMiddleware, AuthUser
+        from infrastructure.security.auth_middleware import AuthMiddleware, AuthUser
 
         async def external_auth(
             authorization: str | None,
@@ -601,14 +601,14 @@ class TestCreateAuthMiddleware(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.auth_middleware import create_auth_middleware
+        from infrastructure.security.auth_middleware import create_auth_middleware
 
         middleware = create_auth_middleware()
         self.assertIsNotNone(middleware)
 
     def test_creation_with_external_authenticator(self):
         """外部認証ハンドラ付きで作成できる."""
-        from agentflow.security.auth_middleware import AuthUser, create_auth_middleware
+        from infrastructure.security.auth_middleware import AuthUser, create_auth_middleware
 
         def external_auth(
             authorization: str | None,
@@ -634,7 +634,7 @@ class TestPermission(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.rbac import Permission
+        from infrastructure.security.rbac import Permission
 
         perm = Permission(
             name="users:read",
@@ -646,7 +646,7 @@ class TestPermission(unittest.TestCase):
 
     def test_matches_exact(self):
         """精确匹配测试."""
-        from agentflow.security.rbac import Permission
+        from infrastructure.security.rbac import Permission
 
         perm = Permission(name="users:read")
         self.assertTrue(perm.matches("users:read"))
@@ -654,14 +654,14 @@ class TestPermission(unittest.TestCase):
 
     def test_matches_wildcard(self):
         """通配符匹配测试."""
-        from agentflow.security.rbac import Permission
+        from infrastructure.security.rbac import Permission
 
         perm = Permission(name="*")
         self.assertTrue(perm.matches("anything"))
 
     def test_matches_prefix_wildcard(self):
         """前缀通配符匹配测试."""
-        from agentflow.security.rbac import Permission
+        from infrastructure.security.rbac import Permission
 
         perm = Permission(name="users:*")
         self.assertTrue(perm.matches("users:read"))
@@ -674,7 +674,7 @@ class TestRole(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.rbac import Role
+        from infrastructure.security.rbac import Role
 
         role = Role(
             name="editor",
@@ -688,7 +688,7 @@ class TestRole(unittest.TestCase):
 
     def test_has_permission(self):
         """权限检查测试."""
-        from agentflow.security.rbac import Role
+        from infrastructure.security.rbac import Role
 
         role = Role(name="viewer")
         role.add_permission("read")
@@ -702,7 +702,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_default_roles(self):
         """默认角色测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         roles = manager.list_roles()
@@ -714,7 +714,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_define_role(self):
         """定义角色测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         role = manager.define_role(
@@ -728,7 +728,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_get_role(self):
         """获取角色测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         admin = manager.get_role("admin")
@@ -738,7 +738,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_assign_role_to_user(self):
         """分配角色给用户测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         result = manager.assign_role("user123", "admin")
@@ -749,7 +749,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_revoke_role_from_user(self):
         """从用户撤销角色测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         manager.assign_role("user123", "admin")
@@ -761,7 +761,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_has_permission(self):
         """检查权限测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         manager.assign_role("user123", "admin")
@@ -771,7 +771,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_has_permission_denied(self):
         """权限拒绝测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         manager.assign_role("user123", "readonly")
@@ -782,7 +782,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_get_user_permissions(self):
         """获取用户权限测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         manager.assign_role("user123", "user")
@@ -793,7 +793,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_has_role(self):
         """检查用户是否拥有角色."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         manager.assign_role("user123", "admin")
@@ -803,7 +803,7 @@ class TestRBACManager(unittest.TestCase):
 
     def test_to_dict(self):
         """转字典测试."""
-        from agentflow.security.rbac import RBACManager
+        from infrastructure.security.rbac import RBACManager
 
         manager = RBACManager()
         manager.assign_role("user123", "admin")

@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from agentflow.core.hooks import HookEvent, HookType, LifecycleHooks
-from agentflow.core.types import ExecutionContext
+from kernel.core.hooks import HookEvent, HookType, LifecycleHooks
+from kernel.core.types import ExecutionContext
 
 
 class TestHookType:

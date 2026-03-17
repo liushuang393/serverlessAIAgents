@@ -5,7 +5,7 @@ HierarchicalPlanner, MonitoredExecutor, ResultVerifier, PEVEngineの機能をテ
 
 import pytest
 
-from agentflow.pev import (
+from kernel.planner.pev import (
     ExecutionMonitor,
     HierarchicalPlanner,
     MonitoredExecutor,
@@ -16,8 +16,8 @@ from agentflow.pev import (
     SubGoal,
     VerificationStrategy,
 )
-from agentflow.pev.hierarchical_planner import GoalStatus
-from agentflow.pev.monitored_executor import ExecutionEventType
+from kernel.planner.pev.hierarchical_planner import GoalStatus
+from kernel.planner.pev.monitored_executor import ExecutionEventType
 
 
 class TestHierarchicalPlanner:

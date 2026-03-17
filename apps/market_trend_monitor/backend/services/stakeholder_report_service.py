@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from agentflow import get_llm
+from kernel import get_llm
 
 
 if TYPE_CHECKING:

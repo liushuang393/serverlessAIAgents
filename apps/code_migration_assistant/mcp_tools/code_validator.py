@@ -13,7 +13,7 @@
 import re
 from typing import Any
 
-from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
+from kernel import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 class CodeValidator(MCPTool):

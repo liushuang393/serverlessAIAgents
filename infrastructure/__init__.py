@@ -6,9 +6,12 @@
 from __future__ import annotations
 
 import importlib
+import sys
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
+    from infrastructure.embeddings import EmbeddingBackendRegistry, get_embedding_backend
     from infrastructure.llm import (
         AgentFlowLLMBackend,
         LLMBackend,
@@ -25,12 +28,14 @@ if TYPE_CHECKING:
         TraceExporterRegistry,
         get_trace_exporter,
     )
+    from infrastructure.rerank import RerankBackendRegistry, get_rerank_backend
     from infrastructure.storage import BinaryStorage, InMemoryBinaryStorage, NoOpBinaryStorage
 
 
 __all__ = [
     "AgentFlowLLMBackend",
     "BinaryStorage",
+    "EmbeddingBackendRegistry",
     "InMemoryBinaryStorage",
     "InMemoryTraceExporter",
     "LLMBackend",
@@ -40,9 +45,12 @@ __all__ = [
     "NoOpBinaryStorage",
     "NoOpLLMBackend",
     "NoOpTraceExporter",
+    "RerankBackendRegistry",
     "TraceExporter",
     "TraceExporterRegistry",
+    "get_embedding_backend",
     "get_llm_backend",
+    "get_rerank_backend",
     "get_trace_exporter",
 ]
 
@@ -62,7 +70,29 @@ _SUBMODULE_MAP: dict[str, str] = {
     "BinaryStorage": "infrastructure.storage",
     "InMemoryBinaryStorage": "infrastructure.storage",
     "NoOpBinaryStorage": "infrastructure.storage",
+    "EmbeddingBackendRegistry": "infrastructure.embeddings",
+    "get_embedding_backend": "infrastructure.embeddings",
+    "RerankBackendRegistry": "infrastructure.rerank",
+    "get_rerank_backend": "infrastructure.rerank",
 }
+
+_LEGACY_PACKAGE_ALIASES: dict[str, str] = {
+    "infrastructure.database": "infrastructure.storage.database",
+    "infrastructure.memory": "infrastructure.storage.memory",
+    "infrastructure.os": "infrastructure.sandbox.os",
+    "infrastructure.security": "infrastructure.secrets.security",
+}
+
+
+def _register_legacy_package_aliases() -> None:
+    """仕様外 root を新しい正規パスへ割り当てる。"""
+    for legacy_name, target_name in _LEGACY_PACKAGE_ALIASES.items():
+        if legacy_name in sys.modules:
+            continue
+        sys.modules[legacy_name] = importlib.import_module(target_name)
+
+
+_register_legacy_package_aliases()
 
 
 def __getattr__(name: str) -> object:

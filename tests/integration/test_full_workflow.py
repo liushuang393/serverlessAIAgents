@@ -12,8 +12,8 @@ from typing import Any
 
 import pytest
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.core.metadata import (
+from kernel.agents.agent_block import AgentBlock
+from kernel.core.metadata import (
     A2AConfig,
     AgentMetadata,
     AGUIConfig,
@@ -27,7 +27,7 @@ from agentflow.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from agentflow.core.schemas import SchemaLoader
+from kernel.core.schemas import SchemaLoader
 
 
 class TestFullWorkflow:

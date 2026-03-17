@@ -25,9 +25,9 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.agents.mixins import RAGCapableMixin
-from agentflow.core.agent_block import AgentBlock
-from agentflow.protocols.a2ui.rich_content import (
+from kernel.agents.mixins import RAGCapableMixin
+from kernel.agents.agent_block import AgentBlock
+from kernel.protocols.a2ui.rich_content import (
     ChartType,
     RichResponse,
 )
@@ -36,7 +36,7 @@ from agentflow.protocols.a2ui.rich_content import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from agentflow.bootstrap.capability_bundle import CapabilityBundle
+    from platform.bootstrap.capability_bundle import CapabilityBundle
 
 
 logger = logging.getLogger(__name__)
@@ -503,8 +503,8 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
         if self._initialized:
             return
 
-        from agentflow.services import SQLDialect, Text2SQLConfig, Text2SQLService
-        from agentflow.skills.builtin.knowledge_qa import (
+        from platform.services import SQLDialect, Text2SQLConfig, Text2SQLService
+        from kernel.skills.builtin.knowledge_qa import (
             AnswerGenerator,
             GapAnalyzer,
             Retriever,
@@ -525,7 +525,7 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
             )
         )
 
-        from agentflow.services import SuggestionConfig, SuggestionService
+        from platform.services import SuggestionConfig, SuggestionService
 
         self._suggestion_service = SuggestionService(
             SuggestionConfig(

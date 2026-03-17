@@ -11,7 +11,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from agentflow.agent_decorator import AgentClient, _agent_registry, agent
+from kernel.agent_decorator import AgentClient, _agent_registry, agent
 
 
 # ============================================================

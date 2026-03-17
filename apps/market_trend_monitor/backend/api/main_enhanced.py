@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from agentflow.protocols.a2ui.rich_content import (
+from kernel.protocols.a2ui.rich_content import (
     AlertType,
     ChartType,
     RichResponse,

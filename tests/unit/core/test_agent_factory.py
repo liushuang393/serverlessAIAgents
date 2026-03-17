@@ -6,14 +6,14 @@ import json
 import sys
 from pathlib import Path
 
-from agentflow.core.agent_factory import (
+from kernel.agents.agent_factory import (
     AgentFactorySpec,
     AgentSharedContext,
     AgentFactory,
     TieredMemory,
     create,
 )
-from agentflow.protocols.a2a_hub import LocalA2AHub
+from kernel.protocols.a2a_hub import LocalA2AHub
 
 
 class InjectedAgent:
@@ -94,7 +94,7 @@ def test_from_app_config_uses_class_name_and_init_overrides(tmp_path: Path) -> N
                 "from __future__ import annotations",
                 "from typing import Any",
                 "from pydantic import BaseModel",
-                "from agentflow.core.resilient_agent import ResilientAgent",
+                "from kernel.agents.resilient_agent import ResilientAgent",
                 "",
                 "class DemoInput(BaseModel):",
                 "    question: str = 'demo'",

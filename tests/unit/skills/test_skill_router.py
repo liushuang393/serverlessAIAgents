@@ -5,7 +5,7 @@ Anthropic Skills体系準拠の軽量Skill選択層をテスト。
 
 import pytest
 
-from agentflow.skills.router import RoutingResult, SkillMeta, SkillRouter
+from kernel.skills.router import RoutingResult, SkillMeta, SkillRouter
 
 
 class TestSkillMeta:

@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from agentflow.core.types import (
+from kernel.core.types import (
     AgentMetadata,
     ExecutionContext,
     ExecutionResult,

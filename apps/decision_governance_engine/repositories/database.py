@@ -18,7 +18,7 @@ from typing import Any
 from apps.decision_governance_engine.repositories.models import Base
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agentflow.database import DatabaseConfig, DatabaseManager
+from infrastructure.database import DatabaseConfig, DatabaseManager
 
 
 logger = logging.getLogger(__name__)

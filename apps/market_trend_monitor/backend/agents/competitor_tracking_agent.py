@@ -14,8 +14,8 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from agentflow import get_llm
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel import get_llm
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 if TYPE_CHECKING:

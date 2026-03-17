@@ -8,7 +8,7 @@ class TestUnifiedAST:
 
     def test_ast_node_creation(self) -> None:
         """Test ASTNode creation."""
-        from agentflow.code_intelligence.ast.unified_ast import (
+        from platform.code_intelligence.ast.unified_ast import (
             ASTNode,
             ASTNodeType,
         )
@@ -23,7 +23,7 @@ class TestUnifiedAST:
 
     def test_ast_node_add_child(self) -> None:
         """Test adding child nodes."""
-        from agentflow.code_intelligence.ast.unified_ast import (
+        from platform.code_intelligence.ast.unified_ast import (
             ASTNode,
             ASTNodeType,
         )
@@ -37,7 +37,7 @@ class TestUnifiedAST:
 
     def test_unified_ast_creation(self) -> None:
         """Test UnifiedAST creation."""
-        from agentflow.code_intelligence.ast.unified_ast import (
+        from platform.code_intelligence.ast.unified_ast import (
             ASTNode,
             ASTNodeType,
             UnifiedAST,
@@ -56,7 +56,7 @@ class TestQualityGates:
     @pytest.mark.asyncio
     async def test_syntax_validator(self) -> None:
         """Test SyntaxValidator gate."""
-        from agentflow.code_intelligence.quality.gates import (
+        from platform.code_intelligence.quality.gates import (
             SyntaxValidator,
         )
 
@@ -69,7 +69,7 @@ class TestQualityGates:
     @pytest.mark.asyncio
     async def test_quality_gate_runner(self) -> None:
         """Test QualityGateRunner."""
-        from agentflow.code_intelligence.quality.gates import (
+        from platform.code_intelligence.quality.gates import (
             QualityGateRunner,
             SemanticValidator,
             SyntaxValidator,
@@ -88,7 +88,7 @@ class TestQualityGates:
     @pytest.mark.asyncio
     async def test_empty_target_fails(self) -> None:
         """Test that empty target code fails validation."""
-        from agentflow.code_intelligence.quality.gates import (
+        from platform.code_intelligence.quality.gates import (
             QualityLevel,
             SyntaxValidator,
         )
@@ -105,7 +105,7 @@ class TestMigrationProject:
 
     def test_project_creation(self) -> None:
         """Test MigrationProject creation."""
-        from agentflow.code_intelligence.migration.project import (
+        from platform.code_intelligence.migration.project import (
             MigrationPhase,
             MigrationProject,
         )
@@ -122,7 +122,7 @@ class TestMigrationProject:
 
     def test_add_file(self) -> None:
         """Test adding files to project."""
-        from agentflow.code_intelligence.migration.project import (
+        from platform.code_intelligence.migration.project import (
             MigrationProject,
             SourceFile,
         )
@@ -140,7 +140,7 @@ class TestMigrationProject:
 
     def test_phase_management(self) -> None:
         """Test phase start and complete."""
-        from agentflow.code_intelligence.migration.project import (
+        from platform.code_intelligence.migration.project import (
             MigrationPhase,
             MigrationProject,
             PhaseStatus,
@@ -165,7 +165,7 @@ class TestPipelineGenerator:
 
     def test_github_pipeline(self) -> None:
         """Test GitHub Actions pipeline generation."""
-        from agentflow.code_intelligence.cicd.pipeline_generator import (
+        from platform.code_intelligence.cicd.pipeline_generator import (
             CIPlatform,
             MigrationPipelineGenerator,
             PipelineConfig,
@@ -185,7 +185,7 @@ class TestPipelineGenerator:
 
     def test_gitlab_pipeline(self) -> None:
         """Test GitLab CI pipeline generation."""
-        from agentflow.code_intelligence.cicd.pipeline_generator import (
+        from platform.code_intelligence.cicd.pipeline_generator import (
             CIPlatform,
             MigrationPipelineGenerator,
             PipelineConfig,
@@ -208,7 +208,7 @@ class TestSkillsVersioning:
 
     def test_skill_version_parsing(self) -> None:
         """Test SkillVersion parsing."""
-        from agentflow.skills.versioning.skill_version import SkillVersion
+        from kernel.skills.versioning.skill_version import SkillVersion
 
         v = SkillVersion.parse("1.2.3")
         assert v.major == 1
@@ -218,7 +218,7 @@ class TestSkillsVersioning:
 
     def test_skill_version_comparison(self) -> None:
         """Test SkillVersion comparison."""
-        from agentflow.skills.versioning.skill_version import SkillVersion
+        from kernel.skills.versioning.skill_version import SkillVersion
 
         v1 = SkillVersion.parse("1.2.3")
         v2 = SkillVersion.parse("1.2.4")
@@ -230,7 +230,7 @@ class TestSkillsVersioning:
 
     def test_skill_version_bump(self) -> None:
         """Test version bumping."""
-        from agentflow.skills.versioning.skill_version import SkillVersion
+        from kernel.skills.versioning.skill_version import SkillVersion
 
         v = SkillVersion.parse("1.2.3")
 
@@ -240,7 +240,7 @@ class TestSkillsVersioning:
 
     def test_diff_engine(self) -> None:
         """Test DiffEngine."""
-        from agentflow.skills.versioning.diff_engine import DiffEngine
+        from kernel.skills.versioning.diff_engine import DiffEngine
 
         engine = DiffEngine()
         old = "line1\nline2\nline3"
@@ -253,11 +253,11 @@ class TestSkillsVersioning:
 
     def test_in_memory_version_store(self) -> None:
         """Test InMemoryVersionStore."""
-        from agentflow.skills.versioning.skill_version import (
+        from kernel.skills.versioning.skill_version import (
             SkillSnapshot,
             SkillVersion,
         )
-        from agentflow.skills.versioning.version_store import InMemoryVersionStore
+        from kernel.skills.versioning.version_store import InMemoryVersionStore
 
         store = InMemoryVersionStore()
         snapshot = SkillSnapshot(

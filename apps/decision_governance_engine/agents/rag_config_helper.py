@@ -7,7 +7,7 @@ routers/config.py の設定を参照し、Agent の RAG パラメータを更新
 import logging
 from typing import Any
 
-from agentflow.skills import RAGConfig, RAGSkill
+from kernel.skills import RAGConfig, RAGSkill
 
 
 logger = logging.getLogger("decision_api.rag_helper")

@@ -9,7 +9,7 @@
 
 import pytest
 
-from agentflow.engines import (
+from kernel.engines import (
     GateEngine,
     PipelineEngine,
     RAGEngine,

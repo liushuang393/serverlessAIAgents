@@ -1,4 +1,4 @@
-from agentflow.protocols.a2a_card import AgentCard, AgentSkill
+from kernel.protocols.a2a_card import AgentCard, AgentSkill
 
 
 # 1. Legacy Analysis Agent

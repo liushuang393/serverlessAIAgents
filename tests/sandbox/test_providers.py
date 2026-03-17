@@ -5,10 +5,10 @@
 
 import pytest
 
-from agentflow.sandbox import SandboxConfig, SandboxState, get_sandbox
-from agentflow.sandbox.docker_provider import DockerProvider
-from agentflow.sandbox.e2b_provider import E2BProvider
-from agentflow.sandbox.microsandbox_provider import MicrosandboxProvider
+from infrastructure.sandbox import SandboxConfig, SandboxState, get_sandbox
+from infrastructure.sandbox.docker_provider import DockerProvider
+from infrastructure.sandbox.e2b_provider import E2BProvider
+from infrastructure.sandbox.microsandbox_provider import MicrosandboxProvider
 
 
 class TestDockerProvider:

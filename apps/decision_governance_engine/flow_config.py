@@ -15,8 +15,8 @@ API起動時の初期化処理を提供。
 import logging
 from pathlib import Path
 
-from agentflow.core.flow_definition import FlowDefinition, FlowDefinitionRegistry
-from agentflow.core.result_store import MemoryResultStore, ResultStoreManager
+from kernel.core.flow_definition import FlowDefinition, FlowDefinitionRegistry
+from kernel.core.result_store import MemoryResultStore, ResultStoreManager
 
 
 # 定数

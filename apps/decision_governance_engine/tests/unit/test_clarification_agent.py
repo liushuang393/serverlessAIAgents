@@ -28,7 +28,7 @@ class TestClarificationAgentInit:
 
     def test_agent_inherits_resilient_agent(self, clarification_agent: ClarificationAgent) -> None:
         """Test that ClarificationAgent inherits from ResilientAgent."""
-        from agentflow import ResilientAgent
+        from kernel import ResilientAgent
 
         assert isinstance(clarification_agent, ResilientAgent)
 

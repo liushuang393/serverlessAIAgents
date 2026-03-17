@@ -14,7 +14,7 @@ class TestDocumentChunk(unittest.TestCase):
 
     def test_create_with_defaults(self):
         """默认参数创建测试."""
-        from agentflow.knowledge.document_loader import DocumentChunk
+        from shared.rag.document_loader import DocumentChunk
 
         chunk = DocumentChunk.create(content="Test content")
         self.assertIsNotNone(chunk.id)
@@ -27,7 +27,7 @@ class TestDocumentChunk(unittest.TestCase):
 
     def test_create_with_all_params(self):
         """全参数创建测试."""
-        from agentflow.knowledge.document_loader import DocumentChunk
+        from shared.rag.document_loader import DocumentChunk
 
         chunk = DocumentChunk.create(
             content="Test content",
@@ -48,7 +48,7 @@ class TestChunkingConfig(unittest.TestCase):
 
     def test_default_values(self):
         """默认值测试."""
-        from agentflow.knowledge.document_loader import ChunkingConfig
+        from shared.rag.document_loader import ChunkingConfig
 
         config = ChunkingConfig()
         self.assertEqual(config.chunk_size, 1000)
@@ -58,7 +58,7 @@ class TestChunkingConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.knowledge.document_loader import ChunkingConfig
+        from shared.rag.document_loader import ChunkingConfig
 
         config = ChunkingConfig(
             chunk_size=500,
@@ -75,7 +75,7 @@ class TestTextLoader(unittest.TestCase):
 
     def test_supports_txt(self):
         """支持 .txt 文件."""
-        from agentflow.knowledge.document_loader import TextLoader
+        from shared.rag.document_loader import TextLoader
 
         loader = TextLoader()
         self.assertTrue(loader.supports("file.txt"))
@@ -85,7 +85,7 @@ class TestTextLoader(unittest.TestCase):
 
     def test_load_text_file(self):
         """加载文本文件测试."""
-        from agentflow.knowledge.document_loader import TextLoader
+        from shared.rag.document_loader import TextLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("This is test content.\n\nThis is paragraph two.")
@@ -109,7 +109,7 @@ class TestMarkdownLoader(unittest.TestCase):
 
     def test_supports_markdown(self):
         """支持 .md 文件."""
-        from agentflow.knowledge.document_loader import MarkdownLoader
+        from shared.rag.document_loader import MarkdownLoader
 
         loader = MarkdownLoader()
         self.assertTrue(loader.supports("file.md"))
@@ -118,7 +118,7 @@ class TestMarkdownLoader(unittest.TestCase):
 
     def test_load_markdown_file(self):
         """加载 Markdown 文件测试."""
-        from agentflow.knowledge.document_loader import MarkdownLoader
+        from shared.rag.document_loader import MarkdownLoader
 
         content = """# Header 1
 
@@ -149,7 +149,7 @@ class TestCSVLoader(unittest.TestCase):
 
     def test_supports_csv(self):
         """支持 .csv 文件."""
-        from agentflow.knowledge.document_loader import CSVLoader
+        from shared.rag.document_loader import CSVLoader
 
         loader = CSVLoader()
         self.assertTrue(loader.supports("file.csv"))
@@ -158,7 +158,7 @@ class TestCSVLoader(unittest.TestCase):
 
     def test_load_csv_file(self):
         """加载 CSV 文件测试."""
-        from agentflow.knowledge.document_loader import CSVLoader
+        from shared.rag.document_loader import CSVLoader
 
         content = """name,description
 Item1,Description of item 1
@@ -182,7 +182,7 @@ Item2,Description of item 2
 
     def test_load_csv_with_content_columns(self):
         """指定内容列加载 CSV."""
-        from agentflow.knowledge.document_loader import CSVLoader
+        from shared.rag.document_loader import CSVLoader
 
         content = """name,description,extra
 Item1,Desc1,Extra1
@@ -208,7 +208,7 @@ class TestJSONLoader(unittest.TestCase):
 
     def test_supports_json(self):
         """支持 .json 文件."""
-        from agentflow.knowledge.document_loader import JSONLoader
+        from shared.rag.document_loader import JSONLoader
 
         loader = JSONLoader()
         self.assertTrue(loader.supports("file.json"))
@@ -219,7 +219,7 @@ class TestJSONLoader(unittest.TestCase):
         """加载 JSON 数组."""
         import json
 
-        from agentflow.knowledge.document_loader import JSONLoader
+        from shared.rag.document_loader import JSONLoader
 
         data = [
             {"name": "Item1", "content": "Content1"},
@@ -245,7 +245,7 @@ class TestJSONLoader(unittest.TestCase):
         """加载单个 JSON 对象."""
         import json
 
-        from agentflow.knowledge.document_loader import JSONLoader
+        from shared.rag.document_loader import JSONLoader
 
         data = {"name": "SingleItem", "content": "SingleContent"}
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -266,7 +266,7 @@ class TestJSONLoader(unittest.TestCase):
         """加载 JSONL 文件."""
         import json
 
-        from agentflow.knowledge.document_loader import JSONLoader
+        from shared.rag.document_loader import JSONLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write(json.dumps({"content": "Line1"}) + "\n")
@@ -289,7 +289,7 @@ class TestHTMLLoader(unittest.TestCase):
 
     def test_supports_html(self):
         """支持 .html 文件."""
-        from agentflow.knowledge.document_loader import HTMLLoader
+        from shared.rag.document_loader import HTMLLoader
 
         loader = HTMLLoader()
         self.assertTrue(loader.supports("file.html"))
@@ -298,7 +298,7 @@ class TestHTMLLoader(unittest.TestCase):
 
     def test_load_html_file(self):
         """加载 HTML 文件."""
-        from agentflow.knowledge.document_loader import HTMLLoader
+        from shared.rag.document_loader import HTMLLoader
 
         html = """<!DOCTYPE html>
 <html>
@@ -332,7 +332,7 @@ class TestUniversalLoader(unittest.TestCase):
 
     def test_auto_select_loader(self):
         """自动选择加载器测试."""
-        from agentflow.knowledge.document_loader import UniversalLoader
+        from shared.rag.document_loader import UniversalLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("Test content")
@@ -350,7 +350,7 @@ class TestUniversalLoader(unittest.TestCase):
 
     def test_unknown_extension_fallback(self):
         """未知扩展名回退测试."""
-        from agentflow.knowledge.document_loader import UniversalLoader
+        from shared.rag.document_loader import UniversalLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".xyz", delete=False) as f:
             f.write("Unknown format content")
@@ -368,7 +368,7 @@ class TestUniversalLoader(unittest.TestCase):
 
     def test_load_directory(self):
         """加载目录测试."""
-        from agentflow.knowledge.document_loader import UniversalLoader
+        from shared.rag.document_loader import UniversalLoader
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create test files
@@ -390,7 +390,7 @@ class TestRAGConfig(unittest.TestCase):
 
     def test_defaults(self):
         """默认值测试."""
-        from agentflow.knowledge.rag_pipeline import RAGConfig
+        from shared.rag.rag_pipeline import RAGConfig
 
         config = RAGConfig()
         self.assertEqual(config.collection_name, "agentflow_rag")
@@ -401,7 +401,7 @@ class TestRAGConfig(unittest.TestCase):
 
     def test_custom_values(self):
         """自定义值测试."""
-        from agentflow.knowledge.rag_pipeline import RAGConfig
+        from shared.rag.rag_pipeline import RAGConfig
 
         config = RAGConfig(
             collection_name="custom",
@@ -417,7 +417,7 @@ class TestRAGResult(unittest.TestCase):
 
     def test_create_with_defaults(self):
         """默认值创建测试."""
-        from agentflow.knowledge.rag_pipeline import RAGResult
+        from shared.rag.rag_pipeline import RAGResult
 
         result = RAGResult(answer="Test answer")
         self.assertEqual(result.answer, "Test answer")
@@ -427,7 +427,7 @@ class TestRAGResult(unittest.TestCase):
 
     def test_create_with_all_params(self):
         """全参数创建测试."""
-        from agentflow.knowledge.rag_pipeline import RAGResult
+        from shared.rag.rag_pipeline import RAGResult
 
         result = RAGResult(
             answer="Test answer",
@@ -446,7 +446,7 @@ class TestVectorSearchHook(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.knowledge.hooks import VectorSearchHook
+        from shared.rag.hooks import VectorSearchHook
 
         hook = VectorSearchHook(collection="test", min_similarity=0.5)
         self.assertEqual(hook._collection, "test")
@@ -454,7 +454,7 @@ class TestVectorSearchHook(unittest.TestCase):
 
     def test_use_vector_search_factory(self):
         """工厂函数测试."""
-        from agentflow.knowledge.hooks import use_vector_search
+        from shared.rag.hooks import use_vector_search
 
         hook = use_vector_search(collection="my-docs", min_similarity=0.4)
         self.assertEqual(hook._collection, "my-docs")
@@ -466,7 +466,7 @@ class TestRAGHook(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.knowledge.hooks import RAGHook
+        from shared.rag.hooks import RAGHook
 
         hook = RAGHook(collection="test", top_k=10)
         self.assertEqual(hook._collection, "test")
@@ -474,7 +474,7 @@ class TestRAGHook(unittest.TestCase):
 
     def test_use_rag_factory(self):
         """工厂函数测试."""
-        from agentflow.knowledge.hooks import use_rag
+        from shared.rag.hooks import use_rag
 
         hook = use_rag(collection="kb", top_k=8, min_similarity=0.4, system_prompt="Custom prompt")
         self.assertEqual(hook._collection, "kb")
@@ -487,7 +487,7 @@ class TestVectorSearchResult(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.knowledge.hooks import VectorSearchResult
+        from shared.rag.hooks import VectorSearchResult
 
         result = VectorSearchResult(
             id="doc-1",

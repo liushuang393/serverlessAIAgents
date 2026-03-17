@@ -26,8 +26,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.core import ResilientAgent
-from agentflow.knowledge.isolated_kb import IsolatedKBManager, KBType
+from kernel.core import ResilientAgent
+from shared.rag.isolated_kb import IsolatedKBManager, KBType
 
 
 if TYPE_CHECKING:

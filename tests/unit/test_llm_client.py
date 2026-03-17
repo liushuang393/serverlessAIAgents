@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentflow.llm.gateway.config import ModelConfig
-from agentflow.llm.llm_client import LLMClient, LLMConfig, LLMMessage
+from infrastructure.llm.gateway.config import ModelConfig
+from infrastructure.llm.llm_client import LLMClient, LLMConfig, LLMMessage
 
 
 if TYPE_CHECKING:

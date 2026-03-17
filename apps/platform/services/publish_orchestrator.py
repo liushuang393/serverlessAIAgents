@@ -35,12 +35,12 @@ from apps.platform.services.component_library import (
     get_component_library,
 )
 
-from agentflow.core.interfaces import (
+from kernel.core.interfaces import (
     CodeOutputType,
     DeployTarget,
     GeneratedCode,
 )
-from agentflow.services.publish_service import PublishService
+from platform.services.publish_service import PublishService
 
 
 if TYPE_CHECKING:

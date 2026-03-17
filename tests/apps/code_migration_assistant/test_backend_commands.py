@@ -13,8 +13,8 @@ from fastapi import BackgroundTasks
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from agentflow.hitl.types import ApprovalRequest
-from agentflow.integrations.context_bridge import FlowContext, SourceSystemType
+from harness.approval.types import ApprovalRequest
+from shared.integrations.context_bridge import FlowContext, SourceSystemType
 from apps.code_migration_assistant.backend import app as backend_app
 from apps.code_migration_assistant.engine import CodeMigrationEngine
 

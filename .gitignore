@@ -114,3 +114,4 @@ data/rag/faq_system/list_docs/uploads/*
 data/rag/faq_system/upload_test/*
 data/rag/faq_system/get_doc/uploads/*
 data/rag/faq_system/chunk_preview/uploads/*
+.VSCodeCounter/*

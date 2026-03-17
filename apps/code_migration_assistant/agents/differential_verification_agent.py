@@ -14,7 +14,7 @@ from apps.code_migration_assistant.workflow.models import (
     build_meta,
 )
 
-from agentflow import agent
+from kernel import agent
 
 
 @agent

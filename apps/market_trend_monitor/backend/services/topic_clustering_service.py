@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from agentflow import get_embedding
+from kernel import get_embedding
 
 
 if TYPE_CHECKING:

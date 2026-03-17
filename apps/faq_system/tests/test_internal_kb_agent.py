@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from apps.faq_system.backend.agents.internal_kb_agent import InternalKBAgent, InternalKBConfig
 
-from agentflow.integrations.ticket_generator import TicketGenerator
-from agentflow.security.policy_engine import PolicyEngine
+from shared.integrations.ticket_generator import TicketGenerator
+from harness.policies.policy_engine import PolicyEngine
 
 
 # ---------------------------------------------------------------------------

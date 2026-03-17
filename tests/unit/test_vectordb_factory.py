@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agentflow.providers.vectordb_provider import (
+from infrastructure.llm.providers.vectordb_provider import (
     ChromaDBProvider,
     FAISSProvider,
     MockVectorDBProvider,

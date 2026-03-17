@@ -18,14 +18,14 @@ from apps.faq_system.backend.auth.service import AuthService, get_auth_service
 from apps.faq_system.backend.security.proxy_auth import proxy_auth_verifier
 from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket
 
-from agentflow.security.auth_client import AuthClient
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.security.auth_client import AuthClient
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from agentflow.security.auth_client.client import RemoteUser
+    from infrastructure.security.auth_client.client import RemoteUser
 
 
 logger = logging.getLogger(__name__)

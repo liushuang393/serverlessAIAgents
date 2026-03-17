@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from kernel.flow.context import FlowContext
 from kernel.flow.progress import ProgressTracker
 from kernel.flow.types import NextAction, NodeType
-from agentflow.protocols.agui_events import (
+from kernel.protocols.agui_events import (
     FlowCompleteEvent,
     FlowErrorEvent,
     NodeCompleteEvent,

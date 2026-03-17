@@ -6,7 +6,7 @@ Agent能力仕様モデルのユニットテスト。
 
 def test_capability_spec_creation():
     """基本的なAgentCapabilitySpec作成のテスト."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec
+    from kernel.agents.capability_spec import AgentCapabilitySpec
 
     cap = AgentCapabilitySpec(
         id="pdf_analysis_v1",
@@ -26,7 +26,7 @@ def test_capability_spec_creation():
 
 def test_capability_spec_default_confidence():
     """デフォルト信頼度が1.0のテスト."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec
+    from kernel.agents.capability_spec import AgentCapabilitySpec
 
     cap = AgentCapabilitySpec(
         id="test",
@@ -39,7 +39,7 @@ def test_capability_spec_default_confidence():
 
 def test_capability_spec_llm_config():
     """LLM設定のテスト."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec, LLMRequirements
+    from kernel.agents.capability_spec import AgentCapabilitySpec, LLMRequirements
 
     cap = AgentCapabilitySpec(
         id="creative_writing",
@@ -58,7 +58,7 @@ def test_capability_spec_llm_config():
 
 def test_capability_spec_matches_requirements():
     """要件マッチングのテスト."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec, CapabilityRequirement
+    from kernel.agents.capability_spec import AgentCapabilitySpec, CapabilityRequirement
 
     cap = AgentCapabilitySpec(
         id="pdf_analysis",
@@ -81,7 +81,7 @@ def test_capability_spec_matches_requirements():
 
 def test_capability_spec_from_agent_config():
     """Agent設定からCapabilitySpec作成のテスト."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec
+    from kernel.agents.capability_spec import AgentCapabilitySpec
 
     config = {
         "name": "SummarizerAgent",
@@ -99,7 +99,7 @@ def test_capability_spec_from_agent_config():
 
 def test_capability_requirement_creation():
     """CapabilityRequirement作成のテスト."""
-    from agentflow.core.capability_spec import CapabilityRequirement
+    from kernel.agents.capability_spec import CapabilityRequirement
 
     req = CapabilityRequirement(
         description="PDFを分析して要約を作成",
@@ -114,7 +114,7 @@ def test_capability_requirement_creation():
 
 def test_llm_requirements_defaults():
     """LLMRequirementsデフォルト値のテスト."""
-    from agentflow.core.capability_spec import LLMRequirements
+    from kernel.agents.capability_spec import LLMRequirements
 
     llm = LLMRequirements()
 
@@ -125,7 +125,7 @@ def test_llm_requirements_defaults():
 
 def test_capability_spec_no_match():
     """マッチしない要件のテスト."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec, CapabilityRequirement
+    from kernel.agents.capability_spec import AgentCapabilitySpec, CapabilityRequirement
 
     cap = AgentCapabilitySpec(
         id="pdf_analysis",

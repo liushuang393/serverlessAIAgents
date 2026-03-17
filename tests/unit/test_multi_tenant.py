@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.multi_tenant import ResourceLimits, TenantContext, TenantManager
-from agentflow.multi_tenant.context import IsolationLevel
-from agentflow.multi_tenant.manager import get_current_tenant, require_tenant
+from kernel.runtime.multi_tenant import ResourceLimits, TenantContext, TenantManager
+from kernel.runtime.multi_tenant.context import IsolationLevel
+from kernel.runtime.multi_tenant.manager import get_current_tenant, require_tenant
 
 
 class TestResourceLimits:
@@ -207,7 +207,7 @@ class TestHelperFunctions:
     def clear_tenant(self) -> None:
         """各テスト後にテナントをクリア."""
         yield
-        from agentflow.multi_tenant.manager import _current_tenant
+        from kernel.runtime.multi_tenant.manager import _current_tenant
 
         _current_tenant.set(None)
 

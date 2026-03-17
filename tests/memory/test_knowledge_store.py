@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agentflow.memory.knowledge import (
+from shared.memory.knowledge import (
     InMemoryKnowledgeStore,
     KnowledgeEntry,
     KnowledgeManager,

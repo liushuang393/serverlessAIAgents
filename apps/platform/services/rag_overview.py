@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin
 
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
 
-from agentflow.services.text2sql_service import SQLDialect, Text2SQLConfig
+from platform.services.text2sql_service import SQLDialect, Text2SQLConfig
 
 
 if TYPE_CHECKING:

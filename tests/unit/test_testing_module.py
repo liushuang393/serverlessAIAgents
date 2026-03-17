@@ -14,7 +14,7 @@ class TestMockResponse(unittest.TestCase):
 
     def test_creation_with_defaults(self):
         """默认值创建测试."""
-        from agentflow.testing.mock_llm import MockResponse
+        from harness.testing.mock_llm import MockResponse
 
         response = MockResponse(content="Hello")
         self.assertEqual(response.content, "Hello")
@@ -23,7 +23,7 @@ class TestMockResponse(unittest.TestCase):
 
     def test_to_dict(self):
         """转字典测试."""
-        from agentflow.testing.mock_llm import MockResponse
+        from harness.testing.mock_llm import MockResponse
 
         response = MockResponse(
             content="Test",
@@ -42,7 +42,7 @@ class TestCallRecord(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.testing.mock_llm import CallRecord, MockResponse
+        from harness.testing.mock_llm import CallRecord, MockResponse
 
         record = CallRecord(
             messages=[{"role": "user", "content": "Hello"}],
@@ -59,7 +59,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_default_response(self):
         """默认响应测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -73,7 +73,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_set_response(self):
         """设置响应测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
         provider.set_response("Custom response")
@@ -88,7 +88,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_pattern_response(self):
         """模式响应测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
         provider.add_pattern_response("weather", "It's sunny!")
@@ -107,7 +107,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_sequence_response(self):
         """序列响应测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
         provider.add_sequence_response("First")
@@ -129,7 +129,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_call_count(self):
         """调用计数测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -145,7 +145,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_get_calls(self):
         """获取调用记录测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -162,7 +162,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_get_last_call(self):
         """获取最后调用测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -179,7 +179,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_assert_called(self):
         """断言调用测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -196,7 +196,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_assert_called_with(self):
         """断言调用内容测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -215,7 +215,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_reset(self):
         """重置测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
 
@@ -232,7 +232,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_stream(self):
         """流式响应测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider
+        from harness.testing.mock_llm import MockLLMProvider
 
         provider = MockLLMProvider()
         provider.set_response("Hello World")
@@ -254,7 +254,7 @@ class TestMockLLMProvider(unittest.TestCase):
 
     def test_response_callback(self):
         """响应回调测试."""
-        from agentflow.testing.mock_llm import MockLLMProvider, MockResponse
+        from harness.testing.mock_llm import MockLLMProvider, MockResponse
 
         provider = MockLLMProvider()
 
@@ -278,7 +278,7 @@ class TestCreateMockLLM(unittest.TestCase):
 
     def test_default_creation(self):
         """默认创建测试."""
-        from agentflow.testing.mock_llm import create_mock_llm
+        from harness.testing.mock_llm import create_mock_llm
 
         provider = create_mock_llm()
 
@@ -292,7 +292,7 @@ class TestCreateMockLLM(unittest.TestCase):
 
     def test_creation_with_params(self):
         """带参数创建测试."""
-        from agentflow.testing.mock_llm import create_mock_llm
+        from harness.testing.mock_llm import create_mock_llm
 
         provider = create_mock_llm(default_response="Custom")
 
@@ -310,7 +310,7 @@ class TestTestContext(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.testing.agent_test_framework import TestContext
+        from harness.testing.agent_test_framework import TestContext
 
         ctx = TestContext()
         self.assertIsNotNone(ctx.mock_llm)
@@ -323,7 +323,7 @@ class TestAgentTestCase(unittest.TestCase):
 
     def test_subclass_creation(self):
         """子类创建测试."""
-        from agentflow.testing.agent_test_framework import AgentTestCase
+        from harness.testing.agent_test_framework import AgentTestCase
 
         class MyTestCase(AgentTestCase):
             pass
@@ -338,7 +338,7 @@ class TestAgentTestRunner(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.testing.agent_test_framework import AgentTestRunner
+        from harness.testing.agent_test_framework import AgentTestRunner
 
         runner = AgentTestRunner(verbosity=1)
         self.assertEqual(runner._verbosity, 1)
@@ -351,7 +351,7 @@ class TestFixtures(unittest.TestCase):
         """Clean Env Fixture 测试."""
         import os
 
-        from agentflow.testing.fixtures import clean_env_fixture
+        from harness.testing.fixtures import clean_env_fixture
 
         original_val = os.environ.get("TEST_VAR")
 
@@ -366,7 +366,7 @@ class TestFixtures(unittest.TestCase):
         import tempfile
         from pathlib import Path
 
-        from agentflow.testing.fixtures import generate_conftest
+        from harness.testing.fixtures import generate_conftest
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = Path(tmpdir) / "tests" / "conftest.py"
@@ -378,7 +378,7 @@ class TestFixtures(unittest.TestCase):
 
     def test_conftest_template(self):
         """conftest 模板测试."""
-        from agentflow.testing.fixtures import CONFTEST_TEMPLATE
+        from harness.testing.fixtures import CONFTEST_TEMPLATE
 
         self.assertIn("@pytest.fixture", CONFTEST_TEMPLATE)
         self.assertIn("mock_llm", CONFTEST_TEMPLATE)
@@ -390,7 +390,7 @@ class TestAgentTestContext(unittest.TestCase):
 
     def test_import(self):
         """导入测试."""
-        from agentflow.testing.agent_test_framework import TestContext, agent_test_context
+        from harness.testing.agent_test_framework import TestContext, agent_test_context
 
         self.assertIsNotNone(agent_test_context)
         self.assertIsNotNone(TestContext)

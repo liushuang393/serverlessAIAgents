@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agentflow.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig, RoutingPolicyConfig
+from infrastructure.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig, RoutingPolicyConfig
 from apps.platform.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
 
 

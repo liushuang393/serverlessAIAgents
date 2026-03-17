@@ -34,9 +34,9 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     StrategyType,
 )
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
-from agentflow.core.type_safe import safe_enum
+from kernel import ResilientAgent
+from kernel.core.exceptions import AgentOutputValidationError
+from kernel.core.type_safe import safe_enum
 
 
 class FaAgent(ResilientAgent[FaInput, FaOutput]):
@@ -313,7 +313,7 @@ JSON形式で出力してください。"""
         self._logger.debug("LLM raw response (first 500 chars): %s", response[:500] if response else "EMPTY")
 
         try:
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(response)
 

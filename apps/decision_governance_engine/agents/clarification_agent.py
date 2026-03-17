@@ -16,7 +16,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     HiddenAssumption,
 )
 
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 
 
 class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]):
@@ -162,7 +162,7 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(response)
 

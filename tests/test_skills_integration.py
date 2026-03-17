@@ -27,8 +27,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agentflow.skills.base import Skill, SkillMetadata
-from agentflow.skills.loader import SkillLoader, SkillRegistry
+from kernel.skills.base import Skill, SkillMetadata
+from kernel.skills.loader import SkillLoader, SkillRegistry
 
 
 class TestSkillMetadataLimits:

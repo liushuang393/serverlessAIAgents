@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agentflow.memory.memory_distiller import MemoryDistiller
-from agentflow.memory.types import (
+from shared.memory.memory_distiller import MemoryDistiller
+from infrastructure.memory.types import (
     MemoryEntry,
     MemorySemanticLevel,
     MemoryStability,

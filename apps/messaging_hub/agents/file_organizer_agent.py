@@ -21,10 +21,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 if TYPE_CHECKING:
-    from agentflow.skills.gateway import SkillGateway
+    from kernel.skills.gateway import SkillGateway
 
 
 @dataclass

@@ -34,8 +34,8 @@ from apps.market_trend_monitor.backend.models import (
 )
 from dateutil import parser as date_parser
 
-from agentflow import ResilientAgent
-from agentflow.config import get_settings
+from kernel import ResilientAgent
+from shared.config import get_settings
 
 
 class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):

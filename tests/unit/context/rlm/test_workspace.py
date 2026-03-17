@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.context.rlm.workspace import (
+from harness.context.rlm.workspace import (
     VariableType,
     Workspace,
     WorkspaceVariable,

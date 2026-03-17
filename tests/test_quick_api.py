@@ -5,8 +5,8 @@ create_flow, Flow, MemoryAccessor のテスト。
 
 import pytest
 
-from agentflow import Flow, FlowWrapper, create_flow
-from agentflow.core.agent_block import AgentBlock
+from kernel import Flow, FlowWrapper, create_flow
+from kernel.agents.agent_block import AgentBlock
 
 
 class DummyAgent(AgentBlock):

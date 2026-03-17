@@ -31,11 +31,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from agentflow.protocols.a2ui.rich_content import (
+from kernel.protocols.a2ui.rich_content import (
     AlertType,
     RichResponse,
 )
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 logging.basicConfig(level=logging.INFO)

@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 logging.basicConfig(level=logging.INFO)
@@ -751,8 +751,8 @@ async def _init_knowledge_managers() -> None:
         )
         from apps.code_migration_assistant.backend.knowledge_router import init_managers
 
-        from agentflow.knowledge.collection_manager import CollectionManager
-        from agentflow.knowledge.document_manager import DocumentManager
+        from shared.rag.collection_manager import CollectionManager
+        from shared.rag.document_manager import DocumentManager
 
         await init_knowledge_db()
         session_factory = get_knowledge_session_factory()

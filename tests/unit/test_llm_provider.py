@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agentflow.providers.llm_provider import LLMProvider, _detect_provider_from_env, get_llm, reset_llm
+from infrastructure.llm.providers.llm_provider import LLMProvider, _detect_provider_from_env, get_llm, reset_llm
 
 
 if TYPE_CHECKING:

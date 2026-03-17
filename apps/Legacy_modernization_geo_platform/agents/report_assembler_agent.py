@@ -10,7 +10,7 @@ from apps.Legacy_modernization_geo_platform.agents._models import (
 )
 from apps.Legacy_modernization_geo_platform.backend.reporting import build_campaign_report
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class ReportAssemblerAgent(

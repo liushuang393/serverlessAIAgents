@@ -25,7 +25,7 @@ from apps.code_migration_assistant.workflow.models import (
     build_meta,
 )
 
-from agentflow.integrations.context_bridge import get_current_context
+from shared.integrations.context_bridge import get_current_context
 
 
 async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:

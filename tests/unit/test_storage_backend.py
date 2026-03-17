@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.storage import MemoryStorageBackend, get_backend
+from infrastructure.storage import MemoryStorageBackend, get_backend
 
 
 class TestMemoryStorageBackend:

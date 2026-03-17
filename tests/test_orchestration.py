@@ -2,26 +2,26 @@
 
 import pytest
 
-from agentflow.orchestration.executor import (
+from kernel.executor.executor import (
     ExecutorAgent,
     ExecutorConfig,
     StepResult,
 )
-from agentflow.orchestration.monitor import (
+from kernel.executor.monitor import (
     AlertSeverity,
     MonitorAgent,
     MonitorEvent,
     MonitorEventType,
     MonitorThresholds,
 )
-from agentflow.orchestration.orchestrator import (
+from kernel.executor.orchestrator import (
     ExecutionContext,
     ExecutionResult,
     ExecutionStatus,
     Orchestrator,
     OrchestratorConfig,
 )
-from agentflow.orchestration.planner import (
+from kernel.planner.planner import (
     ExecutionPlan,
     PlannerAgent,
     PlannerConfig,

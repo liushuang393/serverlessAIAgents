@@ -14,8 +14,8 @@ from shared.registry import ComponentToggle
 
 
 if TYPE_CHECKING:
-    from agentflow.governance import ToolExecutionContext
-    from agentflow.providers.tool_provider import RegisteredTool
+    from harness.governance import ToolExecutionContext
+    from infrastructure.sandbox.tool_provider import RegisteredTool
 
 
 class ToolGate:
@@ -29,7 +29,7 @@ class ToolGate:
         self._toggle = toggle or ComponentToggle()
         if engine is None:
             # 遅延インポート: harness → agentflow.governance の静的依存を回避
-            from agentflow.governance import GovernanceEngine
+            from harness.governance import GovernanceEngine
 
             engine = GovernanceEngine()
         self._engine: GovernanceEngineProtocol = engine

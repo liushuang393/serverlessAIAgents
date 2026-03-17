@@ -26,7 +26,7 @@ from apps.market_trend_monitor.backend.agents import (
 )
 from apps.market_trend_monitor.backend.config import config
 
-from agentflow import PipelineEngine
+from kernel import PipelineEngine
 
 
 logger = logging.getLogger(__name__)

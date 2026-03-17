@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def tool_registry():
     """空のToolRegistryを作成."""
-    from agentflow.core.tool_registry import ToolRegistry
+    from kernel.tools.tool_registry import ToolRegistry
 
     return ToolRegistry()
 
@@ -20,8 +20,8 @@ class TestToolDiscoveryService:
     @pytest.mark.asyncio
     async def test_discover_skills(self, tool_registry):
         """Skillsをツールとして発見するテスト."""
-        from agentflow.core.tool_definition import ToolSource
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_definition import ToolSource
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         service = ToolDiscoveryService(tool_registry)
 
@@ -39,8 +39,8 @@ class TestToolDiscoveryService:
     @pytest.mark.asyncio
     async def test_discover_mcp_servers(self, tool_registry):
         """MCPサーバーツールを発見するテスト."""
-        from agentflow.core.tool_definition import ToolSource
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_definition import ToolSource
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         service = ToolDiscoveryService(tool_registry)
 
@@ -59,7 +59,7 @@ class TestToolDiscoveryService:
     @pytest.mark.asyncio
     async def test_discover_all(self, tool_registry):
         """全発見パイプラインのテスト."""
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         service = ToolDiscoveryService(tool_registry)
 
@@ -71,8 +71,8 @@ class TestToolDiscoveryService:
     @pytest.mark.asyncio
     async def test_refresh(self, tool_registry):
         """リフレッシュ（再発見）のテスト."""
-        from agentflow.core.tool_definition import ToolDefinition, ToolSource
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_definition import ToolDefinition, ToolSource
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         # 既存のツールを追加
         tool_registry.register(
@@ -95,8 +95,8 @@ class TestToolDiscoveryService:
     @pytest.mark.asyncio
     async def test_register_builtin(self, tool_registry):
         """ビルトインツール登録のテスト."""
-        from agentflow.core.tool_definition import ToolSource
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_definition import ToolSource
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         service = ToolDiscoveryService(tool_registry)
 
@@ -113,7 +113,7 @@ class TestToolDiscoveryService:
 
     def test_service_registry_property(self, tool_registry):
         """レジストリプロパティのテスト."""
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         service = ToolDiscoveryService(tool_registry)
 
@@ -122,8 +122,8 @@ class TestToolDiscoveryService:
     @pytest.mark.asyncio
     async def test_discover_skills_from_skill_engine(self, tool_registry):
         """SkillEngine からスキルを発見してツールとして登録."""
-        from agentflow.core.tool_definition import ToolSource
-        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from kernel.tools.tool_definition import ToolSource
+        from kernel.tools.tool_discovery import ToolDiscoveryService
 
         service = ToolDiscoveryService(tool_registry)
 

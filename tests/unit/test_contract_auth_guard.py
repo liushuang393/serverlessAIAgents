@@ -10,8 +10,8 @@ from fastapi import HTTPException
 from starlette.requests import Request
 from starlette.websockets import WebSocket
 
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
-from agentflow.security.auth_client.client import RemoteUser
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.security.auth_client.client import RemoteUser
 
 
 if TYPE_CHECKING:

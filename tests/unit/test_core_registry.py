@@ -10,7 +10,7 @@ import threading
 
 import pytest
 
-from agentflow.core.registry import ProtocolRegistry, Registry
+from kernel.agents.registry import ProtocolRegistry, Registry
 
 
 class ConcreteRegistry(Registry[str]):

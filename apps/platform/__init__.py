@@ -1,39 +1,40 @@
-"""Platform App - AgentFlow Platform Application.
+"""Platform App shell 公開 API.
 
-Platform は AgentFlow の統合プラットフォームアプリケーションです。
-Gallery、一键发布、多租户Dashboard をサポートします。
-
-アーキテクチャ:
-    - Gallery: Agent/App/Component の検索・発見
-    - ComponentLibrary: 共通コンポーネントライブラリ
-    - PublishOrchestrator: 一键发布フロー
-    - TenantDashboard: 多租户ダッシュボード
-
-使用例:
-    >>> from apps.platform import PlatformEngine
-    >>>
-    >>> engine = PlatformEngine()
-    >>> # Gallery検索
-    >>> results = await engine.search_gallery("PDF processor")
-    >>> # コンポーネント登録
-    >>> await engine.register_component(component)
-    >>> # 一键发布
-    >>> await engine.publish(agent, target="docker")
+旧 ``apps.platform`` の公開面は互換維持しつつ、
+正規実装は top-level ``platform`` へ移す。
 """
 
-from apps.platform.engine import PlatformEngine
-from apps.platform.services.component_library import (
-    ComponentEntry,
-    ComponentLibrary,
-    ComponentType,
-    ComponentVisibility,
-)
-from apps.platform.services.gallery_service import GalleryService
-from apps.platform.services.publish_orchestrator import PublishOrchestrator
+from __future__ import annotations
+
+import importlib
+from typing import Any
 
 
 __version__ = "1.0.0"
 __author__ = "AgentFlow Team"
+
+_EXPORT_MAP: dict[str, tuple[str, str]] = {
+    "ComponentEntry": ("platform.engine", "ComponentEntry"),
+    "ComponentLibrary": ("platform.engine", "ComponentLibrary"),
+    "ComponentType": ("platform.engine", "ComponentType"),
+    "ComponentVisibility": ("platform.engine", "ComponentVisibility"),
+    "GalleryService": ("platform.engine", "GalleryService"),
+    "PlatformEngine": ("platform.engine", "PlatformEngine"),
+    "PublishOrchestrator": ("platform.engine", "PublishOrchestrator"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    """互換公開シンボルを遅延解決する。"""
+    target = _EXPORT_MAP.get(name)
+    if target is None:
+        msg = f"module 'apps.platform' has no attribute {name!r}"
+        raise AttributeError(msg)
+
+    module_path, symbol_name = target
+    module = importlib.import_module(module_path)
+    return getattr(module, symbol_name)
+
 
 __all__ = [
     "ComponentEntry",

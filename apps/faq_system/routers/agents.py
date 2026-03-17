@@ -35,7 +35,7 @@ from apps.faq_system.routers.dependencies import (
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from agentflow.protocols.a2a_hub import get_hub
+from kernel.protocols.a2a_hub import get_hub
 
 
 if TYPE_CHECKING:

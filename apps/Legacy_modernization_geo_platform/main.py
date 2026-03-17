@@ -16,10 +16,10 @@ except ImportError:  # pragma: no cover - optional dependency
     load_dotenv = None
 
 import uvicorn
-from agentflow.core.app_agent_runtime import bootstrap_app_agents
-from agentflow.integrations.fastapi_integration import AgentContractRouter, create_sse_response
-from agentflow.protocols.a2ui.components import CardComponent, TextComponent
-from agentflow.protocols.agui_events import (
+from kernel.agents.app_agent_runtime import bootstrap_app_agents
+from shared.integrations.fastapi_integration import AgentContractRouter, create_sse_response
+from kernel.protocols.a2ui.components import CardComponent, TextComponent
+from kernel.protocols.agui_events import (
     A2UIClearEvent,
     A2UIComponentEvent,
     A2UIUpdateEvent,
@@ -34,8 +34,8 @@ from agentflow.protocols.agui_events import (
     NodeErrorEvent,
     NodeStartEvent,
 )
-from agentflow.security.auth_client import AuthClient
-from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.security.auth_client import AuthClient
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from apps.Legacy_modernization_geo_platform.backend.orchestrator import GeoOrchestrator
 from apps.Legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.Legacy_modernization_geo_platform.backend.qa import GeoQualityGate
@@ -133,7 +133,7 @@ def create_app(
     @app.get("/api/a2a/agents")
     async def list_a2a_agents() -> list[dict[str, Any]]:
         """A2AHub 登録済み Agent の AgentCard 一覧を返す."""
-        from agentflow.protocols.a2a_hub import get_hub
+        from kernel.protocols.a2a_hub import get_hub
 
         hub = get_hub()
         return [card.to_a2a_format() for card in hub.list_agents()]

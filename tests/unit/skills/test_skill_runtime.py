@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from agentflow.skills.base import Skill
-from agentflow.skills.runtime import ScriptResult, SkillRuntime
+from kernel.skills.base import Skill
+from kernel.skills.runtime import ScriptResult, SkillRuntime
 
 
 class TestScriptResult:

@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentflow.protocols.a2a.task_store import InMemoryA2ATaskStore
-from agentflow.protocols.a2a.types import (
+from kernel.protocols.a2a.task_store import InMemoryA2ATaskStore
+from kernel.protocols.a2a.types import (
     A2ATask,
     A2ATaskState,
     Artifact,

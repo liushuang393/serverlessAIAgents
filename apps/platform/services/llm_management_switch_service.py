@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from agentflow.llm.gateway import (
+from infrastructure.llm.gateway import (
     LiteLLMGateway,
     LLMGatewayConfig,
     ModelConfig,

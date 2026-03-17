@@ -2,10 +2,10 @@
 
 import pytest
 
-from agentflow.api.websocket_hub import WebSocketHub
-from agentflow.channels.base import MessageChannelAdapter, UserInfo
-from agentflow.channels.gateway import MessageGateway
-from agentflow.skills.chatbot import ChatBotSkill
+from platform.api.websocket_hub import WebSocketHub
+from shared.channels.base import MessageChannelAdapter, UserInfo
+from shared.channels.gateway import MessageGateway
+from kernel.skills.chatbot import ChatBotSkill
 
 
 class MockAdapter(MessageChannelAdapter):

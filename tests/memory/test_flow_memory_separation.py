@@ -4,9 +4,9 @@ import datetime
 
 import pytest
 
-from agentflow.flow.context import FlowContext
-from agentflow.memory.memory_manager import MemoryManager
-from agentflow.memory.types import MemoryEntry, MemoryType
+from kernel.flow.context import FlowContext
+from shared.memory.memory_manager import MemoryManager
+from infrastructure.memory.types import MemoryEntry, MemoryType
 
 
 @pytest.mark.asyncio
@@ -49,8 +49,8 @@ class TestFlowMemorySeparation:
 
     async def test_flow_has_long_term_memory_property(self) -> None:
         """Flowがlong_term_memoryプロパティとattach_long_term_memory()を持つことを確認."""
-        from agentflow.core.agent_block import AgentBlock
-        from agentflow.flow.builder import FlowBuilder
+        from kernel.agents.agent_block import AgentBlock
+        from kernel.flow.builder import FlowBuilder
 
         class DummyAgent(AgentBlock):
             async def run(self, input_data: dict) -> dict:  # type: ignore[override]
@@ -68,8 +68,8 @@ class TestFlowMemorySeparation:
 
     async def test_memory_accessor_is_scratchpad(self) -> None:
         """MemoryAccessor（flow.memory）がScratchpadであることを確認."""
-        from agentflow.core.agent_block import AgentBlock
-        from agentflow.flow.builder import FlowBuilder
+        from kernel.agents.agent_block import AgentBlock
+        from kernel.flow.builder import FlowBuilder
 
         class DummyAgent(AgentBlock):
             async def run(self, input_data: dict) -> dict:  # type: ignore[override]
@@ -89,8 +89,8 @@ class TestFlowMemorySeparation:
 
     async def test_long_term_memory_not_cleared_by_run(self) -> None:
         """flow.run()がScratchpadのみクリアし長期記憶は保持することを確認."""
-        from agentflow.core.agent_block import AgentBlock
-        from agentflow.flow.builder import FlowBuilder
+        from kernel.agents.agent_block import AgentBlock
+        from kernel.flow.builder import FlowBuilder
 
         class DummyAgent(AgentBlock):
             async def run(self, input_data: dict) -> dict:  # type: ignore[override]

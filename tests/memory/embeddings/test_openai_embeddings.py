@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from agentflow.memory.embeddings.openai_embeddings import OpenAIEmbeddings
+from infrastructure.memory.embeddings.openai_embeddings import OpenAIEmbeddings
 
 
 @pytest.fixture

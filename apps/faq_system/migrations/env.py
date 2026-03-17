@@ -9,7 +9,7 @@ from logging.config import fileConfig
 from alembic import context
 from apps.faq_system.backend.db.models import Base
 
-from agentflow.database import MigrationEnv
+from infrastructure.database import MigrationEnv
 
 
 # Alembic ロギング設定

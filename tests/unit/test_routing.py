@@ -5,7 +5,7 @@ IntentRouter, TaskTemplate, ExecutiveSummaryBuilder のテスト。
 
 import pytest
 
-from agentflow.routing import (
+from kernel.router import (
     ExecutiveSummary,
     ExecutiveSummaryBuilder,
     IntentCategory,

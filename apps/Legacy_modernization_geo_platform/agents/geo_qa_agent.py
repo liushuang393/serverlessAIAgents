@@ -7,7 +7,7 @@ from typing import Any
 from apps.Legacy_modernization_geo_platform.agents._models import GeoQAInput, GeoQAOutput
 from apps.Legacy_modernization_geo_platform.backend.qa import GeoQualityGate
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class GeoQAAgent(ResilientAgent[GeoQAInput, GeoQAOutput]):

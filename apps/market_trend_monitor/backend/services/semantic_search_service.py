@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from apps.market_trend_monitor.backend.config import config
 
-from agentflow import get_embedding, get_vectordb
+from kernel import get_embedding, get_vectordb
 
 
 if TYPE_CHECKING:

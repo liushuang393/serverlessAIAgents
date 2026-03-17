@@ -6,7 +6,7 @@ class TestIntentAnalyzerAgent:
 
     def _make_agent(self):
         """テスト用Agentインスタンスを生成."""
-        from agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent import (
+        from kernel.skills.builtin.design_skills.agents.intent_analyzer_agent import (
             IntentAnalyzerAgent,
         )
 
@@ -19,7 +19,7 @@ class TestIntentAnalyzerAgent:
 
     async def test_process_product_brief(self) -> None:
         """商品ブリーフの解析が正しいこと."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignBriefInput,
             DesignCategory,
         )
@@ -40,7 +40,7 @@ class TestIntentAnalyzerAgent:
 
     async def test_process_social_media_brief(self) -> None:
         """SNSブリーフの解析が正しいこと."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignBriefInput,
             DesignCategory,
         )
@@ -58,7 +58,7 @@ class TestIntentAnalyzerAgent:
 
     async def test_default_image_role_distribution(self) -> None:
         """8枚の画像にhero, feature, detail, lifestyleが含まれること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignBriefInput,
             ImageRole,
         )
@@ -76,7 +76,7 @@ class TestIntentAnalyzerAgent:
 
     async def test_amazon_platform_constraints(self) -> None:
         """Amazonプラットフォームの制約が設定されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import DesignBriefInput
 
         agent = self._make_agent()
         input_data = DesignBriefInput(
@@ -91,7 +91,7 @@ class TestIntentAnalyzerAgent:
 
     async def test_japanese_brief(self) -> None:
         """日本語ブリーフが正しく処理されること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignBriefInput,
             DesignCategory,
         )
@@ -108,7 +108,7 @@ class TestIntentAnalyzerAgent:
 
     async def test_brand_identity_detection(self) -> None:
         """ブランドアイデンティティカテゴリの検出."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             DesignBriefInput,
             DesignCategory,
         )

@@ -2,10 +2,10 @@
 
 import pytest
 
-from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.exceptions import WorkflowNotFoundError
-from agentflow.core.hooks import HookType
-from agentflow.core.types import ExecutionContext, WorkflowConfig
+from kernel.core.engine import AgentFlowEngine
+from kernel.core.exceptions import WorkflowNotFoundError
+from kernel.core.hooks import HookType
+from kernel.core.types import ExecutionContext, WorkflowConfig
 
 
 class TestAgentFlowEngine:

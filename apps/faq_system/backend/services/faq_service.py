@@ -23,8 +23,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.security import SafetyMixin
-from agentflow.services.base import (
+from infrastructure.security import SafetyMixin
+from platform.services.base import (
     ServiceBase,
     ServiceEvent,
 )
@@ -145,8 +145,8 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
         if self._started:
             return
 
-        from agentflow.providers import get_llm
-        from agentflow.services.rag_service import RAGConfig, RAGService
+        from infrastructure.llm.providers import get_llm
+        from platform.services.rag_service import RAGConfig, RAGService
 
         # RAG サービス初期化
         rag_config = RAGConfig(
@@ -164,7 +164,7 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
 
         # DB 接続（オプショナル）
         try:
-            from agentflow.providers import get_db
+            from infrastructure.llm.providers import get_db
 
             self._db = get_db()
             await self._db.connect()

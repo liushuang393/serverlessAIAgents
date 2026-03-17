@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture
 def agent_registry():
     """新しいAgentRegistryインスタンスを作成."""
-    from agentflow.core.agent_registry import AgentRegistry
+    from kernel.agents.agent_registry import AgentRegistry
 
     return AgentRegistry()
 
@@ -17,7 +17,7 @@ def agent_registry():
 @pytest.fixture
 def sample_capability():
     """サンプルAgentCapabilitySpecを作成."""
-    from agentflow.core.capability_spec import AgentCapabilitySpec
+    from kernel.agents.capability_spec import AgentCapabilitySpec
 
     return AgentCapabilitySpec(
         id="test_agent_v1",
@@ -63,7 +63,7 @@ class TestAgentRegistry:
 
     def test_find_by_tags(self, agent_registry):
         """タグでAgent検索のテスト."""
-        from agentflow.core.capability_spec import AgentCapabilitySpec
+        from kernel.agents.capability_spec import AgentCapabilitySpec
 
         cap1 = AgentCapabilitySpec(id="a1", name="A1", description="", tags=["pdf", "analysis"])
         cap2 = AgentCapabilitySpec(id="a2", name="A2", description="", tags=["text", "analysis"])
@@ -79,7 +79,7 @@ class TestAgentRegistry:
 
     def test_find_matching(self, agent_registry):
         """要件マッチングでAgent検索のテスト."""
-        from agentflow.core.capability_spec import AgentCapabilitySpec, CapabilityRequirement
+        from kernel.agents.capability_spec import AgentCapabilitySpec, CapabilityRequirement
 
         cap1 = AgentCapabilitySpec(
             id="pdf_analyzer",
@@ -145,7 +145,7 @@ class TestGlobalAgentRegistry:
 
     def test_get_global_registry(self):
         """グローバルレジストリ取得のテスト."""
-        from agentflow.core.agent_registry import get_global_agent_registry
+        from kernel.agents.agent_registry import get_global_agent_registry
 
         registry = get_global_agent_registry()
 
@@ -153,7 +153,7 @@ class TestGlobalAgentRegistry:
 
     def test_global_registry_singleton(self):
         """グローバルレジストリがシングルトンかテスト."""
-        from agentflow.core.agent_registry import get_global_agent_registry
+        from kernel.agents.agent_registry import get_global_agent_registry
 
         registry1 = get_global_agent_registry()
         registry2 = get_global_agent_registry()

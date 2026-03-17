@@ -15,8 +15,8 @@ import uvicorn
 from fastapi import FastAPI, Response
 from pydantic import BaseModel, Field
 
-from agentflow import __version__ as agentflow_version
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel import __version__ as agentflow_version
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 _APP_ROOT = Path(__file__).resolve().parent

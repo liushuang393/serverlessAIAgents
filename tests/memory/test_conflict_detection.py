@@ -9,8 +9,8 @@ from datetime import datetime
 
 import pytest
 
-from agentflow.memory.memory_manager import MemoryManager
-from agentflow.memory.types import MemoryEntry, MemoryType
+from shared.memory.memory_manager import MemoryManager
+from infrastructure.memory.types import MemoryEntry, MemoryType
 
 
 def _make_entry(content: str, topic: str = "test", importance: float = 0.5) -> MemoryEntry:

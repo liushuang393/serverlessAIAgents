@@ -27,9 +27,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
-from agentflow.core.resilient_agent import ResilientAgent
-from agentflow.providers import get_llm
-from agentflow.routing import (
+from kernel.agents.resilient_agent import ResilientAgent
+from infrastructure.llm.providers import get_llm
+from kernel.router import (
     ExecutiveSummaryBuilder,
     Intent,
     IntentCategory,
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
     from apps.messaging_hub.lazy_tool_loader import LazyToolLoader
 
-    from agentflow.skills.gateway import SkillGateway, SkillResult
+    from kernel.skills.gateway import SkillGateway, SkillResult
 
 _logger = logging.getLogger(__name__)
 

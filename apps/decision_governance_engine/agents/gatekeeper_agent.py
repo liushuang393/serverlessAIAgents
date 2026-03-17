@@ -15,7 +15,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     QuestionCategory,
 )
 
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 
 
 class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
@@ -278,7 +278,7 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
                 if isinstance(response, dict)
                 else str(getattr(response, "content", "")).strip()
             )
-            from agentflow.utils import extract_json
+            from shared.utils import extract_json
 
             data = extract_json(content)
             if data:

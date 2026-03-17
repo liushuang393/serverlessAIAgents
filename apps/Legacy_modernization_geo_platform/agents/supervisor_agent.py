@@ -9,7 +9,7 @@ from apps.Legacy_modernization_geo_platform.agents._models import (
     SupervisorOutput,
 )
 
-from agentflow.core.resilient_agent import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 class SupervisorAgent(ResilientAgent[SupervisorInput, SupervisorOutput]):

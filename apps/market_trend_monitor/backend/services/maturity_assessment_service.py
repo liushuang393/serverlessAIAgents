@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from agentflow import get_llm
+from kernel import get_llm
 
 
 if TYPE_CHECKING:

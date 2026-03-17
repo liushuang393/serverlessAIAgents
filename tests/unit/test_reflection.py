@@ -2,8 +2,8 @@
 
 import pytest
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.patterns.reflection import (
+from kernel.agents.agent_block import AgentBlock
+from kernel.patterns.reflection import (
     ImproverAgent,
     ReflectionLoop,
     ReflectionWorkflow,

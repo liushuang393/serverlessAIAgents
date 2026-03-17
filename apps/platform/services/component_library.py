@@ -34,8 +34,8 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Protocol
 
-from agentflow.core.registry import Registry
-from agentflow.multi_tenant.manager import get_current_tenant
+from kernel.agents.registry import Registry
+from kernel.runtime.multi_tenant.manager import get_current_tenant
 
 
 class ComponentType(str, Enum):

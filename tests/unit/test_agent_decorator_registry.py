@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentflow.core.agent_registry import get_global_agent_registry, reset_global_agent_registry
+from kernel.agents.agent_registry import get_global_agent_registry, reset_global_agent_registry
 
 
 @pytest.fixture(autouse=True)
@@ -15,7 +15,7 @@ def reset_registry():
 
 def test_agent_decorator_registers_in_agent_registry():
     """@agent デコレータが AgentRegistry に登録することを確認."""
-    from agentflow import agent
+    from kernel import agent
 
     @agent
     class TestAgent:
@@ -36,7 +36,7 @@ def test_agent_decorator_registers_in_agent_registry():
 
 def test_agent_decorator_creates_capability_spec():
     """@agent デコレータが AgentCapabilitySpec を作成することを確認."""
-    from agentflow import agent
+    from kernel import agent
 
     @agent(skills=["rag", "chatbot"])
     class SkillfulAgent:
@@ -56,8 +56,8 @@ def test_agent_decorator_creates_capability_spec():
 
 def test_agent_registry_find_matching():
     """AgentRegistry でタスク要件マッチングができることを確認."""
-    from agentflow import agent
-    from agentflow.core.capability_spec import CapabilityRequirement
+    from kernel import agent
+    from kernel.agents.capability_spec import CapabilityRequirement
 
     @agent(skills=["rag"])
     class RAGAgent:

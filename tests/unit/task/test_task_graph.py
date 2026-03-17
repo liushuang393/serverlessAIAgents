@@ -1,7 +1,7 @@
-from agentflow.task.task import Task
-from agentflow.task.task_graph import TaskGraph
-from agentflow.task.task_id import TaskID
-from agentflow.task.task_state import TaskState
+from kernel.task.task import Task
+from kernel.task.task_graph import TaskGraph
+from kernel.task.task_id import TaskID
+from kernel.task.task_state import TaskState
 
 
 def test_task_graph_creation():

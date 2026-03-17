@@ -6,8 +6,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from agentflow.evolution.registry import StrategyRegistry
-from agentflow.evolution.types import (
+from shared.evolution.registry import StrategyRegistry
+from shared.evolution.types import (
     RetrievalMode,
     ScopeLevel,
     ScoreUpdateRequest,

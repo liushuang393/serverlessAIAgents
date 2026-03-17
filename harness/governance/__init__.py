@@ -1,0 +1,54 @@
+"""ガバナンスモジュール公開API."""
+
+from harness.governance.audit import AuditEvent, AuditLogger, LoggingAuditLogger
+from harness.governance.engine import (
+    GovernanceDecision,
+    GovernanceEngine,
+    GovernanceResult,
+    ToolExecutionContext,
+)
+from harness.governance.enterprise_audit import (
+    AuditEventType,
+    AuditSeverity,
+    AuditStorage,
+    ComplianceReport,
+    EnterpriseAuditEvent,
+    EnterpriseAuditLogger,
+    InMemoryAuditStorage,
+    PostgresAuditStorage,
+)
+from harness.governance.plugin_registry import (
+    AppPluginSnapshot,
+    PluginBindingRecord,
+    PluginManifestRecord,
+    PluginRegistry,
+    PluginRuntimeAssessment,
+)
+
+
+__all__ = [
+    "AppPluginSnapshot",
+    # 基本監査
+    "AuditEvent",
+    # エンタープライズ監査（Phase 2.3）
+    "AuditEventType",
+    "AuditLogger",
+    "AuditSeverity",
+    "AuditStorage",
+    "ComplianceReport",
+    "EnterpriseAuditEvent",
+    "EnterpriseAuditLogger",
+    # ガバナンスエンジン
+    "GovernanceDecision",
+    "GovernanceEngine",
+    "GovernanceResult",
+    "InMemoryAuditStorage",
+    "LoggingAuditLogger",
+    "PluginBindingRecord",
+    "PluginManifestRecord",
+    "PluginRegistry",
+    "PluginRuntimeAssessment",
+    "PostgresAuditStorage",
+    "ToolExecutionContext",
+    "canonical_manifest_bytes",
+]

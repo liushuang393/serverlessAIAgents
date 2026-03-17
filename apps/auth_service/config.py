@@ -13,7 +13,7 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from agentflow.runtime import resolve_app_runtime
+from kernel.runtime import resolve_app_runtime
 
 
 _AUTH_ENV_FILE = Path(__file__).resolve().parent / ".env"

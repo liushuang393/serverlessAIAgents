@@ -9,8 +9,8 @@ import pytest
 @pytest.fixture(autouse=True)
 def reset_registries():
     """テスト前後にレジストリをリセット."""
-    from agentflow.core.agent_registry import reset_global_agent_registry
-    from agentflow.core.tool_registry import reset_global_tool_registry
+    from kernel.agents.agent_registry import reset_global_agent_registry
+    from kernel.tools.tool_registry import reset_global_tool_registry
 
     reset_global_tool_registry()
     reset_global_agent_registry()
@@ -25,7 +25,7 @@ class TestAutoAgentFlow:
 
     def test_tool_registration_and_discovery(self):
         """ツール登録と発見のテスト."""
-        from agentflow import (
+        from kernel import (
             ToolDefinition,
             ToolDiscoveryService,
             ToolRegistry,
@@ -60,7 +60,7 @@ class TestAutoAgentFlow:
 
     def test_agent_registration_and_capability_matching(self):
         """Agent登録と能力マッチングのテスト."""
-        from agentflow import (
+        from kernel import (
             AgentCapabilitySpec,
             AgentRegistry,
             CapabilityRequirement,
@@ -103,7 +103,7 @@ class TestAutoAgentFlow:
     @pytest.mark.asyncio
     async def test_tool_binding_for_agent(self):
         """Agent へのツールバインディングのテスト."""
-        from agentflow import (
+        from kernel import (
             AgentCapabilitySpec,
             ToolBinder,
             ToolDefinition,
@@ -156,7 +156,7 @@ class TestAutoAgentFlow:
 
     def test_full_workflow_tool_to_agent(self):
         """ツール登録からAgent発見までの完全ワークフロー."""
-        from agentflow import (
+        from kernel import (
             AgentCapabilitySpec,
             CapabilityRequirement,
             ToolDiscoveryService,
@@ -213,7 +213,7 @@ class TestAutoAgentFlow:
         """能力が必要とするツールをMCP形式に変換."""
         import asyncio
 
-        from agentflow import (
+        from kernel import (
             AgentCapabilitySpec,
             ToolBinder,
             ToolDefinition,

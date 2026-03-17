@@ -5,7 +5,7 @@
 
 import pytest
 
-from agentflow.providers.tool_provider import (
+from infrastructure.llm.providers.tool_provider import (
     RegisteredTool,
     ToolProvider,
     _tool_registry,

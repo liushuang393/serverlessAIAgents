@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from agentflow.memory.vector_db.qdrant_db import QdrantDB
+from infrastructure.memory.vector_db.qdrant_db import QdrantDB
 
 
 async def test_connect_or_warn_returns_false_when_client_not_installed() -> None:

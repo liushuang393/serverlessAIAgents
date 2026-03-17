@@ -2,10 +2,10 @@
 
 import pytest
 
-from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.hooks import HookEvent, HookType
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
-from agentflow.protocols.agui_events import (
+from kernel.core.engine import AgentFlowEngine
+from kernel.core.hooks import HookEvent, HookType
+from kernel.protocols.agui_emitter import AGUIEventEmitter
+from kernel.protocols.agui_events import (
     AGUIEventType,
     FlowCancelEvent,
     FlowCompleteEvent,

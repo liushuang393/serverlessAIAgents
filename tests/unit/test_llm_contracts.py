@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from agentflow.llm.contracts import (
+from infrastructure.llm.contracts import (
     LLMContractResolutionError,
     load_app_llm_contracts,
     resolve_contract_model_alias,
     resolve_contract_model_ref,
 )
-from agentflow.llm.gateway import load_gateway_config
+from infrastructure.llm.gateway import load_gateway_config
 
 
 if TYPE_CHECKING:

@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentflow.memory.types import MemoryEntry, MemoryType
-from agentflow.memory.vector_db.pinecone_db import PineconeDB
+from infrastructure.memory.types import MemoryEntry, MemoryType
+from infrastructure.memory.vector_db.pinecone_db import PineconeDB
 
 
 @pytest.fixture

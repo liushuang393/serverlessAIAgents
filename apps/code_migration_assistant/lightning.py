@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from agentflow.engines.base import EngineConfig
-from agentflow.run import LightningRuntimeConfig, resolve_lightning_store
+from kernel.engines.base import EngineConfig
+from kernel.runtime import LightningRuntimeConfig, resolve_lightning_store
 
 
 def score_migration_result(result: dict[str, Any]) -> float | None:

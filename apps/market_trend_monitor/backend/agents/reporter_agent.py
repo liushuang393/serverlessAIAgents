@@ -25,7 +25,7 @@ from apps.market_trend_monitor.backend.models import (
     TrendSchema,
 )
 
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 
 
 class ReporterAgent(ResilientAgent[ReporterInput, ReporterOutput]):

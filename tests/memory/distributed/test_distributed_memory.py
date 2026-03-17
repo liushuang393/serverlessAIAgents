@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agentflow.memory.distributed.distributed_memory import DistributedMemoryManager
-from agentflow.memory.types import MemoryEntry, MemoryType
+from infrastructure.memory.distributed.distributed_memory import DistributedMemoryManager
+from infrastructure.memory.types import MemoryEntry, MemoryType
 
 
 @pytest.fixture

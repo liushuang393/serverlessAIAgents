@@ -42,7 +42,7 @@ from apps.platform.services.llm_management_switch_service import LLMSwitchServic
 from apps.platform.services.llm_management_validator import LLMConfigValidator
 from apps.platform.services.llm_runtime_status import resolve_provider_runtime_statuses
 
-from agentflow.llm.gateway import (
+from infrastructure.llm.gateway import (
     InferenceEngineConfig,
     LiteLLMGateway,
     LLMGatewayConfig,
@@ -53,7 +53,7 @@ from agentflow.llm.gateway import (
     load_gateway_config,
     resolve_secret_status,
 )
-from agentflow.llm.gateway.config import register_platform_secret_resolver
+from infrastructure.llm.gateway.config import register_platform_secret_resolver
 
 
 class LLMManagementService:

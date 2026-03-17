@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from agentflow.core.circuit_breaker import (
+from kernel.executor.reliability.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
     CircuitBreakerOpenError,

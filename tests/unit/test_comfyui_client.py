@@ -8,13 +8,13 @@ class TestComfyUIClient:
 
     def _make_client(self):
         """テスト用クライアントインスタンスを生成."""
-        from agentflow.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
+        from kernel.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
 
         return ComfyUIClient(base_url="http://localhost:8188")
 
     async def test_build_workflow_payload(self) -> None:
         """ImageSpecからワークフローJSONを正しく構築できること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,
@@ -57,7 +57,7 @@ class TestComfyUIClient:
 
     async def test_build_workflow_merges_prompts(self) -> None:
         """グローバルスタイルと画像固有プロンプトがマージされること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,
@@ -141,7 +141,7 @@ class TestComfyUIClient:
 
     async def test_build_workflow_extra_negative(self) -> None:
         """画像固有のネガティブプロンプトがマージされること."""
-        from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
+        from kernel.skills.builtin.design_skills.schemas.design_schemas import (
             GlobalStyle,
             ImageRole,
             ImageSpec,
