@@ -1,0 +1,282 @@
+{
+  "name": "legacy_modernization_geo_platform",
+  "display_name": "Legacy Modernization GEO Platform",
+  "description": "旧システム刷新向けの需要診断・GEOコンテンツ生成・承認・公開を統合するMVPプラットフォーム",
+  "business_base": "growth",
+  "product_line": "framework",
+  "surface_profile": "operator",
+  "audit_profile": "business",
+  "version": "0.1.0",
+  "icon": "🧭",
+  "ports": {
+    "api": 8100,
+    "frontend": 3100,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.legacy_modernization_geo_platform.main:app",
+    "health": "/api/health"
+  },
+  "agents": [
+    {
+      "name": "Supervisor",
+      "module": "apps.legacy_modernization_geo_platform.agents.supervisor_agent",
+      "class_name": "SupervisorAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "routing",
+        "task_control",
+        "approval"
+      ],
+      "business_base": "growth",
+      "pattern": "coordinator",
+      "agent_type": "planner"
+    },
+    {
+      "name": "BrandMemory",
+      "module": "apps.legacy_modernization_geo_platform.agents.brand_memory_agent",
+      "class_name": "BrandMemoryAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "positioning",
+        "brand_memory"
+      ],
+      "business_base": "growth",
+      "pattern": "specialist",
+      "agent_type": "specialist"
+    },
+    {
+      "name": "DemandSignal",
+      "module": "apps.legacy_modernization_geo_platform.agents.demand_signal_agent",
+      "class_name": "DemandSignalAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "live_search",
+        "signal_detection"
+      ],
+      "business_base": "growth",
+      "pattern": "analyzer",
+      "agent_type": "reactor"
+    },
+    {
+      "name": "AccountScore",
+      "module": "apps.legacy_modernization_geo_platform.agents.account_score_agent",
+      "class_name": "AccountScoreAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "scoring",
+        "prioritization"
+      ],
+      "business_base": "growth",
+      "pattern": "analyzer",
+      "agent_type": "reactor"
+    },
+    {
+      "name": "QuestionGraph",
+      "module": "apps.legacy_modernization_geo_platform.agents.question_graph_agent",
+      "class_name": "QuestionGraphAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "question_mapping",
+        "persona_planning"
+      ],
+      "business_base": "growth",
+      "pattern": "planner",
+      "agent_type": "planner"
+    },
+    {
+      "name": "EvidenceMatrix",
+      "module": "apps.legacy_modernization_geo_platform.agents.evidence_matrix_agent",
+      "class_name": "EvidenceMatrixAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "evidence_collection",
+        "citation"
+      ],
+      "business_base": "governance",
+      "pattern": "collector",
+      "agent_type": "executor"
+    },
+    {
+      "name": "LegacySemantics",
+      "module": "apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent",
+      "class_name": "LegacySemanticsAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "business_semantics",
+        "modernization_strategy"
+      ],
+      "business_base": "operations",
+      "pattern": "specialist",
+      "agent_type": "specialist"
+    },
+    {
+      "name": "ContentBlueprint",
+      "module": "apps.legacy_modernization_geo_platform.agents.content_blueprint_agent",
+      "class_name": "ContentBlueprintAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "content_strategy",
+        "page_blueprint"
+      ],
+      "business_base": "growth",
+      "pattern": "planner",
+      "agent_type": "planner"
+    },
+    {
+      "name": "ContentDraft",
+      "module": "apps.legacy_modernization_geo_platform.agents.content_draft_agent",
+      "class_name": "ContentDraftAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "content_generation",
+        "json_ld"
+      ],
+      "business_base": "growth",
+      "pattern": "executor",
+      "agent_type": "executor"
+    },
+    {
+      "name": "GeoQA",
+      "module": "apps.legacy_modernization_geo_platform.agents.geo_qa_agent",
+      "class_name": "GeoQAAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "quality_gate",
+        "citation_checks",
+        "risk_scoring"
+      ],
+      "business_base": "governance",
+      "pattern": "gatekeeper",
+      "agent_type": "gatekeeper"
+    },
+    {
+      "name": "Publishing",
+      "module": "apps.legacy_modernization_geo_platform.agents.publishing_agent",
+      "class_name": "PublishingAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "static_publish",
+        "sitemap",
+        "ai_feed"
+      ],
+      "business_base": "growth",
+      "pattern": "executor",
+      "agent_type": "executor"
+    },
+    {
+      "name": "ReportAssembler",
+      "module": "apps.legacy_modernization_geo_platform.agents.report_assembler_agent",
+      "class_name": "ReportAssemblerAgent",
+      "init_kwargs": {},
+      "capabilities": [
+        "reporting",
+        "summaries"
+      ],
+      "business_base": "governance",
+      "pattern": "reporter",
+      "agent_type": "reporter"
+    }
+  ],
+  "services": {
+    "intelligence": {
+      "providers": [
+        "serpapi",
+        "bing",
+        "duckduckgo_search"
+      ],
+      "enabled": true
+    },
+    "publish": {
+      "enabled": true,
+      "target": "docker"
+    },
+    "artifacts": {
+      "enabled": true,
+      "storage": "file+sqlite"
+    }
+  },
+  "dependencies": {
+    "database": "sqlite",
+    "redis": false,
+    "external": [
+      "serpapi",
+      "bing_search"
+    ]
+  },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8100",
+      "frontend": "http://localhost:3100",
+      "health": "http://localhost:8100/api/health",
+      "database": "sqlite:///apps/legacy_modernization_geo_platform/data/geo_platform.db"
+    },
+    "hosts": {
+      "backend": "0.0.0.0",
+      "frontend": "0.0.0.0"
+    },
+    "database": {
+      "kind": "sqlite",
+      "url": "sqlite:///apps/legacy_modernization_geo_platform/data/geo_platform.db",
+      "host": null,
+      "port": null,
+      "name": "geo_platform.db",
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": "ローカル SQLite 保存"
+    },
+    "commands": {
+      "backend_dev": "python apps/legacy_modernization_geo_platform/scripts/dev.py",
+      "frontend_dev": "cd apps/legacy_modernization_geo_platform/frontend && npm run dev",
+      "publish": "python apps/legacy_modernization_geo_platform/scripts/compose.py publish",
+      "start": "python apps/legacy_modernization_geo_platform/scripts/compose.py start",
+      "stop": "python apps/legacy_modernization_geo_platform/scripts/compose.py stop"
+    }
+  },
+  "tags": [
+    "geo",
+    "legacy-modernization",
+    "growth",
+    "publishing",
+    "approval"
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": true,
+      "providers": [
+        "auth_service"
+      ],
+      "allow_anonymous": false,
+      "required_scopes": [
+        "geo.operator"
+      ],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "token_policy": {
+        "jwt_issuer": "auth-service",
+        "jwt_audience": "auth-service"
+      },
+      "session_ttl_minutes": 60
+    },
+    "llm": {
+      "enabled": false,
+      "defaults": {},
+      "agent_overrides": {},
+      "allowed_modalities": [],
+      "extra_model_refs": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [
+        "docker"
+      ],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "plugin_bindings": []
+}

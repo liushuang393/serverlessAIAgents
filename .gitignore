@@ -111,3 +111,4 @@ test_results.txt
 # ---- Runtime / Generated Data
 platform/data/*.db
 platform/data/*.db-journal
+apps/legacy_modernization_geo_platform/data/*
