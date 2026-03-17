@@ -44,7 +44,7 @@ class RailwayTarget(BaseDeployTarget):
         """Railway にデプロイ."""
         api_token = config.credentials.get("railway_token")
         project_id = config.settings.get("project_id")
-        service_name = config.settings.get("service_name", "agentflow-app")
+        service_name = config.settings.get("service_name", "bizcore-app")
 
         if not api_token:
             yield DeployEvent(type="error", message="Railway API token is required")
@@ -157,7 +157,7 @@ class RailwayTarget(BaseDeployTarget):
                 label="Service Name",
                 type="string",
                 required=True,
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

@@ -35,7 +35,7 @@ class ResourceManager:
     """auth_service のリソース定義 API を呼び出す共通クライアント.
 
     Args:
-        auth_client: agentflow.security.auth_client.AuthClient インスタンス
+        auth_client: auth_service 互換クライアントインスタンス
     """
 
     def __init__(self, auth_client: Any) -> None:

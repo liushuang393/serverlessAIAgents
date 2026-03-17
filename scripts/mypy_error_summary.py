@@ -2,7 +2,7 @@
 """MyPy のエラーを集計し、コード別・ファイル別のサマリーを出力する。
 
 使用例:
-  conda activate agentflow
+  conda activate bizcore
   python scripts/mypy_error_summary.py
 
 型エラー解消の進捗確認や、check-errors-analysis の分類確認に利用する。
@@ -18,6 +18,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+MYPY_TARGETS: list[str] = [
+    "contracts",
+    "infrastructure",
+    "shared",
+    "kernel",
+    "harness",
+    "control_plane",
+    "domain",
+    "apps",
+    "tests",
+]
+TARGET_ROOT_PATTERN = r"(?:contracts|infrastructure|shared|kernel|harness|control_plane|domain|apps|tests)"
 
 # 既知の mypy エラーコード（集計対象）
 KNOWN_CODES: set[str] = {
@@ -50,11 +62,11 @@ KNOWN_CODES: set[str] = {
 
 
 def run_mypy() -> str:
-    """mypy agentflow を --no-pretty で実行し、1行1エラーの形式で返す。"""
+    """mypy を現行パッケージ群に対して実行し、1行1エラーの形式で返す。"""
     result = subprocess.run(
         [
             "mypy",
-            "agentflow",
+            *MYPY_TARGETS,
             "--strict",
             "--ignore-missing-imports",
             "--no-error-summary",
@@ -72,12 +84,14 @@ def parse_errors(output: str) -> tuple[list[tuple[str, str, str]], str]:
     """mypy 出力をパースし (file, detail, code) のリストと集計行を返す。
 
     --no-pretty 出力は 1 行に完結しているため、行末の [code] を確実に取得できる。
-    例: agentflow/foo.py:10:5: error: Message text [no-any-return]
+    例: kernel/foo.py:10:5: error: Message text [no-any-return]
     """
     # ファイル:行[:列]: error: メッセージ [コード]
-    error_re = re.compile(r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.*?)\s*\[([a-z][a-z0-9-]*)\]\s*$")
+    error_re = re.compile(
+        rf"^({TARGET_ROOT_PATTERN}/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.*?)\s*\[([a-z][a-z0-9-]*)\]\s*$"
+    )
     # コードが不明な行（行末に [code] が無い場合）
-    error_nocode_re = re.compile(r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.+)$")
+    error_nocode_re = re.compile(rf"^({TARGET_ROOT_PATTERN}/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.+)$")
 
     errors: list[tuple[str, str, str]] = []
     summary_line = ""
@@ -102,7 +116,10 @@ def parse_errors(output: str) -> tuple[list[tuple[str, str, str]], str]:
 
 
 def main() -> int:
-    print("Running: mypy agentflow --strict --ignore-missing-imports ...")
+    print(
+        "Running: mypy contracts infrastructure shared kernel harness control_plane domain apps tests "
+        "--strict --ignore-missing-imports ..."
+    )
     raw = run_mypy()
     errors, summary_line = parse_errors(raw)
     if not errors:

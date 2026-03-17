@@ -1,6 +1,6 @@
 """Alembic migration environment for Decision Governance Engine.
 
-agentflow.database.MigrationEnv を使用した統一マイグレーション環境。
+infrastructure.database.MigrationEnv を使用した統一マイグレーション環境。
 既存DBの自動検知・auto-stamp・offline/online モードに自動対応。
 """
 

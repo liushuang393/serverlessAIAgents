@@ -106,7 +106,7 @@ pinned: false
 
 # {space_name}
 
-Deployed with AgentFlow Framework.
+Deployed with BizCore Framework.
 """
             # 一時ディレクトリにファイルを準備
             with tempfile.TemporaryDirectory() as tmp_dir:

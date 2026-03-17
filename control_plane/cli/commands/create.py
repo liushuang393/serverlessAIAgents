@@ -180,15 +180,15 @@ def agent(
 
         \b
         # 基本的な使用方法
-        $ agentflow create agent my-agent
+        $ bizcore create agent my-agent
 
         \b
         # 対話モードで作成
-        $ agentflow create agent my-agent --interactive
+        $ bizcore create agent my-agent --interactive
 
         \b
         # プロトコルを指定
-        $ agentflow create agent my-agent --no-agui
+        $ bizcore create agent my-agent --no-agui
     """
     verbose = ctx.obj.get("verbose", False)
 

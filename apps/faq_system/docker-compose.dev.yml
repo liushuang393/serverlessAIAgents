@@ -31,7 +31,13 @@ services:
       ]
     volumes:
       # ソースコードをマウント（リアルタイム反映、読み書き可能）
-      - ../../agentflow:/app/agentflow
+      - ../../contracts:/app/contracts
+      - ../../infrastructure:/app/infrastructure
+      - ../../shared:/app/shared
+      - ../../kernel:/app/kernel
+      - ../../harness:/app/harness
+      - ../../control_plane:/app/control_plane
+      - ../../domain:/app/domain
       - .:/app/apps/faq_system
     environment:
       # LLM 設定（ホストの環境変数をそのまま継承、値を上書きしない）

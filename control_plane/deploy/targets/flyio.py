@@ -44,7 +44,7 @@ class FlyioTarget(BaseDeployTarget):
     ) -> AsyncIterator[DeployEvent]:
         """Fly.io にデプロイ."""
         api_token = config.credentials.get("fly_api_token")
-        app_name = config.settings.get("app_name", "agentflow-app")
+        app_name = config.settings.get("app_name", "bizcore-app")
         region = config.settings.get("region", "nrt")  # Tokyo
 
         if not api_token:
@@ -184,7 +184,7 @@ primary_region = "{region}"
                 label="App Name",
                 type="string",
                 required=True,
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

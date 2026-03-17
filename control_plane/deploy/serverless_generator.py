@@ -34,7 +34,7 @@ class ServerlessConfig:
         env_vars: 環境変数
     """
 
-    app_name: str = "agentflow-app"
+    app_name: str = "bizcore-app"
     python_version: str = "3.13"
     entry_point: str = "main.handler"
     region: str = "us-east-1"
@@ -71,7 +71,7 @@ This file serves as the entry point for Vercel serverless deployment.
 from fastapi import FastAPI
 from mangum import Mangum
 
-# Import your AgentFlow application
+# Import your BizCore application
 # from your_app import create_app
 # app = create_app()
 
@@ -81,7 +81,7 @@ app = FastAPI(title="{app_name}")
 
 @app.get("/")
 async def root():
-    return {{"message": "AgentFlow is running!"}}
+    return {{"message": "BizCore is running!"}}
 
 
 @app.get("/api/health")
@@ -167,7 +167,7 @@ This file serves as the entry point for AWS Lambda deployment.
 from mangum import Mangum
 from fastapi import FastAPI
 
-# Import your AgentFlow application
+# Import your BizCore application
 # from your_app import create_app
 # app = create_app()
 
@@ -177,7 +177,7 @@ app = FastAPI(title="{app_name}")
 
 @app.get("/")
 async def root():
-    return {{"message": "AgentFlow is running!"}}
+    return {{"message": "BizCore is running!"}}
 
 
 @app.get("/health")
@@ -299,7 +299,7 @@ def generate_requirements_txt(
         生成されたファイルパス
     """
     requirements = [
-        "agentflow>=1.0.0",
+        "bizcore>=2.0.0",
         "fastapi>=0.100.0",
         "uvicorn>=0.23.0",
         "mangum>=0.17.0",  # AWS Lambda/Vercel adapter

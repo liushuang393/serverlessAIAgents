@@ -48,7 +48,7 @@ class ScopeResolver:
     検索可能な collection 一覧を取得する。
 
     Args:
-        auth_client: agentflow.security.auth_client.AuthClient インスタンス
+        auth_client: auth_service 互換クライアントインスタンス
     """
 
     def __init__(self, auth_client: Any) -> None:

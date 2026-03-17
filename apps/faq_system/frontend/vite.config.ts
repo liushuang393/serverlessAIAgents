@@ -46,9 +46,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // agentflow フレームワーク i18n 基底実装へのエイリアス
-      '@agentflow/i18n': path.resolve(__dirname, '../../../agentflow/i18n/frontend'),
-      // agentflow 配下の TSX からも、このアプリの React を確実に解決する
+      '@bizcore/i18n': path.resolve(__dirname, './src/i18n/base'),
+      // 共通 i18n 基底から読み込まれる TSX でも、このアプリの React を確実に解決する
       react: path.resolve(__dirname, './node_modules/react'),
       'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/jsx-runtime.js'),
       'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/jsx-dev-runtime.js'),

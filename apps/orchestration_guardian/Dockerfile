@@ -13,7 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md /app/
-COPY agentflow /app/agentflow
+COPY contracts /app/contracts
+COPY infrastructure /app/infrastructure
+COPY shared /app/shared
+COPY kernel /app/kernel
+COPY harness /app/harness
+COPY control_plane /app/control_plane
+COPY domain /app/domain
 COPY apps/orchestration_guardian /app/apps/orchestration_guardian
 
 RUN pip install --no-cache-dir -e ".[apps]"

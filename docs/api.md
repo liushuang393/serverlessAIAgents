@@ -3,7 +3,7 @@
 ## Canonical Routes
 
 - `/api/studios/*`
-- `/api/studios/framework/*`
+- `/api/studios/framework/apps/*`
 
 ## Control Plane Entrypoint
 
@@ -13,4 +13,5 @@
 ## Notes
 
 - 旧 `/api/apps/*` は正規経路ではない
+- framework app 管理面は `/api/studios/framework/apps/*` を使う
 - control-plane の実装パスは `control_plane/` が正本

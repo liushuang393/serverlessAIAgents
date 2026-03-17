@@ -43,7 +43,7 @@ class GoogleCloudRunTarget(BaseDeployTarget):
     ) -> AsyncIterator[DeployEvent]:
         """Google Cloud Run にデプロイ."""
         project_id = config.settings.get("project_id")
-        service_name = config.settings.get("service_name", "agentflow-app")
+        service_name = config.settings.get("service_name", "bizcore-app")
         region = config.settings.get("region", "us-central1")
         image_url = config.settings.get("image_url")
 
@@ -144,7 +144,7 @@ class GoogleCloudRunTarget(BaseDeployTarget):
                 type="string",
                 required=True,
                 description="Cloud Run サービス名",
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

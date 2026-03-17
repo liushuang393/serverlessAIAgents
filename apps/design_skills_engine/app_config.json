@@ -21,7 +21,7 @@
   "agents": [
     {
       "name": "IntentAnalyzerAgent",
-      "module": "agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent",
+      "module": "kernel.skills.builtin.design_skills.agents.intent_analyzer_agent",
       "capabilities": [
         "intent_analysis",
         "design_brief"
@@ -32,7 +32,7 @@
     },
     {
       "name": "PromptPlannerAgent",
-      "module": "agentflow.skills.builtin.design_skills.agents.prompt_planner_agent",
+      "module": "kernel.skills.builtin.design_skills.agents.prompt_planner_agent",
       "capabilities": [
         "prompt_planning",
         "style_generation"
@@ -43,7 +43,7 @@
     },
     {
       "name": "WorkflowExecutorAgent",
-      "module": "agentflow.skills.builtin.design_skills.agents.workflow_executor_agent",
+      "module": "kernel.skills.builtin.design_skills.agents.workflow_executor_agent",
       "capabilities": [
         "image_generation",
         "comfyui",

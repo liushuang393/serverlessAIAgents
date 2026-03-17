@@ -49,7 +49,7 @@ class DeploymentConfig:
         env_vars: 環境変数
     """
 
-    app_name: str = "agentflow-app"
+    app_name: str = "bizcore-app"
     python_version: str = "3.13"
     docker: bool = True
     vercel: bool = False
@@ -147,7 +147,7 @@ def generate_env_template(output_dir: str | Path) -> Path:
         生成されたファイルパス
     """
     env_template = """# -*- coding: utf-8 -*-
-# AgentFlow Environment Variables
+# BizCore Environment Variables
 #
 # Copy this file to .env and fill in your values
 # DO NOT commit .env to version control!
@@ -155,7 +155,7 @@ def generate_env_template(output_dir: str | Path) -> Path:
 # ============================================================================
 # Application
 # ============================================================================
-APP_NAME=agentflow-app
+APP_NAME=bizcore-app
 APP_ENV=development
 DEBUG=true
 LOG_LEVEL=INFO

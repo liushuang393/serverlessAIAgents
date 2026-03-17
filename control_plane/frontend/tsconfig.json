@@ -18,7 +18,7 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@agentflow/i18n": ["../../../agentflow/i18n/frontend/index"],
+      "@bizcore/i18n": ["./src/i18n/index"],
       "react": ["./node_modules/@types/react"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
       "react-dom": ["./node_modules/@types/react-dom"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgentFlow コード品質チェックスクリプト (Linux/WSL)
+# BizCore コード品質チェックスクリプト (Linux/WSL)
 #
 # 利用例:
 #   ./check.sh format
@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 declare -a JS_PROJECTS=()
-CONDA_ENV_NAME="${CHECK_CONDA_ENV:-agentflow}"
+CONDA_ENV_NAME="${CHECK_CONDA_ENV:-bizcore}"
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -116,7 +116,7 @@ classify_bandit_output() {
 
 show_help() {
     echo "========================================"
-    echo "AgentFlow - 利用可能なコマンド"
+    echo "BizCore - 利用可能なコマンド"
     echo "========================================"
     echo ""
     echo "  ./check.sh format        - コードを自動フォーマット (Python + JS/TS)"
@@ -133,9 +133,9 @@ show_help() {
     echo "  ./check.sh clean         - 一時ファイルとキャッシュを削除"
     echo ""
     echo "環境変数:"
-    echo "  MYPY_TARGETS             - type-check 時の mypy 対象 (デフォルト: agentflow)"
+    echo "  MYPY_TARGETS             - type-check 時の mypy 対象 (デフォルト: contracts infrastructure shared kernel harness control_plane domain apps tests)"
     echo "  JS_PROJECT_DIRS          - JS/TS 対象ディレクトリを空白区切りで指定"
-    echo "  CHECK_CONDA_ENV          - Python ツール実行に使う conda env 名 (デフォルト: agentflow)"
+    echo "  CHECK_CONDA_ENV          - Python ツール実行に使う conda env 名 (デフォルト: bizcore)"
     echo "  CHECK_USE_CONDA          - 1: conda優先, 0: PATH優先 (デフォルト: 1)"
     echo "  CHECK_PYTEST_FLAGS       - unit test 時の追加 pytest 引数 (デフォルト: --tb=short -ra)"
     echo "  CHECK_PYTEST_E2E_FLAGS   - e2e-smoke 時の追加 pytest 引数 (デフォルト: --tb=short -ra)"
@@ -152,7 +152,7 @@ discover_js_projects() {
     fi
 
     if [ -n "${JS_PROJECT_DIRS:-}" ]; then
-        # 例: JS_PROJECT_DIRS="studio apps/faq_system/frontend"
+        # 例: JS_PROJECT_DIRS="control_plane/frontend apps/faq_system/frontend"
         local dir
         for dir in $JS_PROJECT_DIRS; do
             if [ -f "$dir/package.json" ]; then
@@ -466,7 +466,7 @@ do_type_check() {
     echo "========================================"
     echo ""
 
-    local mypy_targets="${MYPY_TARGETS:-agentflow}"
+    local mypy_targets="${MYPY_TARGETS:-contracts infrastructure shared kernel harness control_plane domain apps tests}"
     echo "[Python] MyPy 型チェック中... (targets: $mypy_targets)"
     local mypy_output
     mypy_output="$(mktemp)"
@@ -556,7 +556,18 @@ do_test_cov() {
 
     local test_output
     test_output="$(mktemp)"
-    run_py_tool pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v 2>&1 | tee "$test_output"
+    run_py_tool pytest \
+        --cov=contracts \
+        --cov=infrastructure \
+        --cov=shared \
+        --cov=kernel \
+        --cov=harness \
+        --cov=control_plane \
+        --cov=domain \
+        --cov=apps \
+        --cov-report=html \
+        --cov-report=term-missing \
+        -v 2>&1 | tee "$test_output"
     local test_rc=${PIPESTATUS[0]}
     if [ $test_rc -ne 0 ]; then
         echo "[エラー] テストに失敗しました"
@@ -581,7 +592,7 @@ do_security() {
     echo "[Python] bandit SAST チェック中..."
     local bandit_output
     bandit_output="$(mktemp)"
-    run_py_tool bandit -r agentflow -lll -iii --format txt 2>&1 | tee "$bandit_output"
+    run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii --format txt 2>&1 | tee "$bandit_output"
     local bandit_exit=${PIPESTATUS[0]}
 
     echo ""
@@ -605,7 +616,7 @@ do_report() {
     local report_file="check-report.md"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    local mypy_targets="${MYPY_TARGETS:-agentflow}"
+    local mypy_targets="${MYPY_TARGETS:-contracts infrastructure shared kernel harness control_plane domain apps tests}"
 
     local lint_status="✅" type_status="✅" test_status="✅" security_status="✅"
     local lint_output type_output security_output test_output
@@ -617,14 +628,14 @@ do_report() {
     type_output=$(run_py_tool mypy $mypy_targets --ignore-missing-imports 2>&1)
     [ $? -ne 0 ] && type_status="❌"
 
-    security_output=$(run_py_tool bandit -r agentflow -lll -iii --format txt 2>&1)
+    security_output=$(run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii --format txt 2>&1)
     [ $? -ne 0 ] && security_status="❌"
 
     test_output=$(run_py_tool pytest -v --tb=short 2>&1)
     [ $? -ne 0 ] && test_status="❌"
 
     cat >"$report_file" <<EOF
-# AgentFlow Code Quality Report
+# BizCore Code Quality Report
 Generated: $timestamp
 
 ## Summary
@@ -759,8 +770,8 @@ do_clean() {
 
     echo ""
     echo "[JS/TS] キャッシュを削除中..."
-    rm -rf studio/dist 2>/dev/null
-    rm -rf studio/node_modules/.cache 2>/dev/null
+    rm -rf control_plane/frontend/dist 2>/dev/null
+    rm -rf control_plane/frontend/node_modules/.cache 2>/dev/null
     echo ""
     echo "✅ クリーンアップ完了"
     return 0

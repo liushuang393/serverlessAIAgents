@@ -12,30 +12,34 @@ echo "[FAQ] RAG セットアップを開始..."
 echo "[1/3] Qdrant をセットアップ..."
 bash "${REPO_ROOT}/scripts/setup_qdrant.sh"
 
-# 2. コレクション作成（agentflow 経由）
+# 2. コレクション作成（BizCore ランタイム経由）
 echo "[2/3] faq_knowledge コレクションを作成..."
 cd "${REPO_ROOT}"
 # conda activate は subshell では効かないため、conda run を使う
-conda run -n agentflow python -c "
+conda run -n bizcore python -c "
 import asyncio
-from agentflow.knowledge.collection_manager import CollectionManager
-from agentflow.knowledge.models import CollectionConfig, ChunkStrategy, RetrievalMethod
+from infrastructure.storage.database import DatabaseConfig, DatabaseManager
+from shared.rag.collection_manager import CollectionManager
+from shared.services.rag_service import ChunkStrategy, RetrievalMethod
 
 async def main():
-    mgr = CollectionManager()
-    config = CollectionConfig(
+    db = DatabaseManager(config=DatabaseConfig())
+    await db.init()
+    await db.create_all_tables()
+    mgr = CollectionManager(session_factory=db.session_factory)
+    await mgr.create_collection(
         collection_name='faq_knowledge',
-        app_name='faq_system',
         display_name='FAQ ナレッジベース',
-        chunk_strategy=ChunkStrategy.SENTENCE,
+        app_name='faq_system',
+        chunk_strategy=ChunkStrategy.SENTENCE.value,
         chunk_size=500,
         chunk_overlap=80,
-        retrieval_method=RetrievalMethod.HYBRID,
+        retrieval_method=RetrievalMethod.HYBRID.value,
         top_k=8,
         min_similarity=0.25,
     )
-    await mgr.create_collection(config)
     print('[OK] faq_knowledge コレクション作成完了')
+    await db.close()
 
 asyncio.run(main())
 " 2>&1 || echo "[WARN] コレクション作成をスキップ（既存 or DB 未接続）"
@@ -57,4 +61,4 @@ fi
 echo ""
 echo "[FAQ] RAG セットアップ完了!"
 echo "  次のステップ: アプリを起動してください"
-echo "  cd ${REPO_ROOT} && conda run -n agentflow python -m apps.faq_system.main"
+echo "  cd ${REPO_ROOT} && conda run -n bizcore python -m apps.faq_system.main"

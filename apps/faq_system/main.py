@@ -1,6 +1,6 @@
-"""FAQ System - AgentFlow フレームワーク級サービス.
+"""FAQ System - BizCore 分層ランタイム上の FAQ サービス.
 
-薄い App 層として設計。業務ロジックは agentflow/ フレームワーク側で実装。
+薄い App 層として設計。業務ロジックは apps/shared/kernel/harness 側で実装。
 
 アーキテクチャ:
     App層（薄い）          → フレームワーク層（厚い）
@@ -216,7 +216,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="FAQ System",
-    description="AgentFlow フレームワーク級サービス - WebSocket + 富文本対応",
+    description="BizCore 分層ランタイム上の FAQ サービス - WebSocket + 富文本対応",
     version="4.0.0",
     lifespan=lifespan,
 )
@@ -297,7 +297,7 @@ if __name__ == "__main__":
             host=_host,
             port=_port,
             reload=True,
-            reload_dirs=["apps/faq_system", "agentflow"],
+            reload_dirs=["apps/faq_system", "shared", "kernel", "harness", "control_plane"],
         )
     else:
         uvicorn.run(app, host=_host, port=_port)

@@ -1,6 +1,6 @@
 """Design Skills Engine - Lovart風マルチ画像生成エンジン.
 
-コア実装は agentflow フレームワークに移動済み。
+コア実装は kernel / shared / infrastructure の共通基盤へ移動済み。
 このモジュールは後方互換性のための再エクスポートを提供する。
 
 クイックスタート:

@@ -75,7 +75,7 @@ BizCore AI is organized into seven core layers, with `apps/` as the outer produc
 
 - **App Lifecycle**: Create → Configure → Execute → Observe → Deliver
 - **Unified LLM Management**: Provider / Model / Secret / Local Engine managed centrally by Platform
-- **Unified API**: `/api/studios/*` and `/api/studios/framework/*` as canonical routes
+- **Unified API**: `/api/studios/*` and `/api/studios/framework/apps/*` as canonical routes
 
 ### Business Applications (BizCore Studios)
 
@@ -140,8 +140,8 @@ INFRA --> PROVIDER
 ### Product Layer
 - `apps/`: BizCore Studios and custom apps, assembled on top of the seven core layers
 
-### Legacy Compatibility
-- `agentflow/`: Former Kernel (maintained as a re-export layer to `kernel/`)
+### Transition Notes
+- Some legacy import and config names may remain during migration, but the canonical implementation is consolidated under `contracts/`, `infrastructure/`, `shared/`, `kernel/`, `harness/`, `domain/`, and `control_plane/`
 
 ### Development & Operations
 - `plugins/`: Extensions (Blocks / Tools / Providers)

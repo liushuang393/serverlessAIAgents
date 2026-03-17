@@ -27,7 +27,8 @@ JWT・OAuth2（Google/Azure AD）・LDAP・SAML・プロキシ認証・MFA（TOT
     faq_system        platform app       your app
    (port 8005)        (port 8000)       (any port)
 
-  from agentflow.security.auth_client import require_auth, require_permission
+  from shared.auth_service.api.router import require_auth
+  from shared.auth_service.api.dependencies import require_permission
   @router.get("/protected")
   async def endpoint(user=Depends(require_auth)):
       return {"user": user.username}
@@ -58,7 +59,7 @@ cp shared/auth_service/.env.example shared/auth_service/.env
 # JWT_SECRET_KEY を必ず変更してください
 
 # 起動
-conda activate agentflow
+conda activate bizcore
 python -m shared.auth_service.main
 ```
 
@@ -72,35 +73,16 @@ AUTH_SERVICE_URL=http://localhost:8010
 AUTH_SERVICE_JWT_SECRET=<auth_service と同じ JWT_SECRET_KEY の値>
 ```
 
-**main.py に 1 行追加:**
+**ルーターで依存関係を使う:**
 
 ```python
-from agentflow.security.auth_client import AuthClient, AuthMiddleware
-
-# アプリ起動時
-auth = AuthClient(
-    base_url=os.getenv("AUTH_SERVICE_URL"),
-    jwt_secret=os.getenv("AUTH_SERVICE_JWT_SECRET"),
-)
-
-# ミドルウェア追加（オプション）
-app.add_middleware(AuthMiddleware, auth_client=auth)
-```
-
-**ルーターで認証を使う:**
-
-```python
-from agentflow.security.auth_client import require_auth, require_role, require_permission, get_current_user
+from shared.auth_service.api.router import get_current_user, require_auth
+from shared.auth_service.api.dependencies import require_permission
 
 # 認証必須エンドポイント
 @router.get("/protected")
 async def protected(user=Depends(require_auth)):
     return {"user_id": user.user_id, "username": user.username}
-
-# ロール制限
-@router.get("/admin-only")
-async def admin(user=Depends(require_role("admin"))):
-    return {"admin": True}
 
 # パーミッション制限
 @router.get("/faq-data")
@@ -440,12 +422,12 @@ shared/auth_service/
     └── versions/
         └── 001_initial.py     初期スキーマ
 
-agentflow/security/auth_client/
+shared/auth_service/api/
 ├── __init__.py            パブリック API（require_permission 追加）
-├── client.py              AuthClient（HTTP + ローカル検証）
-├── middleware.py           FastAPI ミドルウェア
-├── dependencies.py        require_auth, require_role, require_permission, get_current_user
-└── config.py              AuthClientConfig
+├── router.py              require_auth / get_current_user
+├── dependencies.py        require_permission / require_admin
+├── schemas.py             認証 API スキーマ
+└── schemas_authorization.py 認可 API スキーマ
 ```
 
 ### リソース定義 API
@@ -516,7 +498,7 @@ curl http://localhost:8010/health
 
 ```bash
 # 1. ローカル起動テスト（最重要 — ImportError が解消されることを確認）
-conda activate agentflow
+conda activate bizcore
 python -m shared.auth_service.main
 # → ポート 8010 で起動し "auth_service 起動中..." が表示されること
 

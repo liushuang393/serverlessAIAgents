@@ -13,7 +13,7 @@
 - 定常運用を前提に、日次/週次レポートを標準化できる。
 
 ## 技術アーキテクチャ
-- FastAPI + AgentFlow create_flow によるパイプライン編排。
+- FastAPI + BizCore create_flow によるパイプライン編排。
 - Frontend は React/Vite で可視化し、Backend API と疎結合連携。
 - Evidence Ledger と Signal Scorer で信頼性評価を明示。
 
@@ -30,7 +30,7 @@
 
 ## 概要
 
-Market Trend Monitor は、AgentFlow フレームワークを使用した Multi-Agent アプリケーションです。
+Market Trend Monitor は、BizCore 基盤上で動作する Multi-Agent アプリケーションです。
 9 つのエージェントが協調動作し、市場動向を自動的に監視・分析します。
 
 ### 主要機能
@@ -74,7 +74,7 @@ Collector → EvidenceLedger → Analyzer → SignalScorer → Reporter → RedT
 
 - Python 3.13+
 - Node.js 18+（フロントエンド用）
-- AgentFlow フレームワーク
+- BizCore 開発環境
 
 ### 開発環境（インストール: 統一手順）
 
@@ -88,7 +88,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 pip install -e ".[dev,apps]"
 ```
 
@@ -243,7 +243,7 @@ npm test
 ## 📦 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m control_plane.main publish ./apps/market_trend_monitor --target docker
 ```
 
@@ -290,7 +290,7 @@ MIT License
 ## 共有テスト env 自動生成
 
 ```bash
-conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+conda run -n bizcore python scripts/bootstrap_test_env.py --env-file .env
 ```
 
 - 共通テストの env 値は手動作成せず、スクリプトで空値補完します。

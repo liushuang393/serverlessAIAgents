@@ -177,7 +177,7 @@ def main() -> None:
             host=host,
             port=port,
             reload=True,
-            reload_dirs=["apps/design_skills_engine", "agentflow/skills/builtin/design_skills"],
+            reload_dirs=["apps/design_skills_engine", "kernel/skills/builtin/design_skills", "harness"],
         )
     else:
         uvicorn.run(app, host=host, port=port)

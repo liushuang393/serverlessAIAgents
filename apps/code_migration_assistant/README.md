@@ -92,7 +92,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 pip install -e ".[dev,apps]"
 ```
 
@@ -194,7 +194,7 @@ cd <repo-root>
 推奨手順（Platform CLI）:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m control_plane.main publish ./apps/code_migration_assistant --target docker
 ```
 
@@ -518,7 +518,7 @@ Note:
 ## 共有テスト env 自動生成
 
 ```bash
-conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+conda run -n bizcore python scripts/bootstrap_test_env.py --env-file .env
 ```
 
 - `CODE_MIGRATION_API_KEY_ENV` / `CODE_MIGRATION_API_KEY` / `CODE_MIGRATION_CORS_ORIGINS` を自動補完します。

@@ -1,5 +1,5 @@
 #!/bin/bash
-# AgentFlow 開発環境セットアップスクリプト
+# BizCore 開発環境セットアップスクリプト
 # 使用方法: bash setup_dev.sh または ./setup_dev.sh
 #
 # 依存関係は pyproject.toml で一元管理しています
@@ -7,7 +7,7 @@
 set -e  # エラー時に即座に終了
 
 echo "========================================"
-echo "AgentFlow 開発環境セットアップ"
+echo "BizCore 開発環境セットアップ"
 echo "========================================"
 echo ""
 
@@ -17,27 +17,27 @@ TOTAL_STEPS=5
 # 1. Conda 環境のチェック/作成
 echo "[1/$TOTAL_STEPS] Conda 環境を確認中..."
 
-if [ "$CONDA_DEFAULT_ENV" = "agentflow" ]; then
-    echo "✓ Conda 環境 'agentflow' はアクティブです"
-elif conda env list | grep -q "^agentflow "; then
-    echo "Conda 環境 'agentflow' が存在します。アクティベートしてください:"
-    echo "  conda activate agentflow"
+if [ "$CONDA_DEFAULT_ENV" = "bizcore" ]; then
+    echo "✓ Conda 環境 'bizcore' はアクティブです"
+elif conda env list | grep -q "^bizcore "; then
+    echo "Conda 環境 'bizcore' が存在します。アクティベートしてください:"
+    echo "  conda activate bizcore"
     exit 1
 else
-    echo "Conda 環境 'agentflow' を作成中..."
-    conda create -n agentflow python=3.13 -y
+    echo "Conda 環境 'bizcore' を作成中..."
+    conda create -n bizcore python=3.13 -y
     echo ""
     echo "✓ Conda 環境作成完了"
     echo ""
     echo "次のコマンドを実行してください:"
-    echo "  conda activate agentflow"
+    echo "  conda activate bizcore"
     exit 0
 fi
 echo ""
 
 # 2. Python 依存関係をインストール
 echo "[2/$TOTAL_STEPS] Python 依存関係をインストール中..."
-pip install -e ".[dev]"
+pip install -e ".[apps,dev]"
 echo "✓ Python 依存関係インストール完了"
 echo ""
 
@@ -50,19 +50,20 @@ echo ""
 
 # 4. フロントエンド依存関係をインストール
 echo "[4/$TOTAL_STEPS] フロントエンド依存関係をインストール中..."
-if [ -d "studio" ]; then
-    cd studio
+if [ -d "control_plane/frontend" ]; then
+    cd control_plane/frontend
     npm install
+    cd ..
     cd ..
     echo "✓ フロントエンド依存関係インストール完了"
 else
-    echo "⚠ studio/ ディレクトリが見つかりません（スキップ）"
+    echo "⚠ control_plane/frontend ディレクトリが見つかりません（スキップ）"
 fi
 echo ""
 
 # 5. インストール確認
 echo "[5/$TOTAL_STEPS] インストール確認中..."
-agentflow --version
+bizcore --version
 echo "✓ インストール確認完了"
 echo ""
 
@@ -71,8 +72,8 @@ echo "セットアップ完了！"
 echo "========================================"
 echo ""
 echo "使用方法:"
-echo "  conda activate agentflow    # 環境アクティベート"
-echo "  agentflow --help            # CLI ヘルプ"
+echo "  conda activate bizcore      # 環境アクティベート"
+echo "  bizcore --help              # CLI ヘルプ"
 echo ""
 echo "開発コマンド:"
 echo "  make check-all              # すべてのチェック"

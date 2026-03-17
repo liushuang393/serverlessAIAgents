@@ -1,7 +1,7 @@
 # Market Trend Monitor - Backend Dependencies
 
 # Core framework
-agentflow>=1.0.0
+bizcore>=2.0.0
 
 # Web framework
 fastapi>=0.109.0

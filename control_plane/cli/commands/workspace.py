@@ -3,10 +3,10 @@
 ワークスペース管理のためのCLIコマンド。Daytonaスタイルの操作を提供。
 
 使用例:
-    $ agentflow workspace create --name my-project
-    $ agentflow workspace list
-    $ agentflow workspace files ws-abc123
-    $ agentflow workspace run ws-abc123 main.py
+    $ bizcore workspace create --name my-project
+    $ bizcore workspace list
+    $ bizcore workspace files ws-abc123
+    $ bizcore workspace run ws-abc123 main.py
 """
 
 from __future__ import annotations

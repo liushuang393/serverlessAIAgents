@@ -1,6 +1,6 @@
 # FAQ System
 
-AgentFlow フレームワーク級 Agent/サービスを使用した FAQ システムです。
+BizCore 共通基盤の Agent/サービスを使用した FAQ システムです。
 
 <!-- README_REQUIRED_SECTIONS_START -->
 
@@ -134,7 +134,7 @@ docker compose up --build -d
 Platform（Control Plane）に publish/deploy を統一する場合:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m control_plane.main publish ./apps/faq_system --target docker
 ```
 
@@ -371,7 +371,7 @@ curl -X POST http://auth-service:8010/auth/authorization/check-resource \
 
 ### auth_client SDK によるパーミッションチェック
 
-FAQ バックエンドで auth_service の RBAC を利用する場合、`agentflow.security.auth_client` SDK を使用します。
+FAQ バックエンドで auth_service の RBAC を利用する場合、FAQ 側の認証依存関係と shared 側の権限制御依存関係を利用します。
 
 **環境変数設定:**
 
@@ -383,7 +383,8 @@ AUTH_SERVICE_JWT_SECRET=<auth_service と同じ JWT_SECRET_KEY の値>
 **エンドポイントでのパーミッションチェック:**
 
 ```python
-from agentflow.security.auth_client import require_auth, require_role, require_permission
+from apps.faq_system.backend.auth.dependencies import require_auth, require_role
+from shared.auth_service.api.dependencies import require_permission
 
 # 認証のみ（全ユーザー）
 @router.get("/api/chat")
@@ -463,7 +464,7 @@ FAQ_DEFAULT_TENANT_ID=default
 
 ```bash
 cd <repo-root>
-conda activate agentflow
+conda activate bizcore
 python -m apps.faq_system.main --reload
 # → http://localhost:8005 でAPIが起動
 ```
@@ -826,7 +827,7 @@ EOF
 
 ```bash
 cd <リポジトリルート>
-conda activate agentflow
+conda activate bizcore
 
 # 1. 業務DBをDockerで起動（PostgreSQLのみ）
 cd apps/faq_system
@@ -997,26 +998,26 @@ docker compose -f docker-compose.auth-faq.yml up --build -d
 
 | コンポーネント      | 場所                            | 説明                                  |
 | ------------------- | ------------------------------- | ------------------------------------- |
-| **FAQAgent**        | `agentflow/agents/faq_agent.py` | FAQ 専門 Agent（ResilientAgent 継承） |
-| **FAQInput/Output** | `agentflow/agents/faq_agent.py` | 型安全な入出力スキーマ                |
-| **RAGService**      | `agentflow/services/`           | RAG 検索サービス                      |
-| **Text2SQLService** | `agentflow/services/`           | SQL 生成サービス                      |
+| **FAQAgent**        | `apps/faq_system/backend/agents/faq_agent.py` | FAQ 専門 Agent（ResilientAgent 継承） |
+| **FAQInput/Output** | `apps/faq_system/backend/agents/faq_agent.py` | 型安全な入出力スキーマ                |
+| **RAGService**      | `shared/services/rag_service.py`              | RAG 検索サービス                      |
+| **Text2SQLService** | `shared/services/text2sql_service.py`         | SQL 生成サービス                      |
 
 ```
 apps/faq_system/          ← App層（薄い：APIルーティングのみ）
     └── main.py           ← FAQAgentを呼び出すのみ
         │
         ▼
-agentflow/agents/         ← Agent層（新アーキテクチャ）
-    └── faq_agent.py      ← FAQAgent（ResilientAgent継承）
+apps/faq_system/backend/agents/  ← App 専用 Agent 層
+    └── faq_agent.py             ← FAQAgent（ResilientAgent継承）
         │
         ▼
-agentflow/services/       ← サービス層
+shared/services/          ← 共通サービス層
     ├── rag_service.py
     ├── text2sql_service.py
     ├── chart_service.py
     └── suggestion_service.py
-agentflow/skills/builtin/design_skills/ ← 営業資料画像生成
+kernel/skills/builtin/design_skills/    ← 営業資料画像生成
 ```
 
 ### Agent 実装パターン（必読）
@@ -1024,7 +1025,7 @@ agentflow/skills/builtin/design_skills/ ← 営業資料画像生成
 新しい Agent を作成する際は、以下のパターンに従ってください：
 
 ```python
-from agentflow import ResilientAgent
+from kernel import ResilientAgent
 from pydantic import BaseModel
 
 # 1. 入出力スキーマを定義（Pydantic）
@@ -1265,7 +1266,7 @@ GET /api/nodes/service
                       ▼
 ┌─────────────────────────────────────────────────┐
 │               Agent Layer (NEW)                  │
-│  agentflow/agents/faq_agent.py                  │
+│  apps/faq_system/backend/agents/faq_agent.py    │
 │  - FAQAgent (ResilientAgent 継承)               │
 │  - FAQInput/FAQOutput (Pydantic)                │
 │  - 自動リトライ・タイムアウト制御               │
@@ -1274,7 +1275,7 @@ GET /api/nodes/service
                       ▼
 ┌─────────────────────────────────────────────────┐
 │               Service Layer                      │
-│  agentflow/services/                            │
+│  shared/services/                               │
 │  ├── rag_service.py      ← RAG 検索            │
 │  ├── text2sql_service.py ← SQL 生成・実行      │
 │  ├── chart_service.py    ← チャート生成        │
@@ -1295,7 +1296,7 @@ GET /api/nodes/service
 ### ❌ やってはいけないこと
 
 1. **`apps/faq_system/backend/agents/` に独自 Agent を作成しない**
-   - Agent はフレームワーク層（`agentflow/agents/`）に配置
+   - Agent は app 層または kernel/shared の責務分離に従って配置
    - App 層は API ルーティングのみ
 
 2. **`AgentBlock` を直接継承しない**
@@ -1335,13 +1336,13 @@ GET /api/nodes/service
 
 ```bash
 # workflow YAML を直接実行
-agentflow flow run workflow.yaml --json
+bizcore flow run workflow.yaml --json
 
 # 外部 Skill をマウント
-agentflow skills mount ./external/faq-policy-check --scope project
+bizcore skills mount ./external/faq-policy-check --scope project
 
 # マウント済み Skill を確認
-agentflow skills list --project
+bizcore skills list --project
 ```
 
 ---
@@ -1353,7 +1354,7 @@ MIT License
 ## 共有テスト env 自動生成
 
 ```bash
-conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+conda run -n bizcore python scripts/bootstrap_test_env.py --env-file .env
 ```
 
 - `JWT_SECRET_KEY` と `FAQ_PROXY_AUTH_SHARED_SECRET` は上記で自動補完されます。

@@ -151,7 +151,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 pip install -e ".[dev,apps]"
 ```
 
@@ -194,7 +194,7 @@ vim apps/messaging_hub/.env
 ```bash
 # ローカル開発（ホットリロード有効）
 # ポートは app_config.json から自動読み込み（8004）
-conda activate agentflow
+conda activate bizcore
 python -m apps.messaging_hub.main --reload
 
 # 本番起動（リロードなし）
@@ -246,7 +246,7 @@ PWA（インストール）手順:
 ## 📦 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m control_plane.main publish ./apps/messaging_hub --target docker
 ```
 
@@ -460,8 +460,8 @@ curl http://localhost:8004/platforms
 ### カスタム Agent の追加
 
 ```python
-from agentflow import ChatBotSkill
-from agentflow.patterns.coordinator import AdaptiveCoordinator
+from kernel.skills.chatbot import ChatBotSkill
+from kernel.patterns.adaptive_coordinator import AdaptiveCoordinator
 
 # マルチエージェントコーディネーターを作成
 coordinator = AdaptiveCoordinator(agents=[agent1, agent2])
@@ -476,10 +476,10 @@ gateway = MessageGateway(hub, chatbot)
 ### RAG 機能の追加
 
 ```python
-from agentflow.skills.rag import RAGSkill
+from kernel.skills.rag import RAGSkill
 
 # RAG skill を作成
-rag = RAGSkill(knowledge_base_path="./data")
+rag = RAGSkill()
 
 # ChatBot に統合
 chatbot = ChatBotSkill(rag_skill=rag)
@@ -489,12 +489,12 @@ chatbot = ChatBotSkill(rag_skill=rag)
 
 ```python
 # ChatBotSkill を拡張してデータベースストレージを実装
-from agentflow import get_db
+from infrastructure.storage.database import DatabaseConfig, DatabaseManager
 
 class PersistentChatBot(ChatBotSkill):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.db = get_db()
+        self.db = DatabaseManager(config=DatabaseConfig())
 
     async def create_session(self, metadata=None):
         # データベースから読み込み
@@ -595,7 +595,7 @@ MIT License - AgentFlow メイン README を参照
 ## 共有テスト env 自動生成
 
 ```bash
-conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+conda run -n bizcore python scripts/bootstrap_test_env.py --env-file .env
 ```
 
 - `MESSAGING_HUB_API_KEY_ENV` / `MESSAGING_HUB_API_KEY` は上記で自動補完されます。

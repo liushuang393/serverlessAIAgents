@@ -41,7 +41,7 @@ class I18nManager:
         Args:
             locale: デフォルトロケール（"ja" / "en" / "zh"）。
             locale_dir: ロケール JSON ファイルのディレクトリ。
-                        None の場合は agentflow/i18n/locales/ を使用。
+                        None の場合は control_plane/i18n/locales/ を使用。
         """
         self._locale: str = locale
         self._locale_dir: Path = locale_dir if locale_dir is not None else _DEFAULT_LOCALE_DIR

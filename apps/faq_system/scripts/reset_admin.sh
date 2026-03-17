@@ -3,7 +3,7 @@ set -euo pipefail
 
 # 目的: ローカル開発環境の auth_service DB 上で FAQ デモユーザーを復旧する。
 # 入力: 第1引数=ユーザー名（既定: admin）、第2引数=新パスワード（既定: admin123）。
-# 注意: Docker の auth-db コンテナと Python 実行環境（agentflow 推奨）が必要。
+# 注意: Docker の auth-db コンテナと Python 実行環境（bizcore 推奨）が必要。
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"

@@ -2582,7 +2582,7 @@ if __name__ == "__main__":
             host=_host,
             port=_port,
             reload=True,
-            reload_dirs=["apps/messaging_hub", "agentflow"],
+            reload_dirs=["apps/messaging_hub", "shared", "kernel", "harness", "control_plane"],
             log_level="info",
         )
     else:

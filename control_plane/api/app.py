@@ -404,7 +404,7 @@ def main() -> None:
                     host=args.host,
                     port=args.port,
                     reload=True,
-                    reload_dirs=["control_plane", "agentflow"],
+                    reload_dirs=["control_plane", "contracts", "infrastructure", "shared", "kernel", "harness", "domain"],
                 )
             else:
                 uvicorn.run(create_app(), host=args.host, port=args.port)

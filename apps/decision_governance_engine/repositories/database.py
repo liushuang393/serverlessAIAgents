@@ -2,7 +2,7 @@
 
 目的:
     PostgreSQL（SQLAlchemy + asyncpg）と Redis の接続管理。
-    agentflow.database.DatabaseManager を使用してエンジン/セッションを統一管理。
+    infrastructure.database.DatabaseManager を使用してエンジン/セッションを統一管理。
 
 環境変数:
     DATABASE_URL: PostgreSQL 接続 URL

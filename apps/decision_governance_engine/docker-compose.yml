@@ -4,7 +4,7 @@
 # PostgreSQL + Redis + バックエンド + フロントエンド
 #
 # ポート設定:
-#   1. .env を作成（自動生成: python -m agentflow.tools.port_manager decision_governance_engine）
+#   1. .env を作成（自動生成: python -m control_plane.tools.port_manager decision_governance_engine）
 #   2. または下記デフォルト値を使用
 #
 # 使用方法:
@@ -112,7 +112,13 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       # 開発時: ソースコードをマウント（ホットリロード用）
-      - ../../agentflow:/app/agentflow:ro
+      - ../../contracts:/app/contracts:ro
+      - ../../infrastructure:/app/infrastructure:ro
+      - ../../shared:/app/shared:ro
+      - ../../kernel:/app/kernel:ro
+      - ../../harness:/app/harness:ro
+      - ../../control_plane:/app/control_plane:ro
+      - ../../domain:/app/domain:ro
       - .:/app/apps/decision_governance_engine:ro
       # 知識ベース
       - ./knowledge:/app/apps/decision_governance_engine/knowledge:ro

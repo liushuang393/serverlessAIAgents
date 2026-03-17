@@ -34,7 +34,7 @@ class DockerConfig:
         extra_packages: 追加パッケージ
     """
 
-    app_name: str = "agentflow-app"
+    app_name: str = "bizcore-app"
     python_version: str = "3.13"
     port: int = 8000
     entry_point: str = "main:app"
@@ -44,7 +44,7 @@ class DockerConfig:
 
 
 DOCKERFILE_TEMPLATE = """# -*- coding: utf-8 -*-
-# AgentFlow Docker Image
+# BizCore Docker Image
 #
 # Build: docker build -t {app_name} .
 # Run: docker run -p {port}:{port} {app_name}
@@ -64,7 +64,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
 
 # Install Python dependencies
 COPY pyproject.toml README.md ./
-COPY agentflow/ ./agentflow/
+COPY contracts/ ./contracts/
+COPY infrastructure/ ./infrastructure/
+COPY shared/ ./shared/
+COPY kernel/ ./kernel/
+COPY harness/ ./harness/
+COPY control_plane/ ./control_plane/
+COPY domain/ ./domain/
 
 # Create virtual environment and install dependencies
 RUN python -m venv /opt/venv
@@ -81,7 +87,7 @@ FROM python:{python_version}-slim as runtime
 WORKDIR /app
 
 # Create non-root user for security
-RUN groupadd -r agentflow && useradd -r -g agentflow agentflow
+RUN groupadd -r bizcore && useradd -r -g bizcore bizcore
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
@@ -97,10 +103,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \\
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs && \\
-    chown -R agentflow:agentflow /app
+    chown -R bizcore:bizcore /app
 
 # Switch to non-root user
-USER agentflow
+USER bizcore
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
@@ -115,7 +121,7 @@ CMD ["uvicorn", "{entry_point}", "--host", "0.0.0.0", "--port", "{port}"]
 
 
 DOCKER_COMPOSE_TEMPLATE = """# -*- coding: utf-8 -*-
-# AgentFlow Docker Compose
+# BizCore Docker Compose
 #
 # Development: docker compose up
 # Production: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
@@ -124,7 +130,7 @@ version: "3.9"
 
 services:
   # ============================================================================
-  # AgentFlow Application
+  # BizCore Application
   # ============================================================================
   app:
     build:
@@ -148,7 +154,7 @@ services:
       start_period: 5s
     restart: unless-stopped
     networks:
-      - agentflow-network
+      - bizcore-network
 
   # ============================================================================
   # Redis (Optional - for caching/rate limiting)
@@ -167,7 +173,7 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - agentflow-network
+      - bizcore-network
 
   # ============================================================================
   # PostgreSQL (Optional - for persistent storage)
@@ -178,22 +184,22 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=${{POSTGRES_USER:-agentflow}}
+      - POSTGRES_USER=${{POSTGRES_USER:-bizcore}}
       - POSTGRES_PASSWORD=${{POSTGRES_PASSWORD}}
-      - POSTGRES_DB=${{POSTGRES_DB:-agentflow}}
+      - POSTGRES_DB=${{POSTGRES_DB:-bizcore}}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U agentflow"]
+      test: ["CMD-SHELL", "pg_isready -U bizcore"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
-      - agentflow-network
+      - bizcore-network
 
 networks:
-  agentflow-network:
+  bizcore-network:
     driver: bridge
 
 volumes:

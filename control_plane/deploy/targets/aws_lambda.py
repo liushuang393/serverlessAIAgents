@@ -44,7 +44,7 @@ class AWSLambdaTarget(BaseDeployTarget):
         config: DeployConfig,
     ) -> AsyncIterator[DeployEvent]:
         """AWS Lambda にデプロイ."""
-        function_name = config.settings.get("function_name", "agentflow-function")
+        function_name = config.settings.get("function_name", "bizcore-function")
         region = config.settings.get("region", "us-east-1")
         runtime = config.settings.get("runtime", "python3.11")
         handler = config.settings.get("handler", "app.handler")
@@ -214,7 +214,7 @@ class AWSLambdaTarget(BaseDeployTarget):
                 type="string",
                 required=True,
                 description="Lambda function name",
-                placeholder="my-agentflow-function",
+                placeholder="my-bizcore-function",
                 group="settings",
             ),
             ConfigField(

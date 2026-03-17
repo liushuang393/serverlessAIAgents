@@ -1,35 +1,35 @@
 @echo off
-REM AgentFlow 開発環境セットアップスクリプト (Windows)
+REM BizCore 開発環境セットアップスクリプト (Windows)
 REM 使用方法: Anaconda Prompt で setup_dev.bat を実行
 REM
 REM 依存関係は pyproject.toml で一元管理しています
 
 echo ========================================
-echo AgentFlow 開発環境セットアップ
+echo BizCore 開発環境セットアップ
 echo ========================================
 echo.
 
 REM 1. Conda 環境のチェック/作成
 echo [1/5] Conda 環境を確認中...
 
-if "%CONDA_DEFAULT_ENV%"=="agentflow" (
-    echo ✓ Conda 環境 'agentflow' はアクティブです
+if "%CONDA_DEFAULT_ENV%"=="bizcore" (
+    echo ✓ Conda 環境 'bizcore' はアクティブです
     goto :install_deps
 )
 
 REM 環境が存在するかチェック
-conda env list | findstr /B "agentflow " >nul 2>&1
+conda env list | findstr /B "bizcore " >nul 2>&1
 if %errorlevel%==0 (
-    echo Conda 環境 'agentflow' が存在します。アクティベートしてください:
-    echo   conda activate agentflow
+    echo Conda 環境 'bizcore' が存在します。アクティベートしてください:
+    echo   conda activate bizcore
     echo   setup_dev.bat
     pause
     exit /b 1
 )
 
 REM 環境を新規作成
-echo Conda 環境 'agentflow' を作成中...
-call conda create -n agentflow python=3.13 -y
+echo Conda 環境 'bizcore' を作成中...
+call conda create -n bizcore python=3.13 -y
 if errorlevel 1 (
     echo エラー: Conda 環境の作成に失敗しました
     pause
@@ -39,7 +39,7 @@ echo.
 echo ✓ Conda 環境作成完了
 echo.
 echo 次のコマンドを実行してください:
-echo   conda activate agentflow
+echo   conda activate bizcore
 echo   setup_dev.bat
 pause
 exit /b 0
@@ -49,7 +49,7 @@ echo.
 
 REM 2. Python 依存関係をインストール
 echo [2/5] Python 依存関係をインストール中...
-pip install -e ".[dev]"
+pip install -e ".[apps,dev]"
 if errorlevel 1 (
     echo エラー: Python 依存関係のインストールに失敗しました
     pause
@@ -77,27 +77,27 @@ echo.
 
 REM 4. フロントエンド依存関係をインストール
 echo [4/5] フロントエンド依存関係をインストール中...
-if exist "studio" (
-    cd studio
+if exist "control_plane\frontend" (
+    cd control_plane\frontend
     call npm install
     if errorlevel 1 (
         echo エラー: フロントエンド依存関係のインストールに失敗しました
-        cd ..
+        cd ..\..
         pause
         exit /b 1
     )
-    cd ..
+    cd ..\..
     echo ✓ フロントエンド依存関係インストール完了
 ) else (
-    echo ⚠ studio/ ディレクトリが見つかりません（スキップ）
+    echo ⚠ control_plane\frontend ディレクトリが見つかりません（スキップ）
 )
 echo.
 
 REM 5. インストール確認
 echo [5/5] インストール確認中...
-agentflow --version
+bizcore --version
 if errorlevel 1 (
-    echo 警告: AgentFlow CLI が正しくインストールされていない可能性があります
+    echo 警告: BizCore CLI が正しくインストールされていない可能性があります
 )
 echo ✓ インストール確認完了
 echo.
@@ -107,8 +107,8 @@ echo セットアップ完了！
 echo ========================================
 echo.
 echo 使用方法:
-echo   conda activate agentflow    # 環境アクティベート
-echo   agentflow --help            # CLI ヘルプ
+echo   conda activate bizcore      # 環境アクティベート
+echo   bizcore --help              # CLI ヘルプ
 echo.
 echo 開発コマンド:
 echo   check.bat all               # すべてのチェック

@@ -44,7 +44,7 @@ class AzureContainerAppsTarget(BaseDeployTarget):
         """Azure Container Apps にデプロイ."""
         subscription_id = config.credentials.get("subscription_id")
         resource_group = config.settings.get("resource_group")
-        app_name = config.settings.get("app_name", "agentflow-app")
+        app_name = config.settings.get("app_name", "bizcore-app")
         environment_name = config.settings.get("environment_name")
         image_url = config.settings.get("image_url")
 
@@ -165,7 +165,7 @@ class AzureContainerAppsTarget(BaseDeployTarget):
                 label="App Name",
                 type="string",
                 required=True,
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

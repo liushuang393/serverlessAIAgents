@@ -1,7 +1,7 @@
 """FAQ System - Enterprise FAQ with RAG, Text2SQL, and Charts.
 
 ⚠️ 注意: このアプリは薄い App 層として設計されています。
-業務ロジックは agentflow/agents/faq_agent.py に実装されています。
+業務ロジックは apps.faq_system.backend.agents.faq_agent に実装されています。
 
 Features:
 - RAG with multiple chunking strategies and rerankers

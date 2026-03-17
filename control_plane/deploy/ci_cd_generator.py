@@ -34,7 +34,7 @@ class CICDConfig:
         branches: CI を実行するブランチ
     """
 
-    app_name: str = "agentflow-app"
+    app_name: str = "bizcore-app"
     python_version: str = "3.13"
     node_version: str = "20"
     test_command: str = "pytest"
@@ -44,11 +44,11 @@ class CICDConfig:
 
 
 GITHUB_ACTIONS_TEMPLATE = """# -*- coding: utf-8 -*-
-# AgentFlow CI/CD Pipeline
+# BizCore CI/CD Pipeline
 #
 # This workflow runs tests, linting, and deployment on push/PR
 
-name: AgentFlow CI/CD
+name: BizCore CI/CD
 
 on:
   push:
@@ -179,7 +179,7 @@ jobs:
 
 
 GITLAB_CI_TEMPLATE = """# -*- coding: utf-8 -*-
-# AgentFlow GitLab CI/CD Pipeline
+# BizCore GitLab CI/CD Pipeline
 
 stages:
   - lint

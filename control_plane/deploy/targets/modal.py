@@ -42,7 +42,7 @@ class ModalTarget(BaseDeployTarget):
         config: DeployConfig,
     ) -> AsyncIterator[DeployEvent]:
         """Modal にデプロイ."""
-        app_name = config.settings.get("app_name", "agentflow-app")
+        app_name = config.settings.get("app_name", "bizcore-app")
         gpu = config.settings.get("gpu")
         memory = config.settings.get("memory", 1024)
 
@@ -67,7 +67,7 @@ class ModalTarget(BaseDeployTarget):
             modal.App(name=app_name)
 
             # イメージ設定
-            image = modal.Image.debian_slim(python_version="3.11").pip_install("fastapi", "uvicorn", "agentflow")
+            image = modal.Image.debian_slim(python_version="3.11").pip_install("fastapi", "uvicorn", "bizcore")
 
             if gpu:
                 image = image.pip_install("torch", "transformers")
@@ -130,7 +130,7 @@ import modal
 app = modal.App(name="{app_name}")
 
 image = modal.Image.debian_slim(python_version="3.11").pip_install(
-    "fastapi", "uvicorn", "agentflow"
+    "fastapi", "uvicorn", "bizcore"
 )
 
 @app.function(image=image, memory={memory}, {gpu_config})
@@ -141,7 +141,7 @@ def web():
 
     @api.get("/")
     def root():
-        return {{"message": "AgentFlow on Modal"}}
+        return {{"message": "BizCore on Modal"}}
 
     @api.get("/health")
     def health():
@@ -158,7 +158,7 @@ def web():
                 label="App Name",
                 type="string",
                 required=True,
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

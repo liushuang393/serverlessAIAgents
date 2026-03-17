@@ -33,7 +33,7 @@ def list_templates() -> None:
     使用例:
 
         \b
-        $ agentflow template list
+        $ bizcore template list
     """
     try:
         manager = TemplateManager()
@@ -77,7 +77,7 @@ def show(template_id: str) -> None:
     使用例:
 
         \b
-        $ agentflow template show invoice-processor
+        $ bizcore template show invoice-processor
 
     Args:
         template_id: テンプレート ID
@@ -154,13 +154,13 @@ def generate(
 
         \b
         # パラメーターを指定して生成
-        $ agentflow template generate invoice-processor my-agent \\
+        $ bizcore template generate invoice-processor my-agent \\
             -p agent_name=my-invoice-processor \\
             -p database_type=postgresql
 
         \b
         # 対話モードで生成
-        $ agentflow template generate chatbot my-chatbot -i
+        $ bizcore template generate chatbot my-chatbot -i
 
     Args:
         template_id: テンプレート ID

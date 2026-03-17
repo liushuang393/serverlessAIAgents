@@ -1,6 +1,6 @@
 """FAQ システム DB セッション管理.
 
-agentflow.database.DatabaseManager を利用した統一セッション管理。
+infrastructure.database.DatabaseManager を利用した統一セッション管理。
 エンジン/セッションファクトリのライフサイクルはフレームワークに委譲し、
 アプリ固有ロジック（ensure_ready, SyncSessionAdapter）のみ保持する。
 """

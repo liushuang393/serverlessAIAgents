@@ -1,4 +1,4 @@
-# AgentFlow インストール・セットアップガイド
+# BizCore AI インストール・セットアップガイド
 
 > **対象**: 初心者向けの詳細な手順書
 
@@ -7,7 +7,7 @@
 ## 📋 目次
 
 1. [前提条件](#前提条件)
-2. [AgentFlow フレームワークのインストール](#agentflow-フレームワークのインストール)
+2. [BizCore AI のインストール](#bizcore-ai-のインストール)
 3. [decision_governance_engine のセットアップ](#decision_governance_engine-のセットアップ)
 4. [環境変数の設定](#環境変数の設定)
 5. [アプリケーションの起動](#アプリケーションの起動)
@@ -51,7 +51,7 @@ npm --version
 
 ---
 
-## AgentFlow フレームワークのインストール
+## BizCore AI のインストール
 
 ### ステップ 1: プロジェクトの取得
 
@@ -87,24 +87,26 @@ source venv/bin/activate
 
 **確認**: ターミナルの先頭に `(venv)` が表示されれば成功です。
 
-### ステップ 3: AgentFlow のインストール
+### ステップ 3: BizCore AI のインストール
 
 ```bash
 # プロジェクトルートで実行
-pip install -e .
+pip install -e ".[apps]"
 
 # または、開発用依存関係も含める場合
-pip install -e ".[dev]"
+pip install -e ".[apps,dev]"
 ```
 
 **インストール確認:**
 ```bash
-# AgentFlow がインストールされたか確認
-python -c "import agentflow; print(agentflow.__version__)"
-# 出力例: 0.2.0
+# BizCore 配布パッケージがインストールされたか確認
+pip show bizcore
 
 # CLI コマンドが使えるか確認
-agentflow --help
+bizcore --help
+
+# レイヤーパッケージが import できるか確認
+python -c "import kernel, shared; print('imports ok')"
 ```
 
 ---
@@ -113,7 +115,7 @@ agentflow --help
 
 ### ステップ 1: バックエンド依存関係の確認
 
-AgentFlow をインストール済みであれば、追加のインストールは不要です。
+BizCore AI をインストール済みであれば、追加のインストールは不要です。
 
 **確認:**
 ```bash
@@ -332,7 +334,7 @@ Python 3.13+ required, but you have Python 3.10
    rm -rf venv
    python3.13 -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
-   pip install -e .
+   pip install -e ".[apps]"
    ```
 
 ### 問題 2: API キーが見つからない
@@ -410,18 +412,18 @@ Failed to fetch: http://localhost:8000/api/...
 
 **エラー:**
 ```
-ModuleNotFoundError: No module named 'agentflow'
+ModuleNotFoundError: No module named 'kernel'
 ```
 
 **解決方法:**
 1. 仮想環境が有効化されているか確認
-2. AgentFlow がインストールされているか確認:
+2. BizCore 配布パッケージがインストールされているか確認:
    ```bash
-   pip list | grep agentflow
+   pip show bizcore
    ```
 3. 再インストール:
    ```bash
-   pip install -e .
+   pip install -e ".[apps]"
    ```
 
 ---
@@ -454,7 +456,7 @@ python -m apps.decision_governance_engine.main --interactive
 1. **バックエンド**: Docker コンテナまたはサーバーレス（AWS Lambda、Vercel など）
 2. **フロントエンド**: `npm run build` でビルド後、静的ホスティング（Vercel、Netlify など）
 
-詳細は `agentflow/deploy/` モジュールを参照してください。
+詳細は `control_plane/deploy/` モジュールを参照してください。
 
 ### Q4: 他のアプリ（market_trend_monitor など）も同じ手順ですか？
 
@@ -466,7 +468,7 @@ python -m apps.decision_governance_engine.main --interactive
 
 ```bash
 # Memvid オプション依存をインストール
-pip install agentflow[memvid]
+pip install "bizcore[memvid]"
 ```
 
 インストール後、自動的に Memvid が使用されます。インストールされていない場合は、メモリ内実装（BM25 検索）にフォールバックします。
@@ -474,7 +476,7 @@ pip install agentflow[memvid]
 **使用例：**
 
 ```python
-from agentflow import get_knowledge_manager
+from shared.memory.knowledge import get_knowledge_manager
 
 # 知識マネージャーを取得（環境に応じて自動選択）
 manager = get_knowledge_manager()

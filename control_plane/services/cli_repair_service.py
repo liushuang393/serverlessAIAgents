@@ -86,7 +86,7 @@ class CLIRepairService:
         app_relative = self._to_repo_relative(app_root)
         roots = {
             "control_plane",
-            "agentflow/tools/cli",
+            "kernel/tools/cli",
         }
         if app_relative is not None:
             roots.add(app_relative)
@@ -188,4 +188,3 @@ class CLIRepairService:
             return path.resolve().relative_to(self._repo_root).as_posix()
         except ValueError:
             return None
-

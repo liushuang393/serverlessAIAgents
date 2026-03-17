@@ -92,8 +92,8 @@ def list_skills(ctx: click.Context, learned: bool, project: bool) -> None:
     """全 Skills を一覧表示.
 
     例:
-        agentflow skills list
-        agentflow skills list --learned
+        bizcore skills list
+        bizcore skills list --learned
     """
     all_skills = load_all_skills()
 
@@ -148,7 +148,7 @@ def show(ctx: click.Context, name: str) -> None:
     NAME: Skill 名
 
     例:
-        agentflow skills show pdf-extractor
+        bizcore skills show pdf-extractor
     """
     all_skills = load_all_skills()
     skill = next((s for s in all_skills if s.name == name), None)
@@ -205,9 +205,9 @@ def create(
     NAME: Skill 名 (kebab-case)
 
     例:
-        agentflow skills create my-skill
-        agentflow skills create my-skill --interactive
-        agentflow skills create my-skill -d "My skill description" -t "my,skill"
+        bizcore skills create my-skill
+        bizcore skills create my-skill --interactive
+        bizcore skills create my-skill -d "My skill description" -t "my,skill"
     """
     # kebab-case 検証
     if not re.match(r"^[a-z0-9]+(-[a-z0-9]+)*$", name):
@@ -271,7 +271,7 @@ tags: []
             f"Location: {skill_file}\n\n"
             f"Next steps:\n"
             f"  1. Edit {skill_file} to add instructions\n"
-            f"  2. Run: agentflow skills show {name}",
+            f"  2. Run: bizcore skills show {name}",
             title="Success",
             border_style="green",
         )
@@ -288,8 +288,8 @@ def validate(ctx: click.Context, path: Path, strict: bool) -> None:
     PATH: Skill ディレクトリまたは SKILL.md ファイルのパス
 
     例:
-        agentflow skills validate .agentflow/skills/my-skill
-        agentflow skills validate ./SKILL.md --strict
+        bizcore skills validate .agentflow/skills/my-skill
+        bizcore skills validate ./SKILL.md --strict
     """
     # パスを解決
     if path.is_file() and path.name == "SKILL.md":
@@ -352,8 +352,8 @@ def search(ctx: click.Context, query: str, top: int) -> None:
     QUERY: 検索クエリ（自然言語）
 
     例:
-        agentflow skills search "PDF からテキスト抽出"
-        agentflow skills search "excel spreadsheet" --top 10
+        bizcore skills search "PDF からテキスト抽出"
+        bizcore skills search "excel spreadsheet" --top 10
     """
     all_skills = load_all_skills()
 
@@ -408,8 +408,8 @@ def delete(ctx: click.Context, name: str, scope: str, force: bool) -> None:
     NAME: Skill 名
 
     例:
-        agentflow skills delete my-skill
-        agentflow skills delete my-skill --scope project --force
+        bizcore skills delete my-skill
+        bizcore skills delete my-skill --scope project --force
     """
     # 削除先決定
     if scope == "learned":

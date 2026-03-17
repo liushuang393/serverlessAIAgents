@@ -15,7 +15,7 @@ import uvicorn
 from fastapi import FastAPI, Response
 from pydantic import BaseModel, Field
 
-from kernel import __version__ as agentflow_version
+from kernel import __version__ as kernel_version
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -73,7 +73,7 @@ async def health() -> dict[str, Any]:
     return {
         "status": "healthy",
         "service": "orchestration_guardian",
-        "agentflow_version": agentflow_version,
+        "framework_version": kernel_version,
     }
 
 

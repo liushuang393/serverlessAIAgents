@@ -2,7 +2,7 @@
 """Fail when non-gateway code imports provider SDKs directly.
 
 Allowed:
-- agentflow/llm/gateway/**
+- infrastructure/llm/**
 - tests/**
 """
 
@@ -15,17 +15,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 TARGET_DIRS = [
-    ROOT / "agentflow",
     ROOT / "apps",
     ROOT / "infrastructure",
     ROOT / "shared",
     ROOT / "kernel",
     ROOT / "harness",
-    ROOT / "platform",
+    ROOT / "domain",
+    ROOT / "control_plane",
 ]
 
 ALLOWED_PATH_PREFIXES = [
-    ROOT / "agentflow" / "llm" / "gateway",
     ROOT / "infrastructure" / "llm",
 ]
 

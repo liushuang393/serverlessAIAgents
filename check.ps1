@@ -1,4 +1,4 @@
-# AgentFlow コード品質チェックスクリプト (PowerShell)
+# BizCore コード品質チェックスクリプト (PowerShell)
 #
 # 使用方法:
 #   .\check.ps1 [command]
@@ -21,7 +21,7 @@ param(
 
 function Show-Help {
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "AgentFlow - 利用可能なコマンド" -ForegroundColor Cyan
+    Write-Host "BizCore - 利用可能なコマンド" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  .\check.ps1 format        - コードを自動フォーマット (Python + JS/TS)" -ForegroundColor Green
@@ -56,11 +56,11 @@ function Format-Code {
     }
     Write-Host ""
 
-    Write-Host "[JS/TS] Prettier フォーマット中..." -ForegroundColor Yellow
-    Push-Location studio
-    npx prettier --write "src/**/*.{ts,tsx,js,jsx,json,css}"
+    Write-Host "[JS/TS] ESLint auto-fix 実行中..." -ForegroundColor Yellow
+    Push-Location control_plane/frontend
+    npm run lint -- --fix
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[エラー] Prettier フォーマットに失敗しました" -ForegroundColor Red
+        Write-Host "[エラー] JS/TS 自動修正に失敗しました" -ForegroundColor Red
         Pop-Location
         exit 1
     }
@@ -85,8 +85,8 @@ function Run-Lint {
     Write-Host ""
 
     Write-Host "[JS/TS] ESLint チェック中..." -ForegroundColor Yellow
-    Push-Location studio
-    npx eslint "src/**/*.{ts,tsx,js,jsx}" --max-warnings=0
+    Push-Location control_plane/frontend
+    npm run lint
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] ESLint チェックに失敗しました" -ForegroundColor Red
         Pop-Location
@@ -105,7 +105,7 @@ function Run-TypeCheck {
     Write-Host ""
 
     Write-Host "[Python] MyPy 型チェック中..." -ForegroundColor Yellow
-    mypy agentflow --strict --ignore-missing-imports
+    mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict --ignore-missing-imports
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] MyPy 型チェックに失敗しました" -ForegroundColor Red
         exit 1
@@ -113,8 +113,8 @@ function Run-TypeCheck {
     Write-Host ""
 
     Write-Host "[TypeScript] tsc 型チェック中..." -ForegroundColor Yellow
-    Push-Location studio
-    npx tsc --noEmit
+    Push-Location control_plane/frontend
+    npm run type-check
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] TypeScript 型チェックに失敗しました" -ForegroundColor Red
         Pop-Location
@@ -148,7 +148,7 @@ function Run-TestCov {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
 
-    pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v
+    pytest --cov=contracts --cov=infrastructure --cov=shared --cov=kernel --cov=harness --cov=control_plane --cov=domain --cov=apps --cov-report=html --cov-report=term-missing -v
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] テストに失敗しました" -ForegroundColor Red
         exit 1
@@ -223,8 +223,8 @@ function Clean-Files {
     Write-Host ""
 
     Write-Host "[JS/TS] キャッシュを削除中..." -ForegroundColor Yellow
-    if (Test-Path "studio\dist") { Remove-Item -Path "studio\dist" -Recurse -Force }
-    if (Test-Path "studio\node_modules\.cache") { Remove-Item -Path "studio\node_modules\.cache" -Recurse -Force }
+    if (Test-Path "control_plane\frontend\dist") { Remove-Item -Path "control_plane\frontend\dist" -Recurse -Force }
+    if (Test-Path "control_plane\frontend\node_modules\.cache") { Remove-Item -Path "control_plane\frontend\node_modules\.cache" -Recurse -Force }
     Write-Host ""
 
     Write-Host "✅ クリーンアップ完了" -ForegroundColor Green

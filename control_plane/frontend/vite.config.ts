@@ -1,5 +1,5 @@
 /**
- * AgentFlow Platform Frontend - Vite 設定.
+ * BizCore Control Plane Frontend - Vite 設定.
  *
  * 注意事項:
  * - server.proxy は開発環境（vite dev）でのみ有効
@@ -31,11 +31,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // agentflow フレームワーク i18n 基底実装へのエイリアス
-      "@agentflow/i18n": path.resolve(
-        __dirname,
-        "../../../agentflow/i18n/frontend",
-      ),
+      "@bizcore/i18n": path.resolve(__dirname, "./src/i18n"),
     },
   },
   server: {

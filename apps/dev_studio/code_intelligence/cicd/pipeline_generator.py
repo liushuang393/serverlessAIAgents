@@ -192,12 +192,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install agentflow
+          pip install bizcore
 
       - name: Run code inventory
         id: inventory
         run: |
-          agentflow code-inventory scan ${{ env.SOURCE_DIR }} \\
+          bizcore code-inventory scan ${{ env.SOURCE_DIR }} \\
             --language ${{ env.SOURCE_LANGUAGE }} \\
             --output inventory.json
           echo "file_count=$(jq .total_files inventory.json)" >> $GITHUB_OUTPUT
@@ -205,7 +205,7 @@ jobs:
 
       - name: Analyze dependencies
         run: |
-          agentflow code-inventory analyze-deps inventory.json \\
+          bizcore code-inventory analyze-deps inventory.json \\
             --output dependencies.json
 
       - name: Upload analysis artifacts
@@ -236,7 +236,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies
-        run: pip install agentflow
+        run: pip install bizcore
 
       - name: Download analysis
         uses: actions/download-artifact@v4
@@ -245,7 +245,7 @@ jobs:
 
       - name: Transform code batch ${{{{ matrix.batch }}}}
         run: |
-          agentflow code-transform run \\
+          bizcore code-transform run \\
             --source-dir ${{{{ env.SOURCE_DIR }}}} \\
             --target-dir ${{{{ env.TARGET_DIR }}}} \\
             --source-lang ${{{{ env.SOURCE_LANGUAGE }}}} \\
@@ -278,7 +278,7 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies
-        run: pip install agentflow
+        run: pip install bizcore
 
       - name: Download transformed code
         uses: actions/download-artifact@v4
@@ -289,7 +289,7 @@ jobs:
 
       - name: Run quality gates
         run: |
-          agentflow quality-gate run \\
+          bizcore quality-gate run \\
             --source-dir ${{{{ env.SOURCE_DIR }}}} \\
             --target-dir ${{{{ env.TARGET_DIR }}}} \\
             --threshold ${{{{ env.QUALITY_THRESHOLD }}}} \\
@@ -455,14 +455,14 @@ variables:
 .python_setup:
   image: python:3.13
   before_script:
-    - pip install agentflow
+    - pip install bizcore
 
 analyze:
   extends: .python_setup
   stage: analyze
   script:
-    - agentflow code-inventory scan $SOURCE_DIR --language $SOURCE_LANGUAGE --output inventory.json
-    - agentflow code-inventory analyze-deps inventory.json --output dependencies.json
+    - bizcore code-inventory scan $SOURCE_DIR --language $SOURCE_LANGUAGE --output inventory.json
+    - bizcore code-inventory analyze-deps inventory.json --output dependencies.json
   artifacts:
     paths:
       - inventory.json
@@ -476,7 +476,7 @@ transform:
   parallel: {config.parallel_jobs}
   script:
     - |
-      agentflow code-transform run \\
+      bizcore code-transform run \\
         --source-dir $SOURCE_DIR \\
         --target-dir $TARGET_DIR \\
         --source-lang $SOURCE_LANGUAGE \\
@@ -494,7 +494,7 @@ validate:
   needs: [transform]
   script:
     - |
-      agentflow quality-gate run \\
+      bizcore quality-gate run \\
         --source-dir $SOURCE_DIR \\
         --target-dir $TARGET_DIR \\
         --threshold $QUALITY_THRESHOLD \\
@@ -592,10 +592,10 @@ stages:
           - task: UsePythonVersion@0
             inputs:
               versionSpec: '3.13'
-          - script: pip install agentflow
+          - script: pip install bizcore
             displayName: 'Install dependencies'
           - script: |
-              agentflow code-inventory scan $(SOURCE_DIR) \\
+              bizcore code-inventory scan $(SOURCE_DIR) \\
                 --language $(SOURCE_LANGUAGE) \\
                 --output $(Build.ArtifactStagingDirectory)/inventory.json
             displayName: 'Run code inventory'
@@ -616,10 +616,10 @@ stages:
           - task: UsePythonVersion@0
             inputs:
               versionSpec: '3.13'
-          - script: pip install agentflow
+          - script: pip install bizcore
             displayName: 'Install dependencies'
           - script: |
-              agentflow code-transform run \\
+              bizcore code-transform run \\
                 --source-dir $(SOURCE_DIR) \\
                 --target-dir $(TARGET_DIR) \\
                 --source-lang $(SOURCE_LANGUAGE) \\
@@ -640,9 +640,9 @@ stages:
           - task: UsePythonVersion@0
             inputs:
               versionSpec: '3.13'
-          - script: pip install agentflow
+          - script: pip install bizcore
           - script: |
-              agentflow quality-gate run \\
+              bizcore quality-gate run \\
                 --source-dir $(SOURCE_DIR) \\
                 --target-dir $(Pipeline.Workspace)/transformed \\
                 --threshold $(QUALITY_THRESHOLD)
@@ -716,8 +716,8 @@ pipeline {{
         stage('Analyze') {{
             steps {{
                 sh '''
-                    pip install agentflow
-                    agentflow code-inventory scan $SOURCE_DIR \\
+                    pip install bizcore
+                    bizcore code-inventory scan $SOURCE_DIR \\
                         --language $SOURCE_LANGUAGE \\
                         --output inventory.json
                 '''
@@ -728,7 +728,7 @@ pipeline {{
         stage('Transform') {{
             steps {{
                 sh '''
-                    agentflow code-transform run \\
+                    bizcore code-transform run \\
                         --source-dir $SOURCE_DIR \\
                         --target-dir $TARGET_DIR \\
                         --source-lang $SOURCE_LANGUAGE \\
@@ -740,7 +740,7 @@ pipeline {{
         stage('Validate') {{
             steps {{
                 sh '''
-                    agentflow quality-gate run \\
+                    bizcore quality-gate run \\
                         --source-dir $SOURCE_DIR \\
                         --target-dir $TARGET_DIR \\
                         --threshold $QUALITY_THRESHOLD \\

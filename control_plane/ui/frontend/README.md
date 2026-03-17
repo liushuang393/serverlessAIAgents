@@ -1,9 +1,9 @@
-# AgentFlow Studio
+# BizCore Studio
 
 > 注意: この `studio/` はフロントエンド専用です。  
-> バックエンド API は `agentflow/studio/`（FastAPI）にあります。
+> バックエンド API は `control_plane/ui/studio/`（FastAPI）にあります。
 
-AgentFlow のビジュアルワークフローエディタ。React + TypeScript + React Flow で構築されたモダンな Web アプリケーション。
+BizCore のビジュアルワークフローエディタ。React + TypeScript + React Flow で構築された Web アプリケーション。
 
 ## 機能
 

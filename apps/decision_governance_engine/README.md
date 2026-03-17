@@ -32,13 +32,13 @@
 ## 1. システム概要
 
 Decision Governance Engine は、企業の重要な意思決定を支援するマルチエージェントシステムです。
-**AgentFlow の PipelineEngine パターン** を使用して実装されています。
+**BizCore の PipelineEngine パターン** を使用して実装されています。
 
 ### アーキテクチャ概要
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  PipelineEngine (agentflow/engines/pipeline_engine.py)      │
+│  PipelineEngine (kernel/engines/pipeline_engine.py)         │
 │  ┌─────────────────────────────────────────────────────────┐│
 │  │ 前処理層: CognitiveGate（認知分析）→ Gatekeeper（門番） ││
 │  │ 診断層: Clarification（問題精緻化）                     ││
@@ -209,13 +209,13 @@ CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi →
 | Python | 3.13以上 |
 | Node.js | 18以上 |
 | パッケージマネージャ | pip, npm |
-| LLM Gateway | `.agentflow/llm_gateway.yaml`（自動生成可） |
+| LLM Gateway | `control_plane` の LLM Management（必要時のみ `.agentflow/llm_gateway.yaml` fallback） |
 | API Key | Platform 未設定時のみ fallback として利用 |
 
 ### 4.2 クイックセットアップ
 
 ```bash
-# 1. プロジェクトルートで AgentFlow をインストール
+# 1. プロジェクトルートで BizCore をインストール
 pip install -e .
 
 # 2. フロントエンド依存関係をインストール
@@ -229,7 +229,7 @@ PLATFORM_SECRET_MASTER_KEY=
 EOF
 
 # 4. Gateway 設定を初期化（未作成時）
-python -c "from agentflow.llm.gateway import load_gateway_config; load_gateway_config()"
+python -c "from infrastructure.llm.gateway import get_gateway_router; print(get_gateway_router())"
 ```
 
 > 注意:
@@ -282,7 +282,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 pip install -e ".[dev,apps]"
 ```
 
@@ -435,7 +435,7 @@ mypy apps/decision_governance_engine/
 Platform（Control Plane）に publish/deploy を統一する場合:
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m control_plane.main publish ./apps/decision_governance_engine --target docker
 ```
 
@@ -567,7 +567,7 @@ uvicorn apps.decision_governance_engine.api:app --port 8001
 ## 11. 共有テスト env 自動生成
 
 ```bash
-conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+conda run -n bizcore python scripts/bootstrap_test_env.py --env-file .env
 ```
 
 - `POSTGRES_PASSWORD` と `SESSION_SECRET` を含むテスト用値を自動補完します。

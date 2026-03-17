@@ -11,4 +11,4 @@
 ## API Surface
 
 - 正規 API は `/api/studios/*`
-- framework 管理面は `/api/studios/framework/*`
+- framework app 管理面は `/api/studios/framework/apps/*`

@@ -18,16 +18,16 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[apps,dev]"
 
       - name: Lint (Ruff)
         run: ruff check .
 
       - name: Type check (MyPy)
-        run: mypy agentflow --strict --ignore-missing-imports
+        run: mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict --ignore-missing-imports
 
       - name: Security scan (bandit HIGH)
-        run: bandit -r agentflow -lll -iii
+        run: bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii
 
       - name: Tests (pytest)
         run: pytest --tb=short -q
@@ -39,8 +39,8 @@ jobs:
           echo "Generated: $(date)" >> check-report.md
           echo "" >> check-report.md
           ruff check . >> check-report.md 2>&1 || true
-          mypy agentflow --strict >> check-report.md 2>&1 || true
-          bandit -r agentflow -lll -iii >> check-report.md 2>&1 || true
+          mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict >> check-report.md 2>&1 || true
+          bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii >> check-report.md 2>&1 || true
 
       - name: Upload failure report
         if: failure()

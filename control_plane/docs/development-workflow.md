@@ -43,11 +43,11 @@ App の基本情報を決定する。
 
 ```bash
 # 対話モードで基盤生成
-python -m agentflow.cli template generate fullstack-app \
+python -m control_plane.cli.main template generate fullstack-app \
   apps/inventory_manager -i
 
 # パラメータ指定モード
-python -m agentflow.cli template generate fullstack-app \
+python -m control_plane.cli.main template generate fullstack-app \
   apps/inventory_manager \
   -p app_name=inventory_manager \
   -p app_title="在庫管理システム" \
@@ -63,8 +63,9 @@ python -m agentflow.cli template generate fullstack-app \
 既存ツール `PortManager` を使用:
 
 ```bash
-python -m agentflow.tools.port_manager inventory_manager \
-  apps/inventory_manager
+curl -X POST http://localhost:8000/api/studios/framework/apps/ports/rebalance \
+  -H "Content-Type: application/json" \
+  -d '{"dry_run": false}'
 ```
 
 **自動検出対象**:
@@ -158,7 +159,7 @@ flowchart LR
         TM["TemplateManager"]
         PM["PortManager"]
         PO["PublishOrchestrator"]
-        CLI["agentflow CLI"]
+        CLI["bizcore CLI"]
     end
     subgraph New["新規開発（赤）"]
         AC["app_config.json 自動生成"]

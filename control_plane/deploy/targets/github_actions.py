@@ -160,7 +160,7 @@ jobs:
     def _generate_docker_workflow(self, name: str, branch: str, config: DeployConfig) -> str:
         """Docker デプロイワークフローを生成."""
         registry = config.settings.get("registry", "ghcr.io")
-        config.settings.get("image_name", "agentflow-app")
+        config.settings.get("image_name", "bizcore-app")
 
         return f"""name: {name}
 

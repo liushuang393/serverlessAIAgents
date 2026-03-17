@@ -1,7 +1,7 @@
 /**
  * Decision Governance Engine - i18n プロバイダー設定。
  *
- * 実装はフレームワーク (@agentflow/i18n) に委譲。
+ * 実装は共通 i18n 基底 (@bizcore/i18n) に委譲。
  * このファイルはアプリ固有のロケールファイル読み込みのみ担当する。
  * 対応ロケール: ja / en / zh
  */
@@ -9,8 +9,8 @@ import type { ReactNode } from 'react';
 import {
   I18nProvider as BaseProvider,
   detectBrowserLocale,
-} from '@agentflow/i18n';
-import type { Locale, Translations } from '@agentflow/i18n';
+} from '@bizcore/i18n';
+import type { Locale, Translations } from '@bizcore/i18n';
 
 /**
  * このアプリのロケール JSON ローダー。

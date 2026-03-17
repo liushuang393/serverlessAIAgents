@@ -1,7 +1,7 @@
 """Decision Governance Engine - Agents パッケージ.
 
 全てのAgentを公開するエントリーポイント。
-Agentは agentflow.ResilientAgent を継承。
+Agent は kernel.ResilientAgent を継承。
 """
 
 from apps.decision_governance_engine.agents.clarification_agent import ClarificationAgent

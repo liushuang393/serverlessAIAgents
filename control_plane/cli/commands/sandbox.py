@@ -4,16 +4,16 @@ Daytonaスタイルのサンドボックス管理CLIを提供。
 
 使用例:
     # サンドボックス作成
-    $ agentflow sandbox create --provider docker
+    $ bizcore sandbox create --provider docker
 
     # 一覧表示
-    $ agentflow sandbox list
+    $ bizcore sandbox list
 
     # コード実行
-    $ agentflow sandbox exec <sandbox_id> "print('Hello')"
+    $ bizcore sandbox exec <sandbox_id> "print('Hello')"
 
     # 削除
-    $ agentflow sandbox delete <sandbox_id>
+    $ bizcore sandbox delete <sandbox_id>
 """
 
 import asyncio

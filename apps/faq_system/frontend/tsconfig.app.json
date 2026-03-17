@@ -27,7 +27,7 @@
 
     /* パスエイリアス - Vite vite.config.ts の alias と対応させること */
     "paths": {
-      "@agentflow/i18n": ["../../../agentflow/i18n/frontend/index"],
+      "@bizcore/i18n": ["./src/i18n/base"],
       "react": ["./node_modules/@types/react"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
       "react-dom": ["./node_modules/@types/react-dom"]

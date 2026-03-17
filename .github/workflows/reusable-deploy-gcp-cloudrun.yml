@@ -56,7 +56,7 @@ jobs:
       - name: Build and Push Docker image
         working-directory: ${{ inputs.working-directory }}
         run: |
-          IMAGE="${{ inputs.region }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/agentflow/${{ inputs.service-name }}:${{ github.sha }}"
+          IMAGE="${{ inputs.region }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/bizcore/${{ inputs.service-name }}:${{ github.sha }}"
           docker build -t $IMAGE -f ${{ inputs.dockerfile }} .
           docker push $IMAGE
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
@@ -74,4 +74,3 @@ jobs:
             --cpu=1
             --min-instances=0
             --max-instances=10
-

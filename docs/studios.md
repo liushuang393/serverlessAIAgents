@@ -4,9 +4,9 @@ BizCore Studios は `apps/` 配下の製品群です。
 
 ## Primary Studios
 
-- `apps/code_migration_assistant`
-- `apps/faq_system`
-- `apps/orchestration_guardian`
+- Migration Studio: `apps/code_migration_assistant`
+- Enterprise FAQ Studio: `apps/faq_system`
+- Computer Assistant Studio: `apps/messaging_hub`
 
 ## Rule
 

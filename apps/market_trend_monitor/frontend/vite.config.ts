@@ -113,7 +113,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./src"),
         // Docker build でも安定して解決できるよう、アプリ内 i18n 基底実装を参照する。
-        "@agentflow/i18n": path.resolve(__dirname, "./src/i18n/base"),
+        "@bizcore/i18n": path.resolve(__dirname, "./src/i18n/base"),
       },
     },
     server: {

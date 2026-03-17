@@ -31,7 +31,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@agentflow/i18n": ["src/i18n/base"]
+      "@bizcore/i18n": ["src/i18n/base"]
     }
   },
   "include": ["src"],

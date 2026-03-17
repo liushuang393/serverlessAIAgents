@@ -1,6 +1,6 @@
 """auth_service DB セッション管理.
 
-agentflow.database.DatabaseManager を利用した統一セッション管理。
+infrastructure.database.DatabaseManager を利用した統一セッション管理。
 """
 
 from __future__ import annotations

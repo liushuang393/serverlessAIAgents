@@ -44,7 +44,7 @@ class RenderTarget(BaseDeployTarget):
         """Render にデプロイ."""
         api_key = config.credentials.get("render_api_key")
         service_id = config.settings.get("service_id")
-        service_name = config.settings.get("service_name", "agentflow-app")
+        service_name = config.settings.get("service_name", "bizcore-app")
 
         if not api_key:
             yield DeployEvent(type="error", message="Render API key is required")

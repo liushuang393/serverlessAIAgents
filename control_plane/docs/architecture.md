@@ -1,7 +1,7 @@
 # Platform アーキテクチャ設計書
 
 > **最終更新**: 2026-02-23
-> **対象**: `control_plane` — AgentFlow 統合管理プラットフォーム
+> **対象**: `control_plane` — BizCore 統合管理プラットフォーム
 
 ---
 
@@ -28,7 +28,7 @@ graph TB
         A6["design_skills_engine"]
     end
 
-    subgraph Framework["agentflow/ (共通フレームワーク)"]
+    subgraph Framework["kernel / shared / infrastructure (共通基盤)"]
         AR["AgentRegistry"]
         RAG["RAGService"]
         SK["SkillRegistry"]
@@ -57,7 +57,7 @@ graph TB
 |------|------|
 | **App 独立性** | 各 App は Platform なしでも単独起動・動作可能 |
 | **マニフェスト駆動** | `app_config.json` が唯一の契約。Platform はこれを読むだけ |
-| **フレームワーク層共有** | 共通機能は `agentflow/` に実装。App が直接 import |
+| **フレームワーク層共有** | 共通機能は `kernel/` `shared/` `infrastructure/` に実装。App が責務に応じて import |
 | **Platform は可視化** | 管理・監視・操作の UI を提供。ビジネスロジックは持たない |
 
 ---
@@ -85,7 +85,7 @@ graph LR
         TenantDash["TenantDashboard"]
     end
     subgraph L4["Framework 層"]
-        AF["agentflow/*"]
+        AF["kernel/* + shared/* + infrastructure/*"]
     end
 
     L1 --> L2
@@ -213,7 +213,7 @@ sequenceDiagram
 
 ### 主要コンポーネント
 
-- `agentflow/tools/cli/runtime_manager.py`
+- `kernel/tools/cli/runtime_manager.py`
   - CLI 検出、インストール、認証、診断実行を統一
 - `control_plane/services/runtime_command_resolver.py`
   - README から起動コマンド抽出、fallback 決定

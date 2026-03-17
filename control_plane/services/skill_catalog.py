@@ -1,4 +1,4 @@
-"""Skill Catalog Service — agentflow/skills/builtin/ の SKILL.md スキャン.
+"""Skill Catalog Service — kernel/skills/builtin/ の SKILL.md スキャン.
 
 ビルトインスキルディレクトリを走査し、SKILL.md の YAML frontmatter を
 パースしてスキルカタログを構築する。
@@ -26,7 +26,7 @@ _logger = logging.getLogger(__name__)
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 # デフォルトのビルトインスキルディレクトリ
-_DEFAULT_SKILLS_DIR = "agentflow/skills/builtin"
+_DEFAULT_SKILLS_DIR = "kernel/skills/builtin"
 
 # ------------------------------------------------------------------
 # 利用シナリオベースのカテゴリ定義

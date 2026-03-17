@@ -108,7 +108,7 @@ apps = [
     "discord.py>=2.0",             # For messaging_hub
 
     # Security / MFA
-    "pyotp>=2.9.0",  # TOTP MFA（agentflow/security/mfa.py）
+    "pyotp>=2.9.0",  # TOTP MFA（infrastructure/security/mfa.py）
 ]
 
 # Memvid長期知識記憶（高性能RAG）
@@ -303,7 +303,7 @@ ignore = [
     "ARG004",  # unused-static-method-argument: acceptable in protocol implementations
     "F402",    # import-shadowed-by-loop-var: acceptable in comprehension patterns
     "ANN002",  # missing-type-annotation-args: *args not always annotated
-    "ANN003",  # already in agentflow/** but missing from global
+    "ANN003",  # already used in legacy modules but missing from global
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -526,7 +526,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 filterwarnings = [
-    # agentflow/ 内部の AgentBlock 直接継承クラスが多数残っているため一時的に抑制（移行待ち）
+    # 旧構成由来の AgentBlock 直接継承クラスが多数残っているため一時的に抑制（移行待ち）
     "ignore:.*AgentBlock.*直接継承は非推奨:DeprecationWarning",
 ]
 addopts = [
@@ -593,11 +593,10 @@ skips = ["*_test.py", "test_*.py"]
 # Hatch Configuration
 # ============================================================================
 [tool.hatch.build.targets.wheel]
-packages = ["agentflow", "contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain"]
+packages = ["contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/agentflow",
     "/contracts",
     "/infrastructure",
     "/shared",

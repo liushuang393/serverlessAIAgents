@@ -4,7 +4,7 @@
  * 目的: 認証・画面切り替えとルーティング
  *
  * 使用フレームワーク:
- *   - ErrorBoundary: グローバルエラーキャッチ（@agentflow/ui）
+ *   - ErrorBoundary: グローバルエラーキャッチ（app 内実装）
  */
 
 import React, { useEffect } from 'react';
@@ -52,8 +52,7 @@ const GlobalErrorFallback: React.FC<{ error: Error; onReset: () => void }> = ({
 // ========================================
 // エラー境界コンポーネント（簡易版）
 // ========================================
-// 注: @agentflow/ui の ErrorBoundary を使用する場合は import してください
-// import { ErrorBoundary } from '@agentflow/ui';
+// 注: 共通 UI ライブラリに統合する場合は ErrorBoundary を差し替えてください
 
 interface ErrorBoundaryState {
   hasError: boolean;

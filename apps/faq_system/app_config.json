@@ -21,7 +21,7 @@
   "agents": [
     {
       "name": "FAQAgent",
-      "module": "agentflow.agents.faq_agent",
+      "module": "apps.faq_system.backend.agents.faq_agent",
       "capabilities": [
         "faq",
         "rag",
@@ -35,7 +35,7 @@
     },
     {
       "name": "SalesAgent",
-      "module": "agentflow.agents.sales_agent",
+      "module": "shared.agents.sales_agent",
       "capabilities": [
         "sales",
         "design_skills",

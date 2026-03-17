@@ -53,10 +53,10 @@ class KubernetesTarget(BaseDeployTarget):
         config: DeployConfig,
     ) -> AsyncIterator[DeployEvent]:
         """Kubernetesにデプロイ."""
-        app_name = config.settings.get("app_name", "agentflow-app")
+        app_name = config.settings.get("app_name", "bizcore-app")
         namespace = config.settings.get("namespace", "default")
         replicas = config.settings.get("replicas", 2)
-        image = config.settings.get("image", "agentflow:latest")
+        image = config.settings.get("image", "bizcore:latest")
         port = config.settings.get("port", 8000)
 
         yield DeployEvent(

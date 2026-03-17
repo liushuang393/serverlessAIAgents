@@ -29,7 +29,13 @@ services:
     command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       # ソースコードをマウント（リアルタイム反映、読み書き可能）
-      - ../../agentflow:/app/agentflow
+      - ../../contracts:/app/contracts
+      - ../../infrastructure:/app/infrastructure
+      - ../../shared:/app/shared
+      - ../../kernel:/app/kernel
+      - ../../harness:/app/harness
+      - ../../control_plane:/app/control_plane
+      - ../../domain:/app/domain
       - .:/app/apps/decision_governance_engine
     environment:
       # LLM 設定（ホストの環境変数をそのまま継承、値を上書きしない）
@@ -64,9 +70,6 @@ services:
       - ./frontend/tailwind.config.js:/app/tailwind.config.js
       - ./frontend/postcss.config.js:/app/postcss.config.js
       - ./frontend/tsconfig.json:/app/tsconfig.json
-      # agentflow i18n 基底実装をマウント（vite.config.ts の @agentflow/i18n エイリアス解決用）
-      # vite.config.ts: path.resolve(__dirname='app', '../../../agentflow/i18n/frontend') → /agentflow/i18n/frontend
-      - ../../agentflow/i18n/frontend:/agentflow/i18n/frontend:ro
     environment:
       - VITE_DEBUG_MODE=true
       # Vite dev server の proxy target（容器内部ネットワーク経由）

@@ -44,7 +44,7 @@ class VercelTarget(BaseDeployTarget):
     ) -> AsyncIterator[DeployEvent]:
         """Vercel にデプロイ."""
         token = config.credentials.get("token")
-        project_name = config.settings.get("project_name", "agentflow-app")
+        project_name = config.settings.get("project_name", "bizcore-app")
 
         if not token:
             yield DeployEvent(
@@ -205,7 +205,7 @@ class VercelTarget(BaseDeployTarget):
                 type="string",
                 required=True,
                 description="Vercel project name",
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

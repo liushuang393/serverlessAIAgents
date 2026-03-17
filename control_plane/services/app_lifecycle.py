@@ -81,8 +81,8 @@ _REPAIR_TOOL_ORDER: tuple[Literal["codex", "claude"], ...] = ("codex", "claude")
 _REPAIR_MAX_ATTEMPTS_PER_TOOL = 2
 _LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery", "admin")
 
-# WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
-_CONDA_ACTIVATE_PREFIX = 'eval "$(conda shell.bash hook)" && conda activate agentflow && '
+# WSL / Linux 環境で conda bizcore を活性化するシェルプレフィックス
+_CONDA_ACTIVATE_PREFIX = 'eval "$(conda shell.bash hook)" && conda activate bizcore && '
 
 ExecutionMode = Literal["local", "docker"]
 
@@ -1367,18 +1367,18 @@ class AppLifecycleManager:
     ) -> LocalProcessLaunchResult:
         """Local 開発コマンドをバックグラウンド起動し、生存確認する.
 
-        WSL / Linux 環境で conda agentflow を活性化してから実行する。
+        WSL / Linux 環境で conda bizcore を活性化してから実行する。
         """
         log_path = f"/tmp/{app_name}_{role}.log"
         pid_file = f"/tmp/{app_name}_{role}.pid"
-        # conda agentflow 環境を活性化してからコマンドを実行する
+        # conda bizcore 環境を活性化してからコマンドを実行する
         activated_command = f"{_CONDA_ACTIVATE_PREFIX}{command}"
         launch_cmd = (
             f"nohup setsid bash -lc {shlex.quote(activated_command)}"
             f" > {shlex.quote(log_path)} 2>&1"
             f" & PID=$!; echo $PID; echo $PID > {shlex.quote(pid_file)}"
         )
-        _logger.info("[%s] %s 起動 (conda agentflow): %s", app_name, role, command)
+        _logger.info("[%s] %s 起動 (conda bizcore): %s", app_name, role, command)
         proc = await asyncio.create_subprocess_shell(
             launch_cmd,
             cwd=str(cwd),

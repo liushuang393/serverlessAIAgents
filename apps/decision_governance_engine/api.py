@@ -218,7 +218,7 @@ if __name__ == "__main__":
             host=_host,
             port=_port,
             reload=True,
-            reload_dirs=["apps/decision_governance_engine", "agentflow"],
+            reload_dirs=["apps/decision_governance_engine", "shared", "kernel", "harness", "control_plane"],
         )
     else:
         uvicorn.run(app, host=_host, port=_port)

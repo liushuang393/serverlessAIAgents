@@ -1,5 +1,5 @@
 @echo off
-REM AgentFlow コード品質チェックスクリプト (Windows)
+REM BizCore コード品質チェックスクリプト (Windows)
 REM
 REM 使用方法:
 REM   check.bat [command]
@@ -34,7 +34,7 @@ goto :help
 
 :help
 echo ========================================
-echo AgentFlow - 利用可能なコマンド
+echo BizCore - 利用可能なコマンド
 echo ========================================
 echo.
 echo   check.bat format        - コードを自動フォーマット (Python + JS/TS)
@@ -66,15 +66,15 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [JS/TS] Prettier フォーマット中...
-cd studio
-call npx prettier --write "src/**/*.{ts,tsx,js,jsx,json,css}"
+echo [JS/TS] ESLint auto-fix 実行中...
+cd control_plane\frontend
+call npm run lint -- --fix
 if errorlevel 1 (
-    echo [エラー] Prettier フォーマットに失敗しました
-    cd ..
+    echo [エラー] JS/TS 自動修正に失敗しました
+    cd ..\..
     exit /b 1
 )
-cd ..
+cd ..\..
 echo.
 echo ✅ すべてのコードがフォーマットされました
 goto :eof
@@ -92,14 +92,14 @@ if errorlevel 1 (
 )
 echo.
 echo [JS/TS] ESLint チェック中...
-cd studio
-call npx eslint "src/**/*.{ts,tsx,js,jsx}" --max-warnings=0
+cd control_plane\frontend
+call npm run lint
 if errorlevel 1 (
     echo [エラー] ESLint チェックに失敗しました
-    cd ..
+    cd ..\..
     exit /b 1
 )
-cd ..
+cd ..\..
 echo.
 echo ✅ すべてのリントチェックが完了しました
 goto :eof
@@ -110,21 +110,21 @@ echo 型チェック中...
 echo ========================================
 echo.
 echo [Python] MyPy 型チェック中...
-mypy agentflow --strict --ignore-missing-imports
+mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict --ignore-missing-imports
 if errorlevel 1 (
     echo [エラー] MyPy 型チェックに失敗しました
     exit /b 1
 )
 echo.
 echo [TypeScript] tsc 型チェック中...
-cd studio
-call npx tsc --noEmit
+cd control_plane\frontend
+call npm run type-check
 if errorlevel 1 (
     echo [エラー] TypeScript 型チェックに失敗しました
-    cd ..
+    cd ..\..
     exit /b 1
 )
-cd ..
+cd ..\..
 echo.
 echo ✅ すべての型チェックが完了しました
 goto :eof
@@ -148,7 +148,7 @@ echo ========================================
 echo カバレッジ付きでテストを実行中...
 echo ========================================
 echo.
-pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v
+pytest --cov=contracts --cov=infrastructure --cov=shared --cov=kernel --cov=harness --cov=control_plane --cov=domain --cov=apps --cov-report=html --cov-report=term-missing -v
 if errorlevel 1 (
     echo [エラー] テストに失敗しました
     exit /b 1
@@ -212,8 +212,8 @@ if exist dist rd /s /q dist
 if exist build rd /s /q build
 echo.
 echo [JS/TS] キャッシュを削除中...
-if exist studio\dist rd /s /q studio\dist
-if exist studio\node_modules\.cache rd /s /q studio\node_modules\.cache
+if exist control_plane\frontend\dist rd /s /q control_plane\frontend\dist
+if exist control_plane\frontend\node_modules\.cache rd /s /q control_plane\frontend\node_modules\.cache
 echo.
 echo ✅ クリーンアップ完了
 goto :eof

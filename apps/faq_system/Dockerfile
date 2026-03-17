@@ -5,7 +5,7 @@
 #
 # ビルド:
 #   docker build -t faq-backend -f apps/faq_system/Dockerfile ../..
-#   （リポジトリルートから agentflow パッケージを含める）
+#   （リポジトリルートから BizCore コア層を含める）
 #
 # 実行:
 #   docker run -p 8005:8005 faq-backend
@@ -37,8 +37,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # pyproject.toml から依存関係をインストール
 # コンテキストはリポジトリルート想定
 COPY pyproject.toml README.md ./
-# agentflow パッケージをコピー（editable install に必要）
-COPY agentflow/ /app/agentflow/
+# 分層パッケージをコピー（editable install に必要）
+COPY contracts/ /app/contracts/
+COPY infrastructure/ /app/infrastructure/
+COPY shared/ /app/shared/
+COPY kernel/ /app/kernel/
+COPY harness/ /app/harness/
+COPY control_plane/ /app/control_plane/
+COPY domain/ /app/domain/
 RUN pip install --no-cache-dir -e ".[apps]"
 
 # ---------------------------------------------------------------------------
@@ -55,7 +61,13 @@ COPY --from=dependencies /usr/local/bin /usr/local/bin
 
 # アプリケーションコードをコピー
 # コンテキストはリポジトリルート想定
-COPY agentflow/ /app/agentflow/
+COPY contracts/ /app/contracts/
+COPY infrastructure/ /app/infrastructure/
+COPY shared/ /app/shared/
+COPY kernel/ /app/kernel/
+COPY harness/ /app/harness/
+COPY control_plane/ /app/control_plane/
+COPY domain/ /app/domain/
 COPY apps/faq_system/ /app/apps/faq_system/
 
 # PYTHONPATH 設定
@@ -74,4 +86,3 @@ EXPOSE 8005
 
 # 起動コマンド（app_config.json のポート 8005 を使用）
 CMD ["python", "-m", "apps.faq_system.main"]
-

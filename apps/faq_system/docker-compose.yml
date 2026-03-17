@@ -97,7 +97,13 @@ services:
       - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
     volumes:
       # 開発時: ソースコードをマウント（ホットリロード用）
-      - ../../agentflow:/app/agentflow:ro
+      - ../../contracts:/app/contracts:ro
+      - ../../infrastructure:/app/infrastructure:ro
+      - ../../shared:/app/shared:ro
+      - ../../kernel:/app/kernel:ro
+      - ../../harness:/app/harness:ro
+      - ../../control_plane:/app/control_plane:ro
+      - ../../domain:/app/domain:ro
       - .:/app/apps/faq_system:ro
     command:
       [

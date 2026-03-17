@@ -42,7 +42,7 @@ bash setup_dev.sh
 ## 起動
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m apps.orchestration_guardian.main
 ```
 
@@ -64,7 +64,7 @@ cd <repo-root>
 ## 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate agentflow
+conda activate bizcore
 python -m control_plane.main publish ./apps/orchestration_guardian --target docker
 ```
 
@@ -73,7 +73,7 @@ python -m control_plane.main publish ./apps/orchestration_guardian --target dock
 | エンドポイント   | メソッド | 説明                                                                   |
 | ---------------- | -------- | ---------------------------------------------------------------------- |
 | `/`              | GET      | サービス情報（docs/health URL を返却）                                 |
-| `/api/health`    | GET      | ヘルスチェック（agentflow_version を含む）                             |
+| `/api/health`    | GET      | ヘルスチェック（framework_version を含む）                             |
 | `/api/checklist` | GET      | オーケストレーション準備チェックリスト（6項目）                        |
 | `/api/verify`    | POST     | 準備状況スコア評価（streaming/a2a/rag_contract/auth_baseline の4観点） |
 

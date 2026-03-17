@@ -53,9 +53,9 @@ def search(
     """マーケットプレイスでエージェントを検索.
 
     例:
-        agentflow marketplace search "PDF"
-        agentflow marketplace search --category document
-        agentflow marketplace search --protocols mcp --protocols a2a
+        bizcore marketplace search "PDF"
+        bizcore marketplace search --category document
+        bizcore marketplace search --protocols mcp --protocols a2a
     """
     try:
         client = MarketplaceClient()
@@ -96,7 +96,7 @@ def search(
             )
 
         console.print(table)
-        console.print("\n[dim]Use 'agentflow marketplace install <agent-id>' to install an agent.[/dim]")
+        console.print("\n[dim]Use 'bizcore marketplace install <agent-id>' to install an agent.[/dim]")
 
         client.close()
 
@@ -134,9 +134,9 @@ def install(
     """マーケットプレイスからエージェントをインストール.
 
     例:
-        agentflow marketplace install pdf-processor
-        agentflow marketplace install text-analyzer --version 1.2.0
-        agentflow marketplace install my-agent --force
+        bizcore marketplace install pdf-processor
+        bizcore marketplace install text-analyzer --version 1.2.0
+        bizcore marketplace install my-agent --force
     """
     try:
         client = MarketplaceClient()
@@ -150,7 +150,7 @@ def install(
             Panel(
                 f"[green]✓[/green] Agent installed successfully!\n\n"
                 f"[dim]Install path:[/dim] {install_path}\n"
-                f"[dim]Run with:[/dim] agentflow run {install_path}",
+                f"[dim]Run with:[/dim] bizcore run {install_path}",
                 title=f"Installed: {agent_id}",
                 border_style="green",
             )
@@ -195,8 +195,8 @@ def uninstall(
     """インストール済みエージェントをアンインストール.
 
     例:
-        agentflow marketplace uninstall pdf-processor
-        agentflow marketplace uninstall my-agent --yes
+        bizcore marketplace uninstall pdf-processor
+        bizcore marketplace uninstall my-agent --yes
     """
     try:
         client = MarketplaceClient()
@@ -249,7 +249,7 @@ def list_installed(ctx: click.Context) -> None:
     """インストール済みエージェントを一覧表示.
 
     例:
-        agentflow marketplace list
+        bizcore marketplace list
     """
     try:
         client = MarketplaceClient()
@@ -258,7 +258,7 @@ def list_installed(ctx: click.Context) -> None:
 
         if not agents:
             console.print("[yellow]No agents installed.[/yellow]")
-            console.print("[dim]Use 'agentflow marketplace search' to find agents.[/dim]")
+            console.print("[dim]Use 'bizcore marketplace search' to find agents.[/dim]")
             client.close()
             return
 

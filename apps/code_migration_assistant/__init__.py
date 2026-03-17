@@ -1,6 +1,6 @@
-"""Code Migration Assistant - agentflow ベースのコード移行ツール.
+"""Code Migration Assistant - BizCore ベースのコード移行ツール.
 
-agentflow の Engine パターンを使用したコード移行アシスタント。
+BizCore の Engine パターンを使用したコード移行アシスタント。
 Factory パターンにより、設定ベースで言語ペアを切り替え可能。
 
 使用例:

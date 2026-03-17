@@ -43,7 +43,7 @@ class DockerTarget(BaseDeployTarget):
         config: DeployConfig,
     ) -> AsyncIterator[DeployEvent]:
         """Docker イメージをビルド＆プッシュ."""
-        image_name = config.settings.get("image_name", "agentflow-app")
+        image_name = config.settings.get("image_name", "bizcore-app")
         tag = config.settings.get("tag", "latest")
         registry = config.settings.get("registry", "")
         push = config.settings.get("push", False)
@@ -199,7 +199,7 @@ class DockerTarget(BaseDeployTarget):
                 type="string",
                 required=True,
                 description="Docker image name",
-                placeholder="my-agentflow-app",
+                placeholder="my-bizcore-app",
                 group="settings",
             ),
             ConfigField(

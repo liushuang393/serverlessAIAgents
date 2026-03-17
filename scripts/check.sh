@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PYTHON="${PYTHON:-python3}"
 
-# プロジェクトルートを PYTHONPATH に追加（agentflow shim パッケージ解決用）
+# プロジェクトルートを PYTHONPATH に追加（分層パッケージ解決用）
 export PYTHONPATH="${ROOT_DIR}:${PYTHONPATH:-}"
 
 EXIT_CODE=0
@@ -43,36 +43,23 @@ else
 fi
 echo ""
 
-# --- 3. 旧パス互換 shim 確認 ---
-echo "[3/3] 旧パス互換 shim インポート確認"
+# --- 3. 正規公開入口確認 ---
+echo "[3/3] 正規公開入口インポート確認"
 SHIM_FAIL=0
 "$PYTHON" -c "
-# kernel shims
-from agentflow.orchestration.executor import ExecutorAgent
-from agentflow.orchestration.planner import PlannerAgent
-from agentflow.engines.report_builder import ReportBuilder
-from agentflow.pev.result_verifier import ResultVerifier
-from agentflow.routing.intent_router import IntentRouter
+from apps.faq_system.backend.agents.faq_agent import FAQAgent
+from shared.agents.sales_agent import SalesAgent
+from kernel.skills.builtin.design_skills.engine import DesignSkillsEngine
+from control_plane import AppRegistryService, DiscoveryService, LifecycleService
 
-# harness shims
-from agentflow.context import ContextEngineer
-from agentflow.context.budget_manager import TokenBudgetManager
-from agentflow.governance.engine import GovernanceEngine
+assert FAQAgent.__name__ == 'FAQAgent'
+assert SalesAgent.__name__ == 'SalesAgent'
+assert DesignSkillsEngine.__name__ == 'DesignSkillsEngine'
+assert AppRegistryService.__name__ == 'AppRegistryService'
+assert DiscoveryService.__name__ == 'DiscoveryService'
+assert LifecycleService.__name__ == 'LifecycleService'
 
-# control plane
-from control_plane.registry import AppRegistryService
-from control_plane.lifecycle import LifecycleService
-from control_plane.discovery import DiscoveryService
-
-# identity checks
-from kernel import ExecutorAgent as EA2
-assert EA2 is ExecutorAgent, 'ExecutorAgent identity mismatch'
-from harness.context import ContextEngineer as CE2
-assert CE2 is ContextEngineer, 'ContextEngineer identity mismatch'
-from harness.guardrails import GovernanceEngine as GE2
-assert GE2 is GovernanceEngine, 'GovernanceEngine identity mismatch'
-
-print('All shim imports and identity checks passed.')
+print('All canonical entry-point imports passed.')
 " || SHIM_FAIL=1
 
 if [ "$SHIM_FAIL" -eq 0 ]; then

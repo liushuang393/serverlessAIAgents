@@ -305,8 +305,8 @@ settings = Settings()
 
     def _generate_requirements(self) -> str:
         """requirements.txt を生成."""
-        return """# AgentFlow Generated Application
-agentflow>=1.0.0
+        return """# BizCore Generated Application
+bizcore>=2.0.0
 fastapi>=0.100.0
 uvicorn>=0.23.0
 pydantic>=2.0.0

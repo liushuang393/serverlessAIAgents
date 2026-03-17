@@ -5,7 +5,7 @@
 - unused-ignore: 不要になった # type: ignore コメントを削除（mypy 出力を解析）
 
 使用例:
-  conda activate agentflow
+  conda activate bizcore
   python scripts/fix_mypy_safe.py              # 修正実行
   python scripts/fix_mypy_safe.py --dry-run    # 変更せずに削除対象のみ表示
 
@@ -22,6 +22,18 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+MYPY_TARGETS: list[str] = [
+    "contracts",
+    "infrastructure",
+    "shared",
+    "kernel",
+    "harness",
+    "control_plane",
+    "domain",
+    "apps",
+    "tests",
+]
+TARGET_ROOT_PATTERN = r"(?:contracts|infrastructure|shared|kernel|harness|control_plane|domain|apps|tests)"
 
 
 def run_mypy() -> str:
@@ -29,7 +41,7 @@ def run_mypy() -> str:
     r = subprocess.run(
         [
             "mypy",
-            "agentflow",
+            *MYPY_TARGETS,
             "--strict",
             "--ignore-missing-imports",
             "--no-error-summary",
@@ -47,10 +59,10 @@ def find_unused_ignores(output: str) -> list[tuple[str, int]]:
     """mypy 出力から unused-ignore の (相対パス, 行番号) を抽出する。
 
     --no-pretty 形式の例:
-      agentflow/foo.py:10:5: error: Unused "type: ignore" comment  [unused-ignore]
+      kernel/foo.py:10:5: error: Unused "type: ignore" comment  [unused-ignore]
     """
     pattern = re.compile(
-        r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:.*?Unused \"type: ignore\".*\[unused-ignore\]",
+        rf"^({TARGET_ROOT_PATTERN}/[^\s:]+):(\d+)(?::\d+)?:\s*error:.*?Unused \"type: ignore\".*\[unused-ignore\]",
         re.MULTILINE,
     )
     results = [(m.group(1), int(m.group(2))) for m in pattern.finditer(output)]

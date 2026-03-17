@@ -159,15 +159,15 @@ def init(
 
         \b
         # すべてのプロトコルを有効化
-        $ agentflow init my-agent
+        $ bizcore init my-agent
 
         \b
         # MCP のみを有効化
-        $ agentflow init my-agent --protocols mcp
+        $ bizcore init my-agent --protocols mcp
 
         \b
         # ドライランモード
-        $ agentflow init my-agent --dry-run
+        $ bizcore init my-agent --dry-run
     """
     verbose = ctx.obj.get("verbose", False)
 

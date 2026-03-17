@@ -1,7 +1,7 @@
 """Code Migration Orchestrator - Legacy-to-Agent™ Enterprise Modernization Platform.
 
 ソース言語→ターゲット言語移行のオーケストレーター。
-agentflow の Engine パターンを使用。
+BizCore の Engine パターンを使用。
 
 v5.0: Legacy-to-Agent™ プラットフォーム統合
     - 3つの製品パッケージ: Assessment / Modernization / Agent Platform
@@ -27,7 +27,7 @@ from typing import Any
 class CodeMigrationOrchestrator:
     """Legacy-to-Agent™ Enterprise Modernization Platform Orchestrator.
 
-    agentflow の Engine パターンを使用したオーケストレーター。
+    BizCore の Engine パターンを使用したオーケストレーター。
     3つの製品パッケージに対応。
 
     製品パッケージ:

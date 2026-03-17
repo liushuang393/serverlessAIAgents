@@ -5,7 +5,7 @@
 #
 # ビルド:
 #   docker build -t dge-backend -f Dockerfile ../..
-#   （リポジトリルートから agentflow パッケージを含める）
+#   （リポジトリルートから BizCore コア層を含める）
 #
 # 実行:
 #   docker run -p 8001:8000 dge-backend
@@ -34,8 +34,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # pyproject.toml から依存関係をインストール
 # コンテキストはリポジトリルート想定
 COPY pyproject.toml README.md ./
-# agentflow パッケージをコピー（editable install に必要）
-COPY agentflow/ /app/agentflow/
+# 分層パッケージをコピー（editable install に必要）
+COPY contracts/ /app/contracts/
+COPY infrastructure/ /app/infrastructure/
+COPY shared/ /app/shared/
+COPY kernel/ /app/kernel/
+COPY harness/ /app/harness/
+COPY control_plane/ /app/control_plane/
+COPY domain/ /app/domain/
 RUN pip install --no-cache-dir -e ".[dev]"
 
 # DGE 固有の追加依存関係（PDF生成用）
@@ -55,7 +61,13 @@ COPY --from=dependencies /usr/local/bin /usr/local/bin
 
 # アプリケーションコードをコピー
 # コンテキストはリポジトリルート想定
-COPY agentflow/ /app/agentflow/
+COPY contracts/ /app/contracts/
+COPY infrastructure/ /app/infrastructure/
+COPY shared/ /app/shared/
+COPY kernel/ /app/kernel/
+COPY harness/ /app/harness/
+COPY control_plane/ /app/control_plane/
+COPY domain/ /app/domain/
 COPY apps/decision_governance_engine/ /app/apps/decision_governance_engine/
 
 # PYTHONPATH 設定

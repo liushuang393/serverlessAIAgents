@@ -539,7 +539,7 @@ class AppScaffolderService:
                 "skills": {
                     "auto_install": bool(request.default_skills),
                     "hot_reload": True,
-                    "allowed_sources": ["agentflow/skills/builtin"],
+                    "allowed_sources": ["kernel/skills/builtin"],
                     "default_skills": request.default_skills,
                 },
                 "release": {
@@ -889,7 +889,7 @@ class AppEngine:
         )
 
     async def run(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """入力を受け、AgentFlow フローを実行して結果を返す."""
+        """入力を受け、BizCore フローを実行して結果を返す."""
         flow_inputs = {{
             "payload": payload,
             "message": payload.get("message", ""),

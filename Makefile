@@ -1,6 +1,6 @@
-# AgentFlow Makefile
+# BizCore Makefile
 # コード品質チェックと自動修正のためのコマンド集
-# 使用する Python: conda 環境の場合は conda activate agentflow 後に make を実行すること。
+# 使用する Python: conda 環境の場合は conda activate bizcore 後に make を実行すること。
 # 未指定時は python3 を使用（上書き: make PYTHON=python check-all）
 PYTHON ?= python3
 
@@ -8,7 +8,7 @@ PYTHON ?= python3
 
 # デフォルトターゲット
 help:
-	@echo "AgentFlow - 利用可能なコマンド:"
+	@echo "BizCore - 利用可能なコマンド:"
 	@echo ""
 	@echo "  make install          - 本番環境用の依存関係をインストール"
 	@echo "  make install-dev      - 開発環境用の依存関係をインストール"
@@ -35,9 +35,9 @@ install:
 
 install-dev:
 	@echo "📦 開発環境用の依存関係をインストール中..."
-	$(PYTHON) -m pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[apps,dev]"
 	@echo "📦 フロントエンド依存関係をインストール中..."
-	cd studio && npm install
+	cd control_plane/frontend && npm install
 
 install-hooks:
 	@echo "🪝 pre-commit フックをインストール中..."
@@ -62,23 +62,23 @@ lint-python:
 
 type-check-python:
 	@echo "🔍 Python 型チェック中..."
-	$(PYTHON) -m mypy agentflow --strict --ignore-missing-imports
+	$(PYTHON) -m mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict --ignore-missing-imports
 
 # ========================================
 # JavaScript/TypeScript: フォーマットとリント
 # ========================================
 
 format-js:
-	@echo "🎨 JS/TS コードをフォーマット中..."
-	cd studio && npx prettier --write "src/**/*.{ts,tsx,js,jsx,json,css}"
+	@echo "🎨 JS/TS コードを自動修正中..."
+	cd control_plane/frontend && npm run lint -- --fix
 
 lint-js:
 	@echo "🔍 JS/TS コードをリントチェック中..."
-	cd studio && npx eslint "src/**/*.{ts,tsx,js,jsx}" --fix --max-warnings=0
+	cd control_plane/frontend && npm run lint
 
 type-check-js:
 	@echo "🔍 TypeScript 型チェック中..."
-	cd studio && npx tsc --noEmit
+	cd control_plane/frontend && npm run type-check
 
 # ========================================
 # 統合コマンド
@@ -103,7 +103,7 @@ test:
 
 test-cov:
 	@echo "🧪 カバレッジ付きでテストを実行中..."
-	$(PYTHON) -m pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v
+	$(PYTHON) -m pytest --cov=contracts --cov=infrastructure --cov=shared --cov=kernel --cov=harness --cov=control_plane --cov=domain --cov=apps --cov-report=html --cov-report=term-missing -v
 	@echo "📊 カバレッジレポート: htmlcov/index.html"
 
 test-watch:
@@ -150,15 +150,15 @@ clean:
 	rm -rf htmlcov/ 2>/dev/null || true
 	rm -rf dist/ 2>/dev/null || true
 	rm -rf build/ 2>/dev/null || true
-	rm -rf studio/dist/ 2>/dev/null || true
-	rm -rf studio/node_modules/.cache/ 2>/dev/null || true
+	rm -rf control_plane/frontend/dist/ 2>/dev/null || true
+	rm -rf control_plane/frontend/node_modules/.cache/ 2>/dev/null || true
 	@echo "✅ クリーンアップ完了"
 
 clean-all: clean
 	@echo "🧹 すべての依存関係を削除中..."
 	rm -rf venv/ 2>/dev/null || true
 	rm -rf .venv/ 2>/dev/null || true
-	rm -rf studio/node_modules/ 2>/dev/null || true
+	rm -rf control_plane/frontend/node_modules/ 2>/dev/null || true
 	@echo "✅ すべてのクリーンアップ完了"
 
 # ========================================
@@ -171,7 +171,7 @@ build:
 
 build-frontend:
 	@echo "📦 フロントエンドをビルド中..."
-	cd studio && npm run build
+	cd control_plane/frontend && npm run build
 
 # ========================================
 # 開発サーバー
@@ -179,11 +179,11 @@ build-frontend:
 
 dev-backend:
 	@echo "🚀 バックエンドサーバーを起動中..."
-	uvicorn agentflow.studio.server:app --reload --host 0.0.0.0 --port 8000
+	uvicorn control_plane.main:app --reload --host 0.0.0.0 --port 8000
 
 dev-frontend:
 	@echo "🚀 フロントエンドサーバーを起動中..."
-	cd studio && npm run dev
+	cd control_plane/frontend && npm run dev
 
 # ========================================
 # CI/CD

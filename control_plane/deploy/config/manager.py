@@ -36,7 +36,7 @@ class ConfigManager(IConfigManager):
             config_dir: 設定保存ディレクトリ
         """
         if config_dir is None:
-            config_dir = Path.home() / ".agentflow" / "deploy_configs"
+            config_dir = Path.home() / ".bizcore" / "deploy_configs"
         self._config_dir = config_dir
         self._config_dir.mkdir(parents=True, exist_ok=True)
 

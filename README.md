@@ -75,7 +75,7 @@ BizCore AI は 7 つのコア層と、その外側にある `apps/` 製品層で
 
 - **App ライフサイクル**: 作成 → 設定 → 実行 → 観測 → 配信
 - **LLM 一元管理**: Provider / Model / Secret / Local Engine を Platform から統合管理
-- **統一 API**: `/api/studios/*` と `/api/studios/framework/*` を正規経路として提供
+- **統一 API**: `/api/studios/*` と `/api/studios/framework/apps/*` を正規経路として提供
 
 ### 業務アプリ（BizCore Studios）
 
@@ -140,8 +140,8 @@ INFRA --> PROVIDER
 ### 製品層
 - `apps/`: BizCore Studios と custom apps。7コア層の外側で製品を構成する
 
-### レガシー互換
-- `agentflow/`: 旧 Kernel（`kernel/` への re-export 層として維持中）
+### 移行メモ
+- 旧 import / 設定名は移行期間中に一部残るが、正本実装は `contracts/`, `infrastructure/`, `shared/`, `kernel/`, `harness/`, `domain/`, `control_plane/` に集約する
 
 ### 開発・運用
 - `plugins/`: 拡張機能（Blocks / Tools / Providers）
