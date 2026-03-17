@@ -291,7 +291,7 @@ _active_step_events: dict[str, str] = {}
 _run_started_at: dict[str, float] = {}
 _process_started_at = time.time()
 _platform_runtime_tasks: dict[str, asyncio.Task[None]] = {}
-_LOCAL_PLATFORM_ID = "agentflow_nexus"
+_LOCAL_PLATFORM_ID = "bizcore_nexus"
 _EXTERNAL_PLATFORM_NAMES: tuple[str, ...] = (
     "telegram",
     "slack",

@@ -1,6 +1,6 @@
 """MCP Registry Service.
 
-`.agentflow/protocols/mcp.yaml` を読み書きし、Platform から
+`.bizcore/protocols/mcp.yaml` を読み書きし、Platform から
 MCP サーバー設定を管理できるようにする。
 """
 
@@ -27,8 +27,14 @@ class MCPRegistryService:
         Args:
             config_path: MCP 設定ファイルパス
         """
-        self._config_path = config_path or (Path.cwd() / ".agentflow/protocols/mcp.yaml")
+        self._config_path = config_path or self._resolve_default_config_path()
         self._ensure_file_exists()
+
+    @staticmethod
+    def _resolve_default_config_path() -> Path:
+        primary = Path.cwd() / ".bizcore" / "protocols" / "mcp.yaml"
+        legacy = Path.cwd() / ".agentflow" / "protocols" / "mcp.yaml"
+        return primary if primary.exists() or not legacy.exists() else legacy
 
     @property
     def config_path(self) -> Path:

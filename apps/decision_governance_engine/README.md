@@ -209,7 +209,7 @@ CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi →
 | Python | 3.13以上 |
 | Node.js | 18以上 |
 | パッケージマネージャ | pip, npm |
-| LLM Gateway | `control_plane` の LLM Management（必要時のみ `.agentflow/llm_gateway.yaml` fallback） |
+| LLM Gateway | `control_plane` の LLM Management（必要時のみ `.bizcore/llm_gateway.yaml` fallback、旧 `.agentflow` も互換） |
 | API Key | Platform 未設定時のみ fallback として利用 |
 
 ### 4.2 クイックセットアップ

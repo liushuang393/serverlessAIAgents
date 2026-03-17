@@ -171,7 +171,7 @@ Response:
       "triggers": ["こんにちは"],
       "requirements": ["openai"],
       "examples": ["こんにちは、今日の天気は？"],
-      "path": "agentflow/skills/builtin/chatbot/SKILL.md"
+      "path": "kernel/skills/builtin/chatbot/SKILL.md"
     }
   ],
   "total": 1

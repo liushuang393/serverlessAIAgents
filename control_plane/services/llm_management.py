@@ -60,7 +60,7 @@ class LLMManagementService:
     """Read/update/validate LLM gateway configuration."""
 
     def __init__(self, config_path: Path | None = None) -> None:
-        self._config_path = config_path or (Path.cwd() / ".agentflow" / "llm_gateway.yaml")
+        self._config_path = config_path or _resolve_default_gateway_config_path()
         self._store = LLMConfigStore(self._config_path)
         self._validator = LLMConfigValidator()
         self._catalog = LLMCatalogService()
@@ -539,7 +539,13 @@ class LLMManagementService:
 
 def get_default_llm_management_service() -> LLMManagementService:
     """Create management service from canonical config path."""
-    config_path = Path.cwd() / ".agentflow" / "llm_gateway.yaml"
+    config_path = _resolve_default_gateway_config_path()
     if not config_path.exists():
         load_gateway_config(config_path)
     return LLMManagementService(config_path=config_path)
+
+
+def _resolve_default_gateway_config_path() -> Path:
+    primary = Path.cwd() / ".bizcore" / "llm_gateway.yaml"
+    legacy = Path.cwd() / ".agentflow" / "llm_gateway.yaml"
+    return primary if primary.exists() or not legacy.exists() else legacy

@@ -96,7 +96,7 @@ describe('LLMManagement component', () => {
     apiMocks.fetchLLMDiagnostics.mockResolvedValue({
       has_llm_routes: true,
       route_count: 10,
-      config_path: '/tmp/.agentflow/llm_gateway.yaml',
+      config_path: '/tmp/.bizcore/llm_gateway.yaml',
       config_exists: true,
       config_version: 'version-a',
       last_preflight: null,
@@ -177,7 +177,7 @@ describe('LLMManagement component', () => {
     apiMocks.fetchLLMDiagnostics.mockResolvedValueOnce({
       has_llm_routes: false,
       route_count: 0,
-      config_path: '/tmp/.agentflow/llm_gateway.yaml',
+      config_path: '/tmp/.bizcore/llm_gateway.yaml',
       config_exists: true,
       config_version: 'version-a',
       last_preflight: null,

@@ -101,7 +101,7 @@ class ConstraintSolver:
     """
 
     constraints: dict[str, Constraint] = field(default_factory=dict)
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.world_model.constraint"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("bizcore.world_model.constraint"))
 
     def add_constraint(
         self,

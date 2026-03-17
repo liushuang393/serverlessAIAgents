@@ -1,4 +1,4 @@
-"""Persistent store for `.agentflow/llm_gateway.yaml` with atomic writes."""
+"""Persistent store for `.bizcore/llm_gateway.yaml` with atomic writes."""
 
 from __future__ import annotations
 

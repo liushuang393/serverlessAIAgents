@@ -93,8 +93,8 @@ test("platforms page covers all business network events without API errors and m
       contentType: "application/json",
       body: JSON.stringify([
         {
-          name: "agentflow_nexus",
-          displayName: "AgentFlow Sovereign Nexus",
+          name: "bizcore_nexus",
+          displayName: "BizCore Sovereign Nexus",
           icon: "🛡️",
           description: "Managed internal platform",
           connected: true,

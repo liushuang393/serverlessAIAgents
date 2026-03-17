@@ -97,7 +97,7 @@ class WorldState:
     _action_handlers: dict[str, Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]] = field(
         default_factory=dict
     )
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.world_model.state"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("bizcore.world_model.state"))
 
     def add_state(
         self,

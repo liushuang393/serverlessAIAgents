@@ -639,7 +639,7 @@ class TestEdgeCases:
 
 
 class TestIntentRouterIntegration:
-    """Verify agentflow IntentRouter integration."""
+    """Verify BizCore IntentRouter integration."""
 
     @pytest.mark.asyncio
     async def test_intent_router_classifies_casual_chat(self) -> None:

@@ -83,7 +83,7 @@ export function AppList() {
   const [sortKey, setSortKey] = useState<'name' | 'api' | 'frontend'>('name');
   const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
   const [pinnedApps, setPinnedApps] = useState<string[]>(() => {
-    const saved = localStorage.getItem('agentflow_pinned_apps');
+    const saved = localStorage.getItem('bizcore_pinned_apps');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -158,7 +158,7 @@ export function AppList() {
       ? pinnedApps.filter((n) => n !== name)
       : [...pinnedApps, name];
     setPinnedApps(next);
-    localStorage.setItem('agentflow_pinned_apps', JSON.stringify(next));
+    localStorage.setItem('bizcore_pinned_apps', JSON.stringify(next));
   };
 
   const statusCounts = useMemo(() => {

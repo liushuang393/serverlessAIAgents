@@ -20,7 +20,7 @@ export interface I18nContextValue {
   t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
-const STORAGE_KEY = 'agentflow-platform-locale';
+const STORAGE_KEY = 'bizcore-platform-locale';
 const TRANSLATIONS: Record<Locale, Translations> = { en, ja, zh };
 
 const I18nContext = createContext<I18nContextValue | null>(null);

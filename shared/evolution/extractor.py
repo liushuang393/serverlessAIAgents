@@ -112,7 +112,7 @@ class StrategyExtractor:
     def _extract_environment(self, context: dict[str, Any]) -> dict[str, Any]:
         return {
             "language": context.get("language") or "python",
-            "framework": context.get("framework") or "agentflow",
+            "framework": context.get("framework") or "bizcore",
             "framework_version": context.get("framework_version"),
             "runtime": context.get("runtime"),
             "product_line": context.get("product_line"),

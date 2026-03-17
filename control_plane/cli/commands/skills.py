@@ -1,4 +1,4 @@
-"""AgentFlow CLI skills コマンド.
+"""BizCore CLI skills コマンド.
 
 このモジュールは Skills を管理するコマンドを提供します：
 - list: 全 Skills を一覧表示
@@ -29,13 +29,43 @@ from kernel.skills import (
 
 console = Console()
 
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
+_LEGACY_CONFIG_DIR_NAME = ".agentflow"
+
+
+def _project_skill_dir() -> Path:
+    primary = Path(_PRIMARY_CONFIG_DIR_NAME) / "skills"
+    legacy = Path(_LEGACY_CONFIG_DIR_NAME) / "skills"
+    if primary.exists() or not legacy.exists():
+        return primary
+    return legacy
+
+
+def _global_skill_dir() -> Path:
+    primary = Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills"
+    legacy = Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills"
+    if primary.exists() or not legacy.exists():
+        return primary
+    return legacy
+
+
+def _learned_skill_dir() -> Path:
+    primary = Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills"
+    legacy = Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills"
+    if primary.exists() or not legacy.exists():
+        return primary
+    return legacy
+
 
 def get_skill_dirs() -> list[Path]:
     """Skill ディレクトリ一覧を取得."""
     dirs = [
-        Path.home() / ".agentflow" / "skills",
-        Path.home() / ".agentflow" / "learned_skills",
-        Path(".agentflow") / "skills",
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
+        Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
+        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
     ]
     return [d for d in dirs if d.exists()]
 
@@ -106,10 +136,8 @@ def list_skills(ctx: click.Context, learned: bool, project: bool) -> None:
 
     # フィルタリング
     if learned:
-        Path.home() / ".agentflow" / "learned_skills"
         all_skills = [s for s in all_skills if s.metadata.learned]
     elif project:
-        Path(".agentflow") / "skills"
         # プロジェクト Skills は learned フラグなし
         all_skills = [s for s in all_skills if not s.metadata.learned]
 
@@ -251,9 +279,9 @@ tags: []
 
     # 保存先決定
     if scope == "project":
-        base_dir = Path(".agentflow") / "skills"
+        base_dir = _project_skill_dir()
     else:
-        base_dir = Path.home() / ".agentflow" / "skills"
+        base_dir = _global_skill_dir()
 
     skill_dir = base_dir / name
     skill_dir.mkdir(parents=True, exist_ok=True)
@@ -288,7 +316,7 @@ def validate(ctx: click.Context, path: Path, strict: bool) -> None:
     PATH: Skill ディレクトリまたは SKILL.md ファイルのパス
 
     例:
-        bizcore skills validate .agentflow/skills/my-skill
+        bizcore skills validate .bizcore/skills/my-skill
         bizcore skills validate ./SKILL.md --strict
     """
     # パスを解決
@@ -413,11 +441,11 @@ def delete(ctx: click.Context, name: str, scope: str, force: bool) -> None:
     """
     # 削除先決定
     if scope == "learned":
-        base_dir = Path.home() / ".agentflow" / "learned_skills"
+        base_dir = _learned_skill_dir()
     elif scope == "project":
-        base_dir = Path(".agentflow") / "skills"
+        base_dir = _project_skill_dir()
     else:
-        base_dir = Path.home() / ".agentflow" / "skills"
+        base_dir = _global_skill_dir()
 
     skill_dir = base_dir / name
 
@@ -466,7 +494,7 @@ def mount(
         console.print("[red]--name can only be used when mounting a single skill.[/red]")
         raise click.exceptions.Exit(1)
 
-    target_root = Path(".agentflow") / "skills" if scope == "project" else Path.home() / ".agentflow" / "skills"
+    target_root = _project_skill_dir() if scope == "project" else _global_skill_dir()
     target_root.mkdir(parents=True, exist_ok=True)
 
     validator = SkillValidator(strict=False)

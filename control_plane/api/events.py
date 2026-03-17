@@ -4,8 +4,8 @@
 独自イベント型の定義は禁止 - 必ずここで定義された型を使用すること。
 
 既存の2系統を統一:
-- agentflow.api.sse_emitter.SSEEventType  (API層: flat 名前)
-- agentflow.protocols.agui_events.AGUIEventType (AG-UI層: dot 名前)
+- control_plane.api.sse_emitter.SSEEventType  (API層: flat 名前)
+- kernel.protocols.agui_events.AGUIEventType (AG-UI層: dot 名前)
 
 本モジュールが正規定義元（canonical source）となる。
 """

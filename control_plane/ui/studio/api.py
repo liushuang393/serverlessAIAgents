@@ -1,4 +1,4 @@
-"""AgentFlow Studio REST API.
+"""BizCore Studio REST API.
 
 FastAPI アプリケーションで、エージェント管理、ワークフロー実行、
 マーケットプレイス統合、Preview/Publish機能のための REST エンドポイントを提供します。
@@ -49,8 +49,8 @@ def create_app(
     )
 
     app = FastAPI(
-        title="AgentFlow Studio API",
-        description="REST API for AgentFlow visual workflow editor",
+        title="BizCore Studio API",
+        description="REST API for BizCore visual workflow editor",
         version="0.5.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
@@ -68,9 +68,17 @@ def create_app(
 
     # デフォルトディレクトリ
     if agents_dir is None:
-        agents_dir = Path.home() / ".agentflow" / "agents"
+        primary_agents_dir = Path.home() / ".bizcore" / "agents"
+        legacy_agents_dir = Path.home() / ".agentflow" / "agents"
+        agents_dir = primary_agents_dir if primary_agents_dir.exists() or not legacy_agents_dir.exists() else legacy_agents_dir
     if workflows_dir is None:
-        workflows_dir = Path.home() / ".agentflow" / "workflows"
+        primary_workflows_dir = Path.home() / ".bizcore" / "workflows"
+        legacy_workflows_dir = Path.home() / ".agentflow" / "workflows"
+        workflows_dir = (
+            primary_workflows_dir
+            if primary_workflows_dir.exists() or not legacy_workflows_dir.exists()
+            else legacy_workflows_dir
+        )
 
     # ディレクトリを作成
     agents_dir.mkdir(parents=True, exist_ok=True)

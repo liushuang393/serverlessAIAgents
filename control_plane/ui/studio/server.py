@@ -1,4 +1,4 @@
-"""AgentFlow Studio Server.
+"""BizCore Studio Server.
 
 FastAPI サーバーを起動・管理するためのクラスです。
 """
@@ -15,7 +15,7 @@ from control_plane.ui.studio.api import create_app
 
 
 class StudioServer:
-    """AgentFlow Studio サーバー.
+    """BizCore Studio サーバー.
 
     FastAPI アプリケーションを起動・管理します。
     """
@@ -52,12 +52,12 @@ class StudioServer:
 
     def run(self) -> None:
         """サーバーを起動 (ブロッキング)."""
-        self.console.print("[bold green]🚀 AgentFlow Studio starting...[/bold green]")
+        self.console.print("[bold green]🚀 BizCore Studio starting...[/bold green]")
         self.console.print(f"[cyan]Host:[/cyan] {self.host}")
         self.console.print(f"[cyan]Port:[/cyan] {self.port}")
         self.console.print(f"[cyan]API Docs:[/cyan] http://{self.host}:{self.port}/api/docs")
-        self.console.print(f"[cyan]Agents:[/cyan] {self.agents_dir or '~/.agentflow/agents'}")
-        self.console.print(f"[cyan]Workflows:[/cyan] {self.workflows_dir or '~/.agentflow/workflows'}")
+        self.console.print(f"[cyan]Agents:[/cyan] {self.agents_dir or '~/.bizcore/agents'}")
+        self.console.print(f"[cyan]Workflows:[/cyan] {self.workflows_dir or '~/.bizcore/workflows'}")
         self.console.print()
 
         uvicorn.run(
@@ -93,7 +93,7 @@ def main() -> None:
     """CLI エントリーポイント."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="AgentFlow Studio Server")
+    parser = argparse.ArgumentParser(description="BizCore Studio Server")
     parser.add_argument(
         "--host",
         default="0.0.0.0",
@@ -108,12 +108,12 @@ def main() -> None:
     parser.add_argument(
         "--agents-dir",
         type=Path,
-        help="Agents directory (default: ~/.agentflow/agents)",
+        help="Agents directory (default: ~/.bizcore/agents)",
     )
     parser.add_argument(
         "--workflows-dir",
         type=Path,
-        help="Workflows directory (default: ~/.agentflow/workflows)",
+        help="Workflows directory (default: ~/.bizcore/workflows)",
     )
     parser.add_argument(
         "--reload",

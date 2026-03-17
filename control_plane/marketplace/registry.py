@@ -1,4 +1,4 @@
-"""AgentFlow マーケットプレイスレジストリ.
+"""BizCore マーケットプレイスレジストリ.
 
 このモジュールはローカルエージェントレジストリの管理を提供します。
 """
@@ -36,10 +36,12 @@ class LocalRegistry:
         """レジストリを初期化.
 
         Args:
-            registry_path: レジストリファイルのパス (デフォルト: ~/.agentflow/registry.yaml)
+            registry_path: レジストリファイルのパス (デフォルト: ~/.bizcore/registry.yaml)
         """
         if registry_path is None:
-            registry_path = Path.home() / ".agentflow" / "registry.yaml"
+            primary = Path.home() / ".bizcore" / "registry.yaml"
+            legacy = Path.home() / ".agentflow" / "registry.yaml"
+            registry_path = primary if primary.exists() or not legacy.exists() else legacy
 
         self.registry_path = registry_path
         self._ensure_registry_exists()

@@ -37,16 +37,12 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from kernel.protocols.agui_events import (
     AGUIEvent,
     FlowCompleteEvent,
     FlowErrorEvent,
     FlowStartEvent,
 )
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from kernel.protocols.agui_events import (
 
 
 class FlowProtocol(Protocol):
@@ -133,7 +129,7 @@ class SSEFlowRunner:
             config: SSE設定（オプション）
             flow_id: フローID（オプション、Flowから取得可能な場合は不要）
         """
-        self._logger = logging.getLogger("agentflow.sse_runner")
+        self._logger = logging.getLogger("bizcore.sse_runner")
         self._flow = flow
         self._config = config or SSEConfig()
         self._flow_id = flow_id or getattr(flow, "flow_id", None)

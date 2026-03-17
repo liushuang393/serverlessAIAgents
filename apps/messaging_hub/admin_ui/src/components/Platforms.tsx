@@ -30,7 +30,7 @@ const platformIcons: Record<string, string> = {
   teams: "🏢",
   whatsapp: "💬",
   signal: "🔒",
-  agentflow_nexus: "🛡️",
+  bizcore_nexus: "🛡️",
 };
 
 type NoticeKind = "success" | "error";

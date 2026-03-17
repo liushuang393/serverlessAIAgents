@@ -106,7 +106,7 @@ class CausalModel:
     relations: list[CausalRelation] = field(default_factory=list)
     effect_functions: dict[str, Callable[..., Any]] = field(default_factory=dict)
     _current_state: dict[str, Any] = field(default_factory=dict)
-    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.world_model.causal"))
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("bizcore.world_model.causal"))
 
     def add_node(
         self,

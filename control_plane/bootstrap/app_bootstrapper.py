@@ -171,7 +171,7 @@ class AppCapabilityBootstrapper:
             ]
         )
 
-        # 3. このファイルからの相対パス（agentflow/bootstrap/ → ルート）
+        # 3. このファイルからの相対パス（control_plane/bootstrap/ → ルート）
         pkg_root = Path(__file__).parent.parent.parent
         search_paths.append(pkg_root / _DEFAULT_APPS_DIR / self._app_name / _APP_CONFIG_FILENAME)
 

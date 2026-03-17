@@ -1,7 +1,7 @@
 """統一レジストリ基類 - Protocol/Skill/Coordinator 共用.
 
 Layer 2 (Shared) に配置し、Kernel 以上の全レイヤーから利用可能にする。
-元は agentflow/core/registry.py にあったものを移行。
+元は旧 framework の registry 実装にあったものを移行。
 
 設計原則：
 - 型安全な登録・取得
@@ -154,4 +154,3 @@ class ProtocolRegistry(Registry[Any]):
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
             return cls._instance
-
