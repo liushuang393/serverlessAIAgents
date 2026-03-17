@@ -1,0 +1,1 @@
+"""market-trend-analysis スキル."""

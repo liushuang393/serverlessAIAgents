@@ -112,3 +112,4 @@ test_results.txt
 platform/data/*.db
 platform/data/*.db-journal
 apps/legacy_modernization_geo_platform/data/*
+data/rag/*
