@@ -25,7 +25,7 @@ async def test_detect_codex_with_chat_auth(monkeypatch: pytest.MonkeyPatch) -> N
             return runtime_mod._CommandResult(command=cmd, return_code=0, stdout="Logged in using ChatGPT", stderr="")
         return runtime_mod._CommandResult(command=cmd, return_code=1, stdout="", stderr="unknown command")
 
-    monkeypatch.setattr("agentflow.tools.cli.runtime_manager.shutil.which", _which)
+    monkeypatch.setattr("kernel.tools.cli.runtime_manager.shutil.which", _which)
     monkeypatch.setattr(CLIRuntimeManager, "_run_command", _run_command)
 
     result = await manager.detect()
@@ -41,7 +41,7 @@ async def test_ensure_authenticated_supports_api_key_env(monkeypatch: pytest.Mon
     manager = CLIRuntimeManager()
     monkeypatch.setenv("TEST_API_KEY", "secret")
     monkeypatch.setattr(
-        "agentflow.tools.cli.runtime_manager.shutil.which",
+        "kernel.tools.cli.runtime_manager.shutil.which",
         lambda cmd: "/usr/bin/claude" if cmd == "claude" else None,
     )
 
@@ -85,7 +85,7 @@ async def test_run_diagnostic_prompt_uses_plan_mode_for_claude(monkeypatch: pyte
             return runtime_mod._CommandResult(command=cmd, return_code=0, stdout="diagnostic summary", stderr="")
         return runtime_mod._CommandResult(command=cmd, return_code=1, stdout="", stderr="unexpected")
 
-    monkeypatch.setattr("agentflow.tools.cli.runtime_manager.shutil.which", _which)
+    monkeypatch.setattr("kernel.tools.cli.runtime_manager.shutil.which", _which)
     monkeypatch.setattr(CLIRuntimeManager, "_run_command", _run_command)
 
     result = await manager.run_diagnostic_prompt(
@@ -115,7 +115,7 @@ async def test_run_repair_prompt_uses_workspace_write_for_codex(monkeypatch: pyt
             return runtime_mod._CommandResult(command=cmd, return_code=0, stdout="applied", stderr="")
         return runtime_mod._CommandResult(command=cmd, return_code=1, stdout="", stderr="unexpected")
 
-    monkeypatch.setattr("agentflow.tools.cli.runtime_manager.shutil.which", _which)
+    monkeypatch.setattr("kernel.tools.cli.runtime_manager.shutil.which", _which)
     monkeypatch.setattr(CLIRuntimeManager, "_run_command", _run_command)
 
     result = await manager.run_repair_prompt(

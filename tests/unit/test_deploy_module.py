@@ -16,7 +16,7 @@ class TestDockerConfig(unittest.TestCase):
         from control_plane.deploy.docker_generator import DockerConfig
 
         config = DockerConfig()
-        self.assertEqual(config.app_name, "agentflow-app")
+        self.assertEqual(config.app_name, "bizcore-app")
         self.assertEqual(config.python_version, "3.13")
         self.assertEqual(config.port, 8000)
         self.assertEqual(config.entry_point, "main:app")
@@ -131,7 +131,7 @@ class TestServerlessConfig(unittest.TestCase):
         from control_plane.deploy.serverless_generator import ServerlessConfig
 
         config = ServerlessConfig()
-        self.assertEqual(config.app_name, "agentflow-app")
+        self.assertEqual(config.app_name, "bizcore-app")
         self.assertEqual(config.python_version, "3.13")
         self.assertEqual(config.entry_point, "main.handler")
         self.assertEqual(config.region, "us-east-1")
@@ -263,7 +263,7 @@ class TestCICDConfig(unittest.TestCase):
         from control_plane.deploy.ci_cd_generator import CICDConfig
 
         config = CICDConfig()
-        self.assertEqual(config.app_name, "agentflow-app")
+        self.assertEqual(config.app_name, "bizcore-app")
         self.assertEqual(config.python_version, "3.13")
         self.assertEqual(config.node_version, "20")
         self.assertEqual(config.test_command, "pytest")

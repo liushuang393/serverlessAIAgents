@@ -111,7 +111,7 @@ class TestPydanticSupport:
         assert registered.has_typed_schema is False
 
     @pytest.mark.asyncio
-    @patch("agentflow.providers.get_llm", return_value=None)
+    @patch("infrastructure.llm.providers.get_llm", return_value=None)
     async def test_simple_agent_invoke(self, mock_llm):
         """型なし Agent の呼び出しテスト."""
         client = AgentClient.get("SimpleAgent")
@@ -120,7 +120,7 @@ class TestPydanticSupport:
         assert "こんにちは" in result["response"]
 
     @pytest.mark.asyncio
-    @patch("agentflow.providers.get_llm", return_value=None)
+    @patch("infrastructure.llm.providers.get_llm", return_value=None)
     async def test_typed_agent_invoke(self, mock_llm):
         """型付き Agent の呼び出しテスト."""
         client = AgentClient.get("TypedAgent")
@@ -132,7 +132,7 @@ class TestPydanticSupport:
         assert abs(result["confidence"] - 0.9) < 0.01
 
     @pytest.mark.asyncio
-    @patch("agentflow.providers.get_llm", return_value=None)
+    @patch("infrastructure.llm.providers.get_llm", return_value=None)
     async def test_typed_agent_validation_success(self, mock_llm):
         """入力検証が成功する."""
         client = AgentClient.get("TypedAgent")

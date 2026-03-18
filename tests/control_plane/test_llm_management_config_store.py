@@ -9,7 +9,7 @@ from control_plane.services.llm_management_config_store import LLMConfigStore
 
 
 def test_load_creates_default_config(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     store = LLMConfigStore(config_path)
 
     config = store.load()
@@ -20,7 +20,7 @@ def test_load_creates_default_config(tmp_path: Path) -> None:
 
 
 def test_save_returns_new_version_after_change(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     store = LLMConfigStore(config_path)
     config = store.load()
     old_version = store.version()
@@ -34,7 +34,7 @@ def test_save_returns_new_version_after_change(tmp_path: Path) -> None:
 
 
 def test_concurrent_saves_keep_config_readable(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     store = LLMConfigStore(config_path)
     store.load()
 

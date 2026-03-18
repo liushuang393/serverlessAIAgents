@@ -9,7 +9,7 @@
 - RAGコンテキスト: ≤2000 token（Top1-2片段）
 - 会話履歴: 残り予算で動的調整
 
-移行元: agentflow/context/budget_manager.py → harness/budget/service.py
+移行元: legacy context layer/budget_manager.py → harness/budget/service.py
 """
 
 from __future__ import annotations

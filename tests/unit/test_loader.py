@@ -168,7 +168,7 @@ visual:
 
         assert "agent.yaml not found" in str(exc_info.value)
 
-    @patch("agentflow.core.loader.SchemaLoader")
+    @patch("kernel.agents.loader.SchemaLoader")
     def test_load_from_directory_yaml_not_found(
         self, mock_schema_loader: MagicMock, loader: AgentLoader, tmp_path: Path
     ) -> None:
@@ -181,7 +181,7 @@ visual:
 
         assert "agent.yaml not found" in str(exc_info.value)
 
-    @patch("agentflow.core.loader.SchemaLoader")
+    @patch("kernel.agents.loader.SchemaLoader")
     def test_load_from_directory_flow_module_not_found(
         self,
         mock_schema_loader_class: MagicMock,

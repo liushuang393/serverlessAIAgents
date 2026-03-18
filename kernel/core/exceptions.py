@@ -1,7 +1,7 @@
 """AgentFlow 例外定義 — kernel 層.
 
 フレームワーク全体で使用される例外クラス群。
-agentflow/core/exceptions.py から移行。
+legacy core surface/exceptions.py から移行。
 """
 
 

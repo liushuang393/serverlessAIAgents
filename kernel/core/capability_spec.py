@@ -1,7 +1,7 @@
 """Agent能力仕様モデル — kernel 層.
 
 Agent の能力を宣言し、タスク要件とのマッチングを行う。
-agentflow/core/capability_spec.py から移行。
+legacy core surface/capability_spec.py から移行。
 """
 
 from __future__ import annotations

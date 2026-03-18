@@ -1,7 +1,7 @@
 """AgentFlow セキュリティモジュール — kernel 層.
 
 ツール呼び出しのセキュリティ、監査ログ、CSRF 保護を提供。
-agentflow/core/security.py から移行。
+legacy core surface/security.py から移行。
 """
 
 from __future__ import annotations

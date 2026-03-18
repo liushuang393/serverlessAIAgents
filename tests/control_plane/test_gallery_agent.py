@@ -18,7 +18,7 @@ def _make_agent(tmp_path: Path) -> GalleryAgent:
     """MarketplaceClient のインストールディレクトリをテンポラリに差し替えてエージェントを生成する。"""
     with (
         patch(
-            "agentflow.marketplace.client.MarketplaceClient.__init__",
+            "control_plane.marketplace.client.MarketplaceClient.__init__",
             lambda self, **kw: setattr(self, "_mocked", True) or None,
         ),
         patch(

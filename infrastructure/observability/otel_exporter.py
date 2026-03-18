@@ -58,7 +58,7 @@ class OTLPExporter(SpanExporter):
         """
         self._endpoint = endpoint or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or "http://localhost:4318/v1/traces"
         self._headers = headers or self._parse_headers_env()
-        self._service_name = service_name or os.getenv("OTEL_SERVICE_NAME") or "agentflow"
+        self._service_name = service_name or os.getenv("OTEL_SERVICE_NAME") or "bizcore"
         self._timeout = timeout
         self._native_exporter: Any = None
 

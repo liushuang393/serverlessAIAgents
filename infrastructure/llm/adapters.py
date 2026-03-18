@@ -1,6 +1,6 @@
 """LLM backend の具体アダプタ.
 
-NOTE: L1 (infrastructure) は上位層 (agentflow.providers) を直接 import しない。
+NOTE: L1 (infrastructure) は上位層 (legacy provider facade) を直接 import しない。
 LLMProvider は TYPE_CHECKING 専用、get_llm は関数内遅延 import で境界を維持。
 """
 

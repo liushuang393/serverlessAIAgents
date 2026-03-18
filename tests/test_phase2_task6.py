@@ -34,7 +34,7 @@ try:
             "pytest",
             "tests/unit/test_types.py",
             "-v",
-            "--cov=agentflow.core.types",
+            "--cov=kernel.core.types",
             "--cov-report=term-missing",
             "--tb=short",
         ],

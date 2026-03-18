@@ -16,7 +16,7 @@
   ],
   "signature": {
     "algorithm": "ed25519",
-    "issuer": "agentflow-official",
+    "issuer": "bizcore-official",
     "key_id": "af-official-2026-q1"
   },
   "compatibility": {

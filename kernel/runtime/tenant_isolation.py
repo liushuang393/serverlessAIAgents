@@ -102,7 +102,7 @@ class TenantContext:
         return f"{self.cache_namespace}{key}"
 
 
-_current_tenant: ContextVar[TenantContext | None] = ContextVar("agentflow_tenant_context", default=None)
+_current_tenant: ContextVar[TenantContext | None] = ContextVar("bizcore_tenant_context", default=None)
 
 
 class TenantIsolation:

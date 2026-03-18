@@ -25,7 +25,7 @@ import logging
 from typing import Any
 
 
-logger = logging.getLogger("agentflow.startup")
+logger = logging.getLogger("bizcore.startup")
 
 
 def _mask_secret(value: str | None, visible_chars: int = 4) -> str:
@@ -58,7 +58,7 @@ def _mask_url(url: str | None) -> str:
 
 
 def log_startup_info(
-    app_name: str = "AgentFlow Application",
+    app_name: str = "BizCore Application",
     extra_info: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """起動時情報をログ出力.

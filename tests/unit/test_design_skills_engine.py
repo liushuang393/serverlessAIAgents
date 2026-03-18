@@ -54,14 +54,14 @@ class TestDesignSkillsSkill:
         """SKILL.mdが存在すること."""
         from pathlib import Path
 
-        skill_path = Path("agentflow/skills/builtin/design_skills/SKILL.md")
+        skill_path = Path("kernel/skills/builtin/design_skills/SKILL.md")
         assert skill_path.exists()
 
     def test_skill_md_has_required_fields(self) -> None:
         """SKILL.mdに必須フィールドが含まれること."""
         from pathlib import Path
 
-        skill_path = Path("agentflow/skills/builtin/design_skills/SKILL.md")
+        skill_path = Path("kernel/skills/builtin/design_skills/SKILL.md")
         content = skill_path.read_text()
         assert "name:" in content
         assert "description:" in content
@@ -71,7 +71,7 @@ class TestDesignSkillsSkill:
         """スキルモジュールディレクトリが存在すること."""
         from pathlib import Path
 
-        design_skill_dir = Path("agentflow/skills/builtin/design_skills")
+        design_skill_dir = Path("kernel/skills/builtin/design_skills")
         assert design_skill_dir.exists()
         assert (design_skill_dir / "__init__.py").exists()
         assert (design_skill_dir / "design_skills.py").exists()

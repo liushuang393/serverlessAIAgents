@@ -1,9 +1,9 @@
 """フルワークフロー統合テスト.
 
-このテストは AgentFlow フレームワークの全体的なワークフローをテストします:
-1. プロジェクト初期化 (agentflow init)
-2. エージェント作成 (agentflow create agent)
-3. エージェント実行 (agentflow run)
+このテストは BizCore フレームワークの全体的なワークフローをテストします:
+1. プロジェクト初期化 (bizcore init)
+2. エージェント作成 (bizcore create agent)
+3. エージェント実行 (bizcore run)
 """
 
 import json

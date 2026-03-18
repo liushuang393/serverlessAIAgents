@@ -393,7 +393,7 @@ class TestRAGConfig(unittest.TestCase):
         from shared.rag.rag_pipeline import RAGConfig
 
         config = RAGConfig()
-        self.assertEqual(config.collection_name, "agentflow_rag")
+        self.assertEqual(config.collection_name, "bizcore_rag")
         self.assertEqual(config.top_k, 5)
         self.assertEqual(config.min_similarity, 0.3)
         self.assertEqual(config.max_context_length, 4000)

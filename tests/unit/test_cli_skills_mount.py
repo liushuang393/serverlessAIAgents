@@ -52,7 +52,7 @@ class TestSkillsMountCommand:
             )
 
             assert result.exit_code == 0
-            assert Path(".agentflow/skills/my-skill/SKILL.md").exists()
+            assert Path(".bizcore/skills/my-skill/SKILL.md").exists()
 
     def test_mount_conflict_without_force_fails(self) -> None:
         """同名 Skill がある場合、--force なしで失敗する."""

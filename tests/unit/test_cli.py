@@ -1,4 +1,4 @@
-"""AgentFlow CLI のテスト."""
+"""BizCore CLI のテスト."""
 
 from click.testing import CliRunner
 
@@ -14,7 +14,7 @@ class TestCLI:
         result = runner.invoke(cli, ["--help"])
 
         assert result.exit_code == 0
-        assert "AgentFlow" in result.output
+        assert "BizCore" in result.output
         assert "Lightweight AI Agent Development Framework" in result.output
 
     def test_cli_version(self) -> None:
@@ -23,7 +23,7 @@ class TestCLI:
         result = runner.invoke(cli, ["--version"])
 
         assert result.exit_code == 0
-        assert "agentflow" in result.output
+        assert "bizcore" in result.output
         assert "0.2.0" in result.output
 
     def test_cli_verbose_flag(self) -> None:
@@ -43,7 +43,7 @@ class TestCLI:
         # Click はコマンドなしの場合 exit_code 0 を返す
         # (ヘルプを表示するため)
         assert result.exit_code in (0, 2)  # 2 は "no command" エラー
-        assert "AgentFlow" in result.output or "Usage" in result.output
+        assert "BizCore" in result.output or "Usage" in result.output
 
 
 class TestCreateCommand:

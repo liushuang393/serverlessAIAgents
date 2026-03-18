@@ -68,9 +68,9 @@ class TestStudioServer:
 
         app = server.get_app()
         assert app is not None
-        assert app.title == "AgentFlow Studio API"
+        assert app.title == "BizCore Studio API"
 
-    @patch("agentflow.studio.server.uvicorn.run")
+    @patch("control_plane.ui.studio.server.uvicorn.run")
     def test_run_server(self, mock_uvicorn_run: MagicMock, temp_dirs: tuple[Path, Path]) -> None:
         """サーバーを起動できることをテスト (ブロッキング)."""
         agents_dir, workflows_dir = temp_dirs
@@ -92,7 +92,7 @@ class TestStudioServer:
         assert call_kwargs["reload"] is True
         assert call_kwargs["log_level"] == "info"
 
-    @patch("agentflow.studio.server.uvicorn.Server")
+    @patch("control_plane.ui.studio.server.uvicorn.Server")
     async def test_start_server(self, mock_server_class: MagicMock, temp_dirs: tuple[Path, Path]) -> None:
         """サーバーを起動できることをテスト (非同期)."""
         from unittest.mock import AsyncMock
@@ -118,7 +118,7 @@ class TestStudioServer:
         # serve が呼ばれたことを確認
         mock_server.serve.assert_called_once()
 
-    @patch("agentflow.studio.server.uvicorn.run")
+    @patch("control_plane.ui.studio.server.uvicorn.run")
     def test_run_server_with_defaults(self, mock_uvicorn_run: MagicMock) -> None:
         """デフォルト設定でサーバーを起動できることをテスト."""
         server = StudioServer()
@@ -136,8 +136,8 @@ class TestStudioServer:
 class TestCLI:
     """CLI エントリーポイントのテスト."""
 
-    @patch("agentflow.studio.server.StudioServer")
-    @patch("sys.argv", ["agentflow-studio"])
+    @patch("control_plane.ui.studio.server.StudioServer")
+    @patch("sys.argv", ["bizcore-studio"])
     def test_main_with_defaults(self, mock_server_class: MagicMock) -> None:
         """デフォルト引数で main を実行できることをテスト."""
         mock_server = MagicMock()
@@ -156,8 +156,8 @@ class TestCLI:
         # run が呼ばれたことを確認
         mock_server.run.assert_called_once()
 
-    @patch("agentflow.studio.server.StudioServer")
-    @patch("sys.argv", ["agentflow-studio", "--host", "127.0.0.1", "--port", "9000"])
+    @patch("control_plane.ui.studio.server.StudioServer")
+    @patch("sys.argv", ["bizcore-studio", "--host", "127.0.0.1", "--port", "9000"])
     def test_main_with_custom_host_port(self, mock_server_class: MagicMock) -> None:
         """カスタムホストとポートで main を実行できることをテスト."""
         mock_server = MagicMock()
@@ -176,11 +176,11 @@ class TestCLI:
         # run が呼ばれたことを確認
         mock_server.run.assert_called_once()
 
-    @patch("agentflow.studio.server.StudioServer")
+    @patch("control_plane.ui.studio.server.StudioServer")
     @patch(
         "sys.argv",
         [
-            "agentflow-studio",
+            "bizcore-studio",
             "--agents-dir",
             "/tmp/agents",
             "--workflows-dir",
@@ -205,11 +205,11 @@ class TestCLI:
         # run が呼ばれたことを確認
         mock_server.run.assert_called_once()
 
-    @patch("agentflow.studio.server.StudioServer")
+    @patch("control_plane.ui.studio.server.StudioServer")
     @patch(
         "sys.argv",
         [
-            "agentflow-studio",
+            "bizcore-studio",
             "--host",
             "localhost",
             "--port",

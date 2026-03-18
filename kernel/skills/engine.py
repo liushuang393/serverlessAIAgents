@@ -32,6 +32,22 @@ if TYPE_CHECKING:
     from infrastructure.llm_provider import LLMProvider
 
 
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
+_LEGACY_CONFIG_DIR_NAME = ".agentflow"
+
+
+def _default_skill_dirs() -> list[Path]:
+    """Return default skill directories with legacy compatibility."""
+    return [
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
+        Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
+        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
+    ]
+
+
 @dataclass
 class SkillExecutionResult:
     """Skill 実行結果.
@@ -104,12 +120,7 @@ class SkillEngine:
 
     def _load_skills(self, extra_dirs: list[Path] | None = None) -> None:
         """Skill を全ディレクトリから読み込み."""
-        # デフォルトディレクトリ
-        default_dirs = [
-            Path.home() / ".agentflow" / "skills",  # グローバル
-            Path.home() / ".agentflow" / "learned_skills",  # 学習済み
-            Path(".agentflow") / "skills",  # プロジェクト
-        ]
+        default_dirs = _default_skill_dirs()
 
         all_dirs = default_dirs + (extra_dirs or [])
 

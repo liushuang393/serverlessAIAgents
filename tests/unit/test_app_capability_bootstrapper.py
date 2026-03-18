@@ -85,8 +85,8 @@ async def test_build_tolerates_missing_contracts_without_watcher(
         await asyncio.sleep(0)
         captured["skills"] = config
 
-    monkeypatch.setattr("agentflow.bootstrap.rag_builder.build_rag_engine", fake_build_rag_engine)
-    monkeypatch.setattr("agentflow.bootstrap.skill_builder.build_skill_gateway", fake_build_skill_gateway)
+    monkeypatch.setattr("control_plane.bootstrap.rag_builder.build_rag_engine", fake_build_rag_engine)
+    monkeypatch.setattr("control_plane.bootstrap.skill_builder.build_skill_gateway", fake_build_skill_gateway)
 
     bundle, bootstrapper = await AppCapabilityBootstrapper.build(
         app_name="faq_system",
@@ -123,8 +123,8 @@ async def test_build_ignores_invalid_contract_section_types(
         await asyncio.sleep(0)
         captured["skills"] = config
 
-    monkeypatch.setattr("agentflow.bootstrap.rag_builder.build_rag_engine", fake_build_rag_engine)
-    monkeypatch.setattr("agentflow.bootstrap.skill_builder.build_skill_gateway", fake_build_skill_gateway)
+    monkeypatch.setattr("control_plane.bootstrap.rag_builder.build_rag_engine", fake_build_rag_engine)
+    monkeypatch.setattr("control_plane.bootstrap.skill_builder.build_skill_gateway", fake_build_skill_gateway)
 
     bundle, bootstrapper = await AppCapabilityBootstrapper.build(
         app_name="faq_system",

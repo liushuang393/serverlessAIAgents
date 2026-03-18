@@ -1,6 +1,6 @@
 """Kernel 前段に差し込む Tool Gating.
 
-NOTE: harness 層は agentflow.governance を静的インポートしない。
+NOTE: harness 層は legacy governance layer を静的インポートしない。
 GovernanceEngineProtocol (contracts/policy) を介して DI する。
 """
 
@@ -28,7 +28,7 @@ class ToolGate:
     ) -> None:
         self._toggle = toggle or ComponentToggle()
         if engine is None:
-            # 遅延インポート: harness → agentflow.governance の静的依存を回避
+            # 遅延インポート: harness -> legacy governance layer の静的依存を回避
             from harness.governance import GovernanceEngine
 
             engine = GovernanceEngine()

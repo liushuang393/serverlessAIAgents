@@ -1,4 +1,4 @@
-"""Runtime initialization helpers for AgentFlow."""
+"""Runtime initialization helpers for BizCore."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import Any
 
 
-def init_agentflow(
+def init_bizcore(
     *,
     load_env: bool = True,
     env_path: str | Path | None = None,
     settings_overrides: dict[str, Any] | None = None,
 ) -> None:
-    """Initialize AgentFlow runtime explicitly.
+    """Initialize BizCore runtime explicitly.
 
     Args:
         load_env: Whether to load .env file via python-dotenv (optional).
@@ -44,5 +44,18 @@ def init_agentflow(
     get_settings()
 
 
-__all__ = ["init_agentflow"]
+def init_agentflow(
+    *,
+    load_env: bool = True,
+    env_path: str | Path | None = None,
+    settings_overrides: dict[str, Any] | None = None,
+) -> None:
+    """Backward-compatible alias for legacy callers."""
+    init_bizcore(
+        load_env=load_env,
+        env_path=env_path,
+        settings_overrides=settings_overrides,
+    )
 
+
+__all__ = ["init_bizcore", "init_agentflow"]

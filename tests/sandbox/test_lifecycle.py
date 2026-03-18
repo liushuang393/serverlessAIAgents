@@ -170,7 +170,7 @@ class TestSandboxManager:
     @pytest.mark.asyncio
     async def test_create_and_get(self, manager: SandboxManager) -> None:
         """作成と取得テスト."""
-        with patch("agentflow.sandbox.lifecycle.ManagedSandbox.create") as mock_create:
+        with patch("infrastructure.sandbox.lifecycle.ManagedSandbox.create") as mock_create:
             mock_sandbox = MagicMock()
             mock_sandbox.sandbox_id = "test-id"
             mock_create.return_value = mock_sandbox
@@ -187,7 +187,7 @@ class TestSandboxManager:
     @pytest.mark.asyncio
     async def test_delete(self, manager: SandboxManager) -> None:
         """削除テスト."""
-        with patch("agentflow.sandbox.lifecycle.ManagedSandbox.create") as mock_create:
+        with patch("infrastructure.sandbox.lifecycle.ManagedSandbox.create") as mock_create:
             mock_sandbox = MagicMock()
             mock_sandbox.sandbox_id = "delete-test"
             mock_sandbox.delete = AsyncMock()

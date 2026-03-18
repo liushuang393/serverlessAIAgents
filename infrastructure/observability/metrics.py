@@ -368,7 +368,7 @@ class MetricsCollector:
         >>> requests.inc()
     """
 
-    def __init__(self, prefix: str = "agentflow") -> None:
+    def __init__(self, prefix: str = "bizcore") -> None:
         """初期化.
 
         Args:
@@ -524,7 +524,7 @@ class MetricsCollector:
         return "\n".join(lines)
 
 
-def setup_metrics(prefix: str = "agentflow") -> MetricsCollector:
+def setup_metrics(prefix: str = "bizcore") -> MetricsCollector:
     """メトリクスコレクターをセットアップ.
 
     Args:

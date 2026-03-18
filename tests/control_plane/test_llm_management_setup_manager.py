@@ -76,7 +76,7 @@ async def _health_success(*, url: str, backend_name: str, dry_run: bool) -> LLMP
 async def test_preflight_provider_key_missing_fails(tmp_path: Path) -> None:
     previous = os.environ.pop("OPENAI_API_KEY", None)
     try:
-        manager = LLMSetupManager(config_path=tmp_path / ".agentflow" / "llm_gateway.yaml")
+        manager = LLMSetupManager(config_path=tmp_path / ".bizcore" / "llm_gateway.yaml")
         request = LLMPreflightRequest(
             providers=[LLMProviderKind.OPENAI],
             backends=[],
@@ -98,7 +98,7 @@ async def test_preflight_provider_key_missing_fails(tmp_path: Path) -> None:
 async def test_preflight_backend_detect_fail_install_success_recovers(tmp_path: Path) -> None:
     runner = StubRunner(failures={"python -m pip show"})
     manager = LLMSetupManager(
-        config_path=tmp_path / ".agentflow" / "llm_gateway.yaml",
+        config_path=tmp_path / ".bizcore" / "llm_gateway.yaml",
         command_runner=runner,
     )
     manager._run_health_check = _health_success  # type: ignore[method-assign]
@@ -122,7 +122,7 @@ async def test_preflight_backend_detect_fail_install_success_recovers(tmp_path: 
 
 async def test_preflight_dry_run_returns_dry_run_status(tmp_path: Path) -> None:
     manager = LLMSetupManager(
-        config_path=tmp_path / ".agentflow" / "llm_gateway.yaml",
+        config_path=tmp_path / ".bizcore" / "llm_gateway.yaml",
         command_runner=StubRunner(),
     )
     request = LLMPreflightRequest(

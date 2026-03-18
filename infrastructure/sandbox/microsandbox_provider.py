@@ -150,7 +150,7 @@ class MicrosandboxProvider(SandboxProvider):
 
             # サンドボックス作成・実行
             async with PythonSandbox.create(
-                name=f"agentflow-{int(time.time())}",
+                name=f"bizcore-{int(time.time())}",
             ) as sb:
                 # パッケージインストール
                 if packages:

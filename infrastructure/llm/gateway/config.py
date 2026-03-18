@@ -1,6 +1,6 @@
 """LiteLLM gateway configuration models and persistence helpers.
 
-Gateway canonical file: `.agentflow/llm_gateway.yaml`
+Gateway canonical file: `.bizcore/llm_gateway.yaml`
 Priority: Platform encrypted secret > environment variables > `.env` > YAML defaults.
 """
 
@@ -14,11 +14,19 @@ import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-_GATEWAY_RELATIVE_PATH = Path(".agentflow") / "llm_gateway.yaml"
+_PRIMARY_GATEWAY_RELATIVE_PATH = Path(".bizcore") / "llm_gateway.yaml"
+_LEGACY_GATEWAY_RELATIVE_PATH = Path(".agentflow") / "llm_gateway.yaml"
 _DOTENV_RELATIVE_PATH = Path(".env")
 
 _AVAILABLE_STATUS = Literal["available", "unavailable"]
 _MODEL_TYPE = Literal["text", "embedding", "image", "speech_to_text", "text_to_speech"]
+
+
+def _default_gateway_relative_path() -> Path:
+    """Resolve the preferred gateway path with legacy fallback."""
+    legacy = _LEGACY_GATEWAY_RELATIVE_PATH
+    primary = _PRIMARY_GATEWAY_RELATIVE_PATH
+    return legacy if legacy.exists() and not primary.exists() else primary
 
 
 class ProviderConfig(BaseModel):
@@ -523,7 +531,7 @@ def _merge_with_default_gateway_config(config: LLMGatewayConfig) -> tuple[LLMGat
 def _resolve_config_path(config_path: Path | None = None) -> Path:
     if config_path is not None:
         return config_path
-    return Path.cwd() / _GATEWAY_RELATIVE_PATH
+    return Path.cwd() / _default_gateway_relative_path()
 
 
 def _resolve_dotenv_path(config_path: Path) -> Path:
@@ -583,7 +591,7 @@ def save_gateway_config(config: LLMGatewayConfig, config_path: Path | None = Non
 
 # ---------------------------------------------------------------------------
 # プラットフォーム暗号化シークレット解決コールバック
-# agentflow → apps の逆依存を回避するため、コールバック登録方式を採用。
+# legacy framework import から apps への逆依存を回避するため、コールバック登録方式を採用。
 # control_plane が起動時に register_platform_secret_resolver() を呼ぶ。
 # ---------------------------------------------------------------------------
 from collections.abc import Callable

@@ -20,7 +20,7 @@ _SAMPLE_AGENTS = [
         id="pdf-processor",
         name="PDF Processor",
         version="1.0.0",
-        author="AgentFlow",
+        author="BizCore",
         category="document",
         description="PDF を処理するエージェント",
         protocols=["mcp", "a2a"],
@@ -31,7 +31,7 @@ _SAMPLE_AGENTS = [
         id="text-analyzer",
         name="Text Analyzer",
         version="1.0.0",
-        author="AgentFlow",
+        author="BizCore",
         category="text",
         description="テキストを解析するエージェント",
         protocols=["mcp", "agui"],
@@ -145,8 +145,8 @@ class TestMarketplaceClient:
         """デフォルト値で初期化できることをテスト."""
         client = MarketplaceClient()
 
-        assert client.marketplace_url == "https://marketplace.agentflow.dev"
-        assert client.install_dir == Path.home() / ".agentflow" / "agents"
+        assert client.marketplace_url == "https://marketplace.bizcore.dev"
+        assert client.install_dir == Path.home() / ".bizcore" / "agents"
         assert client.registry is not None
 
     def test_init_with_custom_values(self, install_dir: Path, registry: LocalRegistry) -> None:

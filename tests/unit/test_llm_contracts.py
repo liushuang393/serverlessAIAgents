@@ -68,7 +68,7 @@ def test_resolve_contract_model_alias_prefers_agent_override(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     app_config = tmp_path / "apps" / "code_migration_assistant" / "app_config.json"
-    gateway_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    gateway_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     load_gateway_config(gateway_path)
     _write_app_config(
         app_config,

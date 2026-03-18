@@ -32,6 +32,13 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
+def _default_result_store_path() -> Path:
+    """Resolve the preferred results directory with legacy fallback."""
+    primary = Path(".bizcore") / "results"
+    legacy = Path(".agentflow") / "results"
+    return legacy if legacy.exists() and not primary.exists() else primary
+
+
 class FlowResult(BaseModel):
     """フロー実行結果.
 
@@ -108,8 +115,8 @@ class MemoryResultStore(ResultStore):
 class FileResultStore(ResultStore):
     """ファイルベースの結果ストア."""
 
-    def __init__(self, base_path: str | Path = "./.agentflow/results") -> None:
-        self._base_path = Path(base_path)
+    def __init__(self, base_path: str | Path | None = None) -> None:
+        self._base_path = Path(base_path) if base_path is not None else _default_result_store_path()
         self._base_path.mkdir(parents=True, exist_ok=True)
 
     def _get_path(self, result_id: str) -> Path:

@@ -67,7 +67,7 @@ async def _health_ok(*args, **kwargs) -> None:
 
 @pytest.mark.asyncio
 async def test_get_overview_contains_required_sections(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
 
     overview = await service.get_overview()
@@ -81,7 +81,7 @@ async def test_get_overview_contains_required_sections(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_update_registry_normalizes_role_and_alias(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
 
     updated = await service.update_registry({"Reasoning": "Coding_OpenAI", "cheap": "cheap_gemini"})
@@ -90,7 +90,7 @@ async def test_update_registry_normalizes_role_and_alias(tmp_path: Path) -> None
 
 
 def test_catalog_includes_local_provider_once(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
 
     catalog = service.get_catalog()
@@ -106,7 +106,7 @@ async def test_provider_runtime_marks_missing_key_as_unavailable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     monkeypatch.setenv("PLATFORM_RUNTIME_CACHE_DB", str(tmp_path / "runtime_cache.db"))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     service = LLMManagementService(config_path=config_path)
@@ -119,7 +119,7 @@ async def test_provider_runtime_marks_missing_key_as_unavailable(
 
 @pytest.mark.asyncio
 async def test_update_engines_rejects_app_port_conflicts(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
 
     with pytest.raises(ValueError, match=r"decision_governance_engine\.api"):
@@ -158,7 +158,7 @@ async def test_save_provider_secret_encrypts_and_updates_overview(
 ) -> None:
     db_path = tmp_path / "control_plane.db"
     cache_path = tmp_path / "platform_runtime_cache.db"
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
 
     await close_platform_db()
     monkeypatch.setenv("PLATFORM_DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")
@@ -200,7 +200,7 @@ async def test_save_provider_secret_encrypts_and_updates_overview(
 async def test_get_provider_runtime_marks_local_unavailable_when_linked_engine_is_unhealthy(
     tmp_path: Path,
 ) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
 
     await service.update_engines(
@@ -243,7 +243,7 @@ async def test_resolve_provider_runtime_statuses_probes_custom_provider_success(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
     config = service.get_config().model_copy(deep=True)
     config.providers.append(
@@ -278,7 +278,7 @@ async def test_resolve_provider_runtime_statuses_probes_custom_provider_failure(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service = LLMManagementService(config_path=config_path)
     config = service.get_config().model_copy(deep=True)
     config.providers.append(
@@ -312,7 +312,7 @@ async def test_resolve_provider_runtime_statuses_uses_linked_engine_without_dire
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     config = LLMManagementService(config_path=config_path).get_config()
     error_message = "linked local provider should not use direct probe"
 
@@ -345,7 +345,7 @@ async def test_deploy_engine_generates_compose_and_persists_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db_path = tmp_path / "control_plane.db"
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
 
     await close_platform_db()
     monkeypatch.setenv("PLATFORM_DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")
@@ -384,7 +384,7 @@ async def test_deploy_engine_success_with_stderr_does_not_persist_error_and_enab
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db_path = tmp_path / "control_plane.db"
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
 
     await close_platform_db()
     monkeypatch.setenv("PLATFORM_DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")
@@ -417,7 +417,7 @@ async def test_stop_engine_success_with_stderr_does_not_persist_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db_path = tmp_path / "control_plane.db"
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
 
     await close_platform_db()
     monkeypatch.setenv("PLATFORM_DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")
@@ -445,7 +445,7 @@ async def test_get_overview_trims_oversized_deployment_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     db_path = tmp_path / "control_plane.db"
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
 
     await close_platform_db()
     monkeypatch.setenv("PLATFORM_DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")

@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from kernel.tools.tool_definition import ToolDefinition, ToolSource
@@ -37,6 +38,18 @@ from kernel.tools.tool_definition import ToolDefinition, ToolSource
 
 if TYPE_CHECKING:
     from kernel.tools.tool_registry import ToolRegistry
+
+
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
+_LEGACY_CONFIG_DIR_NAME = ".agentflow"
+
+
+def _user_skill_dirs() -> list[Path]:
+    """Return user skill directories in preferred order."""
+    return [
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
+    ]
 
 
 class ToolDiscoveryService:
@@ -231,21 +244,20 @@ class ToolDiscoveryService:
             登録されたスキル数
         """
         try:
-            from pathlib import Path
-
             from kernel.skills.loader import SkillLoader
 
             count = 0
             loader = SkillLoader()
 
-            # agentflow パッケージの場所を基準にスキルディレクトリを特定
+            # kernel パッケージの場所を基準にスキルディレクトリを特定
             import kernel as _af
+
             _af_root = Path(_af.__file__).parent
 
             scan_dirs: list[tuple[str, Path]] = [
                 ("ビルトイン", _af_root / "skills" / "builtin"),
-                ("ユーザー", Path.home() / ".agentflow" / "skills"),
             ]
+            scan_dirs.extend(("ユーザー", path) for path in _user_skill_dirs())
 
             # アプリ固有スキル（apps/*/skills）を追加
             repo_root = _af_root.parent

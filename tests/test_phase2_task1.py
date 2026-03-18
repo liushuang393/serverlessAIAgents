@@ -34,7 +34,7 @@ try:
             "pytest",
             "tests/unit/test_agent_block.py",
             "-v",
-            "--cov=agentflow.core.agent_block",
+            "--cov=kernel.agents.agent_block",
             "--cov-report=term-missing",
             "--tb=short",
         ],

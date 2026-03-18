@@ -15,6 +15,15 @@ from kernel.skills.base import Skill
 from kernel.skills.validator import SkillValidator
 
 
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
+_LEGACY_CONFIG_DIR_NAME = ".agentflow"
+
+
+def _resolve_default_dir(primary: Path, legacy: Path) -> Path:
+    """Resolve the preferred directory while preserving legacy layouts."""
+    return legacy if legacy.exists() and not primary.exists() else primary
+
+
 class SkillPersister:
     """Skill 固化器 - 学習 Skill の永続化.
 
@@ -25,8 +34,14 @@ class SkillPersister:
     """
 
     # デフォルト保存先
-    DEFAULT_LEARNED_DIR = Path.home() / ".agentflow" / "learned_skills"
-    DEFAULT_PROJECT_DIR = Path(".agentflow") / "skills"
+    DEFAULT_LEARNED_DIR = _resolve_default_dir(
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
+    )
+    DEFAULT_PROJECT_DIR = _resolve_default_dir(
+        Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
+        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
+    )
 
     def __init__(
         self,

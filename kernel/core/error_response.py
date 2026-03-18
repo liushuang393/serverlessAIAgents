@@ -351,7 +351,7 @@ class AgentFlowAPIError(Exception):
     def to_response(self) -> ErrorResponse:
         """ErrorResponse に変換."""
         return ErrorResponse(
-            type=f"https://agentflow.dev/errors/{self.code.value}",
+            type=f"https://bizcore.dev/errors/{self.code.value}",
             title=self.title,
             status=self.status_code,
             detail=self.detail,
@@ -508,7 +508,7 @@ def create_error_response(
         ErrorResponse インスタンス
     """
     return ErrorResponse(
-        type=f"https://agentflow.dev/errors/{code.value}",
+        type=f"https://bizcore.dev/errors/{code.value}",
         title=ERROR_CODE_TITLES.get(code, "Error"),
         status=ERROR_CODE_STATUS_MAP.get(code, 500),
         detail=detail,
@@ -543,7 +543,7 @@ def exception_to_response(
         context["traceback"] = traceback.format_exc()
 
     return ErrorResponse(
-        type="https://agentflow.dev/errors/internal_error",
+        type="https://bizcore.dev/errors/internal_error",
         title="Internal Server Error",
         status=500,
         detail=str(exc) or "An unexpected error occurred",
@@ -577,7 +577,7 @@ def create_exception_handlers() -> dict[type, Any]:
     except ImportError:
         return {}
 
-    async def agentflow_error_handler(
+    async def bizcore_error_handler(
         request: Request,
         exc: AgentFlowAPIError,
     ) -> JSONResponse:
@@ -603,7 +603,7 @@ def create_exception_handlers() -> dict[type, Any]:
         )
 
     return {
-        AgentFlowAPIError: agentflow_error_handler,
+        AgentFlowAPIError: bizcore_error_handler,
         Exception: generic_error_handler,
     }
 

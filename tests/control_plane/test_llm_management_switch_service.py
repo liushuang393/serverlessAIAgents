@@ -29,7 +29,7 @@ def _build_service(config_path: Path) -> tuple[LLMSwitchService, LLMConfigStore,
 
 
 async def test_switch_success_updates_registry(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service, store, _validator = _build_service(config_path)
 
     async def _runtime_ok(*args, **kwargs) -> LLMSwitchRuntimeCheck:
@@ -56,7 +56,7 @@ async def test_switch_success_updates_registry(tmp_path: Path) -> None:
 
 
 async def test_switch_runtime_failure_rolls_back(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service, store, _validator = _build_service(config_path)
     before = store.load()
     before_alias = before.registry["reasoning"]
@@ -88,7 +88,7 @@ async def test_switch_runtime_failure_rolls_back(tmp_path: Path) -> None:
 
 
 async def test_switch_validation_failure_does_not_persist(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service, store, validator = _build_service(config_path)
     old_version = store.version()
 
@@ -114,7 +114,7 @@ async def test_switch_validation_failure_does_not_persist(tmp_path: Path) -> Non
 
 
 async def test_runtime_check_uses_shared_provider_status_resolver(tmp_path: Path, monkeypatch) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     service, _store, _validator = _build_service(config_path)
     config = service._store.load()
 

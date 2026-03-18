@@ -1,6 +1,6 @@
 """ToolProvider のユニットテスト.
 
-このモジュールは、agentflow/providers/tool_provider.py の機能をテストします。
+このモジュールは、legacy provider facade/tool_provider.py の機能をテストします。
 """
 
 import pytest

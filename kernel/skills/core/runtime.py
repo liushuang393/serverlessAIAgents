@@ -1,7 +1,7 @@
 """Skill実行ランタイム - Anthropic Skills体系準拠.
 
 Skill内のスクリプトを安全に実行するためのランタイム環境を提供。
-agentflow/sandbox/を統合し、隔離されたPython実行環境を実現。
+sandbox layerを統合し、隔離されたPython実行環境を実現。
 
 設計原則（Anthropic Skills体系より）:
 - 確定性処理: スクリプトはLLM推論なしで決定論的に実行

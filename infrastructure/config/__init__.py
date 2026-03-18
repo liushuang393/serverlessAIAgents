@@ -1,7 +1,7 @@
 """infrastructure.config — 設定管理モジュール.
 
 AgentFlowフレームワークの設定管理を提供する。
-正規パスは infrastructure.config。agentflow.config は後方互換shim。
+正規パスは infrastructure.config。legacy config import は後方互換 shim。
 """
 
 from __future__ import annotations

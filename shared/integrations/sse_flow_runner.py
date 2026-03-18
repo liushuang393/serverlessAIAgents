@@ -1,32 +1,7 @@
-"""SSEFlowRunner - SSE イベント発射と業務ロジックの分離.
+"""SSEFlowRunner - SSE event emission and business logic decoupling.
 
-このモジュールは、Engine/Flow とSSE配信を分離し、
-テスト容易性とコードの再利用性を向上させます。
-
-設計原則:
-- 分離: SSEイベント発射とビジネスロジックを分離
-- 互換: AG-UIプロトコル準拠
-- 柔軟: PipelineEngineまたは任意のFlow実行を委譲可能
-
-使用例:
-    >>> from shared.integrations.sse_flow_runner import SSEFlowRunner
-    >>> from kernel import PipelineEngine
-    >>>
-    >>> # PipelineEngine をラップ
-    >>> engine = PipelineEngine(stages=[...])
-    >>> # engine.run_stream() を使用するか、SSEFlowRunnerでラップ
-    >>>
-    >>> # SSEストリーム配信
-    >>> async for event in engine.run_stream(input_data):
-    ...     yield event
-    >>>
-    >>> # FastAPI統合
-    >>> @router.get("/stream")
-    >>> async def stream_endpoint():
-    ...     return StreamingResponse(
-    ...         runner.stream_sse(input_data),
-    ...         media_type="text/event-stream",
-    ...     )
+This module separates Engine/Flow execution from SSE delivery to keep the
+runtime reusable and easier to test.
 """
 
 import asyncio
@@ -35,14 +10,27 @@ import time
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-from kernel.protocols.agui_events import (
-    AGUIEvent,
-    FlowCompleteEvent,
-    FlowErrorEvent,
-    FlowStartEvent,
-)
+if TYPE_CHECKING:
+    from kernel.protocols.agui_events import (
+        AGUIEvent,
+        FlowCompleteEvent,
+        FlowErrorEvent,
+        FlowStartEvent,
+    )
+
+
+def _agui_events() -> tuple[type, type, type, type]:
+    """Lazy import to avoid a shared-to-kernel top-level dependency."""
+    from kernel.protocols.agui_events import (
+        AGUIEvent,
+        FlowCompleteEvent,
+        FlowErrorEvent,
+        FlowStartEvent,
+    )
+
+    return AGUIEvent, FlowCompleteEvent, FlowErrorEvent, FlowStartEvent
 
 
 class FlowProtocol(Protocol):
@@ -133,7 +121,9 @@ class SSEFlowRunner:
         self._flow = flow
         self._config = config or SSEConfig()
         self._flow_id = flow_id or getattr(flow, "flow_id", None)
-        self._event_queue: asyncio.Queue[AGUIEvent] = asyncio.Queue(maxsize=self._config.max_event_queue_size)
+        self._event_queue: asyncio.Queue[AGUIEvent] = asyncio.Queue(
+            maxsize=self._config.max_event_queue_size,
+        )
 
     @property
     def flow_id(self) -> str:
@@ -161,11 +151,13 @@ class SSEFlowRunner:
             msg = "Flow is not set. Use set_flow() or pass flow to constructor."
             raise ValueError(msg)
 
+        _AGUIEvent, _FlowComplete, _FlowError, _FlowStart = _agui_events()
+
         flow_id = self.flow_id
         now = time.time()
 
         # Flow開始イベント
-        yield FlowStartEvent(
+        yield _FlowStart(
             timestamp=now,
             flow_id=flow_id,
             data={"input_keys": list(input_data.keys())},
@@ -178,7 +170,7 @@ class SSEFlowRunner:
             async for result, event in self._flow.run_with_events(input_data):
                 if event is not None:
                     # FlowStartEvent は既に発射済みなのでスキップ
-                    if not isinstance(event, FlowStartEvent):
+                    if not isinstance(event, _FlowStart):
                         yield event
                 if result is not None:
                     final_result = result
@@ -186,7 +178,7 @@ class SSEFlowRunner:
             # Flow完了イベント（FlowCompleteEvent がまだ発射されていない場合）
             if final_result is not None:
                 # 結果付きで完了イベントを発射
-                yield FlowCompleteEvent(
+                yield _FlowComplete(
                     timestamp=time.time(),
                     flow_id=flow_id,
                     data={},
@@ -196,7 +188,7 @@ class SSEFlowRunner:
 
         except Exception as e:
             self._logger.exception(f"Flow execution error: {e}")
-            yield FlowErrorEvent(
+            yield _FlowError(
                 timestamp=time.time(),
                 flow_id=flow_id,
                 data={},

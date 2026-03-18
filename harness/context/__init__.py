@@ -1,6 +1,6 @@
 """Layer 4 Context - コンテキスト管理サービス群.
 
-移行元: agentflow/context/ → harness/context/
+移行元: legacy context layer/ → harness/context/
 """
 
 from harness.context.context_engineer import BuiltContext, ContextConfig, ContextEngineer

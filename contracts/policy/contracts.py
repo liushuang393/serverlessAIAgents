@@ -61,7 +61,7 @@ class EvalResult(ContractModel):
 
 
 # ---------------------------------------------------------------------------
-# Governance Protocol — harness 層が agentflow.governance に静的依存しないための抽象
+# Governance Protocol — harness 層が legacy governance layer に静的依存しないための抽象
 # ---------------------------------------------------------------------------
 
 

@@ -62,8 +62,8 @@ class TestMCPClient:
         client = MCPClient(sample_config)
         assert len(client._config.servers) == 2
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_connect_success(
         self,
         mock_session_class: MagicMock,
@@ -99,8 +99,8 @@ class TestMCPClient:
         assert len(client._tools) == 1
         assert "mcp://test-server/test_tool" in client._tools
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_connect_with_disabled_server(
         self,
         mock_session_class: MagicMock,
@@ -127,8 +127,8 @@ class TestMCPClient:
         # 無効なサーバーは接続されない
         assert "disabled-server" not in client._sessions
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_get_tool_definitions(
         self,
         mock_session_class: MagicMock,
@@ -166,8 +166,8 @@ class TestMCPClient:
         assert definitions[0]["function"]["name"] == "mcp://test-server/test_tool"
         assert definitions[0]["function"]["description"] == "A test tool"
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_call_tool_success(
         self,
         mock_session_class: MagicMock,
@@ -216,8 +216,8 @@ class TestMCPClient:
         with pytest.raises(ValueError, match="Invalid tool URI"):
             await client.call_tool("invalid://uri", {})
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_call_tool_not_found(
         self,
         mock_session_class: MagicMock,
@@ -245,8 +245,8 @@ class TestMCPClient:
         with pytest.raises(ValueError, match="Tool not found"):
             await client.call_tool("mcp://test-server/nonexistent", {})
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_list_tools(
         self,
         mock_session_class: MagicMock,
@@ -291,8 +291,8 @@ class TestMCPClient:
         assert len(client._sessions) == 0
         assert len(client._tools) == 0
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_disconnect_with_active_sessions(
         self,
         mock_session_class: MagicMock,
@@ -328,8 +328,8 @@ class TestMCPClient:
         assert len(client._contexts) == 0
         mock_context.__aexit__.assert_called_once()
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_disconnect_with_error(
         self,
         mock_session_class: MagicMock,
@@ -360,8 +360,8 @@ class TestMCPClient:
         assert len(client._sessions) == 0
         assert len(client._tools) == 0
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_call_tool_with_exception(
         self,
         mock_session_class: MagicMock,
@@ -403,8 +403,8 @@ class TestMCPClient:
         assert result["tool"] == "test_tool"
         assert result["server"] == "test-server"
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_call_tool_server_not_connected(
         self,
         mock_session_class: MagicMock,
@@ -460,8 +460,8 @@ class TestMCPClient:
         info = client.get_tool_info("mcp://test-server/nonexistent")
         assert info is None
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_context_manager(
         self,
         mock_session_class: MagicMock,
@@ -488,7 +488,7 @@ class TestMCPClient:
         # 終了後はセッションがクリアされる
         assert len(client._sessions) == 0
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.stdio_client")
     async def test_connect_server_failure(
         self,
         mock_stdio_client: MagicMock,
@@ -513,8 +513,8 @@ class TestMCPClient:
         client = MCPClient(sample_config, logger=custom_logger)
         assert client._logger == custom_logger
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_get_tool_definitions_with_none_description(
         self,
         mock_session_class: MagicMock,
@@ -566,7 +566,7 @@ class TestMCPLazyImport:
         # mcp_client モジュールを再ロードしてインポートエラーが出ないことを確認
         # (mcp パッケージ自体はテスト環境にあるため、実際の ImportError は起きないが
         #  トップレベルに mcp のインポートがないことを間接的に検証)
-        mod = importlib.import_module("agentflow.protocols.mcp_client")
+        mod = importlib.import_module("kernel.protocols.mcp_client")
         assert hasattr(mod, "MCPClient")
 
     def test_protocols_init_lazy_imports(self):

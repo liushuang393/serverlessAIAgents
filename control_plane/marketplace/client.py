@@ -40,7 +40,7 @@ class MarketplaceClient:
 
     def __init__(
         self,
-        marketplace_url: str = "https://marketplace.agentflow.dev",
+        marketplace_url: str = "https://marketplace.bizcore.dev",
         install_dir: Path | None = None,
         registry: LocalRegistry | None = None,
     ) -> None:

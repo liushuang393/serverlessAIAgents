@@ -1,7 +1,7 @@
 """RedisCheckpointer - Redis ベースの状態永続化.
 
 本番環境での分散ワークフロー状態管理に使用。
-agentflow/memory/distributed/redis_backend.py の設計パターンを参考。
+旧 Redis backend の設計パターンを参考。
 
 使用例:
     >>> from harness.approval import RedisCheckpointer
@@ -51,7 +51,7 @@ class RedisCheckpointer(Checkpointer):
         db: int = 0,
         password: str | None = None,
         ttl: int = 86400,  # 24 時間
-        key_prefix: str = "agentflow",
+        key_prefix: str = "bizcore",
     ) -> None:
         """初期化.
 

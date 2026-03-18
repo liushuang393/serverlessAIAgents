@@ -1,4 +1,4 @@
-"""agentflow.config.settings 後方互換shim. 実体は infrastructure.config.settings."""
+"""Legacy config.settings compatibility shim. 実体は infrastructure.config.settings."""
 
 from infrastructure.config.settings import (  # noqa: F401
     AgentFlowSettings,

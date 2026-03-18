@@ -130,7 +130,7 @@ async function mockLLMSuccessRoutes(page: Page): Promise<void> {
         body: JSON.stringify({
           has_llm_routes: true,
           route_count: 12,
-          config_path: '/tmp/.agentflow/llm_gateway.yaml',
+          config_path: '/tmp/.bizcore/llm_gateway.yaml',
           config_exists: true,
           config_version: 'version-a',
           last_preflight: null,
@@ -158,7 +158,7 @@ async function mockLLMMissingRoute(page: Page): Promise<void> {
       body: JSON.stringify({
         has_llm_routes: false,
         route_count: 0,
-        config_path: '/tmp/.agentflow/llm_gateway.yaml',
+        config_path: '/tmp/.bizcore/llm_gateway.yaml',
         config_exists: true,
         config_version: 'version-a',
         last_preflight: null,

@@ -57,7 +57,7 @@ class RAGConfig:
         chunking_config: チャンキング設定
     """
 
-    collection_name: str = "agentflow_rag"
+    collection_name: str = "bizcore_rag"
     top_k: int = 5
     min_similarity: float = 0.3
     system_prompt: str = """あなたは知識ベースに基づいて質問に答えるアシスタントです。

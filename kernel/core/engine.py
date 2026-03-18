@@ -1,7 +1,7 @@
 """AgentFlow エンジン — kernel 層.
 
 PocketFlow ラッパーとライフサイクルフック実装。
-agentflow/core/engine.py から移行。
+legacy core surface/engine.py から移行。
 """
 
 import asyncio

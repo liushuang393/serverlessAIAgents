@@ -33,7 +33,7 @@ if TYPE_CHECKING:
         set_runtime_context,
         use_runtime_context,
     )
-    from kernel.runtime.init import init_agentflow
+    from kernel.runtime.init import init_agentflow, init_bizcore
     from kernel.runtime.lifecycle import (
         HookInfo,
         HookPriority,
@@ -150,6 +150,7 @@ __all__ = [
     "get_runtime_context",
     "get_tenant_id",
     "get_tenant_isolation",
+    "init_bizcore",
     "init_agentflow",
     "is_microsoft_lightning_available",
     "require_scope",
@@ -179,6 +180,7 @@ _SUBMODULE_MAP: dict[str, str] = {
     "resolve_settings": "kernel.runtime.context",
     "set_runtime_context": "kernel.runtime.context",
     "use_runtime_context": "kernel.runtime.context",
+    "init_bizcore": "kernel.runtime.init",
     "init_agentflow": "kernel.runtime.init",
     "LightningEventRecord": "kernel.runtime.lightning",
     "LightningStore": "kernel.runtime.lightning",

@@ -67,7 +67,7 @@ class TestSkillLoading:
 
     def test_load_builtin_skills(self):
         """ビルトイン Skills を正常に読み込み."""
-        builtin_dir = Path(__file__).parent.parent / "agentflow" / "skills" / "builtin"
+        builtin_dir = Path(__file__).parent.parent / "kernel" / "skills" / "builtin"
 
         if not builtin_dir.exists():
             pytest.skip("builtin ディレクトリが存在しません")

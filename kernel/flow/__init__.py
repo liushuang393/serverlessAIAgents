@@ -1,7 +1,7 @@
 """Layer 3 (kernel) の Flow モジュール — 実装本体.
 
 フロー編成フレームワークのコアロジックを提供する。
-agentflow/flow/ は本モジュールからの re-export スタブ。
+legacy flow surface は本モジュールからの re-export スタブ。
 """
 
 # コア型

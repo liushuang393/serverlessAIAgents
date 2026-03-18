@@ -1,7 +1,7 @@
 """LLM client facade backed by AgentFlow LiteLLM gateway.
 
 This module keeps compatibility models (`LLMMessage`, `LLMResponse`) while routing
-all calls through `agentflow.llm.gateway`.
+all calls through `legacy LLM gateway facade`.
 """
 
 from __future__ import annotations

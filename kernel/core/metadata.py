@@ -1,7 +1,7 @@
 """エージェントメタデータスキーマ定義 — kernel 層.
 
 agent.yaml ファイルのスキーマを Pydantic モデルとして定義する。
-agentflow/core/metadata.py から移行。
+legacy core surface/metadata.py から移行。
 """
 
 from typing import Any

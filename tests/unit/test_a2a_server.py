@@ -177,7 +177,7 @@ class TestA2AServer:
                 return func(inputs)
 
         monkeypatch.setattr(
-            "agentflow.protocols.a2a_server.asyncio.get_event_loop",
+            "kernel.protocols.a2a_server.asyncio.get_event_loop",
             lambda: _LoopStub(),
         )
 

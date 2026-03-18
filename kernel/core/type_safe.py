@@ -1,7 +1,7 @@
 """型変換ユーティリティ — kernel 層.
 
 LLM出力の揺れを吸収するための共通変換関数。
-agentflow/core/type_safe.py から移行。
+legacy core surface/type_safe.py から移行。
 
 設計原則:
 - 裸の Enum(value) 変換は禁止。必ず safe_enum を経由

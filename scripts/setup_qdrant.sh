@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Qdrant ローカルセットアップスクリプト
-# AgentFlow Platform の「Qdrant セットアップ」ボタンから自動実行される
+# BizCore Platform の「Qdrant セットアップ」ボタンから自動実行される
 set -euo pipefail
 
 QDRANT_PORT="${QDRANT_PORT:-6333}"
 QDRANT_GRPC_PORT="${QDRANT_GRPC_PORT:-6334}"
-CONTAINER_NAME="agentflow_qdrant"
+CONTAINER_NAME="bizcore_qdrant"
 
-echo "[AgentFlow] Qdrant セットアップを開始..."
+echo "[BizCore] Qdrant セットアップを開始..."
 
 # Docker 確認
 if ! command -v docker &> /dev/null; then
@@ -32,7 +32,7 @@ else
         --name "${CONTAINER_NAME}" \
         -p "${QDRANT_PORT}:6333" \
         -p "${QDRANT_GRPC_PORT}:6334" \
-        -v agentflow_qdrant_storage:/qdrant/storage:z \
+        -v bizcore_qdrant_storage:/qdrant/storage:z \
         qdrant/qdrant:latest
 fi
 

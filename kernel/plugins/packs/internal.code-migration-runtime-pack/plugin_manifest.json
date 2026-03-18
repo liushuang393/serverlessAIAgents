@@ -20,7 +20,7 @@
   ],
   "signature": {
     "algorithm": "ed25519",
-    "issuer": "agentflow-local",
+    "issuer": "bizcore-local",
     "key_id": "af-local-dev"
   },
   "compatibility": {

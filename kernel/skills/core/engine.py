@@ -32,6 +32,22 @@ if TYPE_CHECKING:
     from infrastructure.llm_provider import LLMProvider
 
 
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
+_LEGACY_CONFIG_DIR_NAME = ".agentflow"
+
+
+def _default_skill_dirs() -> list[Path]:
+    """Return default skill directories with legacy compatibility."""
+    return [
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
+        Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
+        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
+        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
+    ]
+
+
 @dataclass
 class SkillExecutionResult:
     """Skill 実行結果.
@@ -106,25 +122,21 @@ class SkillEngine:
         """Skill を全ディレクトリから読み込み.
 
         読み込み順序:
-        1. agentflow/skills/builtin/ (フレームワーク組み込み)
-        2. ~/.agentflow/skills/ (グローバル)
-        3. ~/.agentflow/learned_skills/ (学習済み)
-        4. .agentflow/skills/ (プロジェクト)
-        5. extra_dirs (追加指定)
+        1. kernel/skills/builtin/ (フレームワーク組み込み)
+        2. ~/.bizcore/skills/ (グローバル)
+        3. ~/.bizcore/learned_skills/ (学習済み)
+        4. .bizcore/skills/ (プロジェクト)
+        5. 旧 .agentflow 配下（互換）
+        6. extra_dirs (追加指定)
         """
         # デフォルトパスから読み込み（builtin/ 含む）
         default_skills = self._loader.load_default_paths()
         for skill in default_skills:
             self._matcher.add_skill(skill)
 
-        # agentflow 固有ディレクトリ
-        agentflow_dirs = [
-            Path.home() / ".agentflow" / "skills",
-            Path.home() / ".agentflow" / "learned_skills",
-            Path(".agentflow") / "skills",
-        ]
+        bizcore_dirs = _default_skill_dirs()
 
-        all_dirs = agentflow_dirs + (extra_dirs or [])
+        all_dirs = bizcore_dirs + (extra_dirs or [])
 
         for skill_dir in all_dirs:
             if skill_dir.exists():

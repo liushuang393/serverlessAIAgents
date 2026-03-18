@@ -34,7 +34,7 @@ try:
             "pytest",
             "tests/unit/test_hooks.py",
             "-v",
-            "--cov=agentflow.core.hooks",
+            "--cov=kernel.core.hooks",
             "--cov-report=term-missing",
             "--tb=short",
         ],

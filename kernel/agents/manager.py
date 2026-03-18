@@ -14,6 +14,17 @@ from kernel.core.metadata import AgentMetadata
 from kernel.agents.validator import AgentValidator, ValidationResult
 
 
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
+_LEGACY_CONFIG_DIR_NAME = ".agentflow"
+
+
+def _default_registry_path() -> Path:
+    """Resolve the default registry path with legacy fallback."""
+    primary = Path.home() / _PRIMARY_CONFIG_DIR_NAME / "registry"
+    legacy = Path.home() / _LEGACY_CONFIG_DIR_NAME / "registry"
+    return legacy if legacy.exists() and not primary.exists() else primary
+
+
 class AgentInfo:
     """Agent 情報.
 
@@ -71,10 +82,10 @@ class AgentBlockManager:
         """AgentBlockManager を初期化.
 
         Args:
-            registry_path: Agent レジストリのパス (デフォルト: ~/.agentflow/registry)
+            registry_path: Agent レジストリのパス (デフォルト: ~/.bizcore/registry)
         """
         self.registry: dict[str, AgentBlock] = {}
-        self.registry_path = registry_path or Path.home() / ".agentflow" / "registry"
+        self.registry_path = registry_path or _default_registry_path()
         self.registry_path.mkdir(parents=True, exist_ok=True)
 
         self._loader = AgentLoader()

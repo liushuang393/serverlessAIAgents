@@ -41,7 +41,7 @@ class PostgresBackend(MemoryBackend):
         self,
         host: str = "localhost",
         port: int = 5432,
-        database: str = "agentflow",
+        database: str = "bizcore",
         user: str = "postgres",
         password: str | None = None,
     ) -> None:

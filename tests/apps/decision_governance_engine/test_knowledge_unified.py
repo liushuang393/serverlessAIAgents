@@ -107,7 +107,7 @@ async def config_client(monkeypatch: Any):
 
 
 @pytest.mark.asyncio
-async def test_knowledge_api_uses_agentflow_collection_manager(
+async def test_knowledge_api_uses_bizcore_collection_manager(
     collections_client: AsyncClient,
 ) -> None:
     """GET /api/knowledge/collections が CollectionManager を使って空リストを返すこと."""

@@ -1,7 +1,7 @@
 """AgentFlow 型定義 — kernel 層.
 
 ワークフロー実行に必要な型定義（ExecutionContext, ExecutionResult, WorkflowConfig 等）。
-agentflow/core/types.py から移行。
+legacy core surface/types.py から移行。
 """
 
 from collections.abc import Awaitable, Callable

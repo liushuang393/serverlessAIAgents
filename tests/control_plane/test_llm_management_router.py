@@ -27,7 +27,7 @@ async def llm_client(tmp_path: Path):
 
     app.router.lifespan_context = _no_lifespan
 
-    service = LLMManagementService(config_path=tmp_path / ".agentflow" / "llm_gateway.yaml")
+    service = LLMManagementService(config_path=tmp_path / ".bizcore" / "llm_gateway.yaml")
     init_llm_management_service(service)
 
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
@@ -113,7 +113,7 @@ async def test_legacy_put_registry_endpoint_still_supported(llm_client) -> None:
 
 
 async def test_service_diagnostics_route_missing_case(tmp_path: Path) -> None:
-    service = LLMManagementService(config_path=tmp_path / ".agentflow" / "llm_gateway.yaml")
+    service = LLMManagementService(config_path=tmp_path / ".bizcore" / "llm_gateway.yaml")
     diagnostics = service.get_diagnostics(has_llm_routes=False, route_count=0)
 
     assert diagnostics.has_llm_routes is False

@@ -27,8 +27,8 @@ def _make_mock_llm() -> MagicMock:
 @pytest.fixture(autouse=True)
 def _patch_get_llm():
     """全テストで get_llm をモック化し、APIキー不在エラーを回避."""
-    with patch("agentflow.skills.rag.get_llm", return_value=_make_mock_llm()), \
-         patch("agentflow.skills.chatbot.get_llm", return_value=_make_mock_llm()):
+    with patch("kernel.skills.rag.get_llm", return_value=_make_mock_llm()), \
+         patch("kernel.skills.chatbot.get_llm", return_value=_make_mock_llm()):
         yield
 
 
@@ -52,7 +52,7 @@ class TestRAGSkill:
         await rag_skill.start()
         try:
             doc_id = await rag_skill.add_document(
-                content="AgentFlow は軽量 AI Agent フレームワークです。",
+                content="BizCore は軽量 AI Agent フレームワークです。",
                 topic="framework",
             )
             assert doc_id is not None
@@ -67,7 +67,7 @@ class TestRAGSkill:
         try:
             # ドキュメント追加
             await rag_skill.add_document(
-                content="AgentFlow は軽量 AI Agent フレームワークです。",
+                content="BizCore は軽量 AI Agent フレームワークです。",
                 topic="framework",
             )
             await rag_skill.add_document(
@@ -76,7 +76,7 @@ class TestRAGSkill:
             )
 
             # 質問
-            result = await rag_skill.query("AgentFlow とは何ですか？")
+            result = await rag_skill.query("BizCore とは何ですか？")
 
             assert isinstance(result, RAGResult)
             assert result.answer is not None

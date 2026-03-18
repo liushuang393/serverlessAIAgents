@@ -94,7 +94,7 @@ def _write_plugin_fixture(
         "required_permissions": ["repo.write"],
         "signature": {
             "algorithm": "ed25519",
-            "issuer": "agentflow-official",
+            "issuer": "bizcore-official",
             "key_id": "af-official-2026-q1",
         },
         "compatibility": {"kernel": ">=1.0.0", "product_lines": ["migration"]},
@@ -108,7 +108,7 @@ def _write_plugin_fixture(
         (plugin_dir / "plugin_manifest.sig").write_text("invalid-signature\n", encoding="utf-8")
 
     trust_store = {
-        "agentflow-official": {
+        "bizcore-official": {
             "af-official-2026-q1": {
                 "algorithm": "ed25519",
                 "public_key_base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",

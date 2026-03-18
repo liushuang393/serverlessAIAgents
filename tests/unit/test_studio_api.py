@@ -1,4 +1,4 @@
-"""AgentFlow Studio API のユニットテスト."""
+"""BizCore Studio API のユニットテスト."""
 
 from __future__ import annotations
 
@@ -307,7 +307,7 @@ class TestOpenAPI:
         response = client.get("/api/openapi.json")
         assert response.status_code == 200
         data = response.json()
-        assert data["info"]["title"] == "AgentFlow Studio API"
+        assert data["info"]["title"] == "BizCore Studio API"
         assert data["info"]["version"] == "1.0.0"
 
     def test_swagger_ui(self, client):
@@ -348,7 +348,7 @@ class TestAgentDetails:
         agents_dir, workflows_dir = temp_dirs
 
         # レジストリをモック（必要な全属性を設定）
-        with patch("agentflow.studio.api.LocalRegistry") as mock_registry_class:
+        with patch("control_plane.ui.studio.api.LocalRegistry") as mock_registry_class:
             mock_registry = MagicMock()
             mock_agent_info = MagicMock()
             mock_agent_info.id = "test-agent"
@@ -381,7 +381,7 @@ class TestAgentDetails:
         agents_dir, workflows_dir = temp_dirs
 
         # レジストリをモック（get_agent が None を返す）
-        with patch("agentflow.studio.api.LocalRegistry") as mock_registry_class:
+        with patch("control_plane.ui.studio.api.LocalRegistry") as mock_registry_class:
             mock_registry = MagicMock()
             mock_registry.get_agent.return_value = None
             mock_registry_class.return_value = mock_registry
@@ -405,8 +405,8 @@ class TestAgentExecution:
 
         # レジストリと AgentClient をモック
         with (
-            patch("agentflow.studio.api.LocalRegistry") as mock_registry_class,
-            patch("agentflow.agent_decorator.AgentClient.get") as mock_get_agent_client,
+            patch("control_plane.ui.studio.api.LocalRegistry") as mock_registry_class,
+            patch("kernel.agent_decorator.AgentClient.get") as mock_get_agent_client,
         ):
             mock_registry = MagicMock()
             mock_agent_info = MagicMock()
@@ -437,9 +437,9 @@ class TestAgentExecution:
 
         # レジストリと AgentClient をモック
         with (
-            patch("agentflow.studio.api.LocalRegistry") as mock_registry_class,
+            patch("control_plane.ui.studio.api.LocalRegistry") as mock_registry_class,
             patch(
-                "agentflow.agent_decorator.AgentClient.get",
+                "kernel.agent_decorator.AgentClient.get",
                 side_effect=RuntimeError("invoke failed"),
             ),
         ):
@@ -471,7 +471,7 @@ class TestMarketplaceInstall:
         agents_dir, workflows_dir = temp_dirs
 
         # MarketplaceClient をモック
-        with patch("agentflow.studio.api.MarketplaceClient") as mock_client_class:
+        with patch("control_plane.ui.studio.api.MarketplaceClient") as mock_client_class:
             mock_client = MagicMock()
             mock_client.install = MagicMock()
             mock_client_class.return_value = mock_client

@@ -11,7 +11,7 @@ class TestRootSkillsDirectory:
         repo_root = Path(__file__).parent.parent.parent.parent
         return [
             repo_root / "skills",
-            repo_root / "agentflow" / "skills",
+            repo_root / "kernel" / "skills",
         ]
 
     def test_root_skills_directory_exists(self):

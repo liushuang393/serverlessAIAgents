@@ -120,8 +120,8 @@ class TestLazyMCPClient:
         assert client._enable_lazy_loading is False
         assert client._lazy_threshold == 0.2
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_connect_builds_index(
         self,
         mock_session_class: MagicMock,
@@ -161,8 +161,8 @@ class TestLazyMCPClient:
         assert "mcp://test-server/read_file" in client._tool_index
         assert "mcp://test-server/write_file" in client._tool_index
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_get_tool_index(
         self,
         mock_session_class: MagicMock,
@@ -199,8 +199,8 @@ class TestLazyMCPClient:
         # スキーマは含まれない（軽量）
         assert "parameters" not in index[0]
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_search_by_keywords(
         self,
         mock_session_class: MagicMock,
@@ -239,8 +239,8 @@ class TestLazyMCPClient:
         assert len(result.entries) == 1
         assert result.entries[0].name == "read_file"
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_search_by_select(
         self,
         mock_session_class: MagicMock,
@@ -274,8 +274,8 @@ class TestLazyMCPClient:
         assert len(result.entries) == 1
         assert result.entries[0].name == "create_issue"
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_load_tools(
         self,
         mock_session_class: MagicMock,
@@ -317,8 +317,8 @@ class TestLazyMCPClient:
         # インデックスの loaded フラグが更新される
         assert client._tool_index["mcp://test-server/test_tool"].loaded is True
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_get_tool_definitions_lazy_mode(
         self,
         mock_session_class: MagicMock,
@@ -363,8 +363,8 @@ class TestLazyMCPClient:
         assert len(definitions) == 1
         assert definitions[0]["function"]["name"] == "mcp://test-server/tool1"
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_get_tool_definitions_non_lazy_mode(
         self,
         mock_session_class: MagicMock,
@@ -396,8 +396,8 @@ class TestLazyMCPClient:
         definitions = client.get_tool_definitions()
         assert len(definitions) == 1
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_get_stats(
         self,
         mock_session_class: MagicMock,
@@ -446,8 +446,8 @@ class TestLazyMCPClient:
         assert stats["load_ratio"] == 0.5
         assert stats["estimated_token_saved"] == 200  # 1 * 200
 
-    @patch("agentflow.protocols.mcp_client.stdio_client")
-    @patch("agentflow.protocols.mcp_client.ClientSession")
+    @patch("kernel.protocols.mcp_client.stdio_client")
+    @patch("kernel.protocols.mcp_client.ClientSession")
     async def test_clear_loaded_tools(
         self,
         mock_session_class: MagicMock,

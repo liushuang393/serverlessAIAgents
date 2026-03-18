@@ -40,7 +40,7 @@ class RuntimeContext:
 # ---------------------------------------------------------------------------
 
 _current_context: ContextVar[RuntimeContext | None] = ContextVar(
-    "agentflow_runtime_context", default=None,
+    "bizcore_runtime_context", default=None,
 )
 
 

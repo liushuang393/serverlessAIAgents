@@ -161,7 +161,7 @@ class TestTemplateManager:
         """デフォルトパスで初期化できることをテスト."""
         manager = TemplateManager()
 
-        expected_path = Path(__file__).parent.parent.parent / "agentflow" / "templates" / "scenarios"
+        expected_path = Path(__file__).parent.parent.parent / "kernel" / "templates" / "scenarios"
         assert manager.templates_dir == expected_path
 
     def test_init_with_custom_path(self, templates_dir: Path) -> None:

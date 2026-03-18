@@ -465,7 +465,7 @@ class PluginRegistry:
                 _logger.debug("pyproject.toml から kernel version を解決できませんでした", exc_info=True)
 
         try:
-            return version("agentflow")
+            return version("bizcore")
         except PackageNotFoundError:
             return "2.0.0"
 

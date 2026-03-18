@@ -55,7 +55,7 @@ class TestA2AClient:
 
     async def test_discover_agent_success(self, sample_agent_card_data: dict) -> None:
         """エージェント発見の成功をテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data
@@ -73,7 +73,7 @@ class TestA2AClient:
 
     async def test_discover_agent_uses_cache(self, sample_agent_card_data: dict) -> None:
         """エージェント発見がキャッシュを使用することをテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data
@@ -94,7 +94,7 @@ class TestA2AClient:
 
     async def test_discover_agent_force_refresh(self, sample_agent_card_data: dict) -> None:
         """強制リフレッシュをテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data
@@ -114,7 +114,7 @@ class TestA2AClient:
 
     async def test_discover_agent_retry_on_failure(self, sample_agent_card_data: dict) -> None:
         """失敗時の再試行をテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             # 最初の2回は失敗、3回目は成功
             mock_response_fail = MagicMock()
@@ -142,7 +142,7 @@ class TestA2AClient:
 
     async def test_discover_agent_max_retries_exceeded(self) -> None:
         """最大再試行回数を超えた場合をテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.raise_for_status.side_effect = httpx.HTTPError("Connection error")
@@ -159,7 +159,7 @@ class TestA2AClient:
 
     async def test_call_remote_agent_success(self, sample_agent_card_data: dict) -> None:
         """リモートエージェント呼び出しの成功をテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
 
             # discover_agent 用のレスポンス
@@ -188,7 +188,7 @@ class TestA2AClient:
 
     async def test_call_remote_agent_skill_not_found(self, sample_agent_card_data: dict) -> None:
         """存在しないスキルの呼び出しをテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data
@@ -203,7 +203,7 @@ class TestA2AClient:
 
     async def test_clear_cache(self, sample_agent_card_data: dict) -> None:
         """キャッシュクリアをテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data
@@ -221,7 +221,7 @@ class TestA2AClient:
 
     async def test_clear_all_cache(self, sample_agent_card_data: dict) -> None:
         """全キャッシュクリアをテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data
@@ -240,7 +240,7 @@ class TestA2AClient:
 
     async def test_get_cached_endpoints(self, sample_agent_card_data: dict) -> None:
         """キャッシュされたエンドポイント取得をテスト."""
-        with patch("agentflow.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
+        with patch("kernel.protocols.a2a_client.httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.json.return_value = sample_agent_card_data

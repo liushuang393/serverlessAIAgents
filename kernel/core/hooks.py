@@ -1,7 +1,7 @@
 """ライフサイクルフック — kernel 層.
 
 AgentFlow エンジンのライフサイクルフックを管理する。
-agentflow/core/hooks.py から移行。
+legacy core surface/hooks.py から移行。
 """
 
 from collections.abc import Awaitable, Callable

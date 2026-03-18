@@ -21,7 +21,7 @@ def test_plugin_manifest_validation() -> None:
             "required_permissions": ["network.egress"],
             "signature": {
                 "algorithm": "ed25519",
-                "issuer": "agentflow-official",
+                "issuer": "bizcore-official",
                 "key_id": "key-1",
             },
             "compatibility": {

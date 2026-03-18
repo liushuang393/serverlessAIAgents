@@ -130,7 +130,7 @@ class TestAgentBlockManager:
         """デフォルトのレジストリパスをテスト."""
         manager = AgentBlockManager()
 
-        expected_path = Path.home() / ".agentflow" / "registry"
+        expected_path = Path.home() / ".bizcore" / "registry"
         assert manager.registry_path == expected_path
 
     def test_register_agent(self, manager: AgentBlockManager, mock_agent_block: AgentBlock) -> None:
@@ -214,7 +214,7 @@ class TestAgentBlockManager:
         assert isinstance(result, ValidationResult)
         assert result.is_valid
 
-    @patch("agentflow.core.manager.AgentLoader")
+    @patch("kernel.agents.manager.AgentLoader")
     def test_load_agent_success(
         self,
         mock_loader_class: MagicMock,
@@ -239,8 +239,8 @@ class TestAgentBlockManager:
         assert loaded_agent == mock_agent_block
         mock_loader.load_from_directory.assert_called_once_with(agent_path)
 
-    @patch("agentflow.core.manager.AgentLoader")
-    @patch("agentflow.core.manager.AgentValidator")
+    @patch("kernel.agents.manager.AgentLoader")
+    @patch("kernel.agents.manager.AgentValidator")
     def test_load_agent_validation_failure(
         self,
         mock_validator_class: MagicMock,

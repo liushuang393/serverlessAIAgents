@@ -10,7 +10,7 @@ from infrastructure.llm.gateway.config import build_provider_runtime_statuses, l
 
 
 def test_resolve_secret_prefers_env_over_dotenv(tmp_path: Path, monkeypatch) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     _ = load_gateway_config(config_path)
     (tmp_path / ".env").write_text("OPENAI_API_KEY=dotenv-key\n", encoding="utf-8")
     monkeypatch.setenv("OPENAI_API_KEY", "env-key")
@@ -21,7 +21,7 @@ def test_resolve_secret_prefers_env_over_dotenv(tmp_path: Path, monkeypatch) -> 
 
 
 def test_resolve_secret_falls_back_to_dotenv(tmp_path: Path, monkeypatch) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     _ = load_gateway_config(config_path)
     (tmp_path / ".env").write_text("GEMINI_API_KEY=dotenv-gemini\n", encoding="utf-8")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
@@ -32,7 +32,7 @@ def test_resolve_secret_falls_back_to_dotenv(tmp_path: Path, monkeypatch) -> Non
 
 
 def test_load_gateway_config_applies_env_overrides(tmp_path: Path, monkeypatch) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     _ = load_gateway_config(config_path)
 
     monkeypatch.setenv("LLM_GATEWAY_PRIORITY", "cost")
@@ -46,7 +46,7 @@ def test_load_gateway_config_applies_env_overrides(tmp_path: Path, monkeypatch) 
 
 
 def test_provider_runtime_status_unavailable_when_key_missing(tmp_path: Path, monkeypatch) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     config = load_gateway_config(config_path)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
@@ -60,7 +60,7 @@ def test_provider_runtime_status_unavailable_when_key_missing(tmp_path: Path, mo
 
 
 def test_load_gateway_config_migrates_legacy_yaml_defaults(tmp_path: Path) -> None:
-    config_path = tmp_path / ".agentflow" / "llm_gateway.yaml"
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     legacy_payload = {
         "gateway": {

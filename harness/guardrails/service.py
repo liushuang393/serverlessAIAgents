@@ -2,7 +2,7 @@
 
 ツール実行の認可・承認・監査の統合判定を行う。
 
-移行元: agentflow/governance/engine.py → harness/guardrails/service.py
+移行元: legacy governance layer/engine.py → harness/guardrails/service.py
 """
 
 from __future__ import annotations

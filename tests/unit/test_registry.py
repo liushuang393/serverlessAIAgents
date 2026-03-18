@@ -78,7 +78,7 @@ class TestLocalRegistry:
         """デフォルトパスで初期化できることをテスト."""
         registry = LocalRegistry()
 
-        expected_path = Path.home() / ".agentflow" / "registry.yaml"
+        expected_path = Path.home() / ".bizcore" / "registry.yaml"
         assert registry.registry_path == expected_path
 
     def test_add_agent(self, registry: LocalRegistry, sample_entry: AgentRegistryEntry) -> None:

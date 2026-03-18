@@ -50,7 +50,7 @@ class ObservabilityConfig:
         traces_sample_rate: トレースサンプリング率
     """
 
-    service_name: str = "agentflow"
+    service_name: str = "bizcore"
     log_level: LogLevel = LogLevel.INFO
     log_format: str = "json"
     enable_metrics: bool = True
@@ -62,7 +62,7 @@ class ObservabilityConfig:
 
 
 def setup_observability(
-    service_name: str = "agentflow",
+    service_name: str = "bizcore",
     log_level: str | LogLevel = "INFO",
     log_format: str = "json",
     enable_metrics: bool = True,

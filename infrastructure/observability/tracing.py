@@ -229,7 +229,7 @@ class Tracer:
 
     def __init__(
         self,
-        service_name: str = "agentflow",
+        service_name: str = "bizcore",
         exporter: SpanExporter | None = None,
     ) -> None:
         """初期化.
@@ -369,7 +369,7 @@ def asyncio_is_coroutine_function(func: Any) -> bool:
 
 
 def setup_tracing(
-    service_name: str = "agentflow",
+    service_name: str = "bizcore",
     exporter: SpanExporter | None = None,
 ) -> Tracer:
     """トレーサーをセットアップ.

@@ -1,6 +1,6 @@
 """Core Registry 基類のテスト.
 
-このテストは agentflow/core/registry.py の Registry 基類をテストします。
+このテストは legacy core surface/registry.py の Registry 基類をテストします。
 - 登録・取得・削除
 - 型検証
 - スレッドセーフ

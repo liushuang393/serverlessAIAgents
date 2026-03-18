@@ -1,7 +1,7 @@
 """エージェントメタデータスキーマユーティリティ — kernel 層.
 
 agent.yaml の読み込み、検証、シリアライズ機能を提供する。
-agentflow/core/schemas.py から移行。
+legacy core surface/schemas.py から移行。
 """
 
 import logging

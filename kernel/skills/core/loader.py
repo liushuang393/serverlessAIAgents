@@ -124,7 +124,7 @@ class SkillLoader:
         Scan order:
         1. ~/.claude/skills/ (user-level)
         2. .claude/skills/  (project-level, relative to cwd)
-        3. agentflow/skills/builtin/ (framework builtin)
+        3. kernel/skills/builtin/ (framework builtin)
 
         Returns:
             読み込まれた Skill リスト

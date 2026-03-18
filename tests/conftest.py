@@ -15,7 +15,7 @@ collect_ignore_glob = [
     "test_phase2_task*.py",
 ]
 
-from kernel.core.engine import AgentFlowEngine
+from kernel.core.engine import BizCoreEngine
 from kernel.core.types import WorkflowConfig
 from infrastructure.llm.providers.llm_provider import reset_llm
 
@@ -42,7 +42,7 @@ def force_mock_llm(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPat
 def _redirect_home_to_tmp(tmp_path: Path) -> None:  # type: ignore[misc]
     """全テストで Path.home() を一時ディレクトリにリダイレクトする。
 
-    これにより ~/.agentflow など、ホームディレクトリへの書き込みを
+    これにより ~/.bizcore など、ホームディレクトリへの書き込みを
     サンドボックスや CI 環境でも安全に実行できる。
     """
     if os.getenv("PYTEST_REDIRECT_HOME", "1") != "1":
@@ -56,9 +56,9 @@ def _redirect_home_to_tmp(tmp_path: Path) -> None:  # type: ignore[misc]
 
 
 @pytest.fixture
-def engine() -> AgentFlowEngine:
-    """テスト用 AgentFlowEngine インスタンスを生成する。"""
-    return AgentFlowEngine()
+def engine() -> BizCoreEngine:
+    """テスト用 BizCoreEngine インスタンスを生成する。"""
+    return BizCoreEngine()
 
 
 @pytest.fixture

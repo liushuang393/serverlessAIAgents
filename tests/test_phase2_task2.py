@@ -34,7 +34,7 @@ try:
             "pytest",
             "tests/unit/test_schemas.py",
             "-v",
-            "--cov=agentflow.core.schemas",
+            "--cov=kernel.core.schemas",
             "--cov-report=term-missing",
             "--tb=short",
         ],

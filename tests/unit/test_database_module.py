@@ -1,4 +1,4 @@
-"""agentflow.database モジュールの単体テスト.
+"""legacy database module モジュールの単体テスト.
 
 対象: url_utils, DatabaseConfig, DatabaseManager
 SQLite を使用しインメモリ DB でテスト（外部依存なし）。

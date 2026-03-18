@@ -21,7 +21,7 @@ def _reset_singleton() -> None:
     reset_llm()
 
 
-@patch("agentflow.config.get_settings")
+@patch("infrastructure.config.get_settings")
 def test_detect_provider_from_env(mock_get_settings: MagicMock) -> None:
     mock_settings = MagicMock()
     mock_settings.get_active_llm_config.return_value = {
@@ -42,8 +42,8 @@ def test_detect_provider_from_env(mock_get_settings: MagicMock) -> None:
 
 
 @pytest.mark.asyncio
-@patch("agentflow.config.get_settings")
-@patch("agentflow.llm.llm_client.LLMClient")
+@patch("infrastructure.config.get_settings")
+@patch("infrastructure.llm.llm_client.LLMClient")
 async def test_generate_uses_llm_client(mock_llm_client: MagicMock, mock_get_settings: MagicMock) -> None:
     mock_settings = MagicMock()
     mock_settings.get_active_llm_config.return_value = {"provider": "openai", "model": "gpt-4o"}
@@ -66,8 +66,8 @@ async def test_generate_uses_llm_client(mock_llm_client: MagicMock, mock_get_set
 
 
 @pytest.mark.asyncio
-@patch("agentflow.config.get_settings")
-@patch("agentflow.llm.llm_client.LLMClient")
+@patch("infrastructure.config.get_settings")
+@patch("infrastructure.llm.llm_client.LLMClient")
 async def test_chat_wrapper_with_tools_calls_tool_call(
     mock_llm_client: MagicMock,
     mock_get_settings: MagicMock,
@@ -93,8 +93,8 @@ async def test_chat_wrapper_with_tools_calls_tool_call(
 
 
 @pytest.mark.asyncio
-@patch("agentflow.config.get_settings")
-@patch("agentflow.llm.llm_client.LLMClient")
+@patch("infrastructure.config.get_settings")
+@patch("infrastructure.llm.llm_client.LLMClient")
 async def test_complete_wrapper_calls_generate(
     mock_llm_client: MagicMock,
     mock_get_settings: MagicMock,
@@ -117,8 +117,8 @@ async def test_complete_wrapper_calls_generate(
 
 
 @pytest.mark.asyncio
-@patch("agentflow.config.get_settings")
-@patch("agentflow.llm.llm_client.LLMClient")
+@patch("infrastructure.config.get_settings")
+@patch("infrastructure.llm.llm_client.LLMClient")
 async def test_stream_supports_legacy_style(
     mock_llm_client: MagicMock,
     mock_get_settings: MagicMock,
@@ -143,8 +143,8 @@ async def test_stream_supports_legacy_style(
     assert chunks == ["Hello", " ", "World"]
 
 
-@patch("agentflow.config.get_settings")
-@patch("agentflow.llm.llm_client.LLMClient")
+@patch("infrastructure.config.get_settings")
+@patch("infrastructure.llm.llm_client.LLMClient")
 def test_get_llm_singleton_behavior(
     mock_llm_client: MagicMock,
     mock_get_settings: MagicMock,

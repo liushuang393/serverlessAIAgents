@@ -85,7 +85,7 @@ def _get_skills_registry() -> dict[str, Any]:
 def _load_builtin_skills() -> None:
     """ビルトイン Skills を読み込み.
 
-    agentflow/skills/builtin/ から SKILL.md を持つ Skills を自動検出。
+    kernel/skills/builtin/ から SKILL.md を持つ Skills を自動検出。
     """
     from kernel.skills.loader import SkillLoader
 

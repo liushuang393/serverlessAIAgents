@@ -114,12 +114,12 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 ## LLM Gateway 運用（LiteLLM 内蔵）
 
 - LLM 呼び出しは Provider API 直呼びを禁止し、Platform 管理の Gateway に統一する。
-- 正本設定ファイルは `.bizcore/llm_gateway.yaml`、永続状態は `control_plane/data/control_plane.db`（既定 SQLite）です。旧 `.agentflow/llm_gateway.yaml` も自動互換されます。
+- 正本設定ファイルは `.bizcore/llm_gateway.yaml`、永続状態は `control_plane/data/control_plane.db`（既定 SQLite）です。旧レガシー設定パスも自動互換されます。
 - secret 解決順は `Platform 暗号化保存 > ENV > .env > unavailable` です。
 - Provider secret は画面から保存し、`PLATFORM_SECRET_MASTER_KEY` で暗号化します。API 応答では平文を返しません。
 - model は `model_id` と `model_type` を持ち、app は `contracts.llm` からこの catalog を参照します。
 - Engine は `deployment_mode / docker_image / served_model_name / host_port / public_base_url / gpu_*` を保持し、`配備 / 停止` で Docker Compose を生成・実行します。
-- compose は `.bizcore/llm_backends/<engine-id>/docker-compose.yml` に生成され、公開 URL と状態は DB に保存されます。旧 `.agentflow/` 配下も互換対象です。
+- compose は `.bizcore/llm_backends/<engine-id>/docker-compose.yml` に生成され、公開 URL と状態は DB に保存されます。旧レガシーディレクトリ配下も互換対象です。
 - `setup-and-switch` は preflight が `failed` または `dry_run` の場合、設定を変更しません。
 - `/llm-management` で 404 が出る場合は backend の旧プロセスが残っている可能性が高いです。backend を再起動し、`/openapi.json` に `/api/studios/framework/llm/*` が含まれることを確認してください。
 

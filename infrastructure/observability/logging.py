@@ -323,7 +323,7 @@ def setup_logging(
     root_logger.addHandler(handler)
 
 
-def get_logger(name: str = "agentflow") -> AgentFlowLogger:
+def get_logger(name: str = "bizcore") -> AgentFlowLogger:
     """ロガーを取得.
 
     Args:

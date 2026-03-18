@@ -142,7 +142,7 @@ class RequestScope:
             _logger.debug(f"Request scope completed: {scope.request_id} ({scope.elapsed_ms:.1f}ms)")
 
 
-_current_scope: ContextVar[RequestScope | None] = ContextVar("agentflow_request_scope", default=None)
+_current_scope: ContextVar[RequestScope | None] = ContextVar("bizcore_request_scope", default=None)
 
 
 def get_current_scope() -> RequestScope | None:
@@ -170,4 +170,3 @@ __all__ = [
     "get_current_scope_or_raise",
     "require_scope",
 ]
-

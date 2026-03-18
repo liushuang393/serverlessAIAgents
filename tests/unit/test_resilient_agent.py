@@ -1,6 +1,6 @@
 """ResilientAgent 単体テスト.
 
-agentflow/core/resilient_agent.py のテスト。
+legacy core surface/resilient_agent.py のテスト。
 """
 
 import asyncio

@@ -1,7 +1,7 @@
 """PostgresCheckpointer - PostgreSQL ベースの状態永続化.
 
 本番環境での永続的なワークフロー状態管理に使用。
-agentflow/memory/distributed/postgres_backend.py の設計パターンを参考。
+旧 Postgres backend の設計パターンを参考。
 
 使用例:
     >>> from harness.approval import PostgresCheckpointer
@@ -61,7 +61,7 @@ class PostgresCheckpointer(Checkpointer):
         url: str | None = None,
         host: str = "localhost",
         port: int = 5432,
-        database: str = "agentflow",
+        database: str = "bizcore",
         user: str = "postgres",
         password: str | None = None,
         table_name: str = "checkpoints",
