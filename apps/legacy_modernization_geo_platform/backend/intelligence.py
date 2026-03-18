@@ -7,11 +7,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest
-from apps.decision_governance_engine.services.intelligence_service import (
-    IntelligenceConfig,
-    IntelligenceResult,
-    IntelligenceService,
-)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from apps.decision_governance_engine.services.intelligence_service import (
+        IntelligenceConfig,
+        IntelligenceResult,
+        IntelligenceService,
+    )
 
 
 @dataclass(slots=True)
@@ -67,14 +70,21 @@ class IntelligenceSnapshot:
 class GeoIntelligenceAdapter:
     """Wrap the shared intelligence service with GEO-specific defaults."""
 
-    def __init__(self, service: IntelligenceService | None = None) -> None:
+    def __init__(self, service: "IntelligenceService | None" = None) -> None:
         """Initialize the live intelligence adapter."""
-        self._service = service or IntelligenceService(
-            IntelligenceConfig(
-                provider_preference=["serpapi", "bing", "duckduckgo_search"],
-                mode="STANDARD",
-            ),
-        )
+        if service is None:
+            from apps.decision_governance_engine.services.intelligence_service import (
+                IntelligenceConfig,
+                IntelligenceService,
+            )
+
+            service = IntelligenceService(
+                IntelligenceConfig(
+                    provider_preference=["serpapi", "bing", "duckduckgo_search"],
+                    mode="STANDARD",
+                ),
+            )
+        self._service = service
 
     async def gather_market_intelligence(self, request: GeoExecuteRequest) -> IntelligenceSnapshot:
         """Collect normalized intelligence for the request."""
