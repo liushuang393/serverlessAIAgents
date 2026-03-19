@@ -165,6 +165,33 @@ class AgentAggregatorService:
                 )
         return agents
 
+    def search_by_capability(self, query: str) -> list[AggregatedAgent]:
+        """Capability でエージェントを検索.
+
+        legacy 文字列、canonical ID、label のいずれかにマッチするエージェントを返す。
+
+        Args:
+            query: 検索クエリ（legacy 文字列 / canonical ID / label）
+
+        Returns:
+            マッチした AggregatedAgent のリスト
+        """
+        query_lower = query.lower().strip()
+        results: list[AggregatedAgent] = []
+        for agent in self.list_all():
+            # legacy capabilities match
+            if query_lower in [c.lower() for c in agent.capabilities_legacy]:
+                results.append(agent)
+                continue
+            # canonical capabilities match (id or label)
+            for cap in agent.capabilities:
+                cap_id = cap.get("id", "").lower()
+                cap_label = cap.get("label", "").lower()
+                if query_lower == cap_id or query_lower == cap_label:
+                    results.append(agent)
+                    break
+        return results
+
     def group_by_app(self) -> list[dict[str, Any]]:
         """App 別にグルーピング.
 
@@ -183,6 +210,37 @@ class AgentAggregatorService:
             grouped[agent.app_name]["agents"].append(agent.to_dict())
 
         return [grouped[key] for key in sorted(grouped.keys())]
+
+    def all_capabilities(self) -> list[dict[str, Any]]:
+        """全エージェントの Capability を集約して返す.
+
+        Returns:
+            [{id, domain, label, count, apps, aliases}] のリスト
+        """
+        cap_map: dict[str, dict[str, Any]] = {}
+        for agent in self.list_all():
+            for cap in agent.capabilities:
+                cap_id = cap.get("id", "unknown")
+                if cap_id not in cap_map:
+                    cap_map[cap_id] = {
+                        "id": cap_id,
+                        "domain": cap.get("domain", ""),
+                        "label": cap.get("label", ""),
+                        "count": 0,
+                        "apps": set(),
+                        "aliases": set(),
+                    }
+                cap_map[cap_id]["count"] += 1
+                cap_map[cap_id]["apps"].add(agent.app_name)
+                for alias in cap.get("aliases", []):
+                    cap_map[cap_id]["aliases"].add(alias)
+        # Convert sets to sorted lists for JSON serialization
+        result = []
+        for entry in cap_map.values():
+            entry["apps"] = sorted(entry["apps"])
+            entry["aliases"] = sorted(entry["aliases"])
+            result.append(entry)
+        return sorted(result, key=lambda x: x["id"])
 
     def stats(self) -> dict[str, Any]:
         """Agent 統計情報.

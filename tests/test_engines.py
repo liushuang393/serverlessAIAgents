@@ -140,17 +140,22 @@ class TestRAGEngine:
 
     @pytest.mark.asyncio
     async def test_rag_with_mock_retriever(self):
-        """モック Retriever を使った RAG のテスト."""
+        """モック vector_store を使った RAG のテスト."""
+        from unittest.mock import AsyncMock, patch
+
         mock_docs = [
-            {"content": "Document 1", "score": 0.9},
-            {"content": "Document 2", "score": 0.8},
+            {"document": "Document 1", "score": 0.9},
+            {"document": "Document 2", "score": 0.8},
         ]
 
         engine = RAGEngine(
             agent=MockAgent,
-            retriever=lambda q: mock_docs,
+            vector_store="test-collection",
         )
-        result = await engine.run({"question": "What is AI?"})
+        # UnifiedRAGService の retrieve をモック
+        with patch.object(engine.rag_service, "retrieve", new_callable=AsyncMock, return_value=mock_docs), \
+             patch.object(engine.rag_service, "_ensure_connected", new_callable=AsyncMock):
+            result = await engine.run({"question": "What is AI?"})
 
         assert "answer" in result
         assert "sources" in result

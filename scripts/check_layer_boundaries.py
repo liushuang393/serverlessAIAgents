@@ -52,9 +52,10 @@ LAYER_ROOTS: dict[str, Path] = {
 
 # 層ごとの禁止 eager import 先（トップレベルパッケージ名）
 FORBIDDEN_IMPORTS: dict[str, set[str]] = {
+    "contracts": {"infrastructure", "shared", "kernel", "harness", "domain", "control_plane", "apps"},
     "infrastructure": {"shared", "kernel", "harness", "domain", "control_plane", "apps"},
     "shared": {"kernel", "harness", "domain", "control_plane", "apps"},
-    "kernel": {"harness", "control_plane", "apps", "agentflow"},
+    "kernel": {"harness", "domain", "control_plane", "apps", "agentflow"},
     "harness": {"control_plane", "apps"},
     "domain": {"control_plane", "apps"},
     "control_plane": {"apps"},

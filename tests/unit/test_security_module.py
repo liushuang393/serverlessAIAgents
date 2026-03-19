@@ -485,7 +485,7 @@ class TestJWTConfig(unittest.TestCase):
         config = JWTConfig()
         self.assertEqual(config.algorithm, "HS256")
         self.assertEqual(config.expire_minutes, 60)
-        self.assertEqual(config.issuer, "bizcore")
+        self.assertEqual(config.issuer, "agentflow")
 
 
 class TestAuthUser(unittest.TestCase):

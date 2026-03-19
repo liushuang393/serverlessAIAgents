@@ -104,3 +104,28 @@ async def employee_token(client: httpx.AsyncClient) -> str:
 def auth_headers(token: str) -> dict[str, str]:
     """Authorization ヘッダーを生成."""
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_aiosqlite_threads():
+    """Ensure aiosqlite worker threads are shut down after the session.
+
+    Without this, the non-daemon ``_connection_worker_thread`` keeps the
+    process alive indefinitely after all tests have finished.
+    """
+    yield
+    import shared.auth_service.db.session as db_mod
+    import asyncio
+
+    async def _shutdown() -> None:
+        try:
+            await db_mod.close_db()
+        except Exception:
+            pass
+
+    try:
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(_shutdown())
+        loop.close()
+    except Exception:
+        pass

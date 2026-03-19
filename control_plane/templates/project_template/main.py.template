@@ -1,0 +1,118 @@
+"""{{ agent_name }} - メインエントリーポイント.
+
+このモジュールは {{ agent_name }} のFastAPI+AgentFlow統合を定義します。
+
+API:
+    - POST /api/task        : 同期処理（REST）
+    - GET  /api/task/stream : ストリーム処理（SSE）
+"""
+
+import json
+from typing import Any
+
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+from agentflow import create_flow
+from agentflow.core.agent_block import AgentBlock
+
+
+# ============================================================
+# Agent 定義
+# ============================================================
+
+
+class {{ agent_class }}Agent(AgentBlock):
+    """{{ agent_name }} の主要Agent.
+
+    職責:
+    - TODO: Agent の職責を記述
+
+    禁止事項:
+    - TODO: 禁止事項を記述
+    """
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """メイン処理.
+
+        Args:
+            input_data: 入力データ
+
+        Returns:
+            処理結果
+        """
+        # TODO: ここに処理ロジックを実装
+        task = input_data.get("task", "")
+        return {"result": f"Processed: {task}", "status": "success"}
+
+
+# ============================================================
+# Flow 定義（統一入口）
+# ============================================================
+
+flow = create_flow(
+    agents=[{{ agent_class }}Agent()],
+    pattern="sequential",
+    enable_memory=True,
+    name="{{ agent_name }}-flow",
+)
+
+
+# ============================================================
+# FastAPI アプリ
+# ============================================================
+
+app = FastAPI(
+    title="{{ agent_name }}",
+    description="{{ description }}",
+    version="1.0.0",
+)
+
+
+# リクエスト/レスポンススキーマ
+class TaskRequest(BaseModel):
+    """タスクリクエスト."""
+
+    task: str
+
+
+class TaskResponse(BaseModel):
+    """タスクレスポンス."""
+
+    status: str
+    result: dict[str, Any]
+
+
+@app.post("/api/task", response_model=TaskResponse)
+async def process_task(request: TaskRequest) -> TaskResponse:
+    """同期処理エンドポイント（REST）."""
+    result = await flow.run({"task": request.task})
+    return TaskResponse(status="success", result=result)
+
+
+@app.get("/api/task/stream")
+async def stream_task(task: str) -> StreamingResponse:
+    """ストリーム処理エンドポイント（SSE）."""
+
+    async def event_generator():
+        async for event in flow.run_stream({"task": task}):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/api/health")
+async def health_check() -> dict[str, str]:
+    """ヘルスチェック."""
+    return {"status": "healthy", "flow": flow.name}
+
+
+# ============================================================
+# 実行
+# ============================================================
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)

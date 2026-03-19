@@ -3,6 +3,8 @@
 各Agentの基本機能とWorkflowの動作を検証する。
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from apps.decision_governance_engine.agents.dao_agent import DaoAgent
 from apps.decision_governance_engine.agents.fa_agent import FaAgent
@@ -324,8 +326,18 @@ class TestDecisionEngine:
 
     @pytest.fixture
     def engine(self) -> DecisionEngine:
-        """テスト用Engineを作成."""
-        return DecisionEngine()
+        """テスト用Engineを作成.
+
+        LLM未設定環境でのテスト実行を高速化するため、
+        全AgentのResilientAgent設定を最小に設定する。
+        """
+        eng = DecisionEngine()
+        # ResilientAgent のタイムアウト/リトライを最小にして高速フェイルさせる
+        from kernel.agents.resilient_agent import ResilientAgent
+        with patch.object(ResilientAgent, "timeout_seconds", 5), \
+             patch.object(ResilientAgent, "max_retries", 0), \
+             patch.object(ResilientAgent, "retry_delay", 0.0):
+            yield eng
 
     @pytest.mark.asyncio
     async def test_reject_invalid_question(self, engine: DecisionEngine) -> None:

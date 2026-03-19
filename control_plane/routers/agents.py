@@ -121,4 +121,24 @@ async def agent_type_definitions() -> dict[str, Any]:
     }
 
 
+@router.get("/capabilities")
+async def list_capabilities() -> dict[str, Any]:
+    """全エージェントの Capability 一覧."""
+    aggregator = _get_aggregator()
+    caps = aggregator.all_capabilities()
+    return {
+        "capabilities": caps,
+        "total": len(caps),
+    }
 
+
+@router.get("/search")
+async def search_agents(capability: str) -> dict[str, Any]:
+    """Capability でエージェントを検索."""
+    aggregator = _get_aggregator()
+    results = aggregator.search_by_capability(capability)
+    return {
+        "agents": [a.to_dict() for a in results],
+        "total": len(results),
+        "query": capability,
+    }

@@ -22,7 +22,7 @@ class TestResourceDefinitionModel:
             "app_name",
             "scope",
             "backend_key",
-            "metadata",
+            "metadata_json",
             "is_active",
             "created_at",
             "updated_at",

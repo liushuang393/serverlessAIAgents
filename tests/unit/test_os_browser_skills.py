@@ -26,9 +26,9 @@ from kernel.skills.mode_switcher import (
     ModeSwitchDenied,
     ModeSwitcher,
 )
-from infrastructure.os.command import CommandSkill
-from infrastructure.os.config import ExecutionMode, OSSkillConfig
-from infrastructure.os.filesystem import FileSystemSkill
+from infrastructure.sandbox.os.command import CommandSkill
+from infrastructure.sandbox.os.config import ExecutionMode, OSSkillConfig
+from infrastructure.sandbox.os.filesystem import FileSystemSkill
 
 
 # ========== OSSkillConfig テスト ==========
@@ -107,7 +107,7 @@ class TestFileSystemSkill:
     @pytest.mark.asyncio
     async def test_read_file_outside_workspace(self, fs_skill: FileSystemSkill) -> None:
         """ワークスペース外ファイル読み込みが拒否されることをテスト."""
-        from infrastructure.os.base import PathSecurityError
+        from infrastructure.sandbox.os.base import PathSecurityError
 
         with pytest.raises(PathSecurityError):
             await fs_skill.read_file("/etc/passwd")
@@ -136,7 +136,7 @@ class TestFileSystemSkill:
     @pytest.mark.asyncio
     async def test_write_file_denied_in_isolated(self, fs_skill: FileSystemSkill) -> None:
         """isolated モードで書き込みが拒否されることをテスト."""
-        from infrastructure.os.base import ExecutionModeError
+        from infrastructure.sandbox.os.base import ExecutionModeError
 
         with pytest.raises(ExecutionModeError):
             await fs_skill.write_file("output.txt", "content")
@@ -193,7 +193,7 @@ class TestCommandSkill:
     @pytest.mark.asyncio
     async def test_run_blacklisted_command_denied(self, cmd_skill: CommandSkill, workspace: Path) -> None:
         """ブラックリストコマンドが拒否されることをテスト."""
-        from infrastructure.os.base import CommandSecurityError
+        from infrastructure.sandbox.os.base import CommandSecurityError
 
         with pytest.raises(CommandSecurityError):
             await cmd_skill.run_command(

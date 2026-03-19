@@ -15,7 +15,7 @@ collect_ignore_glob = [
     "test_phase2_task*.py",
 ]
 
-from kernel.core.engine import BizCoreEngine
+from kernel.core.engine import AgentFlowEngine
 from kernel.core.types import WorkflowConfig
 from infrastructure.llm.providers.llm_provider import reset_llm
 
@@ -56,9 +56,9 @@ def _redirect_home_to_tmp(tmp_path: Path) -> None:  # type: ignore[misc]
 
 
 @pytest.fixture
-def engine() -> BizCoreEngine:
-    """テスト用 BizCoreEngine インスタンスを生成する。"""
-    return BizCoreEngine()
+def engine() -> AgentFlowEngine:
+    """テスト用 AgentFlowEngine インスタンスを生成する。"""
+    return AgentFlowEngine()
 
 
 @pytest.fixture

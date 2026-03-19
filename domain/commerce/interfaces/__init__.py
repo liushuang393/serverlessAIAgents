@@ -1,9 +1,25 @@
-"""Commerce domain interfaces."""
+"""Commerce domain interfaces (contracts から re-export).
 
-from domain.commerce.interfaces.agents import IDealRecommender, IIntentAnalyzer, IOfferProvider
-from domain.commerce.interfaces.ai import ICommerceAI
-from domain.commerce.interfaces.core import ICart, IOffer, IPayment, IProduct, ITransaction
-from domain.commerce.interfaces.flow import FlowContext, FlowStatus, FlowStepType, ICommerceFlow, ICommerceStep
+正規配置は contracts/protocol/commerce/interfaces/。
+domain 層の後方互換のため re-export する。
+"""
+
+from contracts.protocol.commerce.interfaces import (
+    FlowContext,
+    FlowStatus,
+    FlowStepType,
+    ICart,
+    ICommerceAI,
+    ICommerceFlow,
+    ICommerceStep,
+    IDealRecommender,
+    IIntentAnalyzer,
+    IOffer,
+    IOfferProvider,
+    IPayment,
+    IProduct,
+    ITransaction,
+)
 
 
 __all__ = [

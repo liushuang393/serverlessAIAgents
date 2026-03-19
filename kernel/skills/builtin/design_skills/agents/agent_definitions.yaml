@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+# Design Skills Engine - Agent定義
+#
+# 目的: DSE用Agent定義ソース
+# 使用: DesignAgentRegistryによるAgent生成・管理
+
+flow_id: design-skills-engine
+name: Design Skills Engine
+version: "1.0.0"
+description: "デザインスキルエンジン - インテント解析・プロンプト計画・ワークフロー実行"
+
+agents:
+  - id: intent_analyzer
+    name: インテント解析
+    label: インテント解析Agent
+    icon: 🔍
+    description: "ユーザーの意図を解析し、デザインブリーフを生成する"
+    class_name: IntentAnalyzerAgent
+    module: kernel.skills.builtin.design_skills.agents.intent_analyzer_agent
+    uses_rag: false
+    progress_messages:
+      - [50, "入力を分析中..."]
+      - [90, "インテントを抽出中..."]
+
+  - id: prompt_planner
+    name: プロンプト計画
+    label: プロンプト計画Agent
+    icon: 📝
+    description: "解析結果に基づきプロンプト計画を策定する"
+    class_name: PromptPlannerAgent
+    module: kernel.skills.builtin.design_skills.agents.prompt_planner_agent
+    uses_rag: false
+    progress_messages:
+      - [50, "計画を策定中..."]
+      - [90, "プロンプトを生成中..."]
+
+  - id: workflow_executor
+    name: ワークフロー実行
+    label: ワークフロー実行Agent
+    icon: ⚡
+    description: "計画に基づきワークフローを実行する"
+    class_name: WorkflowExecutorAgent
+    module: kernel.skills.builtin.design_skills.agents.workflow_executor_agent
+    uses_rag: false
+    progress_messages:
+      - [50, "ワークフローを実行中..."]
+      - [90, "結果を統合中..."]
+

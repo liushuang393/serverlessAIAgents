@@ -2,6 +2,8 @@
 
 コード生成とデプロイを統合したサービス層。
 Studio / CLI / API 全てが使用します。
+
+依存注入（DI）パターンを採用し、具象クラスへの直接依存を排除。
 """
 
 from __future__ import annotations
@@ -28,6 +30,8 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
 
+    from contracts.interfaces.publish import ICodeGenerator, IConfigManager, IDeployExecutor
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,29 +40,59 @@ class PublishService:
     """発布サービス.
 
     コード生成からデプロイまでの全フローを統合的に処理します。
+    具象実装はコンストラクタ注入で受け取ります。
 
     使用例:
-        >>> service = PublishService()
-        >>> # コード生成
-        >>> code = await service.generate_code(workflow, CodeOutputType.FULLSTACK)
-        >>> # ZIP エクスポート
-        >>> zip_file = await service.export_zip(workflow, CodeOutputType.BACKEND)
-        >>> # 設定フィールド取得（UI 用）
-        >>> fields = await service.get_config_fields(DeployTarget.VERCEL)
-        >>> # デプロイ
-        >>> async for event in service.deploy(code, DeployTarget.VERCEL, config):
-        ...     print(event.message)
+        >>> from apps.dev_studio.codegen import CodeGenerator
+        >>> from control_plane.deploy.executor import DeployExecutor
+        >>> from control_plane.deploy.config.manager import ConfigManager
+        >>> service = PublishService(
+        ...     code_generator=CodeGenerator(),
+        ...     deploy_executor=DeployExecutor(),
+        ...     config_manager=ConfigManager(),
+        ... )
     """
 
-    def __init__(self) -> None:
-        """初期化."""
-        from apps.dev_studio.codegen import CodeGenerator
-        from control_plane.deploy.config.manager import ConfigManager
-        from control_plane.deploy.executor import DeployExecutor
+    def __init__(
+        self,
+        code_generator: ICodeGenerator | None = None,
+        deploy_executor: IDeployExecutor | None = None,
+        config_manager: IConfigManager | None = None,
+    ) -> None:
+        """初期化.
 
-        self._code_generator = CodeGenerator()
-        self._deploy_executor = DeployExecutor()
-        self._config_manager = ConfigManager()
+        Args:
+            code_generator: コード生成器。None の場合は遅延ロード。
+            deploy_executor: デプロイ執行器。None の場合は遅延ロード。
+            config_manager: 設定管理器。None の場合は遅延ロード。
+        """
+        self._code_generator = code_generator
+        self._deploy_executor = deploy_executor
+        self._config_manager = config_manager
+
+    def _get_code_generator(self) -> ICodeGenerator:
+        """コード生成器を取得（遅延ロードフォールバック）."""
+        if self._code_generator is None:
+            from apps.dev_studio.codegen import CodeGenerator
+
+            self._code_generator = CodeGenerator()
+        return self._code_generator
+
+    def _get_deploy_executor(self) -> IDeployExecutor:
+        """デプロイ執行器を取得（遅延ロードフォールバック）."""
+        if self._deploy_executor is None:
+            from control_plane.deploy.executor import DeployExecutor
+
+            self._deploy_executor = DeployExecutor()
+        return self._deploy_executor
+
+    def _get_config_manager(self) -> IConfigManager:
+        """設定管理器を取得（遅延ロードフォールバック）."""
+        if self._config_manager is None:
+            from control_plane.deploy.config.manager import ConfigManager
+
+            self._config_manager = ConfigManager()
+        return self._config_manager
 
     # =========================================================================
     # Code Generation
@@ -83,7 +117,7 @@ class PublishService:
         if isinstance(workflow, dict):
             workflow = WorkflowDefinition.from_dict(workflow)
 
-        return await self._code_generator.generate(workflow, output_type, options)
+        return await self._get_code_generator().generate(workflow, output_type, options)
 
     async def preview_code(
         self,
@@ -102,7 +136,7 @@ class PublishService:
         if isinstance(workflow, dict):
             workflow = WorkflowDefinition.from_dict(workflow)
 
-        return await self._code_generator.preview(workflow, output_type)
+        return await self._get_code_generator().preview(workflow, output_type)
 
     async def export_zip(
         self,
@@ -123,7 +157,7 @@ class PublishService:
         if isinstance(workflow, dict):
             workflow = WorkflowDefinition.from_dict(workflow)
 
-        return await self._code_generator.export_zip(workflow, output_type, options)
+        return await self._get_code_generator().export_zip(workflow, output_type, options)
 
     def get_supported_output_types(self) -> list[dict[str, Any]]:
         """サポートされている出力タイプを取得.
@@ -163,8 +197,6 @@ class PublishService:
     ) -> list[ConfigField]:
         """ターゲットに必要な設定フィールドを取得.
 
-        UI でフォームを動的に生成するために使用します。
-
         Args:
             target: デプロイターゲット
             current_config: 現在の設定
@@ -172,7 +204,7 @@ class PublishService:
         Returns:
             設定フィールドのリスト
         """
-        return await self._config_manager.get_required_fields(target, current_config)
+        return await self._get_config_manager().get_required_fields(target, current_config)
 
     async def validate_config(
         self,
@@ -188,7 +220,7 @@ class PublishService:
         Returns:
             検証結果
         """
-        return await self._config_manager.validate(target, config)
+        return await self._get_config_manager().validate(target, config)
 
     def get_supported_targets(self) -> list[dict[str, Any]]:
         """サポートされているデプロイターゲットを取得.
@@ -279,7 +311,7 @@ class PublishService:
             env_vars=config.get("env_vars", {}),
         )
 
-        async for event in self._deploy_executor.deploy(source, target, deploy_config):
+        async for event in self._get_deploy_executor().deploy(source, target, deploy_config):
             yield event
 
     async def deploy_sync(

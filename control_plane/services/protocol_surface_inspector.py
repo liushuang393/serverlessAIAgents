@@ -92,13 +92,18 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
             ),
         )
 
+    def _is_protocols_module(self, lowered: str, sub: str = "") -> bool:
+        """Check if module matches agentflow.protocols or kernel.protocols."""
+        target = f".protocols.{sub}" if sub else ".protocols"
+        return f"agentflow{target}" in lowered or f"kernel{target}" in lowered
+
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             mod = alias.name
             lowered = mod.lower()
-            if "agentflow.protocols.a2a" in lowered:
+            if self._is_protocols_module(lowered, "a2a"):
                 self._record("a2a", node, f"import {mod}")
-            if "agentflow.protocols.mcp" in lowered:
+            if self._is_protocols_module(lowered, "mcp"):
                 self._record("mcp", node, f"import {mod}")
             if lowered.endswith("a2a_card"):
                 self._record("a2a", node, f"import {mod}")
@@ -110,12 +115,12 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
         module = (node.module or "").lower()
         imported_names = {name.name for name in node.names}
 
-        if "agentflow.protocols.a2a" in module:
+        if self._is_protocols_module(module, "a2a"):
             self._record("a2a", node, f"from {node.module} import ...")
-        if "agentflow.protocols.mcp" in module:
+        if self._is_protocols_module(module, "mcp"):
             self._record("mcp", node, f"from {node.module} import ...")
 
-        if "agentflow.protocols" in module:
+        if self._is_protocols_module(module):
             if "AgentCard" in imported_names:
                 self._record("a2a", node, "from kernel.protocols import AgentCard")
             if {"MCPClient", "MCPTool", "MCPToolClient"} & imported_names:

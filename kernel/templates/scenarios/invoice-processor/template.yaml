@@ -1,0 +1,56 @@
+id: invoice-processor
+name: Invoice Processor
+description: PDF請求書を処理し、データを抽出してデータベースに保存するエージェント
+category: document
+author: AgentFlow Team
+version: 1.0.0
+
+parameters:
+  - name: agent_name
+    type: string
+    description: エージェント名
+    default: invoice-processor
+    required: true
+  
+  - name: agent_description
+    type: string
+    description: エージェントの説明
+    default: Process PDF invoices and extract data
+    required: true
+  
+  - name: author
+    type: string
+    description: 作成者名
+    default: Your Name
+    required: true
+  
+  - name: email
+    type: string
+    description: 作成者のメールアドレス
+    default: your.email@example.com
+    required: true
+  
+  - name: database_type
+    type: string
+    description: データベースの種類
+    default: sqlite
+    required: true
+    choices:
+      - sqlite
+      - postgresql
+      - mysql
+  
+  - name: enable_ocr
+    type: bool
+    description: OCR機能を有効にする
+    default: true
+    required: false
+  
+  - name: supported_languages
+    type: list
+    description: サポートする言語
+    default:
+      - ja
+      - en
+    required: false
+

@@ -1,0 +1,70 @@
+id: {{ agent_name }}
+name: {{ agent_name | title }}
+version: 1.0.0
+description: {{ agent_description }}
+author: {{ author }}
+email: {{ email }}
+category: document
+protocols:
+  - mcp
+  - a2a
+  - agui
+
+inputs:
+  - name: pdf_path
+    type: string
+    description: Path to the PDF invoice file
+    required: true
+  
+  - name: output_format
+    type: string
+    description: Output format (json, csv, database)
+    required: false
+    default: json
+
+outputs:
+  - name: invoice_data
+    type: object
+    description: Extracted invoice data
+    schema:
+      type: object
+      properties:
+        invoice_number:
+          type: string
+        date:
+          type: string
+        total_amount:
+          type: number
+        items:
+          type: array
+          items:
+            type: object
+
+tools:
+  - name: pdf_reader
+    description: Read PDF files
+    type: builtin
+  
+  {% if enable_ocr %}
+  - name: ocr_engine
+    description: OCR engine for text extraction
+    type: external
+    config:
+      languages: {{ supported_languages }}
+  {% endif %}
+  
+  - name: data_extractor
+    description: Extract structured data from text
+    type: builtin
+  
+  - name: database_writer
+    description: Write data to database
+    type: external
+    config:
+      type: {{ database_type }}
+
+config:
+  timeout: 300
+  max_retries: 3
+  enable_logging: true
+

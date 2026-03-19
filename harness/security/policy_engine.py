@@ -37,6 +37,8 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from shared.auth_service.core.authorization import AuthorizationService
+
 
 logger = logging.getLogger(__name__)
 
@@ -181,13 +183,23 @@ class PolicyEngine:
     RBAC、ABAC、PBAC を統合した認可エンジン。
     """
 
-    def __init__(self) -> None:
-        """初期化."""
+    def __init__(
+        self,
+        authorization_service: AuthorizationService | None = None,
+    ) -> None:
+        """初期化.
+
+        Args:
+            authorization_service: DB バックエンドの認可サービス。
+                指定時は RBAC 判定で DB を参照する。
+                None の場合はハードコード辞書にフォールバック。
+        """
         self._policies: dict[str, Policy] = {}
-        self._role_permissions: dict[str, set[str]] = {}  # RBAC用
+        self._role_permissions: dict[str, set[str]] = {}  # RBAC用（フォールバック）
+        self._authz_service = authorization_service
         self._logger = logging.getLogger(__name__)
 
-        # デフォルトロール権限を設定
+        # デフォルトロール権限を設定（フォールバック用）
         self._setup_default_roles()
 
     def _setup_default_roles(self) -> None:
@@ -271,8 +283,36 @@ class PolicyEngine:
         return await handlers[mode](context)
 
     async def _authorize_rbac(self, context: AuthContext) -> AuthResult:
-        """RBAC による認可."""
+        """RBAC による認可.
+
+        AuthorizationService が注入されている場合は DB を参照する。
+        未注入の場合はハードコード辞書にフォールバック。
+        """
         role = context.subject.get("role", "guest")
+        user_id = context.subject.get("user_id")
+
+        # DB バックエンド（AuthorizationService 注入時）
+        if self._authz_service is not None and user_id:
+            try:
+                has_perm = await self._authz_service.has_permission(user_id, context.action)
+                if has_perm:
+                    return AuthResult(
+                        decision=AuthDecision.ALLOW,
+                        reason=f"DB RBAC: ユーザー '{user_id}' はアクション '{context.action}' の権限を持っています",
+                        mode=AuthMode.RBAC,
+                    )
+                return AuthResult(
+                    decision=AuthDecision.DENY,
+                    reason=f"DB RBAC: ユーザー '{user_id}' はアクション '{context.action}' の権限がありません",
+                    mode=AuthMode.RBAC,
+                )
+            except Exception:
+                self._logger.warning(
+                    "DB RBAC 参照失敗、ハードコード辞書にフォールバック",
+                    exc_info=True,
+                )
+
+        # フォールバック: ハードコード辞書
         permissions = self._role_permissions.get(role, set())
 
         # 全権限チェック

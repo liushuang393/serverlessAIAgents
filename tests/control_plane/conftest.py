@@ -50,8 +50,14 @@ class SyncASGIClient:
     def post(self, url: str, **kwargs: Any) -> Response:
         return self.request("POST", url, **kwargs)
 
+    def put(self, url: str, **kwargs: Any) -> Response:
+        return self.request("PUT", url, **kwargs)
+
     def patch(self, url: str, **kwargs: Any) -> Response:
         return self.request("PATCH", url, **kwargs)
+
+    def delete(self, url: str, **kwargs: Any) -> Response:
+        return self.request("DELETE", url, **kwargs)
 
     def close(self) -> None:
         self._loop.run_until_complete(self._client.aclose())

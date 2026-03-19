@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from kernel.engines.base import BaseEngine, EngineConfig
 
+from shared.services.unified_rag import UnifiedRAGService
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
-
-    from shared.services.unified_rag import UnifiedRAGService
 
 class RAGEngine(BaseEngine):
     """RAG拡張Agentエンジン."""

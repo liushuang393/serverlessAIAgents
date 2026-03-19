@@ -86,6 +86,15 @@ class SkillMetadata:
     confidence: float = 1.0
     usage_count: int = 0
 
+    # Claude Code CLI フィールド
+    allowed_tools: list[str] = field(default_factory=list)
+    context: str = ""
+    agent: bool = False
+    user_invocable: bool = False
+    disable_model_invocation: bool = False
+    argument_hint: str = ""
+    hooks: dict[str, Any] = field(default_factory=dict)
+
     # その他
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -107,6 +116,21 @@ class SkillMetadata:
         Raises:
             TypeError: data が辞書でない場合
         """
+        if not isinstance(data, dict):
+            msg = f"data must be a dict, got {type(data).__name__}"
+            raise TypeError(msg)
+
+        # Claude Code CLI fields (kebab-case and snake_case)
+        _CLI_FIELDS = {
+            "allowed-tools", "allowed_tools",
+            "context",
+            "agent",
+            "user-invocable", "user_invocable",
+            "disable-model-invocation", "disable_model_invocation",
+            "argument-hint", "argument_hint",
+            "hooks",
+        }
+
         known_fields = {
             "name",
             "description",
@@ -125,7 +149,7 @@ class SkillMetadata:
             "learned",
             "confidence",
             "usage_count",
-        }
+        } | _CLI_FIELDS
         extra = {k: v for k, v in data.items() if k not in known_fields}
 
         def _ensure_list(value: Any) -> list[str]:
@@ -153,6 +177,13 @@ class SkillMetadata:
             learned=bool(data.get("learned", False)),
             confidence=float(data.get("confidence", 1.0)),
             usage_count=int(data.get("usage_count", 0)),
+            allowed_tools=_ensure_list(data.get("allowed-tools", data.get("allowed_tools"))),
+            context=str(data.get("context", "")),
+            agent=bool(data.get("agent", False)),
+            user_invocable=bool(data.get("user-invocable", data.get("user_invocable", False))),
+            disable_model_invocation=bool(data.get("disable-model-invocation", data.get("disable_model_invocation", False))),
+            argument_hint=str(data.get("argument-hint", data.get("argument_hint", ""))),
+            hooks=dict(data.get("hooks", {})),
             extra=extra,
         )
 
@@ -192,6 +223,21 @@ class SkillMetadata:
             result["created_at"] = self.created_at
         if self.usage_count > 0:
             result["usage_count"] = self.usage_count
+        # Claude Code CLI fields (kebab-case output)
+        if self.allowed_tools:
+            result["allowed-tools"] = self.allowed_tools
+        if self.context:
+            result["context"] = self.context
+        if self.agent:
+            result["agent"] = self.agent
+        if self.user_invocable:
+            result["user-invocable"] = self.user_invocable
+        if self.disable_model_invocation:
+            result["disable-model-invocation"] = self.disable_model_invocation
+        if self.argument_hint:
+            result["argument-hint"] = self.argument_hint
+        if self.hooks:
+            result["hooks"] = self.hooks
         # extra フィールドをマージ
         result.update(self.extra)
         return result

@@ -33,6 +33,12 @@ def _lazy(module_path: str, name: str) -> Any:
     return getattr(mod, name)
 
 
+def _get_auth_context_type() -> type:
+    """AuthContext 型を遅延取得."""
+    from harness.security.policy_engine import AuthContext
+    return AuthContext
+
+
 class GovernanceDecision(str, Enum):
     """ガバナンス判定."""
 
@@ -44,7 +50,9 @@ class GovernanceDecision(str, Enum):
 class ToolExecutionContext(BaseModel):
     """ツール実行コンテキスト."""
 
-    auth_context: AuthContext | None = Field(default=None, description="認証コンテキスト")
+    model_config = {"arbitrary_types_allowed": True}
+
+    auth_context: Any | None = Field(default=None, description="認証コンテキスト")
     run_id: str | None = Field(default=None, description="実行ID")
     trace_id: str | None = Field(default=None, description="トレースID")
     thread_id: str | None = Field(default=None, description="スレッドID")
@@ -59,7 +67,7 @@ class GovernanceResult(BaseModel):
 
     decision: GovernanceDecision = Field(default=GovernanceDecision.DENY)
     reason: str = Field(default="")
-    auth_result: AuthResult | None = Field(default=None)
+    auth_result: Any | None = Field(default=None)
     missing_permissions: list[str] = Field(default_factory=list)
     requires_approval: bool = Field(default=False)
     warnings: list[str] = Field(default_factory=list)

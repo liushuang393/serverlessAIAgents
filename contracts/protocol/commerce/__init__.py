@@ -1,9 +1,9 @@
-"""Compatibility exports for the commerce domain surface."""
+"""Commerce domain public surface (contracts 層の正規配置)."""
 
-from domain.commerce import (
-    Cart,
-    CartItem,
-    DirectOffer,
+from contracts.protocol.commerce.interfaces import (
+    FlowContext,
+    FlowStatus,
+    FlowStepType,
     ICart,
     ICommerceAI,
     ICommerceFlow,
@@ -15,6 +15,11 @@ from domain.commerce import (
     IPayment,
     IProduct,
     ITransaction,
+)
+from contracts.protocol.commerce.models import (
+    Cart,
+    CartItem,
+    DirectOffer,
     IntentConfidence,
     IntentType,
     Offer,
@@ -29,9 +34,10 @@ from domain.commerce import (
 
 
 __all__ = [
-    "Cart",
-    "CartItem",
-    "DirectOffer",
+    # interfaces
+    "FlowContext",
+    "FlowStatus",
+    "FlowStepType",
     "ICart",
     "ICommerceAI",
     "ICommerceFlow",
@@ -43,6 +49,10 @@ __all__ = [
     "IPayment",
     "IProduct",
     "ITransaction",
+    # models
+    "Cart",
+    "CartItem",
+    "DirectOffer",
     "IntentConfidence",
     "IntentType",
     "Offer",

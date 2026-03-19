@@ -118,6 +118,34 @@ class SkillLoader:
         self._logger.info(f"Loaded {len(skills)} skills from {directory}")
         return skills
 
+    def load_default_paths(self) -> list[Skill]:
+        """デフォルトパスから Skill を読み込み.
+
+        builtin skills ディレクトリおよびユーザーの .claude/skills/ を検索する。
+
+        Returns:
+            読み込まれた Skill リスト
+        """
+        skills: list[Skill] = []
+
+        # 1. builtin skills
+        builtin_dir = Path(__file__).resolve().parent / "builtin"
+        if builtin_dir.exists():
+            skills.extend(self.load_directory(builtin_dir, recursive=False))
+
+        # 2. User home ~/.claude/skills/
+        home_skills = Path.home() / ".claude" / "skills"
+        if home_skills.exists():
+            skills.extend(self.load_directory(home_skills, recursive=False))
+
+        # 3. Project .claude/skills/
+        cwd_skills = Path.cwd() / ".claude" / "skills"
+        if cwd_skills.exists():
+            skills.extend(self.load_directory(cwd_skills, recursive=False))
+
+        self._logger.info(f"load_default_paths: found {len(skills)} skills total")
+        return skills
+
     def resolve_dependencies(self, skill: Skill) -> list[Skill]:
         """Skill の依存関係を解決.
 

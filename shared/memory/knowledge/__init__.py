@@ -11,16 +11,31 @@ from shared.memory.knowledge.types import KnowledgeEntry, KnowledgeSource
 _global_manager: KnowledgeManager | None = None
 
 
-def get_knowledge_manager() -> KnowledgeManager:
-    """グローバル KnowledgeManager を取得（未作成なら自動生成）."""
+def get_knowledge_manager(*, _new_instance: bool = False) -> KnowledgeManager:
+    """グローバル KnowledgeManager を取得（未作成なら自動生成）.
+
+    Args:
+        _new_instance: True の場合、新しいインスタンスを生成して返す（テスト用）。
+    """
     global _global_manager  # noqa: PLW0603
+    if _new_instance:
+        return KnowledgeManager()
     if _global_manager is None:
         _global_manager = KnowledgeManager()
     return _global_manager
 
 
-def get_knowledge_store() -> InMemoryKnowledgeStore:
-    """デフォルトの InMemoryKnowledgeStore を返すファクトリ."""
+def get_knowledge_store(*, backend: str = "memory") -> InMemoryKnowledgeStore:
+    """KnowledgeStore を返すファクトリ.
+
+    Args:
+        backend: バックエンド種別。"memory" または "auto"。
+                 "auto" の場合、memvid が利用可能ならそちらを使用。
+    """
+    if backend == "auto" and is_memvid_available():
+        from shared.memory.knowledge.memvid_store import MemvidKnowledgeStore
+
+        return MemvidKnowledgeStore()  # type: ignore[return-value]
     return InMemoryKnowledgeStore()
 
 

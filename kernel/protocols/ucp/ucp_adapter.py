@@ -15,12 +15,12 @@ import logging
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from domain.commerce.interfaces import (
+from contracts.protocol.commerce.interfaces import (
     IDealRecommender,
     IIntentAnalyzer,
     IOfferProvider,
 )
-from domain.commerce.models import (
+from contracts.protocol.commerce.models import (
     DirectOffer,
     IntentType,
     Offer,
