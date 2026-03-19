@@ -6,6 +6,7 @@ from contracts.protocol.commerce.models.offer import DirectOffer, Offer, OfferTy
 from contracts.protocol.commerce.models.product import Product, ProductCategory
 from contracts.protocol.commerce.models.transaction import PaymentMethod, Transaction, TransactionStatus
 
+
 __all__ = [
     "Cart",
     "CartItem",

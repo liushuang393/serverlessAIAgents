@@ -4,11 +4,9 @@
 Protocol ベースのインターフェースを contracts 層に集約する。
 """
 
-from contracts.interfaces.publish import (
-    ICodeGenerator,
-    IConfigManager,
-    IDeployExecutor,
-)
+from contracts.interfaces.code_generator import ICodeGenerator
+from contracts.interfaces.config_manager import IConfigManager
+from contracts.interfaces.deploy_executor import IDeployExecutor
 
 
 __all__ = [

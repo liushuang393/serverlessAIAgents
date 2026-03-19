@@ -3,7 +3,14 @@
 from contracts.protocol.commerce.interfaces.agents import IDealRecommender, IIntentAnalyzer, IOfferProvider
 from contracts.protocol.commerce.interfaces.ai import ICommerceAI
 from contracts.protocol.commerce.interfaces.core import ICart, IOffer, IPayment, IProduct, ITransaction
-from contracts.protocol.commerce.interfaces.flow import FlowContext, FlowStatus, FlowStepType, ICommerceFlow, ICommerceStep
+from contracts.protocol.commerce.interfaces.flow import (
+    FlowContext,
+    FlowStatus,
+    FlowStepType,
+    ICommerceFlow,
+    ICommerceStep,
+)
+
 
 __all__ = [
     "FlowContext",

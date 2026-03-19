@@ -34,6 +34,10 @@ from contracts.protocol.commerce.models import (
 
 
 __all__ = [
+    # models
+    "Cart",
+    "CartItem",
+    "DirectOffer",
     # interfaces
     "FlowContext",
     "FlowStatus",
@@ -49,10 +53,6 @@ __all__ = [
     "IPayment",
     "IProduct",
     "ITransaction",
-    # models
-    "Cart",
-    "CartItem",
-    "DirectOffer",
     "IntentConfidence",
     "IntentType",
     "Offer",

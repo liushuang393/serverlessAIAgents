@@ -8,13 +8,10 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-import pytest
-
 from harness.security.policy_engine import (
     AuthContext,
     AuthDecision,
     AuthMode,
-    AuthResult,
     Policy,
     PolicyEngine,
 )

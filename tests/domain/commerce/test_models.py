@@ -6,17 +6,10 @@ contracts/protocol/commerce から re-export されたモデルの
 
 from __future__ import annotations
 
-import pytest
-
 from domain.commerce.models import (
     Cart,
-    CartItem,
-    DirectOffer,
     IntentConfidence,
     IntentType,
-    Offer,
-    OfferType,
-    PaymentMethod,
     Product,
     ProductCategory,
     PurchaseIntent,
@@ -111,14 +104,14 @@ class TestReexportIntegrity:
 
     def test_interfaces_importable_from_domain(self) -> None:
         """domain.commerce からインターフェースをインポートできる."""
-        from domain.commerce import IProduct, ICart, ITransaction
+        from domain.commerce import ICart, IProduct
 
         assert IProduct is not None
         assert ICart is not None
 
     def test_interfaces_importable_from_contracts(self) -> None:
         """contracts.protocol.commerce からインターフェースをインポートできる."""
-        from contracts.protocol.commerce import IProduct, ICart, ITransaction
+        from contracts.protocol.commerce import IProduct
 
         assert IProduct is not None
 

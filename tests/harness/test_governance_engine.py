@@ -5,8 +5,6 @@ GovernanceEngine のインポートと基本操作をテスト。
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestGovernanceEngineImport:
     """GovernanceEngine のインポートテスト."""

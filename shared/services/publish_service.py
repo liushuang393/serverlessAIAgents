@@ -25,6 +25,7 @@ from contracts.core import (
     WorkflowDefinition,
 )
 
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
     from io import BytesIO

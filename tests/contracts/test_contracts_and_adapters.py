@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from contracts import ApprovalRequest as FacadeApprovalRequest
-from kernel.core.flow_definition import AgentDefinition, FlowDefinition
-from harness.approval.types import ApprovalRequest as LegacyApprovalRequest
-from infrastructure.llm.providers.tool_executor import ToolResult as LegacyToolResult
 from contracts import ApprovalRequest as ContractApprovalRequest
+from contracts import ApprovalRequest as FacadeApprovalRequest
 from contracts import FlowDefinition as ContractFlowDefinition
 from contracts import PluginBinding, PluginDescriptor, PluginRuntimeAssessment
 from contracts import ToolResult as ContractToolResult
+from harness.approval.types import ApprovalRequest as LegacyApprovalRequest
+from infrastructure.llm.providers.tool_executor import ToolResult as LegacyToolResult
+from kernel.core.flow_definition import AgentDefinition, FlowDefinition
 from kernel.tools.unified_tool import ToolResult as LegacyUnifiedToolResult
 from kernel.tools.unified_tool import ToolStatus, ToolType
 

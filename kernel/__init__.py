@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
+    from kernel.agents.resilient_agent import ResilientAgent
     from kernel.events import EventSink, EventType, NoOpEventSink
     from kernel.executor import ExecutorAgent, ExecutorConfig, StepResult
     from kernel.flow import (
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
         FlowBuilder,
         FlowContext,
         FlowNode,
+        FlowWrapper,
         GateNode,
         ParallelNode,
         ProgressTracker,
@@ -41,72 +43,68 @@ if TYPE_CHECKING:
     from kernel.reviewer import ResultVerifier, VerificationResult, VerificationStrategy
     from kernel.router import Intent, IntentCategory, IntentRouter, RouterConfig
     from kernel.runtime import RuntimeContext, get_runtime_context, set_runtime_context, use_runtime_context
-    from kernel.agents.resilient_agent import ResilientAgent
-    from control_plane.api.websocket_hub import WebSocketHub
     from kernel.tools import KernelToolExecutor
 
 
 __all__ = [
-    # agents
-    "ResilientAgent",
-    # websocket
-    "WebSocketHub",
+    # flow
+    "AgentNode",
+    # reporter
+    "ChartData",
     # events
     "EventSink",
     "EventType",
-    "NoOpEventSink",
+    # planner
+    "ExecutionPlan",
+    "ExecutiveSummary",
     # executor
     "ExecutorAgent",
     "ExecutorConfig",
-    "StepResult",
-    # flow
-    "AgentNode",
     "Flow",
-    "FlowWrapper",
     "FlowBuilder",
     "FlowContext",
     "FlowNode",
+    "FlowWrapper",
     "GateNode",
-    "ParallelNode",
-    "ProgressTracker",
-    "ReviewNode",
-    "create_flow",
-    # planner
-    "ExecutionPlan",
-    "PlannerAgent",
-    "PlannerConfig",
-    "PlanStep",
-    "StepStatus",
-    "StepType",
-    # plugins
-    "KernelPluginRegistry",
-    # reporter
-    "ChartData",
-    "ExecutiveSummary",
-    "OutputFormat",
-    "ReportBuilder",
-    "ReportSection",
-    "SectionedReportBuilder",
-    "SimpleReportBuilder",
-    "create_bar_chart",
-    "create_line_chart",
-    "create_pie_chart",
-    # reviewer
-    "ResultVerifier",
-    "VerificationResult",
-    "VerificationStrategy",
     # router
     "Intent",
     "IntentCategory",
     "IntentRouter",
+    # plugins
+    "KernelPluginRegistry",
+    # tools
+    "KernelToolExecutor",
+    "NoOpEventSink",
+    "OutputFormat",
+    "ParallelNode",
+    "PlanStep",
+    "PlannerAgent",
+    "PlannerConfig",
+    "ProgressTracker",
+    "ReportBuilder",
+    "ReportSection",
+    # agents
+    "ResilientAgent",
+    # reviewer
+    "ResultVerifier",
+    "ReviewNode",
     "RouterConfig",
     # runtime
     "RuntimeContext",
+    "SectionedReportBuilder",
+    "SimpleReportBuilder",
+    "StepResult",
+    "StepStatus",
+    "StepType",
+    "VerificationResult",
+    "VerificationStrategy",
+    "create_bar_chart",
+    "create_flow",
+    "create_line_chart",
+    "create_pie_chart",
     "get_runtime_context",
     "set_runtime_context",
     "use_runtime_context",
-    # tools
-    "KernelToolExecutor",
 ]
 
 
@@ -161,7 +159,6 @@ def __getattr__(name: str) -> object:
         "KernelToolExecutor": "kernel.tools",
         # agents
         "ResilientAgent": "kernel.agents.resilient_agent",
-        "WebSocketHub": "control_plane.api.websocket_hub",
         # LLM ファクトリ
         "get_llm": "infrastructure.providers.llm_provider",
         # デコレーター

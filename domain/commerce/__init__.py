@@ -17,13 +17,13 @@ from contracts.protocol.commerce import (
     ICommerceStep,
     IDealRecommender,
     IIntentAnalyzer,
+    IntentConfidence,
+    IntentType,
     IOffer,
     IOfferProvider,
     IPayment,
     IProduct,
     ITransaction,
-    IntentConfidence,
-    IntentType,
     Offer,
     OfferType,
     PaymentMethod,
@@ -36,6 +36,10 @@ from contracts.protocol.commerce import (
 
 
 __all__ = [
+    # models
+    "Cart",
+    "CartItem",
+    "DirectOffer",
     # interfaces
     "FlowContext",
     "FlowStatus",
@@ -51,10 +55,6 @@ __all__ = [
     "IPayment",
     "IProduct",
     "ITransaction",
-    # models
-    "Cart",
-    "CartItem",
-    "DirectOffer",
     "IntentConfidence",
     "IntentType",
     "Offer",

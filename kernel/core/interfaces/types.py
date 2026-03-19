@@ -4,7 +4,7 @@
 このファイルは後方互換のため contracts.core.types から全シンボルを re-export する。
 """
 
-from contracts.core.types import (  # noqa: F401
+from contracts.core.types import (
     CodeGenOptions,
     CodeOutputType,
     ConfigField,
@@ -22,6 +22,7 @@ from contracts.core.types import (  # noqa: F401
     ValidationResult,
     WorkflowDefinition,
 )
+
 
 __all__ = [
     "CodeGenOptions",

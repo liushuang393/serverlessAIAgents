@@ -4,6 +4,7 @@
 このファイルは後方互換のため contracts.core.workflow_runner から re-export する。
 """
 
-from contracts.core.workflow_runner import IWorkflowRunner  # noqa: F401
+from contracts.core.workflow_runner import IWorkflowRunner
+
 
 __all__ = ["IWorkflowRunner"]

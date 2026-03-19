@@ -58,7 +58,17 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from kernel import WebSocketHub, get_llm
+from control_plane.api.websocket_hub import WebSocketHub
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from kernel import get_llm
+from kernel.skills import (
+    ChatBotSkill,
+    ConversationExportSkill,
+    ExportFormat,
+    RiskLevel,
+    create_skill_gateway,
+)
+from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 from shared.channels import (
     DiscordAdapter,
     MessageGateway,
@@ -68,15 +78,6 @@ from shared.channels import (
     TelegramAdapter,
     WhatsAppAdapter,
 )
-from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
-from kernel.skills import (
-    ChatBotSkill,
-    ConversationExportSkill,
-    ExportFormat,
-    RiskLevel,
-    create_skill_gateway,
-)
-from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 # 配置日志
