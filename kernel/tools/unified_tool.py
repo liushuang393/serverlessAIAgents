@@ -35,6 +35,8 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
+from contracts.tool import ToolCallStatus as CanonicalToolCallStatus
+from contracts.tool import ToolResult as CanonicalToolResult
 from pydantic import BaseModel, Field
 
 
@@ -103,6 +105,60 @@ class ToolResult:
             "timestamp": self.timestamp.isoformat(),
         }
 
+    def to_contract(
+        self,
+        *,
+        tool_call_id: str,
+        name: str,
+        trace_id: str | None = None,
+    ) -> CanonicalToolResult:
+        """Canonical ToolResult 契約へ変換する."""
+        status_map = {
+            ToolStatus.SUCCESS: CanonicalToolCallStatus.SUCCESS,
+            ToolStatus.FAILED: CanonicalToolCallStatus.FAILED,
+            ToolStatus.TIMEOUT: CanonicalToolCallStatus.TIMEOUT,
+            ToolStatus.NOT_FOUND: CanonicalToolCallStatus.FAILED,
+            ToolStatus.PERMISSION_DENIED: CanonicalToolCallStatus.FAILED,
+        }
+        content = self.output if isinstance(self.output, str) else str(self.output)
+        return CanonicalToolResult(
+            tool_call_id=tool_call_id,
+            name=name,
+            content=content if self.success else "",
+            status=status_map.get(self.status, CanonicalToolCallStatus.FAILED),
+            execution_time_ms=self.duration_ms,
+            error=self.error,
+            trace_id=trace_id,
+            metadata={
+                **self.metadata,
+                "legacy_tool_uri": self.tool_uri,
+                "legacy_tool_type": self.tool_type.value,
+                "legacy_success": self.success,
+                "legacy_output": self.output,
+            },
+        )
+
+    @classmethod
+    def from_contract(
+        cls,
+        contract: CanonicalToolResult,
+        *,
+        tool_uri: str | None = None,
+        tool_type: ToolType = ToolType.CUSTOM,
+    ) -> ToolResult:
+        """Canonical ToolResult 契約から legacy ToolResult を復元する."""
+        output = contract.metadata.get("legacy_output", contract.content)
+        return cls(
+            success=contract.status == CanonicalToolCallStatus.SUCCESS and contract.error is None,
+            status=_legacy_status_from_contract(contract.status),
+            tool_uri=tool_uri or str(contract.metadata.get("legacy_tool_uri", contract.name)),
+            tool_type=tool_type,
+            output=output,
+            error=contract.error,
+            duration_ms=contract.execution_time_ms,
+            metadata=dict(contract.metadata),
+        )
+
 
 class UnifiedToolDefinition(BaseModel):
     """統一ツール定義.
@@ -129,6 +185,18 @@ class UnifiedToolDefinition(BaseModel):
 
 # 後方互換エイリアス: 旧名 ToolDefinition を維持
 ToolDefinition = UnifiedToolDefinition
+
+
+def _legacy_status_from_contract(status: CanonicalToolCallStatus) -> ToolStatus:
+    mapping = {
+        CanonicalToolCallStatus.SUCCESS: ToolStatus.SUCCESS,
+        CanonicalToolCallStatus.FAILED: ToolStatus.FAILED,
+        CanonicalToolCallStatus.TIMEOUT: ToolStatus.TIMEOUT,
+        CanonicalToolCallStatus.PENDING: ToolStatus.FAILED,
+        CanonicalToolCallStatus.RUNNING: ToolStatus.FAILED,
+        CanonicalToolCallStatus.FALLBACK: ToolStatus.SUCCESS,
+    }
+    return mapping.get(status, ToolStatus.FAILED)
 
 
 class ToolProvider(ABC):

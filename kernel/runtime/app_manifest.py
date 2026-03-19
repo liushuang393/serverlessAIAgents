@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse, urlunparse
-
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -68,45 +66,45 @@ def resolve_app_runtime(
     """Resolve manifest runtime networking with optional env overrides."""
     resolved_env = env if env is not None else {}
     manifest_path = Path(config_path).resolve()
-    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    from shared.config.manifest import load_app_manifest  # noqa: E402 — lazy to avoid circular import
+    manifest = load_app_manifest(manifest_path)
 
-    ports_payload = _as_dict(payload.get("ports"))
-    runtime_payload = _as_dict(payload.get("runtime"))
-    urls_payload = _as_dict(runtime_payload.get("urls"))
-    hosts_payload = _as_dict(runtime_payload.get("hosts"))
-
-    api_port = _resolve_port(ports_payload.get("api"), env=resolved_env, env_key=backend_port_env)
-    frontend_port = _resolve_port(ports_payload.get("frontend"), env=resolved_env, env_key=frontend_port_env)
-    db_port = _clean_port(ports_payload.get("db"))
-    redis_port = _clean_port(ports_payload.get("redis"))
+    api_port = _resolve_port(manifest.ports.api, env=resolved_env, env_key=backend_port_env)
+    frontend_port = _resolve_port(
+        manifest.ports.frontend,
+        env=resolved_env,
+        env_key=frontend_port_env,
+    )
+    db_port = _clean_port(manifest.ports.db)
+    redis_port = _clean_port(manifest.ports.redis)
 
     backend_url = _resolve_url(
-        urls_payload.get("backend"),
+        manifest.runtime.urls.backend,
         env=resolved_env,
         env_key=backend_url_env,
         port_override=api_port,
     )
     frontend_url = _resolve_url(
-        urls_payload.get("frontend"),
+        manifest.runtime.urls.frontend,
         env=resolved_env,
         env_key=frontend_url_env,
         port_override=frontend_port,
     )
     health_url = _resolve_url(
-        urls_payload.get("health"),
+        manifest.runtime.urls.health,
         env=resolved_env,
         env_key=health_url_env,
         port_override=api_port,
     )
     database_url = _resolve_url(
-        urls_payload.get("database"),
+        manifest.runtime.urls.database,
         env=resolved_env,
         env_key=database_url_env,
         port_override=db_port,
     )
 
     return ResolvedAppRuntime(
-        app_name=_clean_text(payload.get("name")) or manifest_path.parent.name,
+        app_name=manifest.name,
         config_path=manifest_path,
         ports=AppRuntimePorts(
             api=api_port,
@@ -116,13 +114,13 @@ def resolve_app_runtime(
         ),
         hosts=AppRuntimeHosts(
             backend=_resolve_host(
-                hosts_payload.get("backend"),
+                manifest.runtime.hosts.backend,
                 env=resolved_env,
                 env_key=backend_host_env,
                 default="0.0.0.0" if api_port is not None else None,
             ),
             frontend=_resolve_host(
-                hosts_payload.get("frontend"),
+                manifest.runtime.hosts.frontend,
                 env=resolved_env,
                 env_key=frontend_host_env,
                 default="0.0.0.0" if frontend_port is not None else None,
@@ -135,9 +133,6 @@ def resolve_app_runtime(
             database=database_url,
         ),
     )
-
-
-
 
 def _resolve_host(
     value: object,
@@ -197,12 +192,6 @@ def _replace_url_port(url: str, port: int) -> str:
             userinfo = f"{userinfo}:{parsed.password}"
         netloc = f"{userinfo}@{netloc}"
     return urlunparse(parsed._replace(netloc=netloc))
-
-
-def _as_dict(value: object) -> dict[str, object]:
-    return value if isinstance(value, dict) else {}
-
-
 def _clean_text(value: object) -> str | None:
     if not isinstance(value, str):
         return None

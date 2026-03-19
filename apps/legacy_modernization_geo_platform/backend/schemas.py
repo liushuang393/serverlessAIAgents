@@ -6,7 +6,11 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from pydantic import BaseModel, Field
+from pydantic import model_validator
+
+from kernel.skills.gateway import RiskLevel
 
 
 def _utcnow() -> datetime:
@@ -90,13 +94,70 @@ class TaskCommandRequest(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
-class ApprovalRequest(BaseModel):
-    """Approval request payload."""
+class ApprovalRequest(ContractApprovalRequest):
+    """Approval request payload.
+
+    Keeps the legacy GEO surface while reusing the canonical approval contract.
+    """
 
     approved: bool = True
     reviewer_name: str = "operator"
     comment: str | None = None
     action: ApprovalStatus | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_payload(cls, value: object) -> object:
+        """Map legacy GEO fields to the canonical approval contract."""
+        if not isinstance(value, dict):
+            return value
+
+        payload = dict(value)
+        approved = bool(payload.get("approved", True))
+        reviewer_name = str(payload.get("reviewer_name", "operator")).strip() or "operator"
+        comment = payload.get("comment")
+        comment_text = str(comment).strip() if comment is not None else ""
+
+        action_raw = payload.get("action")
+        if action_raw is None:
+            action = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
+        elif isinstance(action_raw, ApprovalStatus):
+            action = action_raw
+        else:
+            action = ApprovalStatus(str(action_raw))
+
+        payload["approved"] = approved
+        payload["reviewer_name"] = reviewer_name
+        payload["comment"] = comment_text or None
+        payload["action"] = action
+        payload["requester"] = str(payload.get("requester") or reviewer_name).strip() or reviewer_name
+        payload["priority"] = str(payload.get("priority") or _approval_priority(action)).strip() or _approval_priority(
+            action
+        )
+        payload["reason"] = str(payload.get("reason") or comment_text or _approval_reason(action, reviewer_name)).strip()
+        if not payload["reason"]:
+            payload["reason"] = _approval_reason(action, reviewer_name)
+        existing_context = payload.get("context")
+        context = existing_context if isinstance(existing_context, dict) else {}
+        payload["context"] = {
+            **context,
+            "approved": approved,
+            "reviewer_name": reviewer_name,
+            "comment": comment_text or None,
+            "action": action.value,
+            "risk_level": _approval_risk_level(action).value,
+        }
+        return payload
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to the legacy GEO approval shape."""
+        return {
+            **self.model_dump(mode="json"),
+            "approved": self.approved,
+            "reviewer_name": self.reviewer_name,
+            "comment": self.comment,
+            "action": self.action.value if self.action is not None else None,
+        }
 
 
 class ArtifactMeta(BaseModel):
@@ -362,3 +423,26 @@ class TaskStateResponse(BaseModel):
     report: ReportPayload | None = None
     published_pages: list[PublishedPageRecord] = Field(default_factory=list)
     error_message: str | None = None
+
+
+def _approval_priority(action: ApprovalStatus) -> str:
+    """Map approval outcome to a canonical priority string."""
+    if action == ApprovalStatus.REJECTED:
+        return "high"
+    if action == ApprovalStatus.REWRITE:
+        return "normal"
+    return "normal"
+
+
+def _approval_reason(action: ApprovalStatus, reviewer_name: str) -> str:
+    """Build a stable default reason for legacy approval requests."""
+    return f"Approval decision {action.value} by {reviewer_name}"
+
+
+def _approval_risk_level(action: ApprovalStatus) -> RiskLevel:
+    """Map approval outcome to a risk level used by legacy GEO reporting."""
+    if action == ApprovalStatus.REJECTED:
+        return RiskLevel.HIGH
+    if action == ApprovalStatus.REWRITE:
+        return RiskLevel.MEDIUM
+    return RiskLevel.LOW

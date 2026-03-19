@@ -22,7 +22,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -85,6 +84,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from infrastructure.database import DatabaseConfig, DatabaseManager
 from infrastructure.observability.startup import log_startup_info
+from shared.config.manifest import load_app_manifest_dict
 
 
 logging.basicConfig(level=logging.INFO)
@@ -106,8 +106,8 @@ def _load_app_config() -> dict[str, Any]:
     """
     if _APP_CONFIG_PATH.is_file():
         try:
-            return json.loads(_APP_CONFIG_PATH.read_text("utf-8"))
-        except (json.JSONDecodeError, OSError):
+            return load_app_manifest_dict(_APP_CONFIG_PATH)
+        except (OSError, ValueError):
             return {}
     return {}
 

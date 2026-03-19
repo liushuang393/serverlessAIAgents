@@ -39,7 +39,7 @@ def test_plugin_manifest_validation() -> None:
 def test_plugin_manifests_kernel_compatibility_matches_v2() -> None:
     """公式 plugin manifest の kernel 互換が 2.0.0 以上であること."""
     root = Path.cwd()
-    manifests = sorted((root / "plugins").glob("*/plugin_manifest.json"))
+    manifests = sorted((root / "kernel" / "plugins" / "packs").glob("*/plugin_manifest.json"))
     assert len(manifests) >= 1
 
     for path in manifests:

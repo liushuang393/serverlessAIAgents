@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 
 def _disable_auth(monkeypatch: Any) -> None:
-    monkeypatch.setattr(backend_app, "_is_auth_required", lambda: False)
-    monkeypatch.setattr(backend_app, "_should_protect_http_path", lambda _path: False)
+    monkeypatch.setattr(backend_app._auth_guard, "is_auth_required", lambda: False)
+    monkeypatch.setattr(backend_app._auth_guard, "should_protect_http_path", lambda _path: False)
 
 
 def test_hitl_returns_501_in_cma_cli_backend(monkeypatch: Any) -> None:

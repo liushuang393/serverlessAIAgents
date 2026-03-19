@@ -17,6 +17,7 @@ from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
 from kernel.protocols.mcp_client import MCPClient
 from kernel.protocols.mcp_config import MCPConfig
 from kernel.skills.gateway import SkillGateway
+from shared.config.manifest import load_app_manifest_dict
 
 
 if TYPE_CHECKING:
@@ -41,6 +42,8 @@ def test_load_app_config_reads_utf8_file(tmp_path: Path) -> None:
 
     assert app_config is not None
     assert app_config["contracts"] == {"rag": {"enabled": True}}
+    assert app_config["name"] == "faq_system"
+    assert app_config["metadata"]["config_path"] == str(config_path.resolve())
 
 
 def test_load_app_config_reads_shift_jis_file(tmp_path: Path) -> None:
@@ -53,7 +56,39 @@ def test_load_app_config_reads_shift_jis_file(tmp_path: Path) -> None:
 
     app_config = bootstrapper._load_app_config(apps_dir=str(tmp_path))
 
-    assert app_config == payload
+    assert app_config is not None
+    assert app_config["name"] == "faq_system"
+    assert app_config["display_name"] == "FAQシステム"
+    assert app_config["contracts"] == {"skills": {"auto_install": True}}
+    assert app_config["metadata"]["config_path"] == str(config_path.resolve())
+
+
+def test_load_app_config_uses_canonical_manifest_loader(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """bootstrapper が canonical text loader を経由して app_config を読むことを確認する."""
+    config_path = tmp_path / "faq_system" / "app_config.json"
+    _write_app_config(config_path, {"contracts": {"rag": {"enabled": True}}}, "utf-8")
+
+    seen: list[tuple[str, Path]] = []
+
+    def _fake_load_app_manifest_dict_text(text: str, *, manifest_path: Path) -> dict[str, object]:
+        seen.append((text, manifest_path))
+        return {"name": "faq_system", "contracts": {"rag": {"enabled": True}}}
+
+    monkeypatch.setattr(
+        "control_plane.bootstrap.app_bootstrapper.load_app_manifest_dict_text",
+        _fake_load_app_manifest_dict_text,
+    )
+
+    bootstrapper = AppCapabilityBootstrapper(app_name="faq_system")
+    app_config = bootstrapper._load_app_config(apps_dir=str(tmp_path))
+
+    assert app_config == {"name": "faq_system", "contracts": {"rag": {"enabled": True}}}
+    assert len(seen) == 1
+    assert '"rag"' in seen[0][0]
+    assert seen[0][1] == config_path.resolve()
 
 
 def test_load_app_config_returns_none_when_missing(tmp_path: Path) -> None:
@@ -64,6 +99,22 @@ def test_load_app_config_returns_none_when_missing(tmp_path: Path) -> None:
     app_config = bootstrapper._load_app_config(apps_dir=str(tmp_path))
 
     assert app_config is None
+
+
+def test_load_app_config_matches_canonical_manifest_dict(tmp_path: Path) -> None:
+    """bootstrapper の戻り値は canonical manifest dict と一致する."""
+    config_path = tmp_path / "faq_system" / "app_config.json"
+    payload = {
+        "runtime": {"commands": {"start": "python -m faq"}},
+        "blueprint": {"engine_pattern": "pipeline"},
+        "plugin_bindings": [{"id": "Official.Test-Pack", "version": "1.0.0"}],
+        "visibility": {"mode": "private"},
+    }
+    _write_app_config(config_path, payload, "utf-8")
+
+    bootstrapper = AppCapabilityBootstrapper(app_name="faq_system")
+
+    assert bootstrapper._load_app_config(apps_dir=str(tmp_path)) == load_app_manifest_dict(config_path)
 
 
 @pytest.mark.asyncio

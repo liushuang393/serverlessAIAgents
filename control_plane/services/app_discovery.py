@@ -23,6 +23,7 @@ from infrastructure.llm.contracts import (
     resolve_known_model_ids,
     resolve_known_providers,
 )
+from shared.config.manifest import load_app_manifest
 from control_plane.schemas.app_config_schemas import (
     AppConfig,
     BlueprintConfig,
@@ -365,8 +366,8 @@ class AppDiscoveryService:
         """1 つの app_config.json を読み込み・検証・登録."""
         dir_name = config_path.parent.name
         try:
-            raw = json.loads(config_path.read_text("utf-8"))
-            config = AppConfig.model_validate(raw)
+            manifest = load_app_manifest(config_path)
+            config = AppConfig.model_validate(manifest.model_dump(mode="python"))
             self._validate_llm_contracts(config)
             self._registry[config.name] = config
             self._config_paths[config.name] = config_path

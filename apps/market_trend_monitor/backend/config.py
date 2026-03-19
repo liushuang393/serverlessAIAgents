@@ -3,11 +3,12 @@
 アプリケーション全体の設定を管理します。
 """
 
-import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
+
+from shared.config.manifest import load_app_manifest_dict
 
 
 def _parse_port(value: str | int | None, default: int) -> int:
@@ -30,15 +31,12 @@ def _parse_port(value: str | int | None, default: int) -> int:
 def _load_app_config() -> dict[str, object]:
     """アプリ共通設定ファイルを読み込む."""
     config_path = Path(__file__).resolve().parents[1] / "app_config.json"
-
-    try:
-        raw = config_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
+    if not config_path.is_file():
         return {}
 
     try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
+        parsed = load_app_manifest_dict(config_path)
+    except (OSError, ValueError):
         return {}
 
     return parsed if isinstance(parsed, dict) else {}

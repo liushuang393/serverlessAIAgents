@@ -95,9 +95,12 @@ class MigrationRequest(BaseModel):
     migration_type: str = "cobol-to-java"
 
 
-class ApprovalRequest(BaseModel):
+class ApprovalDecisionRequest(BaseModel):
     approved: bool
     comment: str | None = None
+
+
+ApprovalRequest = ApprovalDecisionRequest
 
 
 async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: dict):
@@ -192,7 +195,7 @@ async def get_approvals(task_id: str):
 
 
 @app.post("/api/approvals/{task_id}/{request_id}")
-async def submit_approval(task_id: str, request_id: str, approval: ApprovalRequest):
+async def submit_approval(task_id: str, request_id: str, approval: ApprovalDecisionRequest):
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
 

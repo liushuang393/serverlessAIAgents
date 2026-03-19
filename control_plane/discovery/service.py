@@ -1,26 +1,25 @@
-"""Control-plane の discovery サービス."""
+"""Control-plane discovery facade."""
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from shared import load_app_manifest
-
-
-if TYPE_CHECKING:
-    from contracts.app import AppManifest
+from contracts.app import AppManifest
+from control_plane.services.app_discovery import AppDiscoveryService
 
 
 class DiscoveryService:
-    """apps/*/app_config.json を走査して AppManifest を返す."""
+    """Public discovery facade over the canonical AppDiscoveryService."""
 
     def __init__(self, apps_dir: Path | None = None) -> None:
-        self._apps_dir = apps_dir or (Path.cwd() / "apps")
+        self._service = AppDiscoveryService(apps_dir=apps_dir)
 
     def scan(self) -> list[AppManifest]:
-        """現在の apps 一覧を返す."""
-        manifests: list[AppManifest] = []
-        for path in sorted(self._apps_dir.glob("*/app_config.json")):
-            manifests.append(load_app_manifest(path))
-        return manifests
+        """Return normalized manifests for the current apps directory."""
+        asyncio.run(self._service.scan())
+        return [
+            AppManifest.model_validate(config.model_dump(mode="python"))
+            for config in self._service.list_apps()
+        ]

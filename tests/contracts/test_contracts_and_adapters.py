@@ -8,7 +8,10 @@ from harness.approval.types import ApprovalRequest as LegacyApprovalRequest
 from infrastructure.llm.providers.tool_executor import ToolResult as LegacyToolResult
 from contracts import ApprovalRequest as ContractApprovalRequest
 from contracts import FlowDefinition as ContractFlowDefinition
+from contracts import PluginBinding, PluginDescriptor, PluginRuntimeAssessment
 from contracts import ToolResult as ContractToolResult
+from kernel.tools.unified_tool import ToolResult as LegacyUnifiedToolResult
+from kernel.tools.unified_tool import ToolStatus, ToolType
 
 
 def test_contract_models_expose_schema() -> None:
@@ -56,3 +59,45 @@ def test_legacy_tool_result_reuses_contract_model() -> None:
 
     assert isinstance(result, ContractToolResult)
     assert result.name == "echo"
+
+
+def test_plugin_contract_models_expose_schema() -> None:
+    """Plugin 契約が JSON Schema を生成できること."""
+    descriptor_schema = PluginDescriptor.model_json_schema()
+    assessment_schema = PluginRuntimeAssessment.model_json_schema()
+
+    assert "properties" in descriptor_schema
+    assert "risk_tier" in descriptor_schema["properties"]
+    assert "properties" in assessment_schema
+    assert "plugin_id" in assessment_schema["properties"]
+
+
+def test_legacy_unified_tool_result_round_trips_through_contract() -> None:
+    """legacy unified tool result が canonical contract を経由できること."""
+    legacy = LegacyUnifiedToolResult(
+        success=True,
+        status=ToolStatus.SUCCESS,
+        tool_uri="builtin://echo",
+        tool_type=ToolType.BUILTIN,
+        output={"message": "ok"},
+        duration_ms=12.5,
+    )
+
+    contract = legacy.to_contract(tool_call_id="call-123", name="echo")
+    restored = LegacyUnifiedToolResult.from_contract(
+        contract,
+        tool_uri="builtin://echo",
+        tool_type=ToolType.BUILTIN,
+    )
+
+    assert isinstance(contract, ContractToolResult)
+    assert contract.name == "echo"
+    assert restored.success is True
+    assert restored.output == {"message": "ok"}
+
+
+def test_plugin_binding_contract_normalizes_identifier() -> None:
+    """PluginBinding は ID を正規化する."""
+    binding = PluginBinding(id=" Official.Test-Pack ", version="1.0.0")
+
+    assert binding.id == "official.test-pack"

@@ -6,7 +6,6 @@ A lightweight service for orchestration/protocol readiness checks.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -17,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from kernel import __version__ as kernel_version
 from kernel.agents.resilient_agent import ResilientAgent
+from shared.config.manifest import load_app_manifest_dict
 
 
 _APP_ROOT = Path(__file__).resolve().parent
@@ -29,8 +29,8 @@ def _load_app_config() -> dict[str, Any]:
     if not _APP_CONFIG_PATH.is_file():
         return {}
     try:
-        return json.loads(_APP_CONFIG_PATH.read_text("utf-8"))
-    except json.JSONDecodeError:
+        return load_app_manifest_dict(_APP_CONFIG_PATH)
+    except (OSError, ValueError):
         return {}
 
 

@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from shared.config.manifest import load_app_manifest_dict_text
 
 
 if TYPE_CHECKING:
@@ -177,9 +178,7 @@ class AppCapabilityBootstrapper:
 
         for config_path in dict.fromkeys(search_paths):
             if config_path.is_file():
-                data = self._read_app_config_file(config_path)
-                if data is not None:
-                    return data
+                return self._read_app_config_file(config_path)
 
         logger.warning(
             "app_config.json が見つかりません: app=%s",
@@ -210,27 +209,24 @@ class AppCapabilityBootstrapper:
                 return None
 
             try:
-                payload: object = json.loads(text)
-            except json.JSONDecodeError as exc:
+                app_config = load_app_manifest_dict_text(
+                    text,
+                    manifest_path=config_path,
+                )
+            except ValueError as exc:
                 logger.warning(
-                    "app_config.json パース失敗 (%s, encoding=%s): %s",
+                    "app_config.json canonical load 失敗 (%s, encoding=%s): %s",
                     config_path,
                     encoding,
                     exc,
                 )
                 return None
 
-            app_config = self._coerce_json_object(
-                payload,
-                context=f"app_config.json ({config_path}, encoding={encoding})",
+            logger.info("app_config.json 読み込み: %s (encoding=%s)", config_path, encoding)
+            return self._coerce_json_object(
+                app_config,
+                context=f"canonical app_config.json ({config_path}, encoding={encoding})",
             )
-            if app_config is not None:
-                logger.info(
-                    "app_config.json 読み込み: %s (encoding=%s)",
-                    config_path,
-                    encoding,
-                )
-            return app_config
 
         logger.warning(
             "app_config.json の文字コード判定失敗 (%s): supported=%s",

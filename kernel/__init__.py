@@ -42,12 +42,15 @@ if TYPE_CHECKING:
     from kernel.router import Intent, IntentCategory, IntentRouter, RouterConfig
     from kernel.runtime import RuntimeContext, get_runtime_context, set_runtime_context, use_runtime_context
     from kernel.agents.resilient_agent import ResilientAgent
+    from control_plane.api.websocket_hub import WebSocketHub
     from kernel.tools import KernelToolExecutor
 
 
 __all__ = [
     # agents
     "ResilientAgent",
+    # websocket
+    "WebSocketHub",
     # events
     "EventSink",
     "EventType",
@@ -158,6 +161,7 @@ def __getattr__(name: str) -> object:
         "KernelToolExecutor": "kernel.tools",
         # agents
         "ResilientAgent": "kernel.agents.resilient_agent",
+        "WebSocketHub": "control_plane.api.websocket_hub",
         # LLM ファクトリ
         "get_llm": "infrastructure.providers.llm_provider",
         # デコレーター
@@ -168,6 +172,20 @@ def __getattr__(name: str) -> object:
         "list_skills": "kernel.agent_decorator",
         # tool デコレーター（infrastructure経由）
         "tool": "infrastructure.providers.tool_provider",
+        # ツール定義
+        "ToolDefinition": "kernel.tools.tool_definition",
+        "ToolSource": "kernel.tools.tool_definition",
+        "ToolRegistry": "kernel.tools.tool_registry",
+        "ToolDiscoveryService": "kernel.tools.tool_discovery",
+        "ToolBinder": "kernel.tools.tool_binding",
+        "BoundTools": "kernel.tools.tool_binding",
+        # 能力仕様
+        "AgentCapabilitySpec": "kernel.core.capability_spec",
+        "CapabilityRequirement": "kernel.core.capability_spec",
+        # Agent レジストリ
+        "AgentRegistry": "kernel.agents.agent_registry",
+        "get_global_agent_registry": "kernel.agents.agent_registry",
+        "get_global_tool_registry": "kernel.tools.tool_registry",
     }
     if name in _module_map:
         mod = importlib.import_module(_module_map[name])

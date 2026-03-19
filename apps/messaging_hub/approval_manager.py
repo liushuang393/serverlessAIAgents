@@ -25,7 +25,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from kernel.skills.gateway import RiskLevel
+from pydantic import Field, model_validator
 
 
 if TYPE_CHECKING:
@@ -42,8 +44,7 @@ class ApprovalStatus(str, Enum):
     AUTO_APPROVED = "auto_approved"
 
 
-@dataclass
-class ApprovalRequest:
+class ToolApprovalRequest(ContractApprovalRequest):
     """承認リクエスト.
 
     Attributes:
@@ -61,27 +62,78 @@ class ApprovalRequest:
         metadata: 追加メタデータ
     """
 
-    id: str
-    skill_name: str
-    risk_level: RiskLevel
-    params: dict[str, Any]
-    user_id: str
-    status: ApprovalStatus = ApprovalStatus.PENDING
-    created_at: datetime = field(default_factory=datetime.now)
-    expires_at: datetime | None = None
-    decided_at: datetime | None = None
-    decided_by: str | None = None
-    rejection_reason: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    skill_name: str = Field(..., min_length=1)
+    risk_level: RiskLevel = Field(default=RiskLevel.LOW)
+    params: dict[str, Any] = Field(default_factory=dict)
+    user_id: str = Field(default="system")
+    status: ApprovalStatus = Field(default=ApprovalStatus.PENDING)
+    created_at: datetime = Field(default_factory=datetime.now)
+    expires_at: datetime | None = Field(default=None)
+    decided_at: datetime | None = Field(default=None)
+    decided_by: str | None = Field(default=None)
+    rejection_reason: str | None = Field(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_contract_fields(cls, value: object) -> object:
+        """ローカル形式と canonical contract 形式を相互変換可能にする."""
+        if not isinstance(value, dict):
+            return value
+
+        payload = dict(value)
+        skill_name_raw = payload.get("skill_name", payload.get("action", ""))
+        skill_name = str(skill_name_raw).strip()
+        user_id_raw = payload.get("user_id", payload.get("requester", "system"))
+        user_id = str(user_id_raw).strip() or "system"
+
+        params_raw = payload.get("params")
+        context_raw = payload.get("context")
+        params = params_raw if isinstance(params_raw, dict) else {}
+        context = context_raw if isinstance(context_raw, dict) else {}
+        if not params:
+            context_params = context.get("params")
+            if isinstance(context_params, dict):
+                params = dict(context_params)
+
+        risk_value = payload.get("risk_level", context.get("risk_level", RiskLevel.LOW.value))
+        if isinstance(risk_value, RiskLevel):
+            risk_text = risk_value.value
+        else:
+            risk_text = str(risk_value).strip().lower() or RiskLevel.LOW.value
+
+        if not skill_name:
+            skill_name = "unknown"
+        payload["skill_name"] = skill_name
+        payload["user_id"] = user_id
+        payload["params"] = params
+        payload["action"] = str(payload.get("action", "")).strip() or skill_name
+        payload["requester"] = str(payload.get("requester", "")).strip() or user_id
+        payload["reason"] = str(payload.get("reason", "")).strip() or (
+            f"Approval required for skill '{skill_name}' with risk '{risk_text}'"
+        )
+        payload["priority"] = str(payload.get("priority", "")).strip() or _priority_from_risk(risk_text)
+        payload["risk_level"] = risk_text
+        payload["context"] = {
+            **context,
+            "skill_name": skill_name,
+            "risk_level": risk_text,
+            "params": params,
+        }
+        return payload
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
         return {
             "id": self.id,
+            "action": self.action,
+            "reason": self.reason,
             "skill_name": self.skill_name,
             "risk_level": self.risk_level.value,
             "params": self.params,
             "user_id": self.user_id,
+            "context": self.context,
+            "requester": self.requester,
+            "priority": self.priority,
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
@@ -92,31 +144,30 @@ class ApprovalRequest:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> ApprovalRequest:
+    def from_dict(cls, data: dict[str, Any]) -> ToolApprovalRequest:
         """辞書から復元する."""
-        created_at_raw = data.get("created_at")
-        expires_at_raw = data.get("expires_at")
-        decided_at_raw = data.get("decided_at")
-        return cls(
-            id=str(data.get("id", "")),
-            skill_name=str(data.get("skill_name", "")),
-            risk_level=RiskLevel(str(data.get("risk_level", "low"))),
-            params=data.get("params", {}) if isinstance(data.get("params"), dict) else {},
-            user_id=str(data.get("user_id", "system")),
-            status=ApprovalStatus(str(data.get("status", "pending"))),
-            created_at=datetime.fromisoformat(created_at_raw) if isinstance(created_at_raw, str) else datetime.now(),
-            expires_at=datetime.fromisoformat(expires_at_raw) if isinstance(expires_at_raw, str) else None,
-            decided_at=datetime.fromisoformat(decided_at_raw) if isinstance(decided_at_raw, str) else None,
-            decided_by=str(data.get("decided_by")) if data.get("decided_by") is not None else None,
-            rejection_reason=(str(data.get("rejection_reason")) if data.get("rejection_reason") is not None else None),
-            metadata=data.get("metadata", {}) if isinstance(data.get("metadata"), dict) else {},
-        )
+        return cls.model_validate(data)
 
     def is_expired(self) -> bool:
         """有効期限切れか確認."""
         if self.expires_at is None:
             return False
         return datetime.now() > self.expires_at
+
+
+# 後方互換: 既存 import 名を維持する
+ApprovalRequest = ToolApprovalRequest
+
+
+def _priority_from_risk(risk_level: str) -> str:
+    """RiskLevel を canonical priority へ写像する."""
+    mapping = {
+        RiskLevel.LOW.value: "low",
+        RiskLevel.MEDIUM.value: "normal",
+        RiskLevel.HIGH.value: "high",
+        RiskLevel.CRITICAL.value: "critical",
+    }
+    return mapping.get(risk_level, "normal")
 
 
 @dataclass

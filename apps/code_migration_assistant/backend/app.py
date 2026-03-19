@@ -21,6 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from shared.config.manifest import load_app_manifest
 
 
 logging.basicConfig(level=logging.INFO)
@@ -53,11 +54,15 @@ class MigrationRequest(BaseModel):
     module: str | None = None
 
 
-class ApprovalRequest(BaseModel):
-    """Legacy approval API リクエスト."""
+class ApprovalDecisionRequest(BaseModel):
+    """承認 API の互換入力アダプター."""
 
     approved: bool
     comment: str | None = None
+
+
+# 後方互換: 旧 API 名を維持する
+ApprovalRequest = ApprovalDecisionRequest
 
 
 class TaskCommandRequest(BaseModel):
@@ -897,7 +902,7 @@ async def get_approvals(task_id: str) -> list[dict[str, Any]]:
 
 
 @app.post("/api/approvals/{task_id}/{request_id}")
-async def submit_approval(task_id: str, request_id: str, approval: ApprovalRequest) -> dict[str, Any]:
+async def submit_approval(task_id: str, request_id: str, approval: ApprovalDecisionRequest) -> dict[str, Any]:
     """旧承認 API を commands API へ転送する."""
     command_name = "approve" if approval.approved else "reject"
     response = await post_migration_command(
@@ -930,12 +935,13 @@ if __name__ == "__main__":
     import uvicorn
 
     config_path = Path(__file__).resolve().parents[1] / "app_config.json"
-    config_raw: dict[str, Any] = {}
+    api_port = 8003
     if config_path.is_file():
         try:
-            config_raw = json.loads(config_path.read_text("utf-8"))
-        except json.JSONDecodeError:
-            config_raw = {}
+            manifest = load_app_manifest(config_path)
+            if manifest.ports.api is not None:
+                api_port = manifest.ports.api
+        except ValueError:
+            api_port = 8003
 
-    api_port = config_raw.get("ports", {}).get("api", 8003)
     uvicorn.run(app, host="0.0.0.0", port=int(api_port))

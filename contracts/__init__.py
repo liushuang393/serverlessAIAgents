@@ -8,6 +8,12 @@ from contracts.engine import EngineManifest
 from contracts.context import ContextPack
 from contracts.flow import AgentRoleSpec, FlowDefinition, FlowExecutionState, FlowStatus
 from contracts.policy import ApprovalRequest, EvalResult, PolicyDecision
+from contracts.plugin import (
+    PluginBinding,
+    PluginDescriptor,
+    PluginRegistryProtocol,
+    PluginRuntimeAssessment,
+)
 from contracts.protocol import ProtocolMessage
 from contracts.skill import SkillManifest
 from contracts.runtime.context import RuntimeContext
@@ -32,6 +38,10 @@ __all__ = [
     "FlowStatus",
     "LayerName",
     "PolicyDecision",
+    "PluginBinding",
+    "PluginDescriptor",
+    "PluginRegistryProtocol",
+    "PluginRuntimeAssessment",
     "ProtocolMessage",
     "RegisteredComponent",
     "SkillManifest",

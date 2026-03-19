@@ -11,15 +11,20 @@ import logging
 import os
 import re
 import tomllib
-from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from contracts.plugin import (
+    PluginBinding as ContractPluginBinding,
+    PluginDescriptor,
+    PluginRuntimeAssessment as ContractPluginRuntimeAssessment,
+)
 from harness.governance.plugin_signature import (
     PluginSignatureVerifier,
     SignatureStatus,
 )
+from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
@@ -41,57 +46,33 @@ _VALID_SIGNATURE_ENFORCEMENTS = {"warn", "deny"}
 _logger = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
-class PluginManifestRecord:
+class PluginManifestRecord(PluginDescriptor):
     """plugin_manifest.json の最小参照情報."""
 
-    id: str
-    version: str
-    risk_tier: str
-    compatibility_kernel: str
-    compatibility_product_lines: list[str] = field(default_factory=list)
-    manifest_path: Path | None = None
-    signature_status: SignatureStatus = "parse_error"
-    signature_reason: str = ""
-    raw: dict[str, Any] = field(default_factory=dict)
+    manifest_path: Path | None = Field(default=None)
+    signature_status: SignatureStatus = Field(default="parse_error")
+    signature_reason: str = Field(default="")
+    raw: dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass(slots=True)
-class PluginBindingRecord:
+class PluginBindingRecord(ContractPluginBinding):
     """app_config.json plugin_bindings エントリ."""
 
-    id: str
-    version: str
-    config: dict[str, Any] = field(default_factory=dict)
 
-
-@dataclass(slots=True)
-class AppPluginSnapshot:
+class AppPluginSnapshot(BaseModel):
     """App 単位の plugin バインディング情報."""
 
-    app_name: str
-    product_line: str
-    bindings: dict[str, PluginBindingRecord]
+    app_name: str = Field(...)
+    product_line: str = Field(...)
+    bindings: dict[str, PluginBindingRecord] = Field(default_factory=dict)
 
 
-@dataclass(slots=True)
-class PluginRuntimeAssessment:
+class PluginRuntimeAssessment(ContractPluginRuntimeAssessment):
     """ツール実行時 plugin 評価結果."""
 
-    app_name: str | None
-    product_line: str
-    strict_mode: bool
-    is_side_effect_tool: bool
-    plugin_id: str | None
-    plugin_version: str | None
-    plugin_risk_tier: str | None = None
-    plugin_signature_status: SignatureStatus | None = None
-    plugin_signature_reason: str | None = None
-    manifest_required_permissions: list[str] = field(default_factory=list)
-    manifest: PluginManifestRecord | None = None
-    binding: PluginBindingRecord | None = None
-    errors: list[str] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
+    plugin_signature_status: SignatureStatus | None = Field(default=None)
+    manifest: PluginManifestRecord | None = Field(default=None)
+    binding: PluginBindingRecord | None = Field(default=None)
 
 
 class PluginRegistry:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 from collections.abc import Awaitable, Callable, Mapping
@@ -14,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 from infrastructure.security.auth_client import AuthClient
 from infrastructure.security.auth_client.client import RemoteUser
+from shared.config.manifest import load_app_manifest_dict
 
 
 if TYPE_CHECKING:
@@ -111,8 +111,8 @@ class ContractAuthGuard:
             self._cached_app_config = {}
             return self._cached_app_config
         try:
-            self._cached_app_config = json.loads(path.read_text("utf-8"))
-        except json.JSONDecodeError:
+            self._cached_app_config = load_app_manifest_dict(path)
+        except (OSError, ValueError):
             self._cached_app_config = {}
         return self._cached_app_config
 

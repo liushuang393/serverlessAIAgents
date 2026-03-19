@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any, Literal
 
+from contracts.app import AppManifest
+from contracts.plugin import PluginBinding
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from infrastructure.llm.contracts import LLMContractsConfig
@@ -376,22 +378,10 @@ class ReleaseContractConfig(BaseModel):
     require_approval: bool = Field(default=True, description="承認必須")
 
 
-class PluginBindingConfig(BaseModel):
+class PluginBindingConfig(PluginBinding):
     """プラグインバインディング設定."""
 
-    id: str = Field(..., min_length=1, max_length=120, description="プラグインID")
     version: str = Field(..., min_length=1, max_length=50, description="要求バージョン")
-    config: dict[str, Any] = Field(default_factory=dict, description="プラグイン設定")
-
-    @field_validator("id", mode="before")
-    @classmethod
-    def normalize_plugin_id(cls, v: str) -> str:
-        """plugin id を正規化（空白除去・小文字化）."""
-        text = str(v).strip().lower()
-        if not text:
-            msg = "plugin id は空文字を許可しません"
-            raise ValueError(msg)
-        return text
 
     @field_validator("version")
     @classmethod
@@ -459,7 +449,7 @@ class ContractsConfig(BaseModel):
     release: ReleaseContractConfig = Field(default_factory=ReleaseContractConfig)
 
 
-class AppConfig(BaseModel):
+class AppConfig(AppManifest):
     """app_config.json のルートスキーマ.
 
     各 App ディレクトリに配置するマニフェストファイルの型定義。
