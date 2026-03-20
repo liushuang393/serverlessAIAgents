@@ -14,7 +14,7 @@ providers:
   models: []
   enabled: true
 - name: google
-  api_base: https://generativelanguage.googleapis.com
+  api_base: https://generativelanguage.googleapis.com/v1beta/openai
   api_key_env: GEMINI_API_KEY
   models: []
   enabled: true
@@ -102,7 +102,7 @@ models:
 - alias: coding_openai
   model_id: coding_openai
   provider: openai
-  model: gpt-5.2
+  model: gpt-4o
   model_type: text
   api_base: null
   api_key_env: null
@@ -119,12 +119,12 @@ models:
 - alias: cheap_gemini
   model_id: cheap_gemini
   provider: google
-  model: gemini-3.1-flash-lite-preview
+  model: gemini-2.0-flash
   model_type: text
   api_base: null
   api_key_env: null
   engine: null
-  enabled: true
+  enabled: false  # GEMINI_API_KEY not set → disabled to skip fallback delay
   modalities:
   - text
   - tool_call
@@ -136,7 +136,7 @@ models:
 - alias: platform_text_default
   model_id: platform_text_default
   provider: openai
-  model: gpt-5-mini
+  model: gpt-4o-mini
   model_type: text
   api_base: null
   api_key_env: null
@@ -222,7 +222,7 @@ models:
   api_base: http://127.0.0.1:11434/v1
   api_key_env: null
   engine: ''
-  enabled: true
+  enabled: false  # No local LLM running → disabled to skip connection timeout
   modalities:
   - text
   - tool_call

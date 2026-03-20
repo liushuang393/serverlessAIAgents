@@ -11,12 +11,11 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from control_plane.bootstrap.app_bootstrapper import AppCapabilityBootstrapper
-from control_plane.bootstrap.capability_bundle import CapabilityBundle
-from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
 from kernel.protocols.mcp_client import MCPClient
 from kernel.protocols.mcp_config import MCPConfig
+from kernel.runtime import AppCapabilityBootstrapper, CapabilityBundle
 from kernel.skills.gateway import SkillGateway
+from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
 from shared.config.manifest import load_app_manifest_dict
 
 
@@ -78,7 +77,7 @@ def test_load_app_config_uses_canonical_manifest_loader(
         return {"name": "faq_system", "contracts": {"rag": {"enabled": True}}}
 
     monkeypatch.setattr(
-        "control_plane.bootstrap.app_bootstrapper.load_app_manifest_dict_text",
+        "kernel.runtime.bootstrap.load_app_manifest_dict_text",
         _fake_load_app_manifest_dict_text,
     )
 
@@ -136,8 +135,8 @@ async def test_build_tolerates_missing_contracts_without_watcher(
         await asyncio.sleep(0)
         captured["skills"] = config
 
-    monkeypatch.setattr("control_plane.bootstrap.rag_builder.build_rag_engine", fake_build_rag_engine)
-    monkeypatch.setattr("control_plane.bootstrap.skill_builder.build_skill_gateway", fake_build_skill_gateway)
+    monkeypatch.setattr("kernel.runtime.bootstrap.build_rag_engine", fake_build_rag_engine)
+    monkeypatch.setattr("kernel.runtime.bootstrap.build_skill_gateway", fake_build_skill_gateway)
 
     bundle, bootstrapper = await AppCapabilityBootstrapper.build(
         app_name="faq_system",
@@ -174,8 +173,8 @@ async def test_build_ignores_invalid_contract_section_types(
         await asyncio.sleep(0)
         captured["skills"] = config
 
-    monkeypatch.setattr("control_plane.bootstrap.rag_builder.build_rag_engine", fake_build_rag_engine)
-    monkeypatch.setattr("control_plane.bootstrap.skill_builder.build_skill_gateway", fake_build_skill_gateway)
+    monkeypatch.setattr("kernel.runtime.bootstrap.build_rag_engine", fake_build_rag_engine)
+    monkeypatch.setattr("kernel.runtime.bootstrap.build_skill_gateway", fake_build_skill_gateway)
 
     bundle, bootstrapper = await AppCapabilityBootstrapper.build(
         app_name="faq_system",

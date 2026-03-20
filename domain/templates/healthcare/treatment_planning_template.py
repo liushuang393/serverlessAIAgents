@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -108,7 +109,6 @@ JSON形式で以下を出力:
         self, input_data: TreatmentPlanningInput
     ) -> TreatmentPlanningOutput:
         """LLMを使用した治療計画."""
-        from shared.utils import extract_json
 
         prompt = f"""以下の患者の治療計画を立案してください：
 診断: {input_data.diagnosis}
@@ -119,7 +119,7 @@ JSON形式で以下を出力:
 服用中薬: {', '.join(input_data.current_medications) if input_data.current_medications else 'なし'}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return TreatmentPlanningOutput(**data)

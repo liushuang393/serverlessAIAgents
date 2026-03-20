@@ -237,7 +237,7 @@ class LiteLLMGateway:
                 return "https://api.openai.com/v1"
             msg = f"model alias '{model_cfg.alias}' requires openai-compatible api_base for passthrough endpoint"
             raise RuntimeError(msg)
-        if api_base.endswith("/v1"):
+        if api_base.endswith("/v1") or api_base.endswith("/openai"):
             return api_base
         return f"{api_base}/v1"
 

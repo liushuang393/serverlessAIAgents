@@ -58,9 +58,9 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from control_plane.api.websocket_hub import WebSocketHub
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from kernel import get_llm
+from kernel.runtime import WebSocketHub
 from kernel.skills import (
     ChatBotSkill,
     ConversationExportSkill,

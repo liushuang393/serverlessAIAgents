@@ -820,6 +820,10 @@ async def process_decision_stream(
         import asyncio
         import time as time_module
 
+        # SSE heartbeat interval: send a keepalive comment every N seconds
+        # to prevent TCP idle timeout during long LLM processing
+        HEARTBEAT_INTERVAL_SECS = 20
+
         logger.info("[SSE] ストリーム開始")
         # 即座に接続確認イベントを送信
         yield (
@@ -859,35 +863,72 @@ async def process_decision_stream(
         is_rejected = False
 
         try:
-            async for event in engine.run_stream(inputs):
-                # イベントタイプをログ出力（type または event_type）
-                event_type = event.get("event_type") or event.get("type", "unknown")
-                logger.info(f"[SSE] イベント発行: {event_type}")
+            # ── heartbeat queue ────────────────────────────────────────────
+            # Use an asyncio.Queue so the engine producer task keeps running
+            # while we can send SSE heartbeat comments during LLM silence.
+            _SENTINEL = object()
+            queue: asyncio.Queue[Any] = asyncio.Queue()
 
-                # flow.complete または result イベントから結果を取得
-                if event_type == "flow.complete" and event.get("result"):
-                    final_result = event.get("result", {})
-                    if final_result and not is_rejected:
-                        # PDF出力の即時性を優先し、DB保存前にキャッシュへ格納
-                        _cache_report_from_result(final_result, request_id=str(request_uuid))
-                        # SSE クライアントが flow.complete 直後に切断しても
-                        # 履歴が失われないよう、完了イベント受信時点で即時保存する。
-                        if not history_saved:
-                            await save_history(final_result)
-                            history_saved = True
-                elif event_type == "result" and event.get("data"):
-                    data = event.get("data", {})
-                    if data.get("status") == "rejected":
+            async def _producer() -> None:
+                try:
+                    async for _ev in engine.run_stream(inputs):
+                        await queue.put(_ev)
+                except Exception as _exc:
+                    await queue.put(_exc)
+                finally:
+                    await queue.put(_SENTINEL)
+
+            producer_task = asyncio.create_task(_producer())
+            try:
+                while True:
+                    try:
+                        item = await asyncio.wait_for(
+                            queue.get(), timeout=HEARTBEAT_INTERVAL_SECS
+                        )
+                    except asyncio.TimeoutError:
+                        # Send SSE keepalive comment; does NOT cancel the producer
+                        yield ": heartbeat\n\n"
+                        continue
+
+                    if item is _SENTINEL:
+                        break
+                    if isinstance(item, Exception):
+                        raise item
+
+                    event = item
+                    # イベントタイプをログ出力（type または event_type）
+                    event_type = event.get("event_type") or event.get("type", "unknown")
+                    logger.info(f"[SSE] イベント発行: {event_type}")
+
+                    # flow.complete または result イベントから結果を取得
+                    if event_type == "flow.complete" and event.get("result"):
+                        final_result = event.get("result", {})
+                        if final_result and not is_rejected:
+                            # PDF出力の即時性を優先し、DB保存前にキャッシュへ格納
+                            _cache_report_from_result(final_result, request_id=str(request_uuid))
+                            # SSE クライアントが flow.complete 直後に切断しても
+                            # 履歴が失われないよう、完了イベント受信時点で即時保存する。
+                            if not history_saved:
+                                await save_history(final_result)
+                                history_saved = True
+                    elif event_type == "result" and event.get("data"):
+                        data = event.get("data", {})
+                        if data.get("status") == "rejected":
+                            is_rejected = True
+                        elif data.get("results"):
+                            final_result = data.get("results", {})
+                    elif event_type == "early_return":
                         is_rejected = True
-                    elif data.get("results"):
-                        final_result = data.get("results", {})
-                elif event_type == "early_return":
-                    is_rejected = True
 
-                if isinstance(event, dict):
-                    yield f"data: {serialize_event(event)}\n\n"
-                else:
-                    yield f"data: {event}\n\n"
+                    if isinstance(event, dict):
+                        yield f"data: {serialize_event(event)}\n\n"
+                    else:
+                        yield f"data: {event}\n\n"
+            finally:
+                producer_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await producer_task
+            # ── end heartbeat queue ────────────────────────────────────────
 
             # 成功完了時のみ履歴を保存（拒否時は保存しない）
             if final_result and not is_rejected and not history_saved:

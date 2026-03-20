@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from control_plane.api.websocket_hub import WebSocketHub
+    from kernel.runtime import WebSocketHub
     from shared.channels.base import MessageChannelAdapter
     from kernel.skills.chatbot import ChatBotSkill, ChatSession
 

@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -104,7 +105,6 @@ JSON形式で以下を出力:
         self, input_data: ComplianceCheckInput
     ) -> ComplianceCheckOutput:
         """LLMを使用したコンプライアンスチェック."""
-        from shared.utils import extract_json
 
         prompt = f"""以下のコンプライアンスチェックを実施してください：
 チェックタイプ: {input_data.check_type}
@@ -114,7 +114,7 @@ JSON形式で以下を出力:
 対象データ: {input_data.entity_data}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return ComplianceCheckOutput(**data)

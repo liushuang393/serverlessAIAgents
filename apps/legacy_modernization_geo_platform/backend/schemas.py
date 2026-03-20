@@ -8,9 +8,49 @@ from typing import Any
 
 from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from pydantic import BaseModel, Field
+from pydantic import field_validator
 from pydantic import model_validator
 
 from kernel.skills.gateway import RiskLevel
+
+
+SUPPORTED_CONTENT_LANGUAGES: tuple[str, ...] = ("ja", "en", "zh")
+_SCHEMA_LANGUAGE_BY_CONTENT_LANGUAGE: dict[str, str] = {
+    "ja": "ja-JP",
+    "en": "en-US",
+    "zh": "zh-CN",
+}
+_HTML_LANGUAGE_BY_CONTENT_LANGUAGE: dict[str, str] = {
+    "ja": "ja",
+    "en": "en",
+    "zh": "zh-CN",
+}
+
+
+def normalize_content_language(language: str | None) -> str:
+    """Normalize arbitrary locale inputs to a supported content language code."""
+    if language is None:
+        return "ja"
+    normalized = language.strip().lower()
+    if normalized.startswith("ja"):
+        return "ja"
+    if normalized.startswith("en"):
+        return "en"
+    if normalized.startswith("zh"):
+        return "zh"
+    return "ja"
+
+
+def schema_language_code(language: str | None) -> str:
+    """Resolve JSON-LD language tag from a normalized content language code."""
+    normalized = normalize_content_language(language)
+    return _SCHEMA_LANGUAGE_BY_CONTENT_LANGUAGE[normalized]
+
+
+def html_language_code(language: str | None) -> str:
+    """Resolve `<html lang>` code from a normalized content language code."""
+    normalized = normalize_content_language(language)
+    return _HTML_LANGUAGE_BY_CONTENT_LANGUAGE[normalized]
 
 
 def _utcnow() -> datetime:
@@ -55,6 +95,28 @@ class ExecuteInputs(BaseModel):
     content_languages: list[str] = Field(default_factory=lambda: ["ja"])
     channels: list[str] = Field(default_factory=lambda: ["website", "ai_search"])
     conversion_goal: str = "diagnostic_request"
+
+    @field_validator("content_languages", mode="before")
+    @classmethod
+    def _normalize_content_languages(cls, value: object) -> list[str]:
+        """Normalize locale values and ensure at least one supported language."""
+        candidates: list[str]
+        if value is None:
+            candidates = []
+        elif isinstance(value, str):
+            candidates = [value]
+        elif isinstance(value, list):
+            candidates = [str(item) for item in value]
+        else:
+            candidates = [str(value)]
+
+        normalized: list[str] = []
+        for candidate in candidates:
+            language = normalize_content_language(candidate)
+            if language not in normalized:
+                normalized.append(language)
+
+        return normalized or ["ja"]
 
 
 class ExecuteOptions(BaseModel):

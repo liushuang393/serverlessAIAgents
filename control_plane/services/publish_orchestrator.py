@@ -40,7 +40,7 @@ from kernel.core.interfaces import (
     DeployTarget,
     GeneratedCode,
 )
-from shared.services.publish_service import PublishService
+from control_plane.publish.service import PublishService
 
 
 if TYPE_CHECKING:

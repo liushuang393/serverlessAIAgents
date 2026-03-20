@@ -1,24 +1,34 @@
-"""Kernel plugin registry."""
+"""Kernel runtime plugin registry and SPI contracts."""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class KernelPlugin(Protocol):
+    """Minimal runtime SPI exposed by kernel.plugins."""
+
+    plugin_id: str
 
 
 class KernelPluginRegistry:
-    """Kernel extension point を管理する簡易 registry。"""
+    """Typed registry for runtime plugins."""
 
     def __init__(self) -> None:
-        self._plugins: dict[str, Any] = {}
+        self._plugins: dict[str, KernelPlugin] = {}
 
-    def register(self, plugin_id: str, plugin: Any) -> None:
-        """plugin を登録する。"""
+    def register(self, plugin_id: str, plugin: KernelPlugin) -> None:
+        """Register a runtime plugin under a stable id."""
         self._plugins[plugin_id] = plugin
 
-    def get(self, plugin_id: str) -> Any:
-        """plugin を取得する。"""
+    def get(self, plugin_id: str) -> KernelPlugin:
+        """Return a registered runtime plugin."""
         return self._plugins[plugin_id]
 
     def list_ids(self) -> list[str]:
-        """登録済み plugin ID 一覧を返す."""
+        """Return sorted runtime plugin ids."""
         return sorted(self._plugins.keys())
+
+
+__all__ = ["KernelPlugin", "KernelPluginRegistry"]

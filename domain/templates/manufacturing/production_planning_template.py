@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -105,7 +106,6 @@ JSON形式で以下を出力:
         self, input_data: ProductionPlanningInput
     ) -> ProductionPlanningOutput:
         """LLMを使用した生産計画."""
-        from shared.utils import extract_json
 
         prompt = f"""以下の生産計画を立案してください：
 受注数: {len(input_data.orders)}件
@@ -115,7 +115,7 @@ JSON形式で以下を出力:
 制約: {input_data.constraints}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return ProductionPlanningOutput(**data)

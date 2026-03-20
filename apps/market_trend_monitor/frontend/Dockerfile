@@ -16,11 +16,62 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 
-RUN rm /etc/nginx/conf.d/default.conf
-
-COPY apps/market_trend_monitor/frontend/nginx.conf /etc/nginx/conf.d/default.conf
-
+# ビルド成果物をコピー
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# -----------------------------------------------------------------------
+# 根本解決: DNS リゾルバーを /etc/resolv.conf から動的取得
+#
+# proxy_pass に直接ホスト名を書くと nginx 起動時に静的解決され、
+# backend が一時停止中でもクラッシュする。変数経由にするとリクエスト時解決。
+# resolver IP を固定（127.0.0.11）にすると Docker 専用になるため、
+# /etc/resolv.conf から動的取得して K8s/Podman にも対応する。
+# -----------------------------------------------------------------------
+
+# Step 1: 起動時に /etc/resolv.conf から DNS を読み取るスクリプト
+RUN cat > /docker-entrypoint.d/01-set-resolver.envsh <<'ENVSH'
+#!/bin/sh
+RESOLVER=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
+export RESOLVER
+echo "[nginx] DNS resolver: ${RESOLVER}"
+ENVSH
+RUN chmod +x /docker-entrypoint.d/01-set-resolver.envsh
+
+# Step 2: nginx 設定テンプレート（${RESOLVER} と ${BACKEND_HOST} は起動時に展開）
+RUN mkdir -p /etc/nginx/templates
+RUN cat > /etc/nginx/templates/default.conf.template <<'NGINX'
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # DNS リゾルバー（/etc/resolv.conf から動的取得・Docker/K8s/Podman 対応）
+    resolver ${RESOLVER} valid=30s ipv6=off;
+
+    location /api/ {
+        # set 変数経由で proxy_pass するとリクエスト時に DNS 解決（起動時解決を回避）
+        set $backend http://backend:8002;
+        proxy_pass $backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /health {
+        access_log off;
+        return 200 'ok';
+        add_header Content-Type text/plain;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+NGINX
 
 EXPOSE 80
 

@@ -47,7 +47,7 @@ from apps.decision_governance_engine.startup import log_startup_info
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from kernel import LogLevel, setup_logging
+from infrastructure.observability.logging import LogLevel, setup_logging
 
 
 logger = logging.getLogger("decision_api")
@@ -75,7 +75,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             from shared.rag.models import Base as RAGBase
             from apps.decision_governance_engine.repositories.database import _db
 
-            async with _db.engine.begin() as conn:
+            engine = _db.get_async_engine()
+            async with engine.begin() as conn:
                 await conn.run_sync(RAGBase.metadata.create_all)
             logger.info("RAG management tables initialized")
         except Exception as rag_err:
@@ -90,12 +91,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 init_managers as init_collection_managers,
             )
 
-            async def session_factory():
-                async with get_db_session() as session:
-                    return session
-
-            col_mgr = CollectionManager(session_factory=session_factory)
-            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=session_factory)
+            col_mgr = CollectionManager(session_factory=get_db_session)
+            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_db_session)
             init_collection_managers(col_mgr, doc_mgr)
             logger.info("Knowledge CollectionManager / DocumentManager initialized")
         except Exception as mgr_err:

@@ -59,7 +59,7 @@ cp shared/auth_service/.env.example shared/auth_service/.env
 # JWT_SECRET_KEY を必ず変更してください
 
 # 起動
-conda activate bizcore
+conda activate agentflow
 python -m shared.auth_service.main
 ```
 
@@ -165,29 +165,29 @@ python shared/auth_service/scripts/compose.py publish
 
 `app_config.json` に設定されているため、Studio の「Publish」ボタンをクリックするだけで Docker デプロイが実行されます。
 
-### 3. auth_service + FAQ 統合起動
+### 3. auth_service + 他アプリの連携起動
 
-`docker-compose.auth-faq.yml` で auth_service、FAQ（バックエンド + DB + Qdrant）、管理画面を一括起動できます。
+auth_service は共通サービスのため、各アプリとは **別々に起動** します。
 
 ```bash
-# リポジトリルートで実行
-docker compose -f docker-compose.auth-faq.yml up --build -d
+# 1. auth_service を起動（共通認証基盤）
+cd shared/auth_service
+docker compose up --build -d
+# → auth API: http://localhost:8010/docs
+# → 管理画面: http://localhost:3010
 
-# 各サービス URL:
-# auth API:    http://localhost:8010/docs
-# 管理画面:    http://localhost:3010
-# FAQ:         http://localhost:8005
+# 2. 各アプリを個別起動（例: FAQ）
+cd apps/faq_system
+docker compose up --build -d
+# → FAQ: http://localhost:8005
 ```
 
-サービス構成:
+各アプリの `.env` で以下を設定すれば auth_service と連携できます:
 
-| サービス | ポート | 説明 |
-| -------- | ------ | ---- |
-| auth-service | 8010 | 認証・認可 API |
-| auth-admin | 3010 | 管理画面（React SPA） |
-| faq-backend | 8005 | FAQ バックエンド |
-| faq-db | 5432 | PostgreSQL（FAQ 用） |
-| faq-qdrant | 6333 | Qdrant ベクトル DB |
+```env
+AUTH_SERVICE_URL=http://localhost:8010
+AUTH_SERVICE_JWT_SECRET=<auth_service と同じ JWT_SECRET_KEY の値>
+```
 
 ---
 
@@ -498,7 +498,7 @@ curl http://localhost:8010/health
 
 ```bash
 # 1. ローカル起動テスト（最重要 — ImportError が解消されることを確認）
-conda activate bizcore
+conda activate agentflow
 python -m shared.auth_service.main
 # → ポート 8010 で起動し "auth_service 起動中..." が表示されること
 

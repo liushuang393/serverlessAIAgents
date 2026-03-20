@@ -367,7 +367,7 @@ class AppDiscoveryService:
         dir_name = config_path.parent.name
         try:
             manifest = load_app_manifest(config_path)
-            config = AppConfig.model_validate(manifest.model_dump(mode="python"))
+            config = AppConfig.from_manifest(manifest)
             self._validate_llm_contracts(config)
             self._registry[config.name] = config
             self._config_paths[config.name] = config_path

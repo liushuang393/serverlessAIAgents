@@ -92,7 +92,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 pip install -e ".[dev,apps]"
 ```
 
@@ -194,7 +194,7 @@ cd <repo-root>
 推奨手順（Platform CLI）:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/code_migration_assistant --target docker
 ```
 

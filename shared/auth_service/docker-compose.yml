@@ -51,6 +51,8 @@ services:
     build:
       context: ../..
       dockerfile: shared/auth_service/Dockerfile
+      args:
+        - PORT=${AUTH_SERVICE_PORT:-8010}
     container_name: auth-service
     ports:
       - "${AUTH_SERVICE_PORT:-8010}:8010"
@@ -120,8 +122,8 @@ services:
   # ---------------------------------------------------------------------------
   auth-admin:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: auth-admin
     ports:
       - "${AUTH_ADMIN_PORT:-3010}:80"
@@ -129,7 +131,8 @@ services:
       auth-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost"]
+      # 127.0.0.1 を使用: localhost は IPv6 ::1 に解決される可能性があり不安定
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1"]
       interval: 15s
       timeout: 5s
       retries: 5

@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -111,7 +112,6 @@ JSON形式で以下を出力:
         self, input_data: FinancialAnalysisInput
     ) -> FinancialAnalysisOutput:
         """LLMを使用した財務分析."""
-        from shared.utils import extract_json
 
         prompt = f"""以下の企業の財務分析を実施してください：
 企業名: {input_data.company_name}
@@ -121,7 +121,7 @@ JSON形式で以下を出力:
 財務データ: {input_data.financial_data}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return FinancialAnalysisOutput(**data)

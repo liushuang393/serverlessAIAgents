@@ -12,8 +12,37 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     ContentDraftArtifact,
     PublishManifest,
     PublishedPageRecord,
+    html_language_code,
+    normalize_content_language,
 )
 from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
+
+
+_PUBLIC_COPY: dict[str, dict[str, str]] = {
+    "ja": {
+        "eyebrow": "Legacy Modernization GEO",
+        "guide_title": "導入ガイド",
+        "faq_title": "よくある質問",
+        "next_title": "次のアクション",
+        "next_body": "無料診断から、対象システム・段階移行方針・投資対効果の仮説を整理します。",
+    },
+    "en": {
+        "eyebrow": "Legacy Modernization GEO",
+        "guide_title": "Implementation Guide",
+        "faq_title": "Frequently Asked Questions",
+        "next_title": "Next Action",
+        "next_body": (
+            "Start with a free assessment to align target systems, phased migration policy, and ROI hypotheses."
+        ),
+    },
+    "zh": {
+        "eyebrow": "Legacy Modernization GEO",
+        "guide_title": "实施指南",
+        "faq_title": "常见问题",
+        "next_title": "下一步行动",
+        "next_body": "从免费诊断开始，梳理目标系统、分阶段迁移策略与投资回报假设。",
+    },
+}
 
 
 class GeoPublisher:
@@ -25,6 +54,7 @@ class GeoPublisher:
 
     def publish(self, task_id: str, draft: ContentDraftArtifact) -> PublishManifest:
         """Render pages and discovery metadata to disk."""
+        target_language = normalize_content_language(draft.target_language)
         task_root = self._settings.published_dir / task_id
         pages_dir = task_root / "pages"
         pages_dir.mkdir(parents=True, exist_ok=True)
@@ -32,7 +62,7 @@ class GeoPublisher:
         records: list[PublishedPageRecord] = []
         for page in draft.pages:
             html_path = pages_dir / f"{page.slug}.html"
-            html_path.write_text(self._render_page(page), encoding="utf-8")
+            html_path.write_text(self._render_page(page, target_language), encoding="utf-8")
             page_url = f"{self._settings.public_base_url}/geo/pages/{page.slug}"
             records.append(
                 PublishedPageRecord(
@@ -56,8 +86,10 @@ class GeoPublisher:
             evidence=[{"page_url": item.page_url, "title": item.title} for item in records],
         )
 
-    def _render_page(self, page: object) -> str:
+    def _render_page(self, page: object, language: str) -> str:
         """Render a public GEO page with JSON-LD embedded."""
+        normalized_language = normalize_content_language(language)
+        copy = _PUBLIC_COPY[normalized_language]
         title = html.escape(getattr(page, "title"))
         summary = html.escape(getattr(page, "summary"))
         cta = html.escape(getattr(page, "cta"))
@@ -77,7 +109,7 @@ class GeoPublisher:
             for entry in faq_entries
         )
         return f"""<!DOCTYPE html>
-<html lang="ja">
+<html lang="{html_language_code(normalized_language)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -151,22 +183,22 @@ class GeoPublisher:
   <body>
     <main>
       <section class="hero">
-        <span class="eyebrow">Legacy Modernization GEO</span>
+        <span class="eyebrow">{html.escape(copy["eyebrow"])}</span>
         <h1 data-testid="public-title">{title}</h1>
         <p>{summary}</p>
         <a class="cta" data-testid="public-hero-cta" href="#contact">{cta}</a>
       </section>
       <section class="section">
-        <h2>導入ガイド</h2>
+        <h2>{html.escape(copy["guide_title"])}</h2>
         {body_html}
       </section>
       <section class="faq" data-testid="public-faq">
-        <h2>よくある質問</h2>
+        <h2>{html.escape(copy["faq_title"])}</h2>
         {faq_html}
       </section>
       <section class="section" id="contact">
-        <h2>次のアクション</h2>
-        <p>無料診断から、対象システム・段階移行方針・投資対効果の仮説を整理します。</p>
+        <h2>{html.escape(copy["next_title"])}</h2>
+        <p>{html.escape(copy["next_body"])}</p>
         <a class="cta" data-testid="public-contact-cta" href="mailto:modernization@example.com">{cta}</a>
       </section>
     </main>

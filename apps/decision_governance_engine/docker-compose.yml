@@ -87,16 +87,12 @@ services:
     build:
       context: ../..
       dockerfile: apps/decision_governance_engine/Dockerfile
+      args:
+        - PORT=8000   # コンテナ内部ポートは常に 8000 固定
     container_name: dge-backend
-    command:
-      [
-        "uvicorn",
-        "apps.decision_governance_engine.api:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-      ]
+    # docker-compose の command は Dockerfile CMD を上書きする
+    # コンテナ内部ポートは常に 8000（ホスト側は API_PORT で制御）
+    command: ["sh", "-c", "exec uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
     ports:
       - "${API_PORT:-8001}:8000"
     environment:
@@ -104,6 +100,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_API_KEY=${GOOGLE_API_KEY:-}
       # アプリ設定
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENABLE_RAG=${ENABLE_RAG:-true}
@@ -122,6 +121,8 @@ services:
       - .:/app/apps/decision_governance_engine:ro
       # 知識ベース
       - ./knowledge:/app/apps/decision_governance_engine/knowledge:ro
+      # LLM Gateway 設定（ホスト側の .agentflow/llm_gateway.yaml を SSoT として使用）
+      - ../../.agentflow/llm_gateway.yaml:/app/.bizcore/llm_gateway.yaml:ro
     depends_on:
       postgres-main:
         condition: service_healthy
@@ -158,6 +159,8 @@ services:
     # ポートは各環境オーバーライドファイルで定義する:
     #   開発: docker-compose.dev.yml  → 5174
     #   本番: docker-compose.prod.yml → 80
+    ports:
+      - "${FRONTEND_PORT:-3001}:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -169,7 +172,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost/health",
+          "http://127.0.0.1/health",
         ]
       interval: 30s
       timeout: 3s

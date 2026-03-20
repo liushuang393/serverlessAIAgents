@@ -3,10 +3,15 @@ services:
     build:
       context: ../..
       dockerfile: apps/market_trend_monitor/Dockerfile
+      args:
+        # PORT: コンテナ内部リッスンポート（Dockerfile ARG のデフォルトは 8002）
+        - PORT=${PORT:-8002}
     container_name: market-trend-monitor-backend
     ports:
-      - "${API_PORT:-8002}:8002"
+      # ホスト側ポート: API_PORT（デフォルト=PORT の値）:コンテナ内部ポート: PORT
+      - "${API_PORT:-8002}:${PORT:-8002}"
     environment:
+      - PORT=${PORT:-8002}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -14,18 +19,7 @@ services:
       - MARKET_TREND_MONITOR_API_HOST=0.0.0.0
     volumes:
       - market-trend-data:/app/apps/market_trend_monitor/data
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+    # healthcheck は Dockerfile の HEALTHCHECK を継承（PORT 変数を使用）
     restart: unless-stopped
 
   frontend:

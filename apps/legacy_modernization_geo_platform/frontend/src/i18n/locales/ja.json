@@ -1,0 +1,82 @@
+{
+  "tabs": {
+    "console": "キャンペーンコンソール",
+    "workspace": "アカウントワークスペース",
+    "content": "コンテンツスタジオ",
+    "approval": "承認センター",
+    "report": "レポートセンター"
+  },
+  "sidebar": {
+    "eyebrow": "Legacy Modernization",
+    "title": "GEO Platform",
+    "description": "需要診断、コンテンツ構築、承認公開、レポートの閉ループ。"
+  },
+  "locale": {
+    "label": "言語",
+    "selectAria": "言語を選択"
+  },
+  "hero": {
+    "eyebrow": "Operator Surface",
+    "title": "旧システム刷新 GEO の最小閉ループ",
+    "description": "操作台はオーケストレーションと人手介入を担い、公開ページは配信フェーズで静的生成されます。"
+  },
+  "status": {
+    "idle": "待機中",
+    "notStarted": "未開始"
+  },
+  "common": {
+    "surfaceCard": "サーフェスカード",
+    "pipeline": "pipeline",
+    "noMessage": "メッセージなし"
+  },
+  "console": {
+    "eyebrow": "Campaign Console",
+    "title": "起動と進行ストリーム",
+    "start": "キャンペーン開始",
+    "processing": "処理中...",
+    "fields": {
+      "campaignName": "キャンペーン名",
+      "industry": "業界",
+      "legacyStacks": "レガシースタック",
+      "regions": "地域"
+    },
+    "emptyTimeline": "イベントはまだありません。開始後に pipeline 進捗が表示されます。"
+  },
+  "workspace": {
+    "eyebrow": "Account Workspace",
+    "title": "需要シグナル、質問グラフ、証拠サマリー",
+    "demandSignals": "需要シグナル",
+    "questionMap": "質問マップ",
+    "evidenceSummary": "証拠サマリー",
+    "pendingResult": "実行結果待ち"
+  },
+  "content": {
+    "eyebrow": "Content Studio",
+    "title": "草稿プレビュー、QA、手動リライト",
+    "rewrite": "リライト",
+    "publish": "公開",
+    "rewriteNote": "リライト指示",
+    "defaultRewriteNote": "段階移行の境界、適用前提、連絡アクションを明確化してください。",
+    "rewriteApprovalComment": "比較表現と前提条件の見直しを依頼します。",
+    "draft": "草稿",
+    "qa": "QA",
+    "pendingDraft": "コンテンツ生成待ち"
+  },
+  "approval": {
+    "eyebrow": "Approval Center",
+    "title": "人手による意思決定ゲート",
+    "none": "現在、承認待ち項目はありません。",
+    "approve": "承認",
+    "reject": "却下",
+    "rewrite": "リライト",
+    "uiApprovalComment": "UI 承認"
+  },
+  "report": {
+    "eyebrow": "Report Center",
+    "title": "実行サマリーと公開結果",
+    "campaignReport": "キャンペーンレポート",
+    "publishedAssets": "公開アセット",
+    "pendingReport": "レポート生成待ち",
+    "pendingPublish": "公開完了待ち"
+  }
+}

@@ -453,6 +453,8 @@ class AppConfig(AppManifest):
     """app_config.json のルートスキーマ.
 
     各 App ディレクトリに配置するマニフェストファイルの型定義。
+    `contracts.app.AppManifest` を canonical contract とし、このスキーマは
+    control-plane 側の projection / transport 追加検証を担う。
 
     Attributes:
         name: App 識別子（snake_case、ディレクトリ名と一致）
@@ -531,6 +533,11 @@ class AppConfig(AppManifest):
         description="テナント可視性設定",
     )
     tags: list[str] = Field(default_factory=list, description="検索用タグ")
+
+    @classmethod
+    def from_manifest(cls, manifest: AppManifest) -> AppConfig:
+        """Construct a control-plane projection from the canonical manifest."""
+        return cls.model_validate(manifest.model_dump(mode="python"))
 
     @field_validator("business_base", mode="before")
     @classmethod

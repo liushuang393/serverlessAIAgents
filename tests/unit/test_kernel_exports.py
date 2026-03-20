@@ -10,8 +10,15 @@ def test_kernel_exports_get_llm() -> None:
     assert get_llm.__name__ == "get_llm"
 
 
-def test_websocket_hub_direct_import() -> None:
-    """`WebSocketHub` は control_plane から直接 import する."""
+def test_websocket_hub_runtime_import() -> None:
+    """`WebSocketHub` should be available from kernel.runtime."""
+    from kernel.runtime import WebSocketHub
+
+    assert WebSocketHub.__name__ == "WebSocketHub"
+
+
+def test_websocket_hub_control_plane_compat_import() -> None:
+    """control_plane compatibility import should remain valid."""
     from control_plane.api.websocket_hub import WebSocketHub
 
     assert WebSocketHub.__name__ == "WebSocketHub"

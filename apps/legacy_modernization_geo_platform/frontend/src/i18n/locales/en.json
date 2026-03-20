@@ -1,0 +1,82 @@
+{
+  "tabs": {
+    "console": "Campaign Console",
+    "workspace": "Account Workspace",
+    "content": "Content Studio",
+    "approval": "Approval Center",
+    "report": "Report Center"
+  },
+  "sidebar": {
+    "eyebrow": "Legacy Modernization",
+    "title": "GEO Platform",
+    "description": "Demand discovery, content generation, approval, publishing, and reporting in one loop."
+  },
+  "locale": {
+    "label": "Language",
+    "selectAria": "Select language"
+  },
+  "hero": {
+    "eyebrow": "Operator Surface",
+    "title": "Minimum closed-loop GEO for legacy modernization",
+    "description": "The operator UI handles orchestration and human intervention, while static pages are generated in publish stage."
+  },
+  "status": {
+    "idle": "idle",
+    "notStarted": "not-started"
+  },
+  "common": {
+    "surfaceCard": "Surface Card",
+    "pipeline": "pipeline",
+    "noMessage": "No message"
+  },
+  "console": {
+    "eyebrow": "Campaign Console",
+    "title": "Launch and progress stream",
+    "start": "Start Campaign",
+    "processing": "Processing...",
+    "fields": {
+      "campaignName": "Campaign Name",
+      "industry": "Industry",
+      "legacyStacks": "Legacy Stacks",
+      "regions": "Regions"
+    },
+    "emptyTimeline": "No events yet. Pipeline progress will appear after launch."
+  },
+  "workspace": {
+    "eyebrow": "Account Workspace",
+    "title": "Demand signals, question graph, and evidence summary",
+    "demandSignals": "Demand Signals",
+    "questionMap": "Question Map",
+    "evidenceSummary": "Evidence Summary",
+    "pendingResult": "Waiting for execution result"
+  },
+  "content": {
+    "eyebrow": "Content Studio",
+    "title": "Draft preview, QA, and manual rewrite",
+    "rewrite": "Rewrite",
+    "publish": "Publish",
+    "rewriteNote": "Rewrite Note",
+    "defaultRewriteNote": "Please clarify migration boundaries, assumptions, and follow-up actions.",
+    "rewriteApprovalComment": "Please revise comparative claims and explicit assumptions.",
+    "draft": "Draft",
+    "qa": "QA",
+    "pendingDraft": "Waiting for generated content"
+  },
+  "approval": {
+    "eyebrow": "Approval Center",
+    "title": "Human decision gate",
+    "none": "There are no pending approvals.",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rewrite": "Rewrite",
+    "uiApprovalComment": "UI approval"
+  },
+  "report": {
+    "eyebrow": "Report Center",
+    "title": "Execution summary and publishing results",
+    "campaignReport": "Campaign Report",
+    "publishedAssets": "Published Assets",
+    "pendingReport": "Waiting for report generation",
+    "pendingPublish": "Waiting for publishing completion"
+  }
+}

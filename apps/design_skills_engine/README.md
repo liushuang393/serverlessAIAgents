@@ -48,7 +48,7 @@ bash setup_dev.sh
 
 ```bash
 # リポジトリルートで実行
-conda activate bizcore
+conda activate agentflow
 pip install -e ".[dev,apps]"
 ```
 
@@ -155,7 +155,7 @@ cd <repo-root>
 Platform に統一する場合（推奨）:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/design_skills_engine --target docker
 ```
 

@@ -44,7 +44,7 @@ git remote add upstream https://github.com/liushuang393/serverlessAIAgents.git
 conda env create -f environment.yml
 
 # 環境をアクティベート
-conda activate bizcore
+conda activate agentflow
 
 # 開発用依存関係をインストール
 pip install -e ".[apps,dev]"
@@ -514,7 +514,7 @@ git push origin feature/your-feature-name
 
 ```bash
 # 環境がアクティベートされているか確認
-conda activate bizcore  # または source .venv/bin/activate
+conda activate agentflow  # または source .venv/bin/activate
 
 # 依存関係がインストールされているか確認
 pip install -e ".[apps,dev]"

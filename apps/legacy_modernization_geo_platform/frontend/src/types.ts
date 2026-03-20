@@ -14,6 +14,9 @@ export interface GeoExecuteRequest {
     legacy_stacks: string[];
     regions: string[];
   };
+  inputs?: {
+    content_languages?: string[];
+  };
 }
 
 export interface TaskEvent {
@@ -127,4 +130,3 @@ export interface EvidenceMatrixArtifact {
     fresh: boolean;
   }[];
 }
-

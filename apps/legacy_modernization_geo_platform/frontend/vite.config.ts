@@ -13,6 +13,11 @@ const frontendHost = appConfig.runtime?.hosts?.frontend ?? '0.0.0.0';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@bizcore/i18n': path.resolve(__dirname, './src/i18n/base'),
+    },
+  },
   server: {
     host: frontendHost,
     port: frontendPort,

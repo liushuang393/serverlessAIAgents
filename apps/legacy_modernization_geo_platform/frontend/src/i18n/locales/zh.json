@@ -1,0 +1,82 @@
+{
+  "tabs": {
+    "console": "活动控制台",
+    "workspace": "账户工作台",
+    "content": "内容工作台",
+    "approval": "审批中心",
+    "report": "报告中心"
+  },
+  "sidebar": {
+    "eyebrow": "Legacy Modernization",
+    "title": "GEO Platform",
+    "description": "需求诊断、内容生成、审批发布与报告闭环一体化。"
+  },
+  "locale": {
+    "label": "语言",
+    "selectAria": "选择语言"
+  },
+  "hero": {
+    "eyebrow": "Operator Surface",
+    "title": "旧系统现代化 GEO 的最小闭环",
+    "description": "操作台负责编排与人工介入，对外页面在发布阶段生成静态内容。"
+  },
+  "status": {
+    "idle": "空闲",
+    "notStarted": "未开始"
+  },
+  "common": {
+    "surfaceCard": "面板卡片",
+    "pipeline": "pipeline",
+    "noMessage": "无消息"
+  },
+  "console": {
+    "eyebrow": "Campaign Console",
+    "title": "启动与进度流",
+    "start": "启动活动",
+    "processing": "处理中...",
+    "fields": {
+      "campaignName": "活动名称",
+      "industry": "行业",
+      "legacyStacks": "遗留技术栈",
+      "regions": "区域"
+    },
+    "emptyTimeline": "暂无事件，启动后会显示 pipeline 进度。"
+  },
+  "workspace": {
+    "eyebrow": "Account Workspace",
+    "title": "需求信号、问题图谱与证据摘要",
+    "demandSignals": "需求信号",
+    "questionMap": "问题图谱",
+    "evidenceSummary": "证据摘要",
+    "pendingResult": "等待执行结果"
+  },
+  "content": {
+    "eyebrow": "Content Studio",
+    "title": "草稿预览、QA 与人工改写",
+    "rewrite": "改写",
+    "publish": "发布",
+    "rewriteNote": "改写备注",
+    "defaultRewriteNote": "请补充阶段迁移边界、适用前提和后续联络动作。",
+    "rewriteApprovalComment": "请调整对比性表述并明确适用前提。",
+    "draft": "草稿",
+    "qa": "QA",
+    "pendingDraft": "等待生成内容"
+  },
+  "approval": {
+    "eyebrow": "Approval Center",
+    "title": "人工决策门禁",
+    "none": "当前没有待审批项。",
+    "approve": "通过",
+    "reject": "拒绝",
+    "rewrite": "改写",
+    "uiApprovalComment": "UI 审批"
+  },
+  "report": {
+    "eyebrow": "Report Center",
+    "title": "执行摘要与发布结果",
+    "campaignReport": "活动报告",
+    "publishedAssets": "发布资产",
+    "pendingReport": "等待报告生成",
+    "pendingPublish": "等待发布完成"
+  }
+}

@@ -2,10 +2,10 @@
 
 import pytest
 
-from control_plane.api.websocket_hub import WebSocketHub
+from kernel.skills.chatbot import ChatBotSkill
+from kernel.runtime import WebSocketHub
 from shared.channels.base import MessageChannelAdapter, UserInfo
 from shared.channels.gateway import MessageGateway
-from kernel.skills.chatbot import ChatBotSkill
 
 
 class MockAdapter(MessageChannelAdapter):

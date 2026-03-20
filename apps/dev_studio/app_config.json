@@ -1,10 +1,39 @@
 {
   "name": "dev_studio",
   "display_name": "Developer Studio",
-  "description": "開発支援ツール（コード解析、コード生成、Agentウィザード）",
+  "description": "開発支援ツール（コード解析、コード生成、Agentウィザード）。独立した開発用サーバーとして動作します。",
+  "business_base": "platform",
+  "product_line": "framework",
+  "surface_profile": "developer",
+  "audit_profile": "developer",
   "version": "1.0.0",
+  "icon": "🛠️",
+  "ports": {
+    "api": 8011,
+    "frontend": null,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.dev_studio.main:app",
+    "health": "/health"
+  },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8011",
+      "frontend": null,
+      "health": "http://localhost:8011/health"
+    },
+    "commands": {
+      "backend_dev": "uvicorn apps.dev_studio.main:app --host 0.0.0.0 --port 8011 --reload",
+      "frontend_dev": null,
+      "start": "python -m apps.dev_studio.main",
+      "stop": "pkill -f 'apps.dev_studio.main'"
+    }
+  },
   "blueprint": {
     "engine_pattern": "custom"
   },
-  "agents": []
+  "agents": [],
+  "plugin_bindings": []
 }

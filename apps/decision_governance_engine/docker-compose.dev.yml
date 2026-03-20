@@ -26,7 +26,7 @@ services:
   backend:
     # 容器内ポートは 8000 のまま（docker-compose.yml と統一）
     # ホスト側は .env の API_PORT=8001 で自動切替（docker-compose.yml の ports 設定を継承）
-    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["sh", "-c", "exec uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port ${PORT:-8000} --reload"]
     volumes:
       # ソースコードをマウント（リアルタイム反映、読み書き可能）
       - ../../contracts:/app/contracts

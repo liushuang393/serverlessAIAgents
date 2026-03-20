@@ -282,7 +282,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 pip install -e ".[dev,apps]"
 ```
 
@@ -435,7 +435,7 @@ mypy apps/decision_governance_engine/
 Platform（Control Plane）に publish/deploy を統一する場合:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/decision_governance_engine --target docker
 ```
 

@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -103,7 +104,6 @@ JSON形式で以下を出力:
         self, input_data: RiskAssessmentInput
     ) -> RiskAssessmentOutput:
         """LLMを使用したリスク評価."""
-        from shared.utils import extract_json
 
         prompt = f"""以下の資産のリスクを評価してください：
 資産タイプ: {input_data.asset_type}
@@ -113,7 +113,7 @@ JSON形式で以下を出力:
 追加情報: {input_data.context}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return RiskAssessmentOutput(**data)

@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from control_plane.bootstrap.capability_bundle import CapabilityBundle
+    from kernel.runtime import CapabilityBundle
 
 
 logger = logging.getLogger(__name__)

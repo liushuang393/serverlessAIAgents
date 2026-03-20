@@ -25,6 +25,8 @@ if TYPE_CHECKING:
         ResolvedAppRuntime,
         resolve_app_runtime,
     )
+    from kernel.runtime.bootstrap import AppCapabilityBootstrapper
+    from kernel.runtime.capability_bundle import CapabilityBundle
     from kernel.runtime.context import (
         RuntimeContext,
         get_env,
@@ -33,6 +35,7 @@ if TYPE_CHECKING:
         set_runtime_context,
         use_runtime_context,
     )
+    from kernel.runtime.config_watcher import ConfigWatcher
     from kernel.runtime.init import init_agentflow, init_bizcore
     from kernel.runtime.lifecycle import (
         HookInfo,
@@ -99,12 +102,25 @@ if TYPE_CHECKING:
         get_tenant_isolation,
         require_tenant,
     )
+    from kernel.runtime.websocket import (
+        WSClient,
+        WSHandler,
+        WSMessage,
+        WSMessageType,
+        WSMiddleware,
+        WSNext,
+        WebSocketHub,
+        WebSocketProtocol,
+    )
 
 
 __all__ = [
     "AppRuntimeHosts",
     "AppRuntimePorts",
     "AppRuntimeUrls",
+    "AppCapabilityBootstrapper",
+    "CapabilityBundle",
+    "ConfigWatcher",
     "HookInfo",
     "HookPriority",
     "LifecycleEvent",
@@ -139,6 +155,14 @@ __all__ = [
     "TenantQuota",
     "TrajectoryAdapter",
     "TransitionSample",
+    "WSClient",
+    "WSHandler",
+    "WSMessage",
+    "WSMessageType",
+    "WSMiddleware",
+    "WSNext",
+    "WebSocketHub",
+    "WebSocketProtocol",
     "build_optimized_llm_profile",
     "get_current_scope",
     "get_current_scope_or_raise",
@@ -172,6 +196,9 @@ _SUBMODULE_MAP: dict[str, str] = {
     "AppRuntimeHosts": "kernel.runtime.app_manifest",
     "AppRuntimePorts": "kernel.runtime.app_manifest",
     "AppRuntimeUrls": "kernel.runtime.app_manifest",
+    "AppCapabilityBootstrapper": "kernel.runtime.bootstrap",
+    "CapabilityBundle": "kernel.runtime.capability_bundle",
+    "ConfigWatcher": "kernel.runtime.config_watcher",
     "ResolvedAppRuntime": "kernel.runtime.app_manifest",
     "resolve_app_runtime": "kernel.runtime.app_manifest",
     "RuntimeContext": "kernel.runtime.context",
@@ -231,6 +258,14 @@ _SUBMODULE_MAP: dict[str, str] = {
     "get_tenant_id": "kernel.runtime.tenant_isolation",
     "get_tenant_isolation": "kernel.runtime.tenant_isolation",
     "require_tenant": "kernel.runtime.tenant_isolation",
+    "WSClient": "kernel.runtime.websocket",
+    "WSHandler": "kernel.runtime.websocket",
+    "WSMessage": "kernel.runtime.websocket",
+    "WSMessageType": "kernel.runtime.websocket",
+    "WSMiddleware": "kernel.runtime.websocket",
+    "WSNext": "kernel.runtime.websocket",
+    "WebSocketHub": "kernel.runtime.websocket",
+    "WebSocketProtocol": "kernel.runtime.websocket",
 }
 
 

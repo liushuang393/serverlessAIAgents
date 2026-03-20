@@ -8,3 +8,7 @@
 - 製品層: `apps/`
 - control plane 実装は `control_plane/`
 - commerce ドメイン正本は `domain/commerce/`
+
+## Architecture Review
+
+- [Architecture Review Pack](architecture_review/README.md)

@@ -12,9 +12,17 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountSignalArtifact,
     ArtifactMeta,
     SignalEntry,
+    normalize_content_language,
 )
 
 from kernel.agents.resilient_agent import ResilientAgent
+
+
+_URGENCY_HYPOTHESIS: dict[str, str] = {
+    "ja": "保守要員不足と技術負債圧縮の同時要請が強い",
+    "en": "Maintenance talent shortages and technical-debt reduction pressure are both rising.",
+    "zh": "维护人才短缺与技术债压降需求正在同步上升。",
+}
 
 
 class DemandSignalAgent(ResilientAgent[DemandSignalInput, DemandSignalOutput]):
@@ -29,6 +37,7 @@ class DemandSignalAgent(ResilientAgent[DemandSignalInput, DemandSignalOutput]):
         request = input_data.request
         task_id = input_data.task_id
         intelligence_snapshot = input_data.intelligence_snapshot
+        language = normalize_content_language((request.inputs.content_languages or ["ja"])[0])
         company = (
             request.inputs.target_accounts[0]
             if request.inputs.target_accounts
@@ -54,7 +63,7 @@ class DemandSignalAgent(ResilientAgent[DemandSignalInput, DemandSignalOutput]):
             ),
             company=company,
             signals=signals,
-            urgency_hypothesis="保守要員不足と技術負債圧縮の同時要請が強い",
+            urgency_hypothesis=_URGENCY_HYPOTHESIS[language],
             modernization_fit_score=fit_score,
             evidence=[
                 item.to_evidence_dict()

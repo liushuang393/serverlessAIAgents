@@ -1,8 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
+import { I18nProvider } from './i18n';
+import * as api from './lib/api';
 
 vi.mock('./lib/api', () => ({
+  buildStreamUrl: vi.fn((path: string) => path),
   startExecution: vi.fn().mockResolvedValue({ task_id: 'geo-test', ws_url: '/api/ws/geo-test' }),
   fetchState: vi.fn().mockResolvedValue({
     task_id: 'geo-test',
@@ -89,20 +93,49 @@ vi.mock('./lib/api', () => ({
   postCommand: vi.fn().mockResolvedValue({}),
 }));
 
+function renderApp(): void {
+  render(
+    <I18nProvider>
+      <App />
+    </I18nProvider>,
+  );
+}
+
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe('App', () => {
-  it('renders the shell and start action', () => {
-    render(<App />);
-    expect(screen.getByText('GEO Platform')).toBeInTheDocument();
+  it('renders japanese labels by default', async () => {
+    renderApp();
+    expect(await screen.findByText('キャンペーン開始')).toBeInTheDocument();
     expect(screen.getByTestId('start-campaign-button')).toBeInTheDocument();
   });
 
-  it('switches tabs and renders content studio', () => {
-    render(<App />);
-    fireEvent.click(screen.getByTestId('tab-content'));
-    expect(screen.getByTestId('content-studio')).toBeInTheDocument();
+  it('switches UI labels between en and zh', async () => {
+    renderApp();
+    const localeSwitcher = await screen.findByTestId('locale-switcher');
+
+    fireEvent.change(localeSwitcher, { target: { value: 'en' } });
+    expect(await screen.findByText('Start Campaign')).toBeInTheDocument();
+
+    fireEvent.change(localeSwitcher, { target: { value: 'zh' } });
+    expect(await screen.findByText('启动活动')).toBeInTheDocument();
+  });
+
+  it('sends selected locale as content language when starting execution', async () => {
+    renderApp();
+    const localeSwitcher = await screen.findByTestId('locale-switcher');
+    fireEvent.change(localeSwitcher, { target: { value: 'en' } });
+    await screen.findByText('Start Campaign');
+
+    fireEvent.click(screen.getByTestId('start-campaign-button'));
+
+    await waitFor(() => {
+      expect(api.startExecution).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = vi.mocked(api.startExecution).mock.calls[0][0];
+    expect(payload.inputs?.content_languages).toEqual(['en']);
   });
 });

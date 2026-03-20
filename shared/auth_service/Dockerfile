@@ -52,6 +52,10 @@ RUN pip install --no-cache-dir -e ".[apps]"
 # ---------------------------------------------------------------------------
 FROM base AS production
 
+# ポート設定（ビルド時に override 可能、実行時も ENV として引き継ぐ）
+ARG PORT=8010
+ENV PORT=${PORT}
+
 # 非 root ユーザー作成
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
@@ -79,12 +83,12 @@ RUN mkdir -p /app/data && chown -R appuser:appgroup /app
 # パーミッション設定
 USER appuser
 
-# ヘルスチェック
+# ヘルスチェック（${PORT} は実行時 ENV から展開される）
 HEALTHCHECK --interval=10s --timeout=10s --start-period=60s --retries=5 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')" || exit 1
 
-# ポート公開
-EXPOSE 8010
+# ポート公開（ARG PORT のビルド時値を使用）
+EXPOSE ${PORT}
 
-# 起動コマンド（app_config.json のポート 8010 を使用）
-CMD ["python", "-m", "shared.auth_service.main"]
+# 起動コマンド（sh -c 経由で ${PORT} を実行時に展開）
+CMD ["sh", "-c", "exec uvicorn shared.auth_service.main:app --host 0.0.0.0 --port ${PORT}"]

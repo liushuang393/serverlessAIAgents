@@ -20,7 +20,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -107,7 +108,6 @@ JSON形式で以下を出力:
         self, input_data: DiagnosticSupportInput
     ) -> DiagnosticSupportOutput:
         """LLMを使用した診断支援."""
-        from shared.utils import extract_json
 
         prompt = f"""以下の患者情報に基づいて鑑別診断を支援してください：
 年齢: {input_data.patient_age}歳
@@ -119,7 +119,7 @@ JSON形式で以下を出力:
 検査結果: {input_data.lab_results}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return DiagnosticSupportOutput(**data)

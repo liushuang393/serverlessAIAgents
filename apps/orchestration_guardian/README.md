@@ -42,7 +42,7 @@ bash setup_dev.sh
 ## 起動
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m apps.orchestration_guardian.main
 ```
 
@@ -64,7 +64,7 @@ cd <repo-root>
 ## 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/orchestration_guardian --target docker
 ```
 

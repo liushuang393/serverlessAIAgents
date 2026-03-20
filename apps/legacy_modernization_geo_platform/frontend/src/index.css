@@ -89,7 +89,27 @@ button {
 .tabs {
   display: grid;
   gap: 0.55rem;
-  margin-top: 2rem;
+  margin-top: 1.4rem;
+}
+
+.locale-row {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.locale-label {
+  font-size: 0.78rem;
+  color: #4f5d77;
+}
+
+.locale-switcher {
+  width: 100%;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(24, 32, 48, 0.12);
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0.72rem 0.85rem;
+  color: #182030;
 }
 
 .tab {
@@ -231,4 +251,3 @@ a {
     align-items: flex-start;
   }
 }
-

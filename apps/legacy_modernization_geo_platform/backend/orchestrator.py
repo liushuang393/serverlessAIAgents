@@ -43,6 +43,7 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     TaskEvent,
     TaskStateResponse,
     TaskStatus,
+    normalize_content_language,
 )
 from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
 from fastapi import WebSocket
@@ -53,6 +54,27 @@ from kernel.agents.app_agent_runtime import AppAgentRuntime
 
 logger = logging.getLogger(__name__)
 ModelT = TypeVar("ModelT", bound=BaseModel)
+
+_APPROVAL_REASON_COPY: dict[str, str] = {
+    "ja": "比較表現または数値・引用リスクのため",
+    "en": "Comparative or numeric claims require human review before publishing.",
+    "zh": "存在对比或数值表达风险，发布前需要人工复核。",
+}
+_REWRITE_SECTION_TITLE_COPY: dict[str, str] = {
+    "ja": "レビュー反映メモ",
+    "en": "Review Notes",
+    "zh": "评审修订说明",
+}
+_REWRITE_ADJUSTMENT_NOTE_COPY: dict[str, str] = {
+    "ja": "比較表現は適用条件を明示し、断定を避けるよう調整しました。",
+    "en": "Comparative claims were rewritten with explicit conditions and non-absolute wording.",
+    "zh": "已补充对比结论的适用条件，并调整为非绝对化表述。",
+}
+_REVIEW_REQUESTED_NOTE_COPY: dict[str, str] = {
+    "ja": "レビュー要請",
+    "en": "Review requested",
+    "zh": "请求复审",
+}
 
 
 @dataclass(slots=True)
@@ -661,6 +683,13 @@ class GeoOrchestrator:
             summary=summary,
         )
 
+    @staticmethod
+    def _resolve_runtime_language(runtime: GeoTaskRuntime) -> str:
+        """Resolve normalized task language from execution request."""
+        requested = runtime.request.inputs.content_languages
+        first_language = requested[0] if requested else "ja"
+        return normalize_content_language(first_language)
+
     def _handle_approval_loop(
         self,
         *,
@@ -694,7 +723,9 @@ class GeoOrchestrator:
                 )
                 return qa_report
             if decision == ApprovalStatus.REWRITE:
-                note = runtime.pending_approval.comment if runtime.pending_approval is not None else "Review requested"
+                language = self._resolve_runtime_language(runtime)
+                default_note = _REVIEW_REQUESTED_NOTE_COPY[language]
+                note = runtime.pending_approval.comment if runtime.pending_approval is not None else default_note
                 if runtime.rewrite_iterations >= request.options.max_auto_iterations:
                     runtime.status = TaskStatus.FAILED
                     self._repository.update_task(
@@ -713,7 +744,7 @@ class GeoOrchestrator:
                     )
                     runtime.pending_approval = None
                     return qa_report
-                self._apply_rewrite(task_id=runtime.task_id, note=note or "Review requested")
+                self._apply_rewrite(task_id=runtime.task_id, note=note or default_note)
                 runtime.rewrite_iterations += 1
                 runtime.pending_approval = None
                 qa_report = self._run_stage(
@@ -734,6 +765,8 @@ class GeoOrchestrator:
 
     def _request_approval(self, runtime: GeoTaskRuntime, qa_report: GeoQAReport) -> ApprovalStatus:
         """Emit an approval event and wait for a decision."""
+        language = self._resolve_runtime_language(runtime)
+        approval_reason = _APPROVAL_REASON_COPY[language]
         request_id = f"apr-{uuid4().hex[:10]}"
         approval_record = self._repository.create_approval(
             request_id=request_id,
@@ -741,7 +774,7 @@ class GeoOrchestrator:
             stage="publish_review",
             object_id=runtime.task_id,
             risk_level=qa_report.risk_level,
-            reason="比較表現または数値・引用リスクのため",
+            reason=approval_reason,
             actions=["approve", "reject", "rewrite"],
         )
         runtime.pending_approval = PendingApproval(record=approval_record)
@@ -756,7 +789,7 @@ class GeoOrchestrator:
                 payload={
                     "request_id": request_id,
                     "risk_level": qa_report.risk_level,
-                    "reason": "比較表現または数値・引用リスクのため",
+                    "reason": approval_reason,
                     "actions": ["approve", "reject", "rewrite"],
                 },
             ),
@@ -788,12 +821,15 @@ class GeoOrchestrator:
     def _apply_rewrite(self, *, task_id: str, note: str) -> None:
         """Apply a lightweight rewrite to the current draft artifact."""
         draft = self._load_artifact(task_id, "content_draft_artifact", ContentDraftArtifact)
+        language = normalize_content_language(draft.target_language)
+        section_title = _REWRITE_SECTION_TITLE_COPY[language]
+        adjustment_note = _REWRITE_ADJUSTMENT_NOTE_COPY[language]
         rewritten_pages: list[ContentDraftPage] = []
         for page in draft.pages:
             rewritten_body = (
-                f"{page.body_markdown}\n\n## レビュー反映メモ\n"
+                f"{page.body_markdown}\n\n## {section_title}\n"
                 f"- {note}\n"
-                "- 比較表現は適用条件を明示し、断定を避けるよう調整しました。"
+                f"- {adjustment_note}"
             )
             rewritten_pages.append(
                 ContentDraftPage(
@@ -907,5 +943,4 @@ class GeoOrchestrator:
                 current_stage=runtime.current_stage,
             )
             raise RuntimeError("Task cancelled")
-
 

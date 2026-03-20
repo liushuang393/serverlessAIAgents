@@ -78,7 +78,12 @@ export async function fetchState(taskId: string): Promise<TaskStateResponse> {
   return readJson(response);
 }
 
-export async function submitApproval(taskId: string, approved: boolean, action?: string): Promise<unknown> {
+export async function submitApproval(
+  taskId: string,
+  approved: boolean,
+  action?: string,
+  comment?: string,
+): Promise<unknown> {
   const response = await fetch(`${getApiBase()}/api/geo/${taskId}/approval`, {
     method: 'POST',
     headers: {
@@ -89,7 +94,7 @@ export async function submitApproval(taskId: string, approved: boolean, action?:
       approved,
       reviewer_name: 'operator-ui',
       action,
-      comment: action === 'rewrite' ? '请调整比较性表述' : 'UI approval',
+      comment: comment ?? 'UI approval',
     }),
   });
   return readJson(response);

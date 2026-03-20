@@ -5,8 +5,10 @@ async function startCampaign(
   campaignName: string,
   industry: string,
   stacks: string,
+  locale: 'ja' | 'en' | 'zh' = 'ja',
 ): Promise<void> {
   await page.goto('/');
+  await page.getByTestId('locale-switcher').selectOption(locale);
   await page.getByTestId('campaign-name-input').fill(campaignName);
   await page.getByTestId('industries-input').fill(industry);
   await page.getByTestId('legacy-stacks-input').fill(stacks);
@@ -19,6 +21,7 @@ test('covers operator analysis, rewrite, approval, publish, and public CTA flow'
     'construction-cobol-demand-japan',
     'construction',
     'COBOL, RPG',
+    'en',
   );
 
   await expect(page.getByTestId('task-status')).toContainText('waiting_approval', { timeout: 15000 });
@@ -31,11 +34,13 @@ test('covers operator analysis, rewrite, approval, publish, and public CTA flow'
 
   await page.getByTestId('tab-content').click();
   await expect(page.getByTestId('content-studio')).toBeVisible();
-  await expect(page.getByTestId('draft-preview')).toContainText('モダナイゼーションガイド');
+  await expect(page.getByTestId('draft-preview')).toContainText('Modernization Guide');
   await expect(page.getByTestId('qa-risk-level')).toContainText('MEDIUM');
-  await page.getByTestId('rewrite-note').fill('请补充阶段性迁移边界、适用前提、联络动作');
+  await page.getByTestId('rewrite-note').fill(
+    'Please clarify phased migration boundaries, assumptions, and follow-up actions.',
+  );
   await page.getByTestId('rewrite-button').click();
-  await expect(page.getByTestId('draft-preview')).toContainText('レビュー反映メモ', { timeout: 15000 });
+  await expect(page.getByTestId('draft-preview')).toContainText('Review Notes', { timeout: 15000 });
 
   await page.getByTestId('tab-approval').click();
   await expect(page.getByTestId('pending-approval-card')).toBeVisible({ timeout: 15000 });
@@ -58,9 +63,10 @@ test('covers operator analysis, rewrite, approval, publish, and public CTA flow'
       'href',
       /mailto:modernization@example\.com/,
     );
-    await expect(page.getByTestId('public-faq')).toContainText('よくある質問');
+    await expect(page.getByTestId('public-faq')).toContainText('Frequently Asked Questions');
     const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
     expect(jsonLd).toContain('FAQPage');
+    expect(jsonLd).toContain('en-US');
   }
 
   await page.goto('/geo/sitemap.xml');
@@ -77,10 +83,10 @@ test('covers operator rejection flow before publishing', async ({ page }) => {
 
   await page.getByTestId('tab-approval').click();
   await expect(page.getByTestId('pending-approval-card')).toBeVisible({ timeout: 15000 });
-  await page.getByRole('button', { name: 'Reject' }).click();
+  await page.getByRole('button', { name: '却下' }).click();
 
   await expect(page.getByTestId('task-status')).toContainText('failed', { timeout: 15000 });
   await page.getByTestId('tab-report').click();
-  await expect(page.getByTestId('report-markdown')).toContainText('等待报告生成');
-  await expect(page.getByTestId('report-center')).toContainText('等待发布完成');
+  await expect(page.getByTestId('report-markdown')).toContainText('レポート生成待ち');
+  await expect(page.getByTestId('report-center')).toContainText('公開完了待ち');
 });

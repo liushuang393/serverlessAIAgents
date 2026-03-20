@@ -25,6 +25,7 @@ from harness.governance.plugin_signature import (
     SignatureStatus,
 )
 from pydantic import BaseModel, Field
+from shared.config.manifest import load_app_manifest
 
 
 if TYPE_CHECKING:
@@ -41,6 +42,8 @@ _PLUGIN_SIGNATURE_ENFORCEMENT_ENV = "AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT"
 _APP_ENV_ENV = "APP_ENV"
 _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT = "warn"
 _VALID_SIGNATURE_ENFORCEMENTS = {"warn", "deny"}
+_CANONICAL_PLUGIN_PACKS_DIR = Path("kernel/plugins/packs")
+_LEGACY_PLUGIN_PACKS_DIR = Path("plugins")
 
 
 _logger = logging.getLogger(__name__)
@@ -75,6 +78,177 @@ class PluginRuntimeAssessment(ContractPluginRuntimeAssessment):
     binding: PluginBindingRecord | None = Field(default=None)
 
 
+class PluginManifestLoader:
+    """Load canonical plugin manifests from the configured packs root."""
+
+    def __init__(
+        self,
+        *,
+        plugins_dir: Path,
+        signature_verifier: PluginSignatureVerifier,
+    ) -> None:
+        self._plugins_dir = plugins_dir
+        self._signature_verifier = signature_verifier
+
+    def load(self) -> dict[str, PluginManifestRecord]:
+        """Load plugin manifests under the configured packs root."""
+        manifests: dict[str, PluginManifestRecord] = {}
+        if not self._plugins_dir.is_dir():
+            _logger.debug("plugin packs directory missing: %s", self._plugins_dir)
+            return manifests
+
+        for manifest_path in sorted(self._plugins_dir.glob("*/plugin_manifest.json")):
+            record = self._load_one(manifest_path)
+            if record is not None:
+                manifests[record.id] = record
+        return manifests
+
+    def _load_one(self, manifest_path: Path) -> PluginManifestRecord | None:
+        try:
+            raw = json.loads(manifest_path.read_text("utf-8"))
+            plugin_id = PluginRegistry._normalize_optional_text(raw.get("id"))
+            plugin_version = PluginRegistry._normalize_optional_text(raw.get("version"))
+            risk_tier = PluginRegistry._normalize_optional_text(raw.get("risk_tier"))
+            compatibility = raw.get("compatibility")
+            if (
+                plugin_id is None
+                or plugin_version is None
+                or risk_tier is None
+                or not isinstance(compatibility, dict)
+            ):
+                _logger.warning("plugin manifest missing required fields: %s", manifest_path)
+                return None
+
+            kernel_constraint = PluginRegistry._normalize_optional_text(compatibility.get("kernel")) or ""
+            product_lines = PluginRegistry._normalize_product_lines(compatibility.get("product_lines"))
+            signature_result = self._signature_verifier.verify_manifest(
+                manifest=raw,
+                manifest_path=manifest_path,
+            )
+            return PluginManifestRecord(
+                id=plugin_id,
+                version=plugin_version,
+                risk_tier=risk_tier,
+                compatibility_kernel=kernel_constraint,
+                compatibility_product_lines=product_lines,
+                manifest_path=manifest_path,
+                signature_status=signature_result.status,
+                signature_reason=signature_result.reason,
+                raw=raw,
+            )
+        except Exception as exc:
+            _logger.warning("plugin manifest load failed (%s): %s", manifest_path, exc)
+            return None
+
+
+class AppBindingResolver:
+    """Resolve app-level plugin bindings from canonical app manifests."""
+
+    def __init__(self, apps_dir: Path) -> None:
+        self._apps_dir = apps_dir
+
+    def load_snapshot(self, app_name: str) -> AppPluginSnapshot | None:
+        """Load one app's plugin binding snapshot from canonical manifest."""
+        config_path = self._apps_dir / app_name / "app_config.json"
+        if not config_path.is_file():
+            return None
+        try:
+            manifest = load_app_manifest(config_path)
+            bindings = {
+                binding.id: PluginBindingRecord(
+                    id=binding.id,
+                    version=binding.version,
+                    config=binding.config,
+                )
+                for binding in manifest.plugin_bindings
+            }
+            return AppPluginSnapshot(
+                app_name=manifest.name,
+                product_line=manifest.product_line,
+                bindings=bindings,
+            )
+        except Exception as exc:
+            _logger.warning("app manifest load failed (%s): %s", config_path, exc)
+            return None
+ 
+
+class PluginPolicyEvaluator:
+    """Encapsulate runtime policy checks for plugin manifests and bindings."""
+
+    def __init__(self, *, kernel_version: str, signature_enforcement: str) -> None:
+        self._kernel_version = kernel_version
+        self._signature_enforcement = signature_enforcement
+
+    def evaluate_manifest(
+        self,
+        assessment: PluginRuntimeAssessment,
+        *,
+        manifest: PluginManifestRecord,
+        plugin_version: str | None,
+        tool_permissions: list[str],
+    ) -> None:
+        """Evaluate manifest compatibility and permissions against one tool."""
+        assessment.plugin_risk_tier = manifest.risk_tier
+        assessment.plugin_signature_status = manifest.signature_status
+        assessment.plugin_signature_reason = manifest.signature_reason
+        if manifest.signature_status != "verified":
+            message = (
+                f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}"
+            )
+            if self._signature_enforcement == "deny":
+                assessment.errors.append(message)
+            else:
+                assessment.warnings.append(message)
+
+        assessment.manifest_required_permissions = PluginRegistry._normalize_permissions(
+            manifest.raw.get("required_permissions")
+        )
+        missing_permissions = [
+            permission
+            for permission in assessment.manifest_required_permissions
+            if permission not in tool_permissions
+        ]
+        if missing_permissions:
+            self._add_violation(
+                assessment,
+                f"tool.required_permissions が plugin manifest の必須権限を満たしていません: {missing_permissions}",
+            )
+
+        if plugin_version and plugin_version != manifest.version:
+            self._add_violation(
+                assessment,
+                f"tool.plugin_version({plugin_version}) と manifest.version({manifest.version}) が一致しません",
+            )
+
+        if not PluginRegistry._is_kernel_compatible_static(
+            manifest.compatibility_kernel,
+            self._kernel_version,
+        ):
+            self._add_violation(
+                assessment,
+                (
+                    f"plugin '{manifest.id}' は kernel={manifest.compatibility_kernel} を要求しますが "
+                    f"現在の kernel は {self._kernel_version} です"
+                ),
+            )
+
+        if (
+            manifest.compatibility_product_lines
+            and assessment.product_line not in manifest.compatibility_product_lines
+        ):
+            self._add_violation(
+                assessment,
+                f"plugin '{manifest.id}' は product_line={manifest.compatibility_product_lines} のみ対応です",
+            )
+
+    @staticmethod
+    def _add_violation(assessment: PluginRuntimeAssessment, message: str) -> None:
+        if assessment.strict_mode:
+            assessment.errors.append(message)
+        else:
+            assessment.warnings.append(message)
+
+
 class PluginRegistry:
     """plugin manifest を読み込み、実行時照合を行うレジストリ."""
 
@@ -86,7 +260,7 @@ class PluginRegistry:
         kernel_version: str | None = None,
         signature_verifier: PluginSignatureVerifier | None = None,
     ) -> None:
-        self._plugins_dir = plugins_dir or (Path.cwd() / "plugins")
+        self._plugins_dir = plugins_dir or self._resolve_plugins_dir()
         self._apps_dir = apps_dir or (Path.cwd() / "apps")
         self._kernel_version = kernel_version or self._resolve_kernel_version()
         trust_store_override = os.getenv("AGENTFLOW_PLUGIN_TRUST_STORE")
@@ -96,6 +270,15 @@ class PluginRegistry:
             else self._plugins_dir / "trust_store.json",
         )
         self._signature_enforcement = self._resolve_signature_enforcement()
+        self._manifest_loader = PluginManifestLoader(
+            plugins_dir=self._plugins_dir,
+            signature_verifier=self._signature_verifier,
+        )
+        self._binding_resolver = AppBindingResolver(self._apps_dir)
+        self._policy_evaluator = PluginPolicyEvaluator(
+            kernel_version=self._kernel_version,
+            signature_enforcement=self._signature_enforcement,
+        )
         self._manifests: dict[str, PluginManifestRecord] = {}
         self._app_snapshots: dict[str, AppPluginSnapshot | None] = {}
         self._load_manifests()
@@ -157,54 +340,13 @@ class PluginRegistry:
             )
             return assessment
 
-        assessment.plugin_risk_tier = manifest.risk_tier
-        assessment.plugin_signature_status = manifest.signature_status
-        assessment.plugin_signature_reason = manifest.signature_reason
-        if manifest.signature_status != "verified":
-            signature_message = (
-                f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}"
-            )
-            if self._signature_enforcement == "deny":
-                assessment.errors.append(signature_message)
-            else:
-                assessment.warnings.append(signature_message)
-        assessment.manifest_required_permissions = self._normalize_permissions(
-            manifest.raw.get("required_permissions"),
-        )
-
         tool_permissions = self._normalize_permissions(tool.required_permissions)
-        missing_permissions = [
-            perm for perm in assessment.manifest_required_permissions if perm not in tool_permissions
-        ]
-        if missing_permissions:
-            self._add_violation(
-                assessment,
-                (f"tool.required_permissions が plugin manifest の必須権限を満たしていません: {missing_permissions}"),
-            )
-
-        if plugin_version and plugin_version != manifest.version:
-            self._add_violation(
-                assessment,
-                (f"tool.plugin_version({plugin_version}) と manifest.version({manifest.version}) が一致しません"),
-            )
-
-        if not self._is_kernel_compatible(
-            manifest.compatibility_kernel,
-            self._kernel_version,
-        ):
-            self._add_violation(
-                assessment,
-                (
-                    f"plugin '{plugin_id}' は kernel={manifest.compatibility_kernel} を要求しますが "
-                    f"現在の kernel は {self._kernel_version} です"
-                ),
-            )
-
-        if manifest.compatibility_product_lines and product_line not in manifest.compatibility_product_lines:
-            self._add_violation(
-                assessment,
-                (f"plugin '{plugin_id}' は product_line={manifest.compatibility_product_lines} のみ対応です"),
-            )
+        self._policy_evaluator.evaluate_manifest(
+            assessment,
+            manifest=manifest,
+            plugin_version=plugin_version,
+            tool_permissions=tool_permissions,
+        )
 
         if app_name is None:
             if strict_mode:
@@ -275,90 +417,18 @@ class PluginRegistry:
         return _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT
 
     def _load_manifests(self) -> None:
-        """plugins/*/plugin_manifest.json を読み込む."""
-        self._manifests.clear()
-        if not self._plugins_dir.is_dir():
-            _logger.debug("plugins ディレクトリが見つかりません: %s", self._plugins_dir)
-            return
-
-        for manifest_path in sorted(self._plugins_dir.glob("*/plugin_manifest.json")):
-            try:
-                raw = json.loads(manifest_path.read_text("utf-8"))
-                plugin_id = self._normalize_optional_text(raw.get("id"))
-                plugin_version = self._normalize_optional_text(raw.get("version"))
-                risk_tier = self._normalize_optional_text(raw.get("risk_tier"))
-                compatibility = raw.get("compatibility")
-                if (
-                    plugin_id is None
-                    or plugin_version is None
-                    or risk_tier is None
-                    or not isinstance(compatibility, dict)
-                ):
-                    _logger.warning("plugin manifest 必須項目不足: %s", manifest_path)
-                    continue
-
-                kernel_constraint = self._normalize_optional_text(compatibility.get("kernel")) or ""
-                product_lines = self._normalize_product_lines(
-                    compatibility.get("product_lines"),
-                )
-                signature_result = self._signature_verifier.verify_manifest(
-                    manifest=raw,
-                    manifest_path=manifest_path,
-                )
-                self._manifests[plugin_id] = PluginManifestRecord(
-                    id=plugin_id,
-                    version=plugin_version,
-                    risk_tier=risk_tier,
-                    compatibility_kernel=kernel_constraint,
-                    compatibility_product_lines=product_lines,
-                    manifest_path=manifest_path,
-                    signature_status=signature_result.status,
-                    signature_reason=signature_result.reason,
-                    raw=raw,
-                )
-            except Exception as exc:
-                _logger.warning("plugin manifest 読み込み失敗 (%s): %s", manifest_path, exc)
+        """Load plugin manifests from the canonical packs root."""
+        self._manifests = self._manifest_loader.load()
 
     def _load_app_snapshot(self, app_name: str) -> AppPluginSnapshot | None:
-        """apps/<app>/app_config.json から plugin binding を読み込む."""
+        """Load app plugin bindings from canonical app manifests."""
         cached = self._app_snapshots.get(app_name)
         if app_name in self._app_snapshots:
             return cached
 
-        config_path = self._apps_dir / app_name / "app_config.json"
-        if not config_path.is_file():
-            self._app_snapshots[app_name] = None
-            return None
-
-        try:
-            raw = json.loads(config_path.read_text("utf-8"))
-            product_line = self._normalize_product_line(raw.get("product_line")) or "framework"
-            bindings_raw = raw.get("plugin_bindings", [])
-            bindings: dict[str, PluginBindingRecord] = {}
-            if isinstance(bindings_raw, list):
-                for item in bindings_raw:
-                    if not isinstance(item, dict):
-                        continue
-                    binding_id = self._normalize_optional_text(item.get("id"))
-                    binding_version = self._normalize_optional_text(item.get("version"))
-                    if binding_id is None or binding_version is None:
-                        continue
-                    bindings[binding_id] = PluginBindingRecord(
-                        id=binding_id,
-                        version=binding_version,
-                        config=item.get("config", {}) if isinstance(item.get("config"), dict) else {},
-                    )
-            snapshot = AppPluginSnapshot(
-                app_name=app_name,
-                product_line=product_line,
-                bindings=bindings,
-            )
-            self._app_snapshots[app_name] = snapshot
-            return snapshot
-        except Exception as exc:
-            _logger.warning("app_config 読み込み失敗 (%s): %s", config_path, exc)
-            self._app_snapshots[app_name] = None
-            return None
+        snapshot = self._binding_resolver.load_snapshot(app_name)
+        self._app_snapshots[app_name] = snapshot
+        return snapshot
 
     def _resolve_product_line(
         self,
@@ -452,6 +522,11 @@ class PluginRegistry:
 
     def _is_kernel_compatible(self, constraint: str, current_version: str) -> bool:
         """SemVer 制約との互換性を判定する."""
+        return self._is_kernel_compatible_static(constraint, current_version)
+
+    @staticmethod
+    def _is_kernel_compatible_static(constraint: str, current_version: str) -> bool:
+        """SemVer 制約との互換性を判定する."""
         if not constraint.strip():
             return True
 
@@ -465,7 +540,7 @@ class PluginRegistry:
                 return False
             operator = match.group(1) or "=="
             expected = match.group(2)
-            comparison = self._compare_semver(current_version, expected)
+            comparison = PluginRegistry._compare_semver(current_version, expected)
             if comparison is None:
                 return False
             if operator == "==" and comparison != 0:
@@ -479,6 +554,18 @@ class PluginRegistry:
             if operator == "<" and comparison >= 0:
                 return False
         return True
+
+    @staticmethod
+    def _resolve_plugins_dir() -> Path:
+        explicit = os.getenv("AGENTFLOW_PLUGIN_PACKS_DIR", "").strip()
+        if explicit:
+            return Path(explicit)
+
+        repo_root = Path.cwd()
+        canonical_dir = repo_root / _CANONICAL_PLUGIN_PACKS_DIR
+        if canonical_dir.is_dir():
+            return canonical_dir
+        return repo_root / _LEGACY_PLUGIN_PACKS_DIR
 
     @staticmethod
     def _compare_semver(left: str, right: str) -> int | None:

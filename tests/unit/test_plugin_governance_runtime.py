@@ -501,3 +501,71 @@ def test_signature_enforcement_defaults_to_deny_on_staging(
     apps_dir.mkdir(parents=True)
     registry = PluginRegistry(plugins_dir=plugins_dir, apps_dir=apps_dir)
     assert registry._signature_enforcement == "deny"  # type: ignore[attr-defined]
+
+
+def test_plugin_registry_defaults_to_kernel_plugin_packs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default manifest root should prefer kernel/plugins/packs over legacy plugins/."""
+    packs_dir = tmp_path / "kernel" / "plugins" / "packs" / "official.sample-pack"
+    packs_dir.mkdir(parents=True)
+    (tmp_path / "kernel" / "plugins" / "packs" / "trust_store.json").write_text("{}", encoding="utf-8")
+    (packs_dir / "plugin_manifest.json").write_text(
+        json.dumps(
+            {
+                "id": "official.sample-pack",
+                "version": "1.0.0",
+                "risk_tier": "low",
+                "compatibility": {"kernel": ">=1.0.0", "product_lines": ["framework"]},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "apps").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+
+    registry = PluginRegistry()
+
+    assert registry.get_manifest("official.sample-pack") is not None
+    assert registry._plugins_dir == tmp_path / "kernel" / "plugins" / "packs"  # type: ignore[attr-defined]
+
+
+def test_plugin_registry_loads_app_snapshot_via_canonical_manifest_loader(
+    tmp_path: Path,
+) -> None:
+    """App plugin bindings should be sourced from the canonical manifest loader."""
+    plugins_dir = tmp_path / "kernel" / "plugins" / "packs"
+    apps_dir = tmp_path / "apps"
+    plugins_dir.mkdir(parents=True)
+    apps_dir.mkdir(parents=True)
+    (plugins_dir / "trust_store.json").write_text("{}", encoding="utf-8")
+
+    app_dir = apps_dir / "faq_app"
+    app_dir.mkdir()
+    (app_dir / "app_config.json").write_text(
+        json.dumps(
+            {
+                "name": "faq_app",
+                "display_name": "FAQ App",
+                "product_line": "faq",
+                "surface_profile": "business",
+                "audit_profile": "business",
+                "plugin_bindings": [
+                    {
+                        "id": "official.assistant-memory-pack",
+                        "version": "1.2.3",
+                        "config": {"tenant": "demo"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    registry = PluginRegistry(plugins_dir=plugins_dir, apps_dir=apps_dir)
+    snapshot = registry._load_app_snapshot("faq_app")  # type: ignore[attr-defined]
+
+    assert snapshot is not None
+    assert snapshot.product_line == "faq"
+    assert snapshot.bindings["official.assistant-memory-pack"].config == {"tenant": "demo"}

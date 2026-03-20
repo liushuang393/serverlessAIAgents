@@ -1,0 +1,49 @@
+# ==============================================================================
+# Developer Studio (独立構成版) - Docker Compose
+# ==============================================================================
+#
+# 使用方法:
+#   本番（イメージビルド）:
+#     docker compose up --build -d
+#
+#   停止:
+#     docker compose down
+#
+#   ログ確認:
+#     docker compose logs -f studio
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Developer Studio バックエンド (Port 8011)
+  # ---------------------------------------------------------------------------
+  studio:
+    build:
+      context: ../..
+      dockerfile: apps/dev_studio/Dockerfile
+    container_name: dev-studio
+    ports:
+      - "${DEV_STUDIO_PORT:-8011}:8011"
+    environment:
+      # LLM 認証設定等（必要に応じて .env より注入）
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # ホットリロードは不要だが、成果物のマウント用にマウント可能
+      - ../..:/app/workspace:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8011/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - studio-network
+
+# ---------------------------------------------------------------------------
+# ネットワーク
+# ---------------------------------------------------------------------------
+networks:
+  studio-network:
+    driver: bridge

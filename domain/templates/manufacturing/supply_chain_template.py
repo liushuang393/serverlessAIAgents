@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -100,7 +101,6 @@ JSON形式で以下を出力:
         self, input_data: SupplyChainInput
     ) -> SupplyChainOutput:
         """LLMを使用したサプライチェーン分析."""
-        from shared.utils import extract_json
 
         prompt = f"""以下のサプライチェーン分析を実施してください：
 分析タイプ: {input_data.analysis_type}
@@ -110,7 +110,7 @@ JSON形式で以下を出力:
 制約条件: {input_data.constraints}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return SupplyChainOutput(**data)

@@ -51,7 +51,7 @@ BizCore 共通基盤の Agent/サービスを使用した FAQ システムです
 - FAQ が `auth_service` の JWT をローカル検証するには、`apps/faq_system/.env` に次を設定します。
 - `AUTH_SERVICE_JWT_SECRET` には **auth_service 側の `JWT_SECRET_KEY` と同じ値** を設定してください。
 - 未設定でも動作は継続しますが、その場合は FAQ 側が `/auth/me` にフォールバックして検証するため、`AUTH_SERVICE_JWT_SECRET が未設定です。ローカル検証できません。` という警告が出ます。
-- `docker-compose.auth-faq.yml` で統合起動する場合は、FAQ バックエンドが **ルート `.env` の `JWT_SECRET_KEY`** を参照するため、こちらも同じ値で揃える必要があります。
+- auth_service と連携起動する場合は、FAQ バックエンドの `AUTH_SERVICE_JWT_SECRET` を auth_service 側の `JWT_SECRET_KEY` と同じ値で揃える必要があります。
 
 ```env
 AUTH_SERVICE_URL=http://localhost:8010
@@ -134,7 +134,7 @@ docker compose up --build -d
 Platform（Control Plane）に publish/deploy を統一する場合:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/faq_system --target docker
 ```
 
@@ -464,7 +464,7 @@ FAQ_DEFAULT_TENANT_ID=default
 
 ```bash
 cd <repo-root>
-conda activate bizcore
+conda activate agentflow
 python -m apps.faq_system.main --reload
 # → http://localhost:8005 でAPIが起動
 ```
@@ -827,7 +827,7 @@ EOF
 
 ```bash
 cd <リポジトリルート>
-conda activate bizcore
+conda activate agentflow
 
 # 1. 業務DBをDockerで起動（PostgreSQLのみ）
 cd apps/faq_system
@@ -924,21 +924,24 @@ docker compose down
 
 > コンテナ内部ポートは常に `8005`。ホスト公開ポートは `.env` の `API_PORT` で変更可能。
 
-### auth_service + FAQ 統合起動
+### auth_service + FAQ 連携起動
 
-`docker-compose.auth-faq.yml`（リポジトリルート）で auth_service と FAQ を一括起動できます。
+auth_service と FAQ は**別々の docker-compose で起動**します。
 
 ```bash
-# リポジトリルートで実行
-docker compose -f docker-compose.auth-faq.yml up --build -d
+# 1. auth_service を先に起動（リポジトリルートから）
+cd shared/auth_service
+docker compose up --build -d
+# → auth API: http://localhost:8010/docs
+# → 管理画面: http://localhost:3010
 
-# サービス URL:
-# auth API:    http://localhost:8010/docs
-# 管理画面:    http://localhost:3010
-# FAQ:         http://localhost:8005
+# 2. FAQ を起動
+cd apps/faq_system
+docker compose up --build -d
+# → FAQ: http://localhost:8005
 ```
 
-この構成では FAQ バックエンドの `AUTH_SERVICE_URL` と `AUTH_SERVICE_JWT_SECRET` が自動設定されます。
+FAQ の `.env` で `AUTH_SERVICE_URL=http://localhost:8010` と `AUTH_SERVICE_JWT_SECRET` を設定してください。
 
 ### 環境変数一覧
 

@@ -217,6 +217,20 @@ class TestLayerBoundaries:
             msg = self._format_violations(vs)
             pytest.fail(f"domain → control_plane/apps の依存違反 {len(vs)} 件:\n{msg}")
 
+    def test_apps_do_not_import_control_plane_internals(self) -> None:
+        """Apps runtime should not import control_plane internals directly."""
+        violations: list[str] = []
+        apps_dir = REPO_ROOT / "apps"
+        for py_file in apps_dir.rglob("*.py"):
+            for lineno, imported_module in _extract_imports(py_file):
+                if imported_module == "control_plane" or imported_module.startswith("control_plane."):
+                    rel = py_file.relative_to(REPO_ROOT)
+                    violations.append(f"{rel}:{lineno}: {imported_module}")
+
+        if violations:
+            msg = "\n".join(f"  {violation}" for violation in violations)
+            pytest.fail(f"apps → control_plane internal import violations {len(violations)} 件:\n{msg}")
+
     def test_total_violations_decreasing(self) -> None:
         """全体の違反件数が減少傾向であることを確認する。
 

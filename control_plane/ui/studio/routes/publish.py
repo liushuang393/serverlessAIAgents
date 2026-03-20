@@ -37,7 +37,7 @@ def create_publish_router() -> APIRouter:
         ZIP ファイルとしてダウンロードできます。
         """
         from kernel.core.interfaces import CodeGenOptions, CodeOutputType
-        from shared.services.publish_service import PublishService
+        from control_plane.publish.service import PublishService
 
         try:
             service = PublishService()
@@ -83,7 +83,7 @@ def create_publish_router() -> APIRouter:
     async def publish_preview(request: PublishExportRequest) -> dict[str, Any]:
         """生成されるコードをプレビュー."""
         from kernel.core.interfaces import CodeOutputType
-        from shared.services.publish_service import PublishService
+        from control_plane.publish.service import PublishService
 
         try:
             service = PublishService()
@@ -120,7 +120,7 @@ def create_publish_router() -> APIRouter:
     async def publish_deploy(request: PublishDeployRequest) -> PublishDeployResponse:
         """ワークフローをデプロイ."""
         from kernel.core.interfaces import CodeOutputType, DeployTarget
-        from shared.services.publish_service import PublishService
+        from control_plane.publish.service import PublishService
 
         logs: list[str] = []
 
@@ -192,7 +192,7 @@ def create_publish_router() -> APIRouter:
     ) -> StreamingResponse:
         """ワークフローをストリームデプロイ."""
         from kernel.core.interfaces import CodeOutputType, DeployTarget
-        from shared.services.publish_service import PublishService
+        from control_plane.publish.service import PublishService
 
         async def event_generator() -> AsyncIterator[str]:
             try:
@@ -230,7 +230,7 @@ def create_publish_router() -> APIRouter:
     @router.get("/targets")
     async def list_publish_targets() -> dict[str, Any]:
         """利用可能なデプロイターゲット一覧."""
-        from shared.services.publish_service import PublishService
+        from control_plane.publish.service import PublishService
 
         service = PublishService()
         output_types = service.get_supported_output_types()
@@ -245,7 +245,7 @@ def create_publish_router() -> APIRouter:
     async def get_config_fields(target: str) -> list[dict[str, Any]]:
         """ターゲットに必要な設定フィールドを取得."""
         from kernel.core.interfaces import DeployTarget
-        from shared.services.publish_service import PublishService
+        from control_plane.publish.service import PublishService
 
         service = PublishService()
 

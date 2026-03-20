@@ -6,6 +6,7 @@ import time
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from infrastructure.security.auth_client.client import RemoteUser
@@ -86,6 +87,26 @@ def test_execute_request_defaults() -> None:
     assert request.constraints.must_cite_sources is True
 
 
+@pytest.mark.parametrize(
+    ("raw_language", "normalized_language"),
+    [
+        ("ja-JP", "ja"),
+        ("en-US", "en"),
+        ("zh-CN", "zh"),
+        ("fr-FR", "ja"),
+    ],
+)
+def test_execute_request_content_language_normalization(
+    raw_language: str,
+    normalized_language: str,
+) -> None:
+    request = GeoExecuteRequest(
+        campaign_name="demo",
+        inputs={"content_languages": [raw_language]},
+    )
+    assert request.inputs.content_languages == [normalized_language]
+
+
 def test_execute_creates_task_and_blocks_for_approval(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE", "1")
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
@@ -159,6 +180,96 @@ def test_approval_publishes_page_and_report(monkeypatch, tmp_path: Path) -> None
     sitemap = client.get("/geo/sitemap.xml")
     assert sitemap.status_code == 200
     assert "modernization-guide" in sitemap.text
+
+
+@pytest.mark.parametrize(
+    (
+        "requested_language",
+        "expected_language",
+        "expected_schema_language",
+        "expected_html_lang",
+        "expected_faq_label",
+        "expected_report_title",
+    ),
+    [
+        (
+            "en-US",
+            "en",
+            "en-US",
+            'lang="en"',
+            "Frequently Asked Questions",
+            "Legacy Modernization GEO Platform Report",
+        ),
+        (
+            "zh-CN",
+            "zh",
+            "zh-CN",
+            'lang="zh-CN"',
+            "常见问题",
+            "Legacy Modernization GEO 平台报告",
+        ),
+    ],
+)
+def test_content_language_propagates_to_draft_publish_and_report(
+    monkeypatch,
+    tmp_path: Path,
+    requested_language: str,
+    expected_language: str,
+    expected_schema_language: str,
+    expected_html_lang: str,
+    expected_faq_label: str,
+    expected_report_title: str,
+) -> None:
+    monkeypatch.setenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE", "1")
+    monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
+    runtime = resolve_app_runtime("apps/legacy_modernization_geo_platform/app_config.json")
+    app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
+    client = TestClient(app)
+
+    start = client.post(
+        "/api/geo/execute",
+        headers=_auth_headers(),
+        json={
+            "campaign_name": "legacy-modernization-i18n",
+            "package": "assessment",
+            "targets": {
+                "industries": ["manufacturing"],
+                "legacy_stacks": ["COBOL"],
+                "regions": ["Japan"],
+            },
+            "inputs": {
+                "content_languages": [requested_language],
+            },
+        },
+    ).json()
+
+    waiting_state = _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
+    draft_artifact_response = client.get(
+        f"/api/geo/{start['task_id']}/artifacts/content_draft_artifact",
+        headers=_auth_headers(),
+    )
+    assert draft_artifact_response.status_code == 200
+    draft_artifact = draft_artifact_response.json()
+    assert draft_artifact["target_language"] == expected_language
+    assert draft_artifact["pages"][0]["json_ld"]["inLanguage"] == expected_schema_language
+
+    approval = waiting_state["approvals"][0]
+    approve_response = client.post(
+        f"/api/geo/{start['task_id']}/approval",
+        headers=_auth_headers(),
+        params={"request_id": approval["request_id"]},
+        json={"approved": True, "reviewer_name": "pytest"},
+    )
+    assert approve_response.status_code == 200
+
+    completed = _wait_for_status(client, start["task_id"], TaskStatus.COMPLETED.value)
+    page_url = completed["published_pages"][0]["page_url"]
+    public_page = client.get(page_url.replace(runtime.urls.backend or "http://localhost:8100", ""))
+    assert public_page.status_code == 200
+    assert expected_html_lang in public_page.text
+    assert expected_faq_label in public_page.text
+    assert completed["report"] is not None
+    assert expected_report_title in completed["report"]["markdown"]
 
 
 def test_rewrite_command_updates_draft(monkeypatch, tmp_path: Path) -> None:

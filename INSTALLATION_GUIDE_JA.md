@@ -1,6 +1,7 @@
 # BizCore AI インストール・セットアップガイド
 
 > **対象**: 初心者向けの詳細な手順書
+> **最終更新**: 2026-03-20
 
 ---
 
@@ -8,9 +9,13 @@
 
 1. [前提条件](#前提条件)
 2. [BizCore AI のインストール](#bizcore-ai-のインストール)
-3. [decision_governance_engine のセットアップ](#decision_governance_engine-のセットアップ)
-4. [環境変数の設定](#環境変数の設定)
-5. [アプリケーションの起動](#アプリケーションの起動)
+3. [環境変数の設定](#環境変数の設定)
+4. [Docker デプロイメント（推奨）](#docker-デプロイメント推奨)
+   - [auth_service](#1-auth_service-認証サービス)
+   - [decision_governance_engine](#2-decision_governance_engine-意思決定ガバナンスエンジン)
+   - [market_trend_monitor](#3-market_trend_monitor-市場トレンドモニター)
+   - [dev_studio](#4-dev_studio-開発者スタジオ)
+5. [手動起動（Docker なし）](#手動起動docker-なし)
 6. [動作確認](#動作確認)
 7. [トラブルシューティング](#トラブルシューティング)
 
@@ -22,32 +27,31 @@
 
 | ソフトウェア | バージョン | 説明 |
 |------------|----------|------|
-| **Python** | 3.13+ | Python プログラミング言語 |
-| **Node.js** | 22+ | フロントエンド開発用（React が必要） |
+| **Docker Desktop** | 最新版 | コンテナ実行環境（推奨デプロイ方法） |
+| **Python** | 3.13+ | Python プログラミング言語（手動起動時） |
+| **Node.js** | 22+ | フロントエンド開発用（手動起動時） |
 | **npm** または **pnpm** | 最新版 | Node.js パッケージマネージャー |
-| **Git** | 最新版 | コードの取得用（オプション） |
+| **Git** | 最新版 | コードの取得用 |
 
 ### インストール確認
 
-ターミナル（コマンドプロンプト）で以下を実行して確認：
-
 ```bash
+# Docker のバージョン確認（Docker Desktop 起動後）
+docker --version
+# 出力例: Docker version 27.x.x
+
 # Python のバージョン確認
 python --version
-# または
-python3 --version
 # 出力例: Python 3.13.0
 
 # Node.js のバージョン確認
 node --version
-# 出力例: v18.17.0
-
-# npm のバージョン確認
-npm --version
-# 出力例: 9.6.7
+# 出力例: v22.x.x
 ```
 
-**注意**: Python 3.13 未満の場合は、[Python公式サイト](https://www.python.org/downloads/)から最新版をインストールしてください。
+**注意**:
+- Docker Desktop は [公式サイト](https://www.docker.com/products/docker-desktop/) からインストールし、起動してから作業を行ってください。
+- WSL2 環境の場合は、Docker Desktop の「Settings → Resources → WSL Integration」で対象ディストリビューションを有効化してください。
 
 ---
 
@@ -108,43 +112,6 @@ bizcore --help
 # レイヤーパッケージが import できるか確認
 python -c "import kernel, shared; print('imports ok')"
 ```
-
----
-
-## decision_governance_engine のセットアップ
-
-### ステップ 1: バックエンド依存関係の確認
-
-BizCore AI をインストール済みであれば、追加のインストールは不要です。
-
-**確認:**
-```bash
-# FastAPI がインストールされているか確認
-python -c "import fastapi; print(fastapi.__version__)"
-# 出力例: 0.123.0
-```
-
-### ステップ 2: フロントエンド依存関係のインストール
-
-```bash
-# フロントエンドディレクトリに移動　例：
-cd apps/decision_governance_engine/frontend
-
-# 依存関係をインストール
-npm install
-# または
-pnpm install
-
-# インストール確認
-npm list --depth=0
-```
-
-**インストールされる主なパッケージ:**
-- React 18
-- TypeScript
-- Vite（ビルドツール）
-- Tailwind CSS
-- Zustand（状態管理）
 
 ---
 
@@ -226,99 +193,362 @@ GOOGLE_API_KEY=
 
 ---
 
-## アプリケーションの起動
+## Docker デプロイメント（推奨）
 
-### 方法 1: フロントエンド開発サーバーの起動
+> **前提**: Docker Desktop が起動していること、リポジトリルート（`serverlessAIAgents/`）で作業すること。
+
+### ポート一覧
+
+| サービス | コンポーネント | ホストポート | 説明 |
+|---------|-------------|------------|------|
+| **auth_service** | API | 8010 | 認証 API (JWT/OAuth2/LDAP) |
+| **auth_service** | Admin UI | 3010 | 管理画面 (Nginx) |
+| **auth_service** | PostgreSQL | 5438 | DB (コンテナ内 5432) |
+| **decision_governance_engine** | API | 8001 | 意思決定 API |
+| **decision_governance_engine** | Frontend | 5174 | React Dev Server |
+| **decision_governance_engine** | PostgreSQL | 5432 | DB |
+| **decision_governance_engine** | Redis | 6379 | キャッシュ |
+| **market_trend_monitor** | API | 8002 | 市場トレンド API |
+| **market_trend_monitor** | Frontend | 3002 | React (Nginx) |
+| **market_trend_monitor** | SQLite | — | ボリューム内永続化 |
+
+---
+
+### 1. auth_service（認証サービス）
+
+**場所**: `shared/auth_service/`
+**ビルドコンテキスト**: リポジトリルート（自動設定済み）
+
+```bash
+# リポジトリルートから実行
+cd shared/auth_service
+
+# ビルド＆バックグラウンド起動
+docker compose up --build -d
+
+# ログ確認
+docker compose logs -f auth-service
+
+# 停止
+docker compose down
+```
+
+**アクセス先:**
+- API: `http://localhost:8010/health`
+- API Docs: `http://localhost:8010/docs`
+- Admin UI: `http://localhost:3010`
+
+**主な環境変数**（`.env` または環境変数で上書き可能）:
+
+```env
+JWT_SECRET_KEY=your-secret-key-here      # 必須: JWTシークレット（本番では強力なキーを設定）
+AUTH_PROVIDER=local_db                   # local_db / google / azure / ldap / saml
+AUTH_DB_NAME=auth_service
+AUTH_DB_USER=postgres
+AUTH_DB_PASSWORD=postgres
+AUTH_DB_PORT=5438
+AUTH_SERVICE_PORT=8010
+AUTH_ADMIN_PORT=3010
+DEV_MODE=true                            # 開発時は true
+```
+
+> **nginx DNS 解決について（本番サーバー含む）:**
+> `auth-admin`（nginx）は起動時に `auth-service` の DNS 解決を行いません。
+> `/etc/resolv.conf` から DNS サーバーを動的取得し、リクエスト時に解決するため、
+> Docker Compose・Kubernetes・本番サーバーのいずれでも追加設定なしに動作します。
+
+---
+
+### 2. decision_governance_engine（意思決定ガバナンスエンジン）
+
+**場所**: `apps/decision_governance_engine/`
+**ビルドコンテキスト**: リポジトリルート（自動設定済み）
+
+```bash
+# リポジトリルートから実行
+cd apps/decision_governance_engine
+
+# 開発モード（ホットリロード有効、フロントエンド port 5174）
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+
+# ログ確認
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
+
+# DB のみ先に起動（バックエンド開発時）
+docker compose up -d postgres-main redis
+
+# 停止（ボリューム保持）
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+
+# 停止（ボリュームも削除）
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+```
+
+**アクセス先:**
+- API: `http://localhost:8001/api/health`
+- API Docs: `http://localhost:8001/docs`
+- Frontend: `http://localhost:5174`
+
+**主な環境変数**（`.env` に設定）:
+
+```env
+OPENAI_API_KEY=sk-...           # または ANTHROPIC_API_KEY / GOOGLE_API_KEY
+POSTGRES_USER=dge
+POSTGRES_PASSWORD=dge_password
+POSTGRES_DB=decision_governance
+DB_PORT=5432
+REDIS_PORT=6379
+API_PORT=8001
+FRONTEND_DEV_PORT=5174
+ENABLE_RAG=true
+LOG_LEVEL=DEBUG
+```
+
+---
+
+### 3. market_trend_monitor（市場トレンドモニター）
+
+**場所**: `apps/market_trend_monitor/`
+**ビルドコンテキスト**: リポジトリルート（自動設定済み）
+
+```bash
+# リポジトリルートから実行
+cd apps/market_trend_monitor
+
+# ビルド＆バックグラウンド起動
+docker compose up --build -d
+
+# ログ確認
+docker compose logs -f
+
+# 停止
+docker compose down
+```
+
+**アクセス先:**
+- API: `http://localhost:8002/health`
+- API Docs: `http://localhost:8002/docs`
+- Frontend: `http://localhost:3002`
+
+**主な環境変数**（`.env` に設定）:
+
+```env
+OPENAI_API_KEY=sk-...           # または ANTHROPIC_API_KEY
+DATABASE_URL=sqlite:////app/apps/market_trend_monitor/data/market_trend.db
+API_PORT=8002
+FRONTEND_PORT=3002
+LOG_LEVEL=INFO
+```
+
+---
+
+### 4. dev_studio（開発者スタジオ）
+
+`dev_studio` は **Python ライブラリ**として設計されており、スタンドアロンの Docker サービスではありません。
+
+提供機能:
+- `apps/dev_studio/code_intelligence/` — AST 解析・コード品質・CI/CD インテグレーション
+- `apps/dev_studio/codegen/` — コード生成エンジン
+- `apps/dev_studio/wizard/` — AI エージェントウィザード（SkillForge, Synthesizer 等）
+
+```bash
+# BizCore パッケージとして他サービスが使用（追加インストール不要）
+python -c "from apps.dev_studio.wizard.agent_wizard import AgentWizard; print('dev_studio OK')"
+
+# コード生成の例
+python -c "
+from apps.dev_studio.codegen.generator import CodeGenerator
+# ジェネレーターを使用
+"
+```
+
+---
+
+## 手動起動（Docker なし）
+
+### decision_governance_engine
 
 **ターミナル 1（バックエンド）:**
 
 ```bash
 # プロジェクトルートで実行
-
-# FastAPI サーバーを起動
-uvicorn apps.decision_governance_engine.api:app --reload --host 0.0.0.0 --port 8000
-
-# または、api.py を直接実行
-python api.py
+uvicorn apps.decision_governance_engine.api:app --reload --host 0.0.0.0 --port 8001
 ```
-
-**起動確認:**
-- ブラウザで `http://localhost:8000/docs` にアクセス
-- Swagger UI が表示されれば成功
-
-**API エンドポイント:**
-- `http://localhost:8000/api/health` - ヘルスチェック
-- `http://localhost:8000/api/agents` - Agent 一覧
-- `http://localhost:8000/docs` - API ドキュメント
-
 
 **ターミナル 2（フロントエンド）:**
 
 ```bash
-# フロントエンドディレクトリで実行
 cd apps/decision_governance_engine/frontend
-
-# 開発サーバーを起動
-npm run dev
-# または
-pnpm dev
+npm install && npm run dev
 ```
 
-**起動確認:**
-- ブラウザで `http://localhost:5173` にアクセス（Vite のデフォルトポート）
-- 画面が表示されれば成功
-
-**注意**: フロントエンドはバックエンド API（`http://localhost:8000`）に接続します。
-
-### 方法 2: CLI モードで実行（フロントエンド不要）
-
-**ターミナル:**
+**CLI モード:**
 
 ```bash
-# プロジェクトルートで実行
-cd apps/decision_governance_engine
-
-# インタラクティブモード
 python -m apps.decision_governance_engine.main --interactive
+```
 
-# または、直接質問を指定
-python -m apps.decision_governance_engine.main "新規事業への投資判断をしたい"
+### market_trend_monitor
+
+**ターミナル 1（バックエンド）:**
+
+```bash
+python -m apps.market_trend_monitor.backend.api.main
+```
+
+**ターミナル 2（フロントエンド）:**
+
+```bash
+cd apps/market_trend_monitor/frontend
+npm install && npm run dev
+```
+
+### auth_service
+
+```bash
+python -m shared.auth_service.main
 ```
 
 ---
 
 ## 動作確認
 
-### 1. バックエンド API の確認
+### Docker コンテナ一覧の確認
 
 ```bash
-# ヘルスチェック
-curl http://localhost:8000/api/health
+# 稼働中コンテナの確認
+docker ps
 
-# Agent 一覧取得
-curl http://localhost:8000/api/agents
+# 期待されるコンテナ（全サービス起動時）:
+# auth-db, auth-service, auth-admin
+# dge-postgres-main, dge-redis, dge-backend, dge-frontend
+# market-trend-monitor-backend, market-trend-monitor-frontend
 ```
 
-### 2. フロントエンドの確認
-
-1. ブラウザで `http://localhost:5173` を開く
-2. ログイン画面が表示される
-3. テストユーザーでログイン（実装により異なる）
-4. 意思決定質問を入力して実行
-
-### 3. CLI モードの確認
+### 各サービスのヘルスチェック
 
 ```bash
-# インタラクティブモードで起動
-python -m apps.decision_governance_engine.main --interactive
+# auth_service
+curl http://localhost:8010/health
 
-# プロンプトが表示されたら質問を入力
+# decision_governance_engine
+curl http://localhost:8001/api/health
+
+# market_trend_monitor
+curl http://localhost:8002/health
+```
+
+### フロントエンドへのアクセス
+
+| サービス | URL |
+|---------|-----|
+| auth_service 管理画面 | http://localhost:3010 |
+| DGE フロントエンド | http://localhost:5174 |
+| market_trend_monitor | http://localhost:3002 |
+
+### API ドキュメント（Swagger UI）
+
+| サービス | URL |
+|---------|-----|
+| auth_service | http://localhost:8010/docs |
+| DGE | http://localhost:8001/docs |
+| market_trend_monitor | http://localhost:8002/docs |
+
+### CLI モードの確認（DGE）
+
+```bash
+python -m apps.decision_governance_engine.main --interactive
 質問> 新規事業への投資判断をしたい
 ```
 
 ---
 
 ## トラブルシューティング
+
+### 問題 0: Docker が見つからない / 接続できない（WSL2）
+
+**エラー:**
+```
+The command 'docker' could not be found in this WSL 2 distro.
+```
+
+**解決方法:**
+1. Docker Desktop を起動する（Windows タスクバーのクジラアイコンが「Running」になるまで待つ）
+2. Docker Desktop → Settings → Resources → WSL Integration で対象ディストリビューションを有効化
+3. WSL2 ターミナルを再起動して確認:
+   ```bash
+   docker --version
+   ```
+
+---
+
+### 問題 0b: nginx が起動しない（upstream host not found）
+
+**エラー:**
+```
+[emerg] host not found in upstream "auth-service" in /etc/nginx/conf.d/default.conf:9
+nginx: [emerg] host not found in upstream "auth-service"
+```
+
+**原因:**
+nginx はデフォルトで upstream ホスト名を**起動時に静的解決**します。
+`proxy_pass http://auth-service:8010;` と書くと、nginx が起動した瞬間に `auth-service` を解決しようとします。依存サービスがまだ起動中だったり、DNS が準備できていない場合、nginx がクラッシュします。
+
+**本プロジェクトでの対策（実装済み）:**
+`shared/auth_service/frontend/Dockerfile` で以下の 2 段階の仕組みを採用しています：
+
+1. **起動時 DNS 動的取得** (`01-set-resolver.envsh`)
+   コンテナ起動時に `/etc/resolv.conf` から実際の DNS サーバー IP を読み取り、`RESOLVER` 変数にセットします。
+
+2. **nginx テンプレート展開** (`/etc/nginx/templates/default.conf.template`)
+   `${RESOLVER}` プレースホルダーが起動時に実際の IP に置換されます。
+   `set $backend` で変数経由の `proxy_pass` にすることで、DNS 解決をリクエスト時まで遅延させます。
+
+```nginx
+# /etc/resolv.conf から動的取得（Docker/K8s/Podman 全対応）
+resolver ${RESOLVER} valid=30s ipv6=off;
+
+location /auth/ {
+    set $backend http://auth-service:8010;  # 変数経由→リクエスト時解決
+    proxy_pass $backend;
+}
+```
+
+**対応環境:**
+
+| 実行環境 | DNS | 動作 |
+|---------|-----|------|
+| Docker Compose（ローカル） | `127.0.0.11` | ✅ 自動取得 |
+| Docker Compose（本番サーバー） | `127.0.0.11` | ✅ 自動取得 |
+| Kubernetes | `10.96.0.10`（CoreDNS 等） | ✅ 自動取得 |
+| Podman / その他 | `/etc/resolv.conf` に準拠 | ✅ 自動取得 |
+
+> **注意**: 本実装は `nginx:alpine` の公式テンプレート機能（`/etc/nginx/templates/`）と `.envsh` sourcing 機能を利用しています。他のサービスで nginx を使う場合も同じパターンで実装してください。
+
+---
+
+### 問題 0c: Docker ビルドが失敗する（build context エラー）
+
+**エラー:**
+```
+ERROR: unable to prepare context: path not found
+```
+
+**解決方法:**
+- 各サービスのディレクトリから実行する（リポジトリルートではなく）:
+  ```bash
+  # auth_service の場合
+  cd shared/auth_service && docker compose up --build -d
+
+  # DGE の場合
+  cd apps/decision_governance_engine
+  docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+
+  # market_trend_monitor の場合
+  cd apps/market_trend_monitor && docker compose up --build -d
+  ```
+
+---
 
 ### 問題 1: Python のバージョンエラー
 
@@ -521,5 +751,5 @@ await manager.stop()
 
 ---
 
-**最終更新**: 2025-01-20  
-**バージョン**: 1.0.0
+**最終更新**: 2026-03-20
+**バージョン**: 1.1.0

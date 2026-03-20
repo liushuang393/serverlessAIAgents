@@ -17,7 +17,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel import ResilientAgent
+from domain.templates.template_helpers import extract_json_payload
+from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -105,7 +106,6 @@ JSON形式で以下を出力:
         self, input_data: QualityControlInput
     ) -> QualityControlOutput:
         """LLMを使用した品質検査."""
-        from shared.utils import extract_json
 
         prompt = f"""以下の製品の品質検査を実施してください：
 製品ID: {input_data.product_id}
@@ -115,7 +115,7 @@ JSON形式で以下を出力:
 バッチ: {input_data.production_batch}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
-        data = extract_json(response)
+        data = extract_json_payload(response)
 
         if data:
             return QualityControlOutput(**data)

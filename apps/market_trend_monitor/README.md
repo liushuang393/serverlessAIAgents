@@ -88,7 +88,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 pip install -e ".[dev,apps]"
 ```
 
@@ -243,7 +243,7 @@ npm test
 ## 📦 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/market_trend_monitor --target docker
 ```
 

@@ -81,8 +81,14 @@ _REPAIR_TOOL_ORDER: tuple[Literal["codex", "claude"], ...] = ("codex", "claude")
 _REPAIR_MAX_ATTEMPTS_PER_TOOL = 2
 _LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery", "admin")
 
-# WSL / Linux 環境で conda bizcore を活性化するシェルプレフィックス
-_CONDA_ACTIVATE_PREFIX = 'eval "$(conda shell.bash hook)" && conda activate bizcore && '
+# WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
+# NOTE: `source profile.d/conda.sh` は内部で `conda shell.bash hook` を呼び出し、
+# 親プロセスの conda 環境 (例: bizcore) を復元しようとして
+# EnvironmentNameNotFound を起こす場合がある。
+# `conda shell.bash activate <env>` は hook を経由せず直接活性化コマンドを出力するため安全。
+_CONDA_ACTIVATE_PREFIX = (
+    'eval "$(conda shell.bash activate agentflow)" && '
+)
 
 ExecutionMode = Literal["local", "docker"]
 
@@ -1367,18 +1373,18 @@ class AppLifecycleManager:
     ) -> LocalProcessLaunchResult:
         """Local 開発コマンドをバックグラウンド起動し、生存確認する.
 
-        WSL / Linux 環境で conda bizcore を活性化してから実行する。
+        WSL / Linux 環境で conda agentflow を活性化してから実行する。
         """
         log_path = f"/tmp/{app_name}_{role}.log"
         pid_file = f"/tmp/{app_name}_{role}.pid"
-        # conda bizcore 環境を活性化してからコマンドを実行する
+        # conda agentflow 環境を活性化してからコマンドを実行する
         activated_command = f"{_CONDA_ACTIVATE_PREFIX}{command}"
         launch_cmd = (
-            f"nohup setsid bash -lc {shlex.quote(activated_command)}"
+            f"nohup setsid bash -c {shlex.quote(activated_command)}"
             f" > {shlex.quote(log_path)} 2>&1"
             f" & PID=$!; echo $PID; echo $PID > {shlex.quote(pid_file)}"
         )
-        _logger.info("[%s] %s 起動 (conda bizcore): %s", app_name, role, command)
+        _logger.info("[%s] %s 起動 (conda agentflow): %s", app_name, role, command)
         proc = await asyncio.create_subprocess_shell(
             launch_cmd,
             cwd=str(cwd),
@@ -1938,7 +1944,8 @@ class AppLifecycleManager:
         command_source: str,
     ) -> AppActionResult:
         """runtime.commands の shell コマンドを実行."""
-        command = ["bash", "-lc", shell_command]
+        activated_command = f"{_CONDA_ACTIVATE_PREFIX}{shell_command}"
+        command = ["bash", "-c", activated_command]
         _logger.info("[%s] 実行: %s (cwd=%s)", config.name, shell_command, app_dir)
 
         try:
@@ -1947,6 +1954,7 @@ class AppLifecycleManager:
                 cwd=str(app_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=self._sanitize_local_process_env(),
             )
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 proc.communicate(),
@@ -2628,6 +2636,20 @@ class AppLifecycleManager:
             valid_values = {"1", "0", "true", "false", "yes", "no", "on", "off"}
             if normalized not in valid_values:
                 env["DEBUG"] = "false"
+        # conda 関連の環境変数を除去し、子プロセスが親の conda 環境を
+        # 引き継がないようにする（_CONDA_ACTIVATE_PREFIX で明示的に活性化する）
+        for key in list(env):
+            if key.startswith("CONDA_") or key == "_CE_CONDA":
+                del env[key]
+        # PATH から親プロセスの conda 環境ディレクトリを除去する。
+        # 残留していると conda が親環境（例: bizcore）を復元しようとして
+        # EnvironmentNameNotFound を起こす。
+        # _CONDA_ACTIVATE_PREFIX が正しい環境の PATH を再設定する。
+        if "PATH" in env:
+            dirs = env["PATH"].split(os.pathsep)
+            env["PATH"] = os.pathsep.join(
+                d for d in dirs if "/envs/" not in d
+            )
         return env
 
     @staticmethod

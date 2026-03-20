@@ -255,6 +255,7 @@
       "mode": "tenant_sso",
       "tenant_claim_key": "tenant_id",
       "token_policy": {
+        "auth_service_url": "http://localhost:8010",
         "jwt_issuer": "auth-service",
         "jwt_audience": "auth-service"
       },

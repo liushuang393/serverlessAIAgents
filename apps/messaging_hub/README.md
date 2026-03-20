@@ -151,7 +151,7 @@ bash setup_dev.sh
 手動で行う場合:
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 pip install -e ".[dev,apps]"
 ```
 
@@ -194,7 +194,7 @@ vim apps/messaging_hub/.env
 ```bash
 # ローカル開発（ホットリロード有効）
 # ポートは app_config.json から自動読み込み（8004）
-conda activate bizcore
+conda activate agentflow
 python -m apps.messaging_hub.main --reload
 
 # 本番起動（リロードなし）
@@ -246,7 +246,7 @@ PWA（インストール）手順:
 ## 📦 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate bizcore
+conda activate agentflow
 python -m control_plane.main publish ./apps/messaging_hub --target docker
 ```
 
