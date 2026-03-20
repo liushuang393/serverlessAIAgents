@@ -5,7 +5,7 @@
   "commands": [
     {
       "name": "backend_tests",
-      "command": ".venv/bin/python -m pytest apps/Legacy_modernization_geo_platform/tests",
+      "command": ".venv/bin/python -m pytest apps/legacy_modernization_geo_platform/tests",
       "result": "pass",
       "tests_passed": 4,
       "duration_seconds": 6.7,
@@ -13,21 +13,21 @@
     },
     {
       "name": "frontend_unit_tests",
-      "command": "cd apps/Legacy_modernization_geo_platform/frontend && npm run test",
+      "command": "cd apps/legacy_modernization_geo_platform/frontend && npm run test",
       "result": "pass",
       "tests_passed": 2,
       "duration_seconds": 1.15
     },
     {
       "name": "frontend_build",
-      "command": "cd apps/Legacy_modernization_geo_platform/frontend && npm run build",
+      "command": "cd apps/legacy_modernization_geo_platform/frontend && npm run build",
       "result": "pass",
       "bundle_js_kb": 203.44,
       "bundle_css_kb": 2.8
     },
     {
       "name": "playwright_e2e",
-      "command": "cd apps/Legacy_modernization_geo_platform/frontend && npx playwright test",
+      "command": "cd apps/legacy_modernization_geo_platform/frontend && npx playwright test",
       "result": "pass",
       "tests_passed": 2,
       "duration_seconds": 26.388068,

@@ -6,10 +6,10 @@ Generated: 2026-03-10
 
 | Area | Command | Result | Notes |
 | --- | --- | --- | --- |
-| Backend tests | `.venv/bin/python -m pytest apps/Legacy_modernization_geo_platform/tests` | PASS | 4 tests passed in 6.70s |
-| Frontend unit tests | `cd apps/Legacy_modernization_geo_platform/frontend && npm run test` | PASS | 2 tests passed in 1.15s |
-| Frontend build | `cd apps/Legacy_modernization_geo_platform/frontend && npm run build` | PASS | Vite production build succeeded |
-| Browser E2E | `cd apps/Legacy_modernization_geo_platform/frontend && npx playwright test` | PASS | 2 scenarios passed in 26.4s |
+| Backend tests | `.venv/bin/python -m pytest apps/legacy_modernization_geo_platform/tests` | PASS | 4 tests passed in 6.70s |
+| Frontend unit tests | `cd apps/legacy_modernization_geo_platform/frontend && npm run test` | PASS | 2 tests passed in 1.15s |
+| Frontend build | `cd apps/legacy_modernization_geo_platform/frontend && npm run build` | PASS | Vite production build succeeded |
+| Browser E2E | `cd apps/legacy_modernization_geo_platform/frontend && npx playwright test` | PASS | 2 scenarios passed in 26.4s |
 
 Note: `pytest` was not available on `PATH` in this environment, so the backend acceptance run used the equivalent `.venv/bin/python -m pytest ...`.
 

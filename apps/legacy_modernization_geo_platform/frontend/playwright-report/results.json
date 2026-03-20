@@ -1,10 +1,10 @@
 {
   "config": {
-    "configFile": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/frontend/playwright.config.ts",
-    "rootDir": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/frontend/src",
+    "configFile": "/home/liush/projects/serverlessAIAgents/apps/legacy_modernization_geo_platform/frontend/playwright.config.ts",
+    "rootDir": "/home/liush/projects/serverlessAIAgents/apps/legacy_modernization_geo_platform/frontend/src",
     "forbidOnly": false,
     "fullyParallel": false,
-    "globalSetup": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/frontend/playwright.global-setup.ts",
+    "globalSetup": "/home/liush/projects/serverlessAIAgents/apps/legacy_modernization_geo_platform/frontend/playwright.global-setup.ts",
     "globalTeardown": null,
     "globalTimeout": 0,
     "grep": {},
@@ -16,7 +16,7 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/frontend/test-results",
+        "outputDir": "/home/liush/projects/serverlessAIAgents/apps/legacy_modernization_geo_platform/frontend/test-results",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -24,7 +24,7 @@
         },
         "id": "",
         "name": "",
-        "testDir": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/frontend/src",
+        "testDir": "/home/liush/projects/serverlessAIAgents/apps/legacy_modernization_geo_platform/frontend/src",
         "testIgnore": [],
         "testMatch": [
           "**/*.e2e.spec.ts"
