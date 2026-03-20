@@ -26,7 +26,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   let stderr = '';
   const child = spawn(
     pythonBin,
-    ['-m', 'apps.Legacy_modernization_geo_platform.main', '--host', '127.0.0.1', '--port', String(GEO_E2E_PORT)],
+    ['-m', 'apps.legacy_modernization_geo_platform.main', '--host', '127.0.0.1', '--port', String(GEO_E2E_PORT)],
     {
       cwd: repoRoot,
       env: {
