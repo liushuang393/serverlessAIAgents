@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from shared.access.contracts import AccessContext
 from shared.access.service import build_access_context
 from shared.artifacts.service import ArtifactStore
 from shared.audit.service import AuditService
@@ -14,6 +15,7 @@ from shared.trace.service import TraceService
 
 
 __all__ = [
+    "AccessContext",
     "ArtifactStore",
     "AuditService",
     "ServiceRegistry",

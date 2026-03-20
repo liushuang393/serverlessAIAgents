@@ -22,9 +22,9 @@ from apps.faq_system.backend.db.models import IngestionCheckpoint, IngestionRun,
 from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from sqlalchemy import Select, select
 
+from harness.guardrails.data_sanitizer import DataSanitizer
+from infrastructure.providers.db_provider import SQLAlchemyDBProvider
 from shared.rag.document_loader import UniversalLoader
-from infrastructure.llm.providers.db_provider import SQLAlchemyDBProvider
-from infrastructure.security import DataSanitizer
 
 
 try:

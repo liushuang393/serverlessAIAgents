@@ -72,6 +72,44 @@ SAMPLE_TOOLS = [
 ]
 
 
+def _gateway_is_reachable() -> bool:
+    """Gateway 経由で LLM に到達可能か簡易チェック."""
+    import httpx
+
+    # ローカル vLLM が起動しているか確認
+    try:
+        resp = httpx.get("http://127.0.0.1:11434/v1/models", timeout=2)
+        if resp.status_code == 200:
+            return True
+    except Exception:
+        pass
+    # OpenAI キーが有効か確認
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if key and not key.startswith("sk-placeholder"):
+        try:
+            resp = httpx.get(
+                "https://api.openai.com/v1/models",
+                headers={"Authorization": f"Bearer {key}"},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+_GATEWAY_AVAILABLE: bool | None = None
+
+
+def has_gateway() -> bool:
+    """Gateway が利用可能かキャッシュ付きチェック."""
+    global _GATEWAY_AVAILABLE  # noqa: PLW0603
+    if _GATEWAY_AVAILABLE is None:
+        _GATEWAY_AVAILABLE = _gateway_is_reachable()
+    return _GATEWAY_AVAILABLE
+
+
 def has_openai_key() -> bool:
     """OpenAI API key が利用可能か確認する."""
     return bool(os.environ.get("OPENAI_API_KEY"))
@@ -100,7 +138,7 @@ def has_gemini_library() -> bool:
 class TestOpenAIToolCalling:
     """OpenAI GPT-4o Tool Calling のテスト."""
 
-    @pytest.mark.skipif(not has_openai_key(), reason="OPENAI_API_KEY not set")
+    @pytest.mark.skipif(not has_gateway(), reason="LLM Gateway not reachable")
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
         """単一ツール呼び出しの認識テスト."""
@@ -129,7 +167,7 @@ class TestOpenAIToolCalling:
         assert "city" in args, "引数に city を含む"
         print(f"[OpenAI] Parsed arguments: {args}")
 
-    @pytest.mark.skipif(not has_openai_key(), reason="OPENAI_API_KEY not set")
+    @pytest.mark.skipif(not has_gateway(), reason="LLM Gateway not reachable")
     @pytest.mark.asyncio
     async def test_tool_choice_selection(self):
         """LLM が適切にツールを選択できる."""
@@ -153,7 +191,7 @@ class TestOpenAIToolCalling:
 class TestAnthropicToolCalling:
     """Anthropic Claude Tool Calling のテスト."""
 
-    @pytest.mark.skipif(not has_anthropic_key(), reason="ANTHROPIC_API_KEY not set")
+    @pytest.mark.skipif(not has_gateway(), reason="LLM Gateway not reachable")
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
         """単一ツール呼び出しの認識テスト."""
@@ -181,10 +219,7 @@ class TestAnthropicToolCalling:
 class TestGeminiToolCalling:
     """Google Gemini Tool Calling のテスト."""
 
-    @pytest.mark.skipif(
-        not has_gemini_key() or not has_gemini_library(),
-        reason="GEMINI_API_KEY not set or google-generativeai not installed",
-    )
+    @pytest.mark.skipif(not has_gateway(), reason="LLM Gateway not reachable")
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
         """単一ツール呼び出しの認識テスト."""

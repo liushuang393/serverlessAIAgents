@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import StaticPool
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from shared.rag.collection_manager import CollectionManager
 from shared.rag.document_manager import DocumentManager
 from shared.rag.models import Base as RAGBase
+from shared.services.base import ServiceResult
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +297,15 @@ class TestDocumentManagement:
             file_content=b"index me with enough content to be indexed properly",
             filename="index.txt",
         )
-        indexed = await document_manager.index_document(uploaded.document_id)
+        mock_result = ServiceResult(
+            success=True,
+            data={"ids": ["chunk-1"], "count": 1},
+        )
+        with patch(
+            "shared.rag.document_manager.RAGService",
+            return_value=AsyncMock(execute=AsyncMock(return_value=mock_result)),
+        ):
+            indexed = await document_manager.index_document(uploaded.document_id)
         assert indexed.status == "indexed"
         assert indexed.chunk_count >= 1
 
@@ -311,8 +321,16 @@ class TestDocumentManagement:
             file_content=b"reindex me with enough content for chunking",
             filename="reindex.txt",
         )
-        await document_manager.index_document(uploaded.document_id)
-        reindexed = await document_manager.reindex_document(uploaded.document_id)
+        mock_result = ServiceResult(
+            success=True,
+            data={"ids": ["chunk-1"], "count": 1},
+        )
+        with patch(
+            "shared.rag.document_manager.RAGService",
+            return_value=AsyncMock(execute=AsyncMock(return_value=mock_result)),
+        ):
+            await document_manager.index_document(uploaded.document_id)
+            reindexed = await document_manager.reindex_document(uploaded.document_id)
         assert reindexed.status == "indexed"
         assert reindexed.chunk_count >= 1
 
@@ -339,14 +357,22 @@ class TestDocumentManagement:
         sample_collection: dict[str, Any],
     ) -> None:
         """コレクション全体の再インデックス."""
-        for i in range(3):
-            uploaded = await document_manager.upload_document(
-                collection_name="test_collection",
-                file_content=f"document content number {i} with enough text".encode(),
-                filename=f"doc{i}.txt",
-            )
-            await document_manager.index_document(uploaded.document_id)
-        result = await document_manager.reindex_collection("test_collection")
+        mock_result = ServiceResult(
+            success=True,
+            data={"ids": ["chunk-1"], "count": 1},
+        )
+        with patch(
+            "shared.rag.document_manager.RAGService",
+            return_value=AsyncMock(execute=AsyncMock(return_value=mock_result)),
+        ):
+            for i in range(3):
+                uploaded = await document_manager.upload_document(
+                    collection_name="test_collection",
+                    file_content=f"document content number {i} with enough text".encode(),
+                    filename=f"doc{i}.txt",
+                )
+                await document_manager.index_document(uploaded.document_id)
+            result = await document_manager.reindex_collection("test_collection")
         assert result["total"] == 3
         assert result["reindexed"] == 3
         assert result["errors"] == 0

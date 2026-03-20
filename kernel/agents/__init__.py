@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "AgentBlock": ("kernel.agents.agent_block", "AgentBlock"),
     "AgentFactory": ("kernel.agents.agent_factory", "AgentFactory"),
@@ -31,6 +32,8 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "ToolCapableAgent": ("kernel.agents.tool_agent", "ToolCapableAgent"),
     "FAQAgent": ("apps.faq_system.backend.agents.faq_agent", "FAQAgent"),
     "FAQAgentConfig": ("apps.faq_system.backend.agents.faq_agent", "FAQAgentConfig"),
+    "SalesAgent": ("shared.agents.sales_agent", "SalesAgent"),
+    "SalesAgentConfig": ("shared.agents.sales_agent", "SalesAgentConfig"),
 }
 
 

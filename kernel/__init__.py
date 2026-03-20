@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+
+__version__ = "1.3.0"
+
 import importlib
 from typing import TYPE_CHECKING
 
@@ -161,6 +164,15 @@ def __getattr__(name: str) -> object:
         "ResilientAgent": "kernel.agents.resilient_agent",
         # LLM ファクトリ
         "get_llm": "infrastructure.providers.llm_provider",
+        # Embedding ファクトリ
+        "get_embedding": "infrastructure.embeddings.provider",
+        # VectorDB ファクトリ
+        "get_vectordb": "infrastructure.vector.provider",
+        # MCP ツール
+        "MCPTool": "kernel.protocols.mcp_tool",
+        "MCPToolRequest": "kernel.protocols.mcp_tool",
+        "MCPToolResponse": "kernel.protocols.mcp_tool",
+        "MCPToolClient": "kernel.protocols.mcp_tool",
         # デコレーター
         "agent": "kernel.agent_decorator",
         "AgentClient": "kernel.agent_decorator",
