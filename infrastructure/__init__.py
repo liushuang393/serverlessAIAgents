@@ -80,7 +80,9 @@ _LEGACY_PACKAGE_ALIASES: dict[str, str] = {
     "infrastructure.database": "infrastructure.storage.database",
     "infrastructure.memory": "infrastructure.storage.memory",
     "infrastructure.os": "infrastructure.sandbox.os",
-    "infrastructure.security": "infrastructure.secrets.security",
+    # NOTE: infrastructure.security は正規パスのため legacy alias 不要
+    # "infrastructure.security": "infrastructure.secrets.security" は
+    # infrastructure/secrets/ ディレクトリが存在しないため削除
 }
 
 
