@@ -31,6 +31,11 @@ jobs:
         run: |
           ruff check .
 
+      - name: Architecture boundary check
+        run: |
+          python scripts/check_layer_boundaries.py
+          python scripts/check_no_direct_provider_calls.py
+
       - name: Run mypy
         run: |
           mypy contracts infrastructure shared kernel harness control_plane domain apps tests

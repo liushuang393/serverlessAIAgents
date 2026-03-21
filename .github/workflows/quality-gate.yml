@@ -6,14 +6,14 @@ on:
 
 jobs:
   quality-gate:
-    name: Quality Gate (lint + type + security + test)
+    name: Quality Gate (lint + arch + type + security + test)
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -22,6 +22,17 @@ jobs:
 
       - name: Lint (Ruff)
         run: ruff check .
+
+      - name: Architecture boundary check
+        run: |
+          python scripts/check_layer_boundaries.py
+          python scripts/check_no_direct_provider_calls.py
+
+      - name: App compliance check
+        run: python scripts/check_app_compliance.py
+
+      - name: Rules compliance report
+        run: python scripts/check_rules_compliance.py
 
       - name: Type check (MyPy)
         run: mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict --ignore-missing-imports
@@ -38,9 +49,9 @@ jobs:
           echo "# Quality Gate Failure Report" > check-report.md
           echo "Generated: $(date)" >> check-report.md
           echo "" >> check-report.md
+          python scripts/check_rules_compliance.py >> check-report.md 2>&1 || true
+          python scripts/check_app_compliance.py >> check-report.md 2>&1 || true
           ruff check . >> check-report.md 2>&1 || true
-          mypy contracts infrastructure shared kernel harness control_plane domain apps tests --strict >> check-report.md 2>&1 || true
-          bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii >> check-report.md 2>&1 || true
 
       - name: Upload failure report
         if: failure()
