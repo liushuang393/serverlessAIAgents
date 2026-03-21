@@ -136,35 +136,35 @@ models:
 - alias: platform_text_default
   model_id: platform_text_default
   provider: openai
-  model: gpt-4o-mini
+  model: gpt-4o
   model_type: text
   api_base: null
-  api_key_env: null
+  api_key_env: OPENAI_API_KEY
   engine: null
   enabled: true
   modalities:
   - text
   - tool_call
-  quality_score: 0.9
-  avg_latency_ms: 850.0
+  quality_score: 0.92
+  avg_latency_ms: 800.0
   cost:
-    input_per_1k: 0.0004
-    output_per_1k: 0.0016
+    input_per_1k: 0.0025
+    output_per_1k: 0.01
 - alias: platform_embedding_default
   model_id: platform_embedding_default
   provider: openai
   model: text-embedding-3-small
   model_type: embedding
   api_base: null
-  api_key_env: null
+  api_key_env: OPENAI_API_KEY
   engine: null
   enabled: true
   modalities:
   - embedding
-  quality_score: 0.82
-  avg_latency_ms: 350.0
+  quality_score: 0.88
+  avg_latency_ms: 200.0
   cost:
-    input_per_1k: 2.0e-05
+    input_per_1k: 0.00002
     output_per_1k: 0.0
 - alias: platform_image_default
   model_id: platform_image_default
@@ -222,7 +222,7 @@ models:
   api_base: http://127.0.0.1:11434/v1
   api_key_env: null
   engine: ''
-  enabled: false  # No local LLM running → disabled to skip connection timeout
+  enabled: true
   modalities:
   - text
   - tool_call
@@ -232,9 +232,9 @@ models:
     input_per_1k: 0.0
     output_per_1k: 0.0
 registry:
-  reasoning: reasoning_claude
+  reasoning: coding_openai
   coding: coding_openai
-  cheap: cheap_gemini
+  cheap: coding_openai
   local: local_vllm_default
 routing_policy:
   priority: latency

@@ -81,16 +81,35 @@ def log_startup_info(
     logger.info(f"{app_name} - 起動情報")
     logger.info("=" * 60)
 
-    # LLM 情報
-    llm_config = settings.get_active_llm_config()
-    info["llm"] = {
-        "provider": llm_config["provider"],
-        "model": llm_config["model"],
-    }
-    logger.info(f"[LLM] Provider: {llm_config['provider']}")
-    logger.info(f"[LLM] Model: {llm_config['model']}")
-    if llm_config.get("base_url"):
-        logger.info(f"[LLM] Base URL: {llm_config['base_url']}")
+    # LLM 情報（gateway 設定を優先表示、フォールバックで settings）
+    llm_provider = "unknown"
+    llm_model = "unknown"
+    llm_base_url: str | None = None
+    try:
+        from infrastructure.llm.gateway.config import load_gateway_config
+
+        gw_config = load_gateway_config()
+        default_role = gw_config.gateway.default_role
+        default_alias = gw_config.registry.get(default_role)
+        if default_alias:
+            for m in gw_config.models:
+                if m.alias == default_alias:
+                    llm_provider = m.provider
+                    llm_model = m.model
+                    llm_base_url = m.api_base
+                    break
+    except Exception:
+        # gateway 読み込み失敗時は settings からフォールバック
+        llm_config = settings.get_active_llm_config()
+        llm_provider = str(llm_config.get("provider", "unknown"))
+        llm_model = str(llm_config.get("model", "unknown"))
+        llm_base_url = llm_config.get("base_url")
+
+    info["llm"] = {"provider": llm_provider, "model": llm_model}
+    logger.info(f"[LLM] Provider: {llm_provider}")
+    logger.info(f"[LLM] Model: {llm_model}")
+    if llm_base_url:
+        logger.info(f"[LLM] Base URL: {llm_base_url}")
 
     # DB 情報
     db_config = settings.get_db_config()
@@ -110,9 +129,20 @@ def log_startup_info(
     if vdb_config.get("index"):
         logger.info(f"[VectorDB] Index: {vdb_config['index']}")
 
-    # Embedding 情報
-    logger.info(f"[Embedding] Model: {settings.openai_embedding_model}")
-    info["embedding"] = {"model": settings.openai_embedding_model}
+    # Embedding 情報（gateway の platform_embedding_default を優先表示）
+    embedding_model = settings.openai_embedding_model
+    try:
+        from infrastructure.llm.gateway.config import load_gateway_config as _load_gw
+
+        _gw = _load_gw()
+        for _m in _gw.models:
+            if _m.alias == "platform_embedding_default" and _m.model:
+                embedding_model = _m.model
+                break
+    except Exception:
+        pass
+    logger.info(f"[Embedding] Model: {embedding_model}")
+    info["embedding"] = {"model": embedding_model}
 
     # 追加情報
     if extra_info:

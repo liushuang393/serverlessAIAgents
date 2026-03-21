@@ -103,11 +103,28 @@ class LLMProvider:
                 gateway_config_path=self._config.gateway_config_path,
             )
         )
+        # gateway 解決後のモデル情報をログ表示（env fallback 値ではなく実際に使われるモデル）
+        resolved_role = self._role_override or self._config.default_role
+        gw_provider = provider
+        gw_model = model
+        try:
+            from infrastructure.llm.gateway.config import load_gateway_config
+
+            gw_config = load_gateway_config()
+            alias = gw_config.registry.get(resolved_role)
+            if alias:
+                for m in gw_config.models:
+                    if m.alias == alias:
+                        gw_provider = m.provider
+                        gw_model = m.model
+                        break
+        except Exception:
+            pass
         logger.info(
             "LLMProvider initialized via gateway: role=%s, provider=%s, model=%s",
-            self._role_override or self._config.default_role,
-            provider,
-            model,
+            resolved_role,
+            gw_provider,
+            gw_model,
         )
 
     def _require_client(self) -> LLMClient:

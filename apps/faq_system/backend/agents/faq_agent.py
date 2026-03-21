@@ -1192,7 +1192,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         if self._services_initialized:
             return
 
-        from infrastructure.security.ai_safety_guard import AISafetyGuard, GuardConfig
+        from harness.guardrails.ai_safety_guard import AISafetyGuard, GuardConfig
         from shared.services import (
             ChartConfig,
             ChartService,
@@ -1208,17 +1208,45 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             WeatherConfig,
             WeatherService,
         )
-        from kernel.skills.browser import BrowserSkill, BrowserSkillConfig
-        from kernel.skills.builtin.design_skills.agents.intent_analyzer_agent import (
-            IntentAnalyzerAgent,
-        )
-        from kernel.skills.builtin.design_skills.agents.prompt_planner_agent import (
-            PromptPlannerAgent,
-        )
-        from kernel.skills.builtin.design_skills.agents.workflow_executor_agent import (
-            WorkflowExecutorAgent,
-        )
-        from kernel.skills.builtin.web_search import SearchConfig, WebSearchSkill
+        # オプション依存: 存在しない場合は None で代替
+        _browser_cls: Any = None
+        _browser_cfg_cls: Any = None
+        if self._config.enable_browser_tools:
+            try:
+                from kernel.skills.browser import BrowserSkill as _BrowserSkill, BrowserSkillConfig as _BrowserSkillConfig  # type: ignore[import-not-found]
+                _browser_cls = _BrowserSkill
+                _browser_cfg_cls = _BrowserSkillConfig
+            except ImportError:
+                self._logger.warning("kernel.skills.browser not found; browser tools disabled")
+
+        _intent_agent_cls: Any = None
+        _prompt_agent_cls: Any = None
+        _workflow_agent_cls: Any = None
+        try:
+            from kernel.skills.builtin.design_skills.agents.intent_analyzer_agent import (
+                IntentAnalyzerAgent as _IntentAnalyzerAgent,
+            )
+            from kernel.skills.builtin.design_skills.agents.prompt_planner_agent import (
+                PromptPlannerAgent as _PromptPlannerAgent,
+            )
+            from kernel.skills.builtin.design_skills.agents.workflow_executor_agent import (
+                WorkflowExecutorAgent as _WorkflowExecutorAgent,
+            )
+            _intent_agent_cls = _IntentAnalyzerAgent
+            _prompt_agent_cls = _PromptPlannerAgent
+            _workflow_agent_cls = _WorkflowExecutorAgent
+        except ImportError:
+            self._logger.warning("design_skills agents not found; sales material disabled")
+
+        _web_search_cls: Any = None
+        _search_cfg_cls: Any = None
+        if self._config.enable_external_tools:
+            try:
+                from kernel.skills.builtin.web_search import SearchConfig as _SearchConfig, WebSearchSkill as _WebSearchSkill  # type: ignore[import-not-found]
+                _web_search_cls = _WebSearchSkill
+                _search_cfg_cls = _SearchConfig
+            except ImportError:
+                self._logger.warning("kernel.skills.builtin.web_search not found; external search disabled")
 
         # RAGサービス
         if self._config.enable_rag:
@@ -1272,9 +1300,9 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         else:
             self.__weather_service = None
 
-        if self._config.enable_external_tools:
-            self.__web_search_skill = WebSearchSkill(
-                SearchConfig(
+        if self._config.enable_external_tools and _web_search_cls is not None and _search_cfg_cls is not None:
+            self.__web_search_skill = _web_search_cls(
+                _search_cfg_cls(
                     max_results=self._config.external_max_results,
                     timeout=self._config.external_fetch_timeout_seconds,
                 )
@@ -1282,9 +1310,9 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         else:
             self.__web_search_skill = None
 
-        if self._config.enable_browser_tools:
-            self.__browser_skill = BrowserSkill(
-                BrowserSkillConfig(
+        if self._config.enable_browser_tools and _browser_cls is not None and _browser_cfg_cls is not None:
+            self.__browser_skill = _browser_cls(
+                _browser_cfg_cls(
                     domain_whitelist=self._config.browser_allowed_domains,
                     headless=True,
                 )
@@ -1297,9 +1325,9 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         else:
             self.__safety_guard = None
 
-        self.__design_intent_agent = IntentAnalyzerAgent(llm_client=self._llm)
-        self.__design_prompt_agent = PromptPlannerAgent(llm_client=self._llm)
-        self.__design_workflow_agent = WorkflowExecutorAgent(llm_client=self._llm)
+        self.__design_intent_agent = _intent_agent_cls(llm_client=self._llm) if _intent_agent_cls is not None else None
+        self.__design_prompt_agent = _prompt_agent_cls(llm_client=self._llm) if _prompt_agent_cls is not None else None
+        self.__design_workflow_agent = _workflow_agent_cls(llm_client=self._llm) if _workflow_agent_cls is not None else None
 
         self._services_initialized = True
 
