@@ -12,6 +12,11 @@ fi
 
 set -o pipefail
 
+# カラー定義
+BLUE='\033[0;34m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT" || exit 1
 
@@ -449,6 +454,14 @@ do_lint() {
         return 1
     fi
 
+    # App コンプライアンスチェック
+    printf "${BLUE}[App Compliance]${NC} Checking app framework usage...\\n"
+    run_py_tool python scripts/check_app_compliance.py
+    local app_rc=$?
+    if [ $app_rc -ne 0 ]; then
+        printf "${YELLOW}[App Compliance] Some apps have compliance issues (non-blocking)${NC}\\n"
+    fi
+
     echo ""
     run_js_lint
     if [ $? -ne 0 ]; then
@@ -633,6 +646,10 @@ do_report() {
 
     test_output=$(run_py_tool pytest -v --tb=short 2>&1)
     [ $? -ne 0 ] && test_status="❌"
+
+    # ルールコンプライアンスレポート
+    printf "${BLUE}[Rules Compliance]${NC} Generating compliance report...\\n"
+    run_py_tool python scripts/check_rules_compliance.py
 
     cat >"$report_file" <<EOF
 # BizCore Code Quality Report
