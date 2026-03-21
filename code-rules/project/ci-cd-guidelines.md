@@ -567,6 +567,23 @@ jobs:
           # 本番デプロイスクリプト実行
 ```
 
+### アーキテクチャ検証ステージ (Architecture Validation)
+
+**実行タイミング:** Lint 後、Type check 前
+**ツール:**
+- `python scripts/check_layer_boundaries.py` - 7層境界ルール
+- `python scripts/check_no_direct_provider_calls.py` - プロバイダ隔離
+- `python scripts/check_app_compliance.py` - App フレームワーク準拠
+- `python scripts/check_rules_compliance.py` - ルール総合遵守
+
+**ブロッキング条件:**
+- レイヤー境界違反 > 25 (段階的に 0 へ削減)
+- プロバイダ直接 import > 0 (即時ブロック)
+
+**非ブロッキング (レポートのみ):**
+- App コンプライアンス (改善追跡用)
+- ルールコンプライアンス (トレンド監視)
+
 ### デプロイスクリプト
 ```bash
 #!/bin/bash

@@ -94,6 +94,7 @@
 
 - [リンター & フォーマッター](tools/lint-format.md)
 - [テスト方針](tools/testing.md)
+- [アーキテクチャ検証ツール](tools/architecture-validation.md)
 - [check-all エラー分類と対処](tools/check-errors-analysis.md)（型エラー解消時の参照）
 - [Mypy 回避パターン（AI 向け）](global/mypy-avoid-patterns.md)（コード生成時に必須）
 
