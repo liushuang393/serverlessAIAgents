@@ -16,7 +16,7 @@ bash "${REPO_ROOT}/scripts/setup_qdrant.sh"
 echo "[2/3] faq_knowledge コレクションを作成..."
 cd "${REPO_ROOT}"
 # conda activate は subshell では効かないため、conda run を使う
-conda run -n bizcore python -c "
+conda run -n agentflow python -c "
 import asyncio
 from infrastructure.storage.database import DatabaseConfig, DatabaseManager
 from shared.rag.collection_manager import CollectionManager
@@ -61,4 +61,4 @@ fi
 echo ""
 echo "[FAQ] RAG セットアップ完了!"
 echo "  次のステップ: アプリを起動してください"
-echo "  cd ${REPO_ROOT} && conda run -n bizcore python -m apps.faq_system.main"
+echo "  cd ${REPO_ROOT} && conda run -n agentflow python -m apps.faq_system.main"

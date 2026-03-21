@@ -16,7 +16,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT" || exit 1
 
 declare -a JS_PROJECTS=()
-CONDA_ENV_NAME="${CHECK_CONDA_ENV:-bizcore}"
+CONDA_ENV_NAME="${CHECK_CONDA_ENV:-agentflow}"
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -135,7 +135,7 @@ show_help() {
     echo "環境変数:"
     echo "  MYPY_TARGETS             - type-check 時の mypy 対象 (デフォルト: contracts infrastructure shared kernel harness control_plane domain apps tests)"
     echo "  JS_PROJECT_DIRS          - JS/TS 対象ディレクトリを空白区切りで指定"
-    echo "  CHECK_CONDA_ENV          - Python ツール実行に使う conda env 名 (デフォルト: bizcore)"
+    echo "  CHECK_CONDA_ENV          - Python ツール実行に使う conda env 名 (デフォルト: agentflow)"
     echo "  CHECK_USE_CONDA          - 1: conda優先, 0: PATH優先 (デフォルト: 1)"
     echo "  CHECK_PYTEST_FLAGS       - unit test 時の追加 pytest 引数 (デフォルト: --tb=short -ra)"
     echo "  CHECK_PYTEST_E2E_FLAGS   - e2e-smoke 時の追加 pytest 引数 (デフォルト: --tb=short -ra)"

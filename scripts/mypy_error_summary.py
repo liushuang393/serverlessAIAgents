@@ -2,7 +2,7 @@
 """MyPy のエラーを集計し、コード別・ファイル別のサマリーを出力する。
 
 使用例:
-  conda activate bizcore
+  conda activate agentflow
   python scripts/mypy_error_summary.py
 
 型エラー解消の進捗確認や、check-errors-analysis の分類確認に利用する。

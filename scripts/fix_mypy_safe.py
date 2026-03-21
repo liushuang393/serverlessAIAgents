@@ -5,7 +5,7 @@
 - unused-ignore: 不要になった # type: ignore コメントを削除（mypy 出力を解析）
 
 使用例:
-  conda activate bizcore
+  conda activate agentflow
   python scripts/fix_mypy_safe.py              # 修正実行
   python scripts/fix_mypy_safe.py --dry-run    # 変更せずに削除対象のみ表示
 

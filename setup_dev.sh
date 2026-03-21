@@ -17,20 +17,20 @@ TOTAL_STEPS=5
 # 1. Conda 環境のチェック/作成
 echo "[1/$TOTAL_STEPS] Conda 環境を確認中..."
 
-if [ "$CONDA_DEFAULT_ENV" = "bizcore" ]; then
-    echo "✓ Conda 環境 'bizcore' はアクティブです"
-elif conda env list | grep -q "^bizcore "; then
-    echo "Conda 環境 'bizcore' が存在します。アクティベートしてください:"
-    echo "  conda activate bizcore"
+if [ "$CONDA_DEFAULT_ENV" = "agentflow" ]; then
+    echo "✓ Conda 環境 'agentflow' はアクティブです"
+elif conda env list | grep -q "^agentflow "; then
+    echo "Conda 環境 'agentflow' が存在します。アクティベートしてください:"
+    echo "  conda activate agentflow"
     exit 1
 else
-    echo "Conda 環境 'bizcore' を作成中..."
-    conda create -n bizcore python=3.13 -y
+    echo "Conda 環境 'agentflow' を作成中..."
+    conda create -n agentflow python=3.13 -y
     echo ""
     echo "✓ Conda 環境作成完了"
     echo ""
     echo "次のコマンドを実行してください:"
-    echo "  conda activate bizcore"
+    echo "  conda activate agentflow"
     exit 0
 fi
 echo ""
@@ -63,7 +63,7 @@ echo ""
 
 # 5. インストール確認
 echo "[5/$TOTAL_STEPS] インストール確認中..."
-bizcore --version
+agentflow --version
 echo "✓ インストール確認完了"
 echo ""
 
@@ -72,8 +72,8 @@ echo "セットアップ完了！"
 echo "========================================"
 echo ""
 echo "使用方法:"
-echo "  conda activate bizcore      # 環境アクティベート"
-echo "  bizcore --help              # CLI ヘルプ"
+echo "  conda activate agentflow      # 環境アクティベート"
+echo "  agentflow --help              # CLI ヘルプ"
 echo ""
 echo "開発コマンド:"
 echo "  make check-all              # すべてのチェック"
