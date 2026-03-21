@@ -166,16 +166,82 @@ INFRA --> PROVIDER
 
 ## クイックスタート
 
+### 前提条件
+
+| ツール | バージョン | 用途 |
+|---|---|---|
+| Python | 3.13+ | バックエンド実行 |
+| conda | 任意 | 推奨仮想環境（`agentflow`） |
+| Docker + Docker Compose | 任意 | DB・ミドルウェア起動 |
+| Node.js | 18+ | フロントエンド起動 |
+
+### 1. 環境セットアップ
+
 ```bash
-# 環境構築
-python3 -m pip install -e ".[apps,dev]"
+# conda 環境（推奨）
+conda create -n agentflow python=3.13 -y
+conda activate agentflow
 
-# バックエンド起動（ローカル開発 ポート 8001）
-python3 -m control_plane.main serve --port 8001
+# 依存パッケージのインストール
+pip install -e ".[apps,dev]"
+```
 
-# フロントエンド起動（別ターミナル）
+### 2. Docker でデータベースを起動
+
+```bash
+# auth_service 用 PostgreSQL（ポート 5438）
+cd shared/auth_service && docker compose up auth-db -d && cd ../..
+
+# faq_system 用 PostgreSQL（ポート 5433）+ Qdrant（ポート 6333）
+cd apps/faq_system && docker compose up faq-db qdrant -d && cd ../..
+```
+
+### 3. 各サービスをローカル起動
+
+ターミナルを 3 つ開き、それぞれ `conda activate agentflow` を実行してから以下を実行します。
+
+#### auth_service（ポート 8010）
+
+```bash
+python -m shared.auth_service.main
+# ヘルスチェック: curl http://localhost:8010/health
+```
+
+#### faq_system（ポート 8005）
+
+```bash
+python -m apps.faq_system.main
+# ヘルスチェック: curl http://localhost:8005/api/health
+# API ドキュメント: http://localhost:8005/docs
+```
+
+#### dev_studio / control_plane（ポート 8900）
+
+```bash
+python -m control_plane.main serve
+# ヘルスチェック: curl http://localhost:8900/health
+```
+
+### 4. フロントエンド起動（任意）
+
+```bash
+# auth_service フロントエンド（ポート 3000）
+cd shared/auth_service/frontend && npm install && npm run dev
+
+# faq_system フロントエンド（ポート 3004）
+cd apps/faq_system/frontend && npm install && npm run dev
+
+# control_plane フロントエンド（ポート 3200）
 cd control_plane/frontend && npm install && npm run dev
 ```
+
+### サービス一覧
+
+| サービス | バックエンド | フロントエンド | 説明 |
+|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | 認証・ユーザー管理 |
+| faq_system | http://localhost:8005 | http://localhost:3004 | RAG ベース FAQ・ナレッジ管理 |
+| dev_studio | http://localhost:8900 | http://localhost:3200 | 開発支援・コントロールプレーン |
 
 ---
 

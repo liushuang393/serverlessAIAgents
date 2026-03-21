@@ -106,3 +106,7 @@ app = _get_app()
 
 
 __all__ = ["app", "create_app", "lifespan", "main"]
+
+
+if __name__ == "__main__":
+    main()

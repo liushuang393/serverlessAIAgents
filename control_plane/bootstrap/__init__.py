@@ -1,4 +1,7 @@
-"""Control-plane compatibility facade for runtime bootstrap APIs."""
+"""bootstrap パッケージ.
+
+AppCapabilityBootstrapper や ConfigWatcher など、runtime bootstrap APIs を公開する。
+"""
 
 from control_plane.bootstrap.app_bootstrapper import AppCapabilityBootstrapper
 from control_plane.bootstrap.capability_bundle import CapabilityBundle
