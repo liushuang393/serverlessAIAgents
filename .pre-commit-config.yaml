@@ -42,6 +42,29 @@ repos:
         types_or: [python, pyi]
 
   # ========================================
+  # Python: アーキテクチャ境界チェック
+  # ========================================
+  - repo: local
+    hooks:
+      # NOTE: language: system は $PATH 上の python を使う。
+      # conda 環境の python を確実に使うため entry に conda run を指定。
+      - id: check-layer-boundaries
+        name: "Arch: Layer boundary check"
+        language: system
+        entry: conda run --no-banner -n agentflow python scripts/check_layer_boundaries.py
+        pass_filenames: false
+        types: [python]
+        always_run: true
+
+      - id: check-no-direct-provider
+        name: "Arch: Provider SDK direct import check"
+        language: system
+        entry: conda run --no-banner -n agentflow python scripts/check_no_direct_provider_calls.py
+        pass_filenames: false
+        types: [python]
+        always_run: true
+
+  # ========================================
   # Python: Type Checking (Disabled - run manually: mypy contracts infrastructure shared kernel harness control_plane domain apps tests)
   # ========================================
   # - repo: https://github.com/pre-commit/mirrors-mypy
