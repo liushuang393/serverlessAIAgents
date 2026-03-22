@@ -6,6 +6,8 @@ REST API と WebSocket エンドポイントを提供します。
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any
 
 from apps.market_trend_monitor.backend.api.routes import (
     collect_router,
@@ -27,8 +29,10 @@ from apps.market_trend_monitor.backend.api.state import (
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.db import init_db
 from apps.market_trend_monitor.backend.workflow import workflow
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 # ロギング設定
@@ -37,6 +41,25 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# ContractAuthGuard 設定（自動トリガー: HTTPミドルウェアとして全リクエストに適用）
+# auth.enabled=false の間は匿名アクセスを許可、有効化後はAPIキー認証が自動適用される
+# ---------------------------------------------------------------------------
+_APP_ROOT = Path(__file__).resolve().parents[2]  # apps/market_trend_monitor/
+_APP_CONFIG_PATH = _APP_ROOT / "app_config.json"
+_PUBLIC_HTTP_PATHS = {"/", "/health", "/docs", "/redoc", "/openapi.json"}
+
+_auth_guard = ContractAuthGuard(
+    ContractAuthGuardConfig(
+        app_config_path=_APP_CONFIG_PATH,
+        public_http_paths=_PUBLIC_HTTP_PATHS,
+        auth_header_name="x-api-key",
+        ws_query_key="api_key",
+        api_key_env_selector_var="MARKET_TREND_API_KEY_ENV",
+        default_api_key_env_var="MARKET_TREND_API_KEY",
+    ),
+)
 
 
 @asynccontextmanager
@@ -61,22 +84,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await workflow.initialize()
 
     # サーバー再起動時に中断された "running" ジョブを "failed" にリセット
+    from datetime import datetime
+
     from apps.market_trend_monitor.backend.db import async_session as _session_factory
     from apps.market_trend_monitor.backend.db.models import CollectJobModel
-    from datetime import datetime
     from sqlalchemy import update as _update
-    async with _session_factory() as _sess:
-        async with _sess.begin():
-            await _sess.execute(
-                _update(CollectJobModel)
-                .where(CollectJobModel.status == "running")
-                .values(
-                    status="failed",
-                    current_step="中断（サーバー再起動）",
-                    completed_at=datetime.now(),
-                    error="サーバーが再起動されたため処理が中断されました",
-                )
+    async with _session_factory() as _sess, _sess.begin():
+        await _sess.execute(
+            _update(CollectJobModel)
+            .where(CollectJobModel.status == "running")
+            .values(
+                status="failed",
+                current_step="中断（サーバー再起動）",
+                completed_at=datetime.now(),
+                error="サーバーが再起動されたため処理が中断されました",
             )
+        )
     logger.info("中断ジョブのリセット完了")
 
     yield
@@ -102,6 +125,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next: Any) -> Any:
+    """ContractAuthGuard による HTTP 認証（自動トリガー）.
+
+    app_config.json の contracts.auth.enabled=true かつ allow_anonymous=false の場合に認証を強制。
+    現在は enabled=false のため匿名アクセスを許可（将来の有効化に備えた準備）。
+    """
+    return await _auth_guard.http_middleware(request, call_next)
 
 
 @app.get("/")

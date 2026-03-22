@@ -48,13 +48,17 @@ conda run -n agentflow python scripts/check_rules_compliance.py --json --strict
 
 `scripts/check_rules_compliance.py` の `THRESHOLDS` で管理:
 
-| カテゴリ | 閾値 | 説明 |
-|---------|------|------|
-| layer_boundary_violations | 25 | レイヤー境界違反数 (段階的に 0 へ) |
-| provider_direct_imports | 0 | プロバイダ直接 import (即時ゼロ) |
-| file_size_violations | 5 | 1000行超ファイル数 |
-| type_ignore_without_reason | 20 | 理由なし type: ignore |
-| cast_usage | 10 | cast() 使用数 |
+| カテゴリ | 閾値 | 現行値 (2026-03-22) | 目標 | 説明 |
+|---------|------|---------------------|------|------|
+| layer_boundary_violations | 25 | 0 | 0 | レイヤー境界違反数 |
+| provider_direct_imports | 0 | 0 | 0 | プロバイダ直接 import (即時ゼロ) |
+| file_size_violations | 30 | 25 | 10 | 1000行超ファイル数 |
+| excessive_imports | 10 | 8 | 5 | 20 import 超ファイル数 |
+| type_ignore_without_reason | 150 | 128 | 50 | 理由なし type: ignore |
+| bare_any_usage | 7000 | 6691 | 3000 | 理由なし Any 使用 |
+| cast_usage | 80 | 68 | 30 | cast() 使用数 |
+
+> 閾値は段階的に削減する。新規コードで閾値を超える追加は禁止。
 
 ## AI コーディング助手向け
 

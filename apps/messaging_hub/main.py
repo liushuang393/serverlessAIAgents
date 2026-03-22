@@ -45,6 +45,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
+from dotenv import load_dotenv
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
 from apps.messaging_hub.agents.file_organizer_agent import FileOrganizerAgent
 from apps.messaging_hub.approval_manager import ApprovalManager, ApprovalRequest, ApprovalStatus
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
@@ -53,12 +58,9 @@ from apps.messaging_hub.lazy_tool_loader import LazyToolLoader
 from apps.messaging_hub.mcp_manager import MCPInstallRequest, MCPManager
 from apps.messaging_hub.skills_manager import SkillsManager, Workflow, WorkflowStatus
 from apps.messaging_hub.storage import SQLiteMessagingHubStore
-from dotenv import load_dotenv
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-
+from harness.budget.service import BudgetConfig, TokenBudgetManager
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension, ScoringResult
 from kernel import get_llm
 from kernel.runtime import WebSocketHub
 from kernel.skills import (
@@ -137,6 +139,18 @@ _auth_guard = ContractAuthGuard(
         default_api_key_env_var="MESSAGING_HUB_API_KEY",
     ),
 )
+
+# Token予算管理 - メッセージ履歴・入力のコンテキスト予算を管理
+_budget_manager = TokenBudgetManager(
+    config=BudgetConfig(
+        system_prompt_budget=500,
+        history_budget=3000,  # メッセージング用に会話履歴予算を確保
+        total_budget=8000,
+    )
+)
+
+# 実行品質スコアラー - アシスタント応答を多次元評価
+_scorer = ExecutionScorer()
 
 
 def _load_local_env_file() -> bool:
@@ -651,6 +665,51 @@ def _resolve_assistant_message_text(result: dict[str, Any]) -> str:
     if generic_error is not None:
         return f"⚠️ 応答生成に失敗しました: {generic_error[:240]}"
     return "⚠️ 応答を生成できませんでした。設定を確認して再試行してください。"
+
+
+def _score_assistant_response(
+    *,
+    input_text: str,
+    response_text: str,
+    elapsed_seconds: float,
+    is_safe: bool = True,
+) -> ScoringResult:
+    """アシスタント応答を多次元スコアリングする.
+
+    Args:
+        input_text: ユーザー入力テキスト
+        response_text: アシスタント応答テキスト
+        elapsed_seconds: 処理時間（秒）
+        is_safe: 安全チェック通過済みか
+
+    Returns:
+        ScoringResult（総合スコアと次元別スコア）
+    """
+    input_tokens = _budget_manager.count_tokens(input_text)
+    response_tokens = _budget_manager.count_tokens(response_text)
+
+    # 完全性スコア: 応答が非空で十分な長さか（50token以上で満点）
+    completeness = min(1.0, response_tokens / 50.0) if response_tokens > 0 else 0.0
+
+    # レイテンシスコア: 5秒以内で満点、30秒で0点
+    latency_score = max(0.0, 1.0 - (elapsed_seconds / 30.0))
+
+    # コストスコア: 入力+応答合計が予算内か（8000token以内で満点）
+    total_tokens = input_tokens + response_tokens
+    cost_score = max(0.0, 1.0 - (total_tokens / 8000.0))
+
+    # 安全スコア
+    safety_score = 1.0 if is_safe else 0.0
+
+    dimension_scores = [
+        DimensionScore(dimension=ScoreDimension.COMPLETENESS, score=completeness, weight=1.5),
+        DimensionScore(dimension=ScoreDimension.LATENCY, score=latency_score, weight=1.0),
+        DimensionScore(dimension=ScoreDimension.COST, score=cost_score, weight=0.5),
+        DimensionScore(dimension=ScoreDimension.SAFETY, score=safety_score, weight=2.0),
+    ]
+    result = _scorer.score(dimension_scores)
+    _budget_manager.reset_usage()
+    return result
 
 
 gateway.set_input_policy(
@@ -2254,12 +2313,37 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
             "metadata": {"user_id": request.user_id},
         }
     )
+
+    # Token予算チェック: 入力サイズを計測してログ記録
+    input_token_count = _budget_manager.count_tokens(request.text)
+    if input_token_count > 3000:
+        logger.warning("sr_chat: 入力Token数が大きい (tokens=%d, run_id=%s)", input_token_count, run_id)
+
+    start_time = time.monotonic()
     result = await assistant.process(
         request.text,
         user_id=request.user_id,
         context={"run_id": run_id, "conversation_id": request.conversation_id},
     )
+    elapsed = time.monotonic() - start_time
+
     assistant_text = _resolve_assistant_message_text(result)
+
+    # 応答品質スコアリング
+    scoring = _score_assistant_response(
+        input_text=request.text,
+        response_text=assistant_text,
+        elapsed_seconds=elapsed,
+        is_safe=True,
+    )
+    logger.info(
+        "sr_chat scoring: overall=%.3f latency=%.2fs tokens_in=%d (run_id=%s)",
+        scoring.overall_score,
+        elapsed,
+        input_token_count,
+        run_id,
+    )
+
     response_time = datetime.now(UTC).isoformat()
     await _store.upsert_sr_message(
         {
@@ -2269,7 +2353,12 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
             "content": assistant_text,
             "created_at": response_time,
             "updated_at": response_time,
-            "metadata": {"run_id": run_id, "intent": result.get("intent", {})},
+            "metadata": {
+                "run_id": run_id,
+                "intent": result.get("intent", {}),
+                "score": scoring.overall_score,
+                "elapsed_seconds": round(elapsed, 3),
+            },
         }
     )
 
@@ -2295,6 +2384,11 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
         },
         "intent": result.get("intent", {}),
         "delivery_error": delivery_error,
+        "quality": {
+            "score": scoring.overall_score,
+            "elapsed_seconds": round(elapsed, 3),
+            "input_tokens": input_token_count,
+        },
     }
 
 
@@ -2416,11 +2510,40 @@ async def process_assistant_request(
 
     try:
         run_id = f"run_{uuid.uuid4().hex}"
+
+        # Token予算チェック: 入力サイズを計測してログ記録
+        input_token_count = _budget_manager.count_tokens(request.message)
+        if input_token_count > 3000:
+            logger.warning(
+                "assistant/process: 入力Token数が大きい (tokens=%d, run_id=%s)",
+                input_token_count,
+                run_id,
+            )
+
+        start_time = time.monotonic()
         result = await assistant.process(
             request.message,
             user_id=request.user_id,
             context={"run_id": run_id},
         )
+        elapsed = time.monotonic() - start_time
+
+        # 応答品質スコアリング
+        summary_text = str(result.get("summary", ""))
+        scoring = _score_assistant_response(
+            input_text=request.message,
+            response_text=summary_text,
+            elapsed_seconds=elapsed,
+            is_safe=True,
+        )
+        logger.info(
+            "assistant/process scoring: overall=%.3f latency=%.2fs tokens_in=%d (run_id=%s)",
+            scoring.overall_score,
+            elapsed,
+            input_token_count,
+            run_id,
+        )
+
         response: dict[str, Any] = {
             "ok": True,
             "summary": result.get("summary", ""),
@@ -2430,6 +2553,11 @@ async def process_assistant_request(
             "risks": result.get("risks", []),
             "intent": result.get("intent", {}),
             "run_id": result.get("run_id", run_id),
+            "quality": {
+                "score": scoring.overall_score,
+                "elapsed_seconds": round(elapsed, 3),
+                "input_tokens": input_token_count,
+            },
         }
         if result.get("needs_cli_confirmation") is True:
             proposal = result.get("cli_proposal")

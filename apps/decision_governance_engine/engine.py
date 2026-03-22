@@ -30,6 +30,10 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
     - ステージ単位DB保存（各ステージ完了後にupsert、途中失敗でも結果保持）
     - 完了済みステージのスキップ（再分析防止）
 
+設計改善（v3.3）:
+    - ContextEngineer 統合（コンテキスト最適化・トークン予算管理）
+    - BudgetConfig による予算設定（DGE 向けに調整済み）
+
 使用例:
     >>> from apps.decision_governance_engine.engine import DecisionEngine
     >>>
@@ -54,11 +58,12 @@ from apps.decision_governance_engine.services.decision_report_builder import (
 from apps.decision_governance_engine.services.deep_agent_adapter import (
     DeepAgentAdapter,
 )
-
+from harness.budget.service import BudgetConfig
+from harness.context.context_engineer import BuiltContext, ContextConfig, ContextEngineer
+from harness.guardrails.safety_mixin import SafetyMixin
+from infrastructure.llm.providers import get_llm
 from kernel.engines import EngineConfig, PipelineEngine
 from kernel.engines.pipeline_engine import StageConfig
-from infrastructure.llm.providers import get_llm
-from harness.guardrails.safety_mixin import SafetyMixin
 
 
 if TYPE_CHECKING:
@@ -95,6 +100,8 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         enable_rag: bool = True,
         enable_deep_agent: bool = True,
         enable_safety: bool = True,
+        enable_context_engineer: bool = True,
+        budget_config: BudgetConfig | None = None,
     ) -> None:
         """初期化.
 
@@ -103,6 +110,8 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
             enable_rag: RAG機能を有効化するか
             enable_deep_agent: DeepAgent機能を有効化するか
             enable_safety: AI安全防護を有効化するか
+            enable_context_engineer: ContextEngineer統合を有効化するか（v3.3）
+            budget_config: トークン予算設定（省略時はDGEデフォルト）
         """
         # LLM自動取得（省略時）
         if llm_client is None:
@@ -116,13 +125,12 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
 
         # DeepAgentAdapter（v3.0）
         self._enable_deep_agent = enable_deep_agent
+        self._deep_adapter: DeepAgentAdapter | None = None
         if enable_deep_agent:
             self._deep_adapter = DeepAgentAdapter(
                 llm_client=llm_client,
                 enable_evolution=True,
             )
-        else:
-            self._deep_adapter = None
 
         # PipelineEngine 初期化（ReportBuilder を使用）
         super().__init__(
@@ -141,6 +149,25 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
 
         # AI安全防護初期化（v3.1）
         self.init_safety(enabled=enable_safety)
+
+        # ContextEngineer 初期化（v3.3）
+        # DGE は長文の意思決定分析を行うため、RAG/History予算を多めに設定
+        self._enable_context_engineer = enable_context_engineer
+        _budget = budget_config or BudgetConfig(
+            system_prompt_budget=600,   # 意思決定専用プロンプト用に拡張
+            tools_budget=200,           # DGEはツール数が少ないため縮小
+            rag_context_budget=3000,    # RAGコンテキストを多めに確保
+            history_budget=6000,        # 多段階分析履歴のため拡張
+            key_notes_budget=600,       # 重要判断メモを多めに確保
+            total_budget=12000,         # DGE は大きなコンテキストウィンドウを使用
+        )
+        if enable_context_engineer:
+            self._context_engineer: ContextEngineer | None = ContextEngineer(
+                config=ContextConfig(budget_config=_budget),
+                llm_client=llm_client,
+            )
+        else:
+            self._context_engineer = None
 
         # ステージ単位DB保存設定（v3.2）
         self._enable_stage_persist = os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
@@ -161,7 +188,12 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         self._resume_completed_stages: set[str] = set()
         self._resume_stage_results: dict[str, dict[str, Any]] = {}
 
-    async def run(self, input_data: dict[str, Any]) -> Any:
+    async def run(
+        self,
+        input_data: dict[str, Any],
+        *,
+        thread_id: str | None = None,
+    ) -> dict[str, Any]:
         """DecisionEngine を実行（入力キー互換）.
 
         目的:
@@ -170,13 +202,13 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
 
         Args:
             input_data: 入力 dict。`raw_question` 推奨。互換のため `question` のみでも可。
+            thread_id: スレッドID（スーパークラス互換）。
 
         Returns:
             PipelineEngine.run() の戻り値（DecisionReport または拒否時 dict）。
         """
-
         prepared_inputs = self._prepare_run_inputs(input_data)
-        return await super().run(prepared_inputs)
+        return await super().run(prepared_inputs, thread_id=thread_id)
 
     async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """DecisionEngine をストリーム実行（入力キー互換 + resume設定）."""
@@ -445,6 +477,69 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         if self._deep_adapter:
             return self._deep_adapter.get_stats()
         return {}
+
+    # =========================================================================
+    # ContextEngineer 統合メソッド（v3.3）
+    # =========================================================================
+
+    async def build_context(
+        self,
+        query: str,
+        base_prompt: str = "",
+        rag_search_func: Any | None = None,
+    ) -> BuiltContext | None:
+        """ContextEngineer を使用してコンテキストを最適化.
+
+        意思決定セッション開始前に呼び出すことで、
+        トークン予算内に最適化されたコンテキストを返す。
+
+        Args:
+            query: ユーザーの意思決定質問
+            base_prompt: ベースシステムプロンプト
+            rag_search_func: RAG検索関数（省略時はRAGなし）
+
+        Returns:
+            最適化されたコンテキスト（無効時はNone）
+        """
+        if self._context_engineer is None:
+            return None
+
+        if not self._context_engineer._started:
+            await self._context_engineer.start()
+
+        return await self._context_engineer.build_context(
+            query=query,
+            base_prompt=base_prompt,
+            rag_search_func=rag_search_func,
+        )
+
+    def add_context_message(self, role: str, content: str) -> None:
+        """会話メッセージをContextEngineerに追加（自動圧縮あり）.
+
+        Args:
+            role: メッセージロール（"user" / "assistant"）
+            content: メッセージ内容
+        """
+        if self._context_engineer is not None:
+            self._context_engineer.add_message(role, content)
+
+    def get_context_stats(self) -> dict[str, Any]:
+        """ContextEngineer の統計情報を取得.
+
+        Returns:
+            トークン予算使用状況などの統計情報
+        """
+        if self._context_engineer is None:
+            return {"context_engineer": "disabled"}
+        return {
+            "context_engineer": "enabled",
+            "budget_config": {
+                "system_prompt_budget": self._context_engineer._config.budget_config.system_prompt_budget,
+                "rag_context_budget": self._context_engineer._config.budget_config.rag_context_budget,
+                "history_budget": self._context_engineer._config.budget_config.history_budget,
+                "total_budget": self._context_engineer._config.budget_config.total_budget,
+            },
+        }
 
 
 __all__ = ["DecisionEngine"]

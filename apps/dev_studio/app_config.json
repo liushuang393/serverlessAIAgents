@@ -35,6 +35,13 @@
   "blueprint": {
     "engine_pattern": "custom"
   },
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "allow_anonymous": true,
+      "providers": ["api_key"]
+    }
+  },
   "agents": [],
   "plugin_bindings": []
 }

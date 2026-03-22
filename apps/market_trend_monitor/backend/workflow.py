@@ -35,10 +35,12 @@ from apps.market_trend_monitor.backend.services.registry import (
     source_reliability_tracker,
 )
 
+from harness.budget import BudgetConfig, TokenBudgetManager
+from harness.guardrails.safety_mixin import SafetyMixin
+from harness.risk import RiskAssessment, RiskAssessor, RiskFactor, RiskLevel
 from kernel import Flow, create_flow
 from kernel.agents.agent_factory import AgentFactorySpec
 from kernel.agents.agent_factory import create as create_agent
-from harness.guardrails.safety_mixin import SafetyMixin
 
 
 logger = logging.getLogger(__name__)
@@ -257,24 +259,109 @@ async def cleanup() -> None:
 
 
 class MarketTrendWorkflow(SafetyMixin):
-    """Market Trend Monitor ワークフロー（安全防護付き）."""
+    """Market Trend Monitor ワークフロー（安全防護・Budget管理・Risk評価付き）."""
 
-    def __init__(self, f: Flow | None = None, enable_safety: bool = True) -> None:
+    def __init__(
+        self,
+        f: Flow | None = None,
+        enable_safety: bool = True,
+        budget_config: BudgetConfig | None = None,
+    ) -> None:
         self._flow = f or flow
         self.init_safety(enabled=enable_safety)
+        # TokenBudgetManager: 入力キーワード・コンテキストのToken予算管理（手動トリガー）
+        self._budget_manager = TokenBudgetManager(config=budget_config or BudgetConfig(
+            system_prompt_budget=500,
+            rag_context_budget=2000,
+            history_budget=2000,
+            total_budget=6000,
+        ))
+        # RiskAssessor: 最終レポート配信前のリスク評価（手動トリガー）
+        self._risk_assessor = RiskAssessor(threshold=RiskLevel.HIGH)
+
+    def _assess_workflow_risk(self, result: dict[str, Any]) -> RiskAssessment:
+        """ワークフロー結果のリスク評価.
+
+        Args:
+            result: ワークフロー実行結果
+
+        Returns:
+            リスク評価結果
+        """
+        factors: list[RiskFactor] = []
+
+        # 安全警告がある場合はリスク要因として登録
+        safety_warnings = result.get("_safety_warnings", [])
+        if safety_warnings:
+            factors.append(
+                RiskFactor(
+                    name="hallucination_risk",
+                    level=RiskLevel.HIGH,
+                    description=f"幻覚検出警告: {len(safety_warnings)}件",
+                    score=0.8,
+                )
+            )
+
+        # トレンド数が0の場合はデータ品質リスク
+        trends = result.get("trends", [])
+        if not trends:
+            factors.append(
+                RiskFactor(
+                    name="no_trends_detected",
+                    level=RiskLevel.MEDIUM,
+                    description="トレンドが検出されませんでした。データ収集に問題がある可能性。",
+                    score=0.5,
+                )
+            )
+
+        # アラートが高スコアで検出された場合
+        alerts = result.get("alerts", [])
+        high_alerts = [a for a in alerts if isinstance(a, dict) and a.get("growth_rate", 0) > 2.0]
+        if high_alerts:
+            factors.append(
+                RiskFactor(
+                    name="high_growth_rate_alert",
+                    level=RiskLevel.MEDIUM,
+                    description=f"急成長トレンド検出: {len(high_alerts)}件（要注意）",
+                    score=0.4,
+                )
+            )
+
+        return self._risk_assessor.assess(factors)
 
     async def run(self, input_data: dict[str, Any] | None = None) -> dict[str, Any]:
+        """ワークフローを実行（Budget制約なし、基本モード）."""
         return await run(input_data)
 
     async def run_with_safety(
         self,
         input_data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """安全検査付きで実行."""
+        """安全検査・Budget管理・Risk評価付きで実行.
+
+        フロー:
+        1. 入力キーワードのToken予算チェック（Budget自動管理）
+        2. 入力の安全検査（SafetyMixin）
+        3. ワークフロー実行
+        4. 出力の幻覚検出（SafetyMixin）
+        5. リスク評価（RiskAssessor）
+        """
         if input_data is None:
             input_data = {}
 
-        keywords = input_data.get("keywords", [])
+        # --- TokenBudgetManager: 入力コンテキストのToken予算確認 ---
+        keywords: list[str] = input_data.get("keywords", [])
+        if keywords:
+            keywords_text = ", ".join(keywords)
+            allocation = self._budget_manager.allocate_rag_context([keywords_text])
+            if allocation.truncated:
+                logger.warning(
+                    "入力キーワードがRAG予算を超過（%d/%d token）。切り詰めを適用。",
+                    allocation.original_token_count,
+                    allocation.budget_used,
+                )
+
+        # --- SafetyMixin: 入力安全検査 ---
         if keywords and self.safety_enabled:
             for keyword in keywords:
                 check = await self.check_input_safety(keyword)
@@ -283,12 +370,35 @@ class MarketTrendWorkflow(SafetyMixin):
 
         result = await run(input_data)
 
+        # --- SafetyMixin: 出力幻覚検出 ---
         if self.safety_enabled and "report" in result:
             report_text = str(result.get("report", ""))
             output_check = await self.check_output_safety(report_text)
             if output_check.needs_review:
-                result["_safety_warnings"] = output_check.warnings
-                logger.warning("出力に幻覚の可能性: %s", output_check.warnings)
+                result["_safety_warnings"] = output_check.issues
+                logger.warning("出力に幻覚の可能性: %s", output_check.issues)
+
+        # --- RiskAssessor: 最終レポートのリスク評価 ---
+        risk_assessment = self._assess_workflow_risk(result)
+        result["_risk_assessment"] = {
+            "level": risk_assessment.overall_level.value,
+            "is_acceptable": risk_assessment.is_acceptable,
+            "factors": [
+                {"name": f.name, "level": f.level.value, "description": f.description}
+                for f in risk_assessment.factors
+            ],
+            "mitigations": risk_assessment.mitigations,
+        }
+        if not risk_assessment.is_acceptable:
+            logger.warning(
+                "ワークフロー結果のリスクレベルが閾値超過: %s（要レビュー）",
+                risk_assessment.overall_level.value,
+            )
+
+        # --- TokenBudgetManager: 使用量サマリをログ出力 ---
+        budget_summary = self._budget_manager.get_usage_summary()
+        logger.debug("Token予算使用サマリ: %s", budget_summary)
+        self._budget_manager.reset_usage()
 
         return result
 
@@ -301,6 +411,16 @@ class MarketTrendWorkflow(SafetyMixin):
     @property
     def flow(self) -> Flow:
         return self._flow
+
+    @property
+    def budget_manager(self) -> TokenBudgetManager:
+        """TokenBudgetManagerへのアクセス（テスト・外部利用用）."""
+        return self._budget_manager
+
+    @property
+    def risk_assessor(self) -> RiskAssessor:
+        """RiskAssessorへのアクセス（テスト・外部利用用）."""
+        return self._risk_assessor
 
 
 workflow = MarketTrendWorkflow(flow)
