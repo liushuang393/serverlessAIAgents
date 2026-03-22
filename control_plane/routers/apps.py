@@ -36,7 +36,6 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Body, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
-from control_plane.schemas.provisioning_schemas import AppCreateRequest
 from control_plane.services.agent_taxonomy import AgentTaxonomyService
 from control_plane.services.app_lifecycle import (
     AppLifecycleManager,
@@ -49,6 +48,7 @@ from control_plane.services.tenant_dashboard import get_tenant_dashboard
 
 
 if TYPE_CHECKING:
+    from control_plane.schemas.provisioning_schemas import AppCreateRequest
     from control_plane.services.app_config_event_store import AppConfigEventStore
     from control_plane.services.app_discovery import AppDiscoveryService
 

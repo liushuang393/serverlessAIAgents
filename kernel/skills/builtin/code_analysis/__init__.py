@@ -3,15 +3,26 @@
 from __future__ import annotations
 
 import importlib
-from types import ModuleType
+from typing import TYPE_CHECKING
 
 from kernel.skills.builtin._compat import register_submodule_alias
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
 
 register_submodule_alias(
     "kernel.skills.builtin.code_analysis",
     "apps.code_migration_assistant.skills.code_analysis",
-    ["complexity_scorer", "dependency_mapper", "migration_planner",
-     "repo_connector", "security_scanner", "static_analyzer"],
+    [
+        "complexity_scorer",
+        "dependency_mapper",
+        "migration_planner",
+        "repo_connector",
+        "security_scanner",
+        "static_analyzer",
+    ],
 )
 
 _TARGET_MODULE = "apps.code_migration_assistant.skills.code_analysis"

@@ -28,13 +28,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import httpx
+
 from control_plane.services.cli_diagnostic_service import CLIDiagnosticService
 from control_plane.services.cli_repair_service import CLIRepairService
 from control_plane.services.runtime_command_resolver import (
     ResolvedRuntimeCommands,
     RuntimeCommandResolver,
 )
-
 from kernel.tools.cli.runtime_manager import CLIRuntimeManager
 
 
@@ -86,9 +86,7 @@ _LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker",
 # 親プロセスの conda 環境 (例: bizcore) を復元しようとして
 # EnvironmentNameNotFound を起こす場合がある。
 # `conda shell.bash activate <env>` は hook を経由せず直接活性化コマンドを出力するため安全。
-_CONDA_ACTIVATE_PREFIX = (
-    'eval "$(conda shell.bash activate agentflow)" && '
-)
+_CONDA_ACTIVATE_PREFIX = 'eval "$(conda shell.bash activate agentflow)" && '
 
 ExecutionMode = Literal["local", "docker"]
 
@@ -2647,9 +2645,7 @@ class AppLifecycleManager:
         # _CONDA_ACTIVATE_PREFIX が正しい環境の PATH を再設定する。
         if "PATH" in env:
             dirs = env["PATH"].split(os.pathsep)
-            env["PATH"] = os.pathsep.join(
-                d for d in dirs if "/envs/" not in d
-            )
+            env["PATH"] = os.pathsep.join(d for d in dirs if "/envs/" not in d)
         return env
 
     @staticmethod

@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from shared.integrations.context_bridge import FlowContext, SourceSystemType
 from apps.code_migration_assistant.backend import app as backend_app
 from apps.code_migration_assistant.engine import CodeMigrationEngine
+
+from shared.integrations.context_bridge import FlowContext, SourceSystemType
 
 
 def test_frontend_mapping_includes_business_semantics_and_same_origin() -> None:
@@ -19,9 +20,7 @@ def test_frontend_mapping_includes_business_semantics_and_same_origin() -> None:
 
 def test_readme_declared_capabilities_have_wired_paths() -> None:
     readme = Path("apps/code_migration_assistant/README.md").read_text(encoding="utf-8")
-    capabilities_py = Path(
-        "apps/code_migration_assistant/workflow/capabilities.py"
-    ).read_text(encoding="utf-8")
+    capabilities_py = Path("apps/code_migration_assistant/workflow/capabilities.py").read_text(encoding="utf-8")
 
     declared = [
         "legacy-ingestion",

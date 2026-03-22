@@ -26,10 +26,7 @@ def test_websocket_hub_control_plane_compat_import() -> None:
 
 def test_kernel_skills_exports_skill_runtime() -> None:
     """`from kernel.skills import SkillRuntime` should stay valid."""
-    from kernel.skills import ScriptResult
-    from kernel.skills import Skill
-    from kernel.skills import SkillRouter
-    from kernel.skills import SkillRuntime
+    from kernel.skills import ScriptResult, Skill, SkillRouter, SkillRuntime
 
     assert SkillRuntime.__name__ == "SkillRuntime"
     assert SkillRouter.__name__ == "SkillRouter"

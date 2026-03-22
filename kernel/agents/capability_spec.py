@@ -3,11 +3,12 @@
 本体は kernel.core.capability_spec に移行済み。後方互換のため re-export する。
 """
 
-from kernel.core.capability_spec import (  # noqa: F401
+from kernel.core.capability_spec import (
     AgentCapabilitySpec,
     CapabilityRequirement,
     LLMRequirements,
 )
+
 
 __all__ = [
     "AgentCapabilitySpec",

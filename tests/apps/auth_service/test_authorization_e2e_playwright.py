@@ -32,7 +32,7 @@ def _ensure_evidence_dir() -> None:
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@pytest.fixture()
+@pytest.fixture
 def _skip_if_no_server() -> None:
     """auth_service が起動していない場合はスキップ."""
     try:
@@ -79,9 +79,13 @@ class TestPlaywrightEvidence:
 
         # まず API でトークンを取得
         async with httpx.AsyncClient() as client:
-            login_resp = await client.post(f"{BASE_URL}/auth/login", json={
-                "username": "admin", "password": "admin123",
-            })
+            login_resp = await client.post(
+                f"{BASE_URL}/auth/login",
+                json={
+                    "username": "admin",
+                    "password": "admin123",
+                },
+            )
             token = login_resp.json().get("access_token", "")
 
             # ロール一覧取得
@@ -119,15 +123,23 @@ class TestPlaywrightEvidence:
 
         async with httpx.AsyncClient() as client:
             # admin ログイン
-            admin_login = await client.post(f"{BASE_URL}/auth/login", json={
-                "username": "admin", "password": "admin123",
-            })
+            admin_login = await client.post(
+                f"{BASE_URL}/auth/login",
+                json={
+                    "username": "admin",
+                    "password": "admin123",
+                },
+            )
             admin_token = admin_login.json().get("access_token", "")
 
             # employee ログイン
-            emp_login = await client.post(f"{BASE_URL}/auth/login", json={
-                "username": "suzuki", "password": "suzuki123",
-            })
+            emp_login = await client.post(
+                f"{BASE_URL}/auth/login",
+                json={
+                    "username": "suzuki",
+                    "password": "suzuki123",
+                },
+            )
             emp_token = emp_login.json().get("access_token", "")
 
             # admin チェック → allowed
@@ -169,9 +181,13 @@ class TestPlaywrightEvidence:
         from playwright.async_api import async_playwright
 
         async with httpx.AsyncClient() as client:
-            login_resp = await client.post(f"{BASE_URL}/auth/login", json={
-                "username": "admin", "password": "admin123",
-            })
+            login_resp = await client.post(
+                f"{BASE_URL}/auth/login",
+                json={
+                    "username": "admin",
+                    "password": "admin123",
+                },
+            )
             token = login_resp.json().get("access_token", "")
             headers = {"Authorization": f"Bearer {token}"}
 

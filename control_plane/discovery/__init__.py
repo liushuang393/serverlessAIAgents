@@ -4,6 +4,7 @@ from control_plane.discovery.base import AgentEntry, AgentStatus, LoadBalanceStr
 from control_plane.discovery.registry import InMemoryAgentRegistry
 from control_plane.discovery.service import DiscoveryService
 
+
 # テスト・レガシー互換エイリアス
 AgentDiscovery = InMemoryAgentRegistry
 

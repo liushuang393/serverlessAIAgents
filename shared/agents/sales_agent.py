@@ -27,10 +27,10 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 
-
 def _get_resilient_agent_base() -> type:
     """遅延インポート: kernel.agents.ResilientAgent（L2→L3 違反回避）."""
-    from kernel.agents import ResilientAgent as _RA
+    from kernel.agents import ResilientAgent as _RA  # noqa: N814
+
     return _RA
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from control_plane.services.agent_taxonomy import AgentTaxonomyService
 
 
@@ -56,10 +57,7 @@ def test_infer_agent_type_from_pattern() -> None:
 def test_infer_app_template_from_product_line() -> None:
     """product_line から app_template を推定する."""
     taxonomy = AgentTaxonomyService()
-    assert (
-        taxonomy.infer_app_template(product_line="faq", engine_pattern="simple", tags=[])
-        == "faq_knowledge_service"
-    )
+    assert taxonomy.infer_app_template(product_line="faq", engine_pattern="simple", tags=[]) == "faq_knowledge_service"
     assert (
         taxonomy.infer_app_template(product_line="assistant", engine_pattern="flow", tags=[])
         == "multichannel_assistant"

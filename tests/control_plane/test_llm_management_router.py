@@ -10,12 +10,13 @@ import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
-import httpx
 import pytest
+
 from control_plane.db.session import close_platform_db
 from control_plane.main import create_app
 from control_plane.routers.llm_management import init_llm_management_service
 from control_plane.services.llm_management import LLMManagementService
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,6 +44,7 @@ def llm_client(tmp_path: Path) -> tuple[SyncASGIClient, LLMManagementService]:
         # close_platform_db shuts down the aiosqlite connection worker thread
         # that would otherwise keep the process alive after tests complete.
         import asyncio
+
         try:
             loop = asyncio.new_event_loop()
             loop.run_until_complete(close_platform_db())

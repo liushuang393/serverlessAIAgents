@@ -3,6 +3,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from apps.faq_system.backend.rag.parsers import FileParser
 
 

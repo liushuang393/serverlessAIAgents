@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from kernel.patterns.agent_pipeline import AgentConfig, AgentPipeline
     from kernel.patterns.composer import AgentComposer, AgentRole, CompositionConfig, CompositionPattern

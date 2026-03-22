@@ -32,13 +32,13 @@ from typing import Any, cast
 import httpx
 
 
-
 logger = logging.getLogger(__name__)
 
 
 def _get_llm_func() -> Any:
     """遅延インポート: kernel.get_llm（L2→L3 違反回避）."""
     from kernel import get_llm as _get_llm
+
     return _get_llm
 
 

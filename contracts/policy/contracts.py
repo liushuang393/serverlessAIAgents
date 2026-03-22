@@ -59,7 +59,6 @@ class EvalResult(ContractModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="拡張メタデータ")
 
 
-
 # ---------------------------------------------------------------------------
 # Governance Protocol — harness 層が legacy governance layer に静的依存しないための抽象
 # ---------------------------------------------------------------------------

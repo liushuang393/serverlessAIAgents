@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """品質管理Agentテンプレート.
 
 製造工程の品質管理を行うAgentテンプレート。
@@ -18,7 +17,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from kernel import ResilientAgent
-from ..base_template import (
+from kernel.plugins.packs.official.templates.base_template import (
     AgentTemplate,
     IndustryType,
     TemplateCategory,
@@ -26,6 +25,7 @@ from ..base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +36,7 @@ class QualityControlInput(BaseModel):
     product_id: str = Field(description="製品ID")
     inspection_type: str = Field(description="検査タイプ（VISUAL/DIMENSIONAL/FUNCTIONAL）")
     measurements: dict[str, float] = Field(default_factory=dict, description="測定値")
-    specifications: dict[str, dict[str, float]] = Field(
-        default_factory=dict, description="仕様（min/max）"
-    )
+    specifications: dict[str, dict[str, float]] = Field(default_factory=dict, description="仕様（min/max）")
     production_batch: str = Field(default="", description="生産バッチ")
     context: dict[str, Any] = Field(default_factory=dict, description="追加コンテキスト")
 
@@ -101,9 +99,7 @@ JSON形式で以下を出力:
             return await self._inspect_with_llm(input_data)
         return self._inspect_rule_based(input_data)
 
-    async def _inspect_with_llm(
-        self, input_data: QualityControlInput
-    ) -> QualityControlOutput:
+    async def _inspect_with_llm(self, input_data: QualityControlInput) -> QualityControlOutput:
         """LLMを使用した品質検査."""
         from shared.utils import extract_json
 
@@ -121,9 +117,7 @@ JSON形式で以下を出力:
             return QualityControlOutput(**data)
         return self._inspect_rule_based(input_data)
 
-    def _inspect_rule_based(
-        self, input_data: QualityControlInput
-    ) -> QualityControlOutput:
+    def _inspect_rule_based(self, input_data: QualityControlInput) -> QualityControlOutput:
         """ルールベースの品質検査."""
         out_of_spec: list[str] = []
 

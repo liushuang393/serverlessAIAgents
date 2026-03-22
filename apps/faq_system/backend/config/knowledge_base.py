@@ -8,14 +8,15 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+from pydantic import BaseModel, Field
+from sqlalchemy.exc import OperationalError, ProgrammingError
+
 from apps.faq_system.backend.db.models import KnowledgeBaseSetting
 from apps.faq_system.backend.db.session import (
     create_all_tables,
     ensure_database_ready,
     get_db_session,
 )
-from pydantic import BaseModel, Field
-from sqlalchemy.exc import OperationalError, ProgrammingError
 
 
 class KnowledgeBaseType(str, Enum):

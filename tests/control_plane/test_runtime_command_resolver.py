@@ -65,13 +65,7 @@ class TestRuntimeCommandResolver:
         app_dir = tmp_path / "compose_app"
         app_dir.mkdir(parents=True)
         (app_dir / "README.md").write_text(
-            (
-                "```bash\n"
-                "docker compose up -d --build\n"
-                "docker compose up -d\n"
-                "docker compose down\n"
-                "```\n"
-            ),
+            ("```bash\ndocker compose up -d --build\ndocker compose up -d\ndocker compose down\n```\n"),
             encoding="utf-8",
         )
         runtime = RuntimeCommandsConfig()
@@ -91,13 +85,7 @@ class TestRuntimeCommandResolver:
         app_dir = tmp_path / "faq_system"
         app_dir.mkdir(parents=True)
         (app_dir / "README.md").write_text(
-            (
-                "```bash\n"
-                "cd apps/faq_system/frontend\n"
-                "npm install\n"
-                "npm run dev\n"
-                "```\n"
-            ),
+            ("```bash\ncd apps/faq_system/frontend\nnpm install\nnpm run dev\n```\n"),
             encoding="utf-8",
         )
         runtime = RuntimeCommandsConfig(frontend_dev=None)
@@ -113,11 +101,7 @@ class TestRuntimeCommandResolver:
         app_dir = tmp_path / "auth_service"
         app_dir.mkdir(parents=True)
         (app_dir / "README.md").write_text(
-            (
-                "```bash\n"
-                "python -m shared.auth_service.main\n"
-                "```\n"
-            ),
+            ("```bash\npython -m shared.auth_service.main\n```\n"),
             encoding="utf-8",
         )
         runtime = RuntimeCommandsConfig(

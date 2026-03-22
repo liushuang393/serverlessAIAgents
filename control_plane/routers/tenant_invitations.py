@@ -12,6 +12,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from fastapi import APIRouter, HTTPException
+
 from control_plane.schemas.tenant_invitation_schemas import (
     TenantInvitationChallengeRequest,
     TenantInvitationConsumeRequest,
@@ -24,7 +26,6 @@ from control_plane.services.tenant_invitation import (
     InviteServiceError,
     TenantInvitationService,
 )
-from fastapi import APIRouter, HTTPException
 
 
 router = APIRouter(

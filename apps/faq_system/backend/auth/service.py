@@ -18,12 +18,12 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from apps.faq_system.backend.auth.models import UserInfo
-from apps.faq_system.backend.db.models import AuthSession, PasswordResetToken, TokenBlacklist, UserAccount
-from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
+from apps.faq_system.backend.auth.models import UserInfo
+from apps.faq_system.backend.db.models import AuthSession, PasswordResetToken, TokenBlacklist, UserAccount
+from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from infrastructure.security.auth_middleware import AuthMiddleware, AuthUser, JWTConfig
 from infrastructure.security.mfa import TimeBasedMFA
 from infrastructure.security.oauth2_provider import ExternalIdentity as OAuth2Identity

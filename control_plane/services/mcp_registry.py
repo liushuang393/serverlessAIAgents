@@ -12,10 +12,11 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 
-from control_plane.schemas.provisioning_schemas import (
-    MCPLazyLoadingPatchRequest,
-    MCPServerUpsertRequest,
-)
+if TYPE_CHECKING:
+    from control_plane.schemas.provisioning_schemas import (
+        MCPLazyLoadingPatchRequest,
+        MCPServerUpsertRequest,
+    )
 
 
 class MCPRegistryService:

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from contracts.base import ComponentSpec, ComponentToggle, LayerName
 from contracts.registry import ToggleableFactoryRegistry
-
 from infrastructure.embeddings.adapters import (
     LegacyEmbeddingBackend,
     MockEmbeddingBackend,

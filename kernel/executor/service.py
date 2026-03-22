@@ -147,7 +147,6 @@ class ExecutorAgent:
             },
         )
 
-
         while retries <= self._config.max_retries:
             try:
                 timeout = step.timeout_seconds or self._config.default_timeout
@@ -183,13 +182,18 @@ class ExecutorAgent:
                 last_error = f"タイムアウト ({timeout}秒)"
                 self._logger.warning(
                     "ステップタイムアウト: %s (リトライ %d/%d)",
-                    step.name, retries + 1, self._config.max_retries,
+                    step.name,
+                    retries + 1,
+                    self._config.max_retries,
                 )
             except Exception as e:
                 last_error = str(e)
                 self._logger.warning(
                     "ステップ失敗: %s - %s (リトライ %d/%d)",
-                    step.name, e, retries + 1, self._config.max_retries,
+                    step.name,
+                    e,
+                    retries + 1,
+                    self._config.max_retries,
                 )
 
             retries += 1
@@ -239,7 +243,9 @@ class ExecutorAgent:
         raise ValueError(msg)
 
     async def _execute_tool_call(
-        self, step: PlanStep, context: dict[str, Any],
+        self,
+        step: PlanStep,
+        context: dict[str, Any],
     ) -> Any:
         """ツール呼び出しを実行."""
         if not self._tool_provider:
@@ -265,7 +271,9 @@ class ExecutorAgent:
         return result.output
 
     async def _execute_llm_generation(
-        self, step: PlanStep, context: dict[str, Any],
+        self,
+        step: PlanStep,
+        context: dict[str, Any],
     ) -> Any:
         """LLM生成を実行."""
         if not self._llm:
@@ -283,9 +291,10 @@ class ExecutorAgent:
         )
         return response
 
-
     async def _execute_human_input(
-        self, step: PlanStep, context: dict[str, Any],
+        self,
+        step: PlanStep,
+        context: dict[str, Any],
     ) -> Any:
         """人間入力待ちを実行."""
         step.status = StepStatus.WAITING
@@ -294,7 +303,9 @@ class ExecutorAgent:
         return {"status": "waiting_for_human", "step": step.name}
 
     async def _execute_parallel(
-        self, step: PlanStep, context: dict[str, Any],
+        self,
+        step: PlanStep,
+        context: dict[str, Any],
     ) -> list[Any]:
         """並列実行."""
         if not step.sub_steps:
@@ -320,7 +331,9 @@ class ExecutorAgent:
         return outputs
 
     async def _execute_sequential(
-        self, step: PlanStep, context: dict[str, Any],
+        self,
+        step: PlanStep,
+        context: dict[str, Any],
     ) -> list[Any]:
         """順次実行."""
         outputs = []
@@ -337,7 +350,9 @@ class ExecutorAgent:
         return outputs
 
     def _expand_params(
-        self, params: dict[str, Any], context: dict[str, Any],
+        self,
+        params: dict[str, Any],
+        context: dict[str, Any],
     ) -> dict[str, Any]:
         """パラメータをコンテキストで展開."""
         expanded: dict[str, Any] = {}
@@ -419,7 +434,11 @@ class ExecutorAgent:
         }
 
     async def _safe_record(
-        self, method_name: str, run_id: str, step_id: str, payload: dict[str, Any],
+        self,
+        method_name: str,
+        run_id: str,
+        step_id: str,
+        payload: dict[str, Any],
     ) -> None:
         """レコーダーがあればフックを呼び出す."""
         if self._recorder is None:
@@ -435,10 +454,7 @@ class ExecutorAgent:
     def _run_id(self, context: dict[str, Any]) -> str:
         """実行IDをコンテキストから取得."""
         return str(
-            context.get("_execution_id")
-            or context.get("execution_id")
-            or context.get("run_id")
-            or "unknown-run"
+            context.get("_execution_id") or context.get("execution_id") or context.get("run_id") or "unknown-run"
         )
 
 

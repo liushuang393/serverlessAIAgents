@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """治療計画Agentテンプレート.
 
 治療計画の立案を支援するAgentテンプレート。
@@ -18,7 +17,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.templates.template_helpers import extract_json_payload
-from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -27,6 +25,8 @@ from kernel.templates.base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+from kernel.templates.template_runtime import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,7 @@ class TreatmentPlanningOutput(BaseModel):
     disclaimer: str = "この計画は参考情報であり、最終的な治療決定は医師が行ってください。"
 
 
-class TreatmentPlanningAgent(
-    ResilientAgent[TreatmentPlanningInput, TreatmentPlanningOutput]
-):
+class TreatmentPlanningAgent(ResilientAgent[TreatmentPlanningInput, TreatmentPlanningOutput]):
     """治療計画Agent."""
 
     name = "TreatmentPlanningAgent"
@@ -97,26 +95,22 @@ JSON形式で以下を出力:
         """入力をパース."""
         return TreatmentPlanningInput(**input_data)
 
-    async def process(
-        self, input_data: TreatmentPlanningInput
-    ) -> TreatmentPlanningOutput:
+    async def process(self, input_data: TreatmentPlanningInput) -> TreatmentPlanningOutput:
         """治療計画を実行."""
         if self._llm:
             return await self._plan_with_llm(input_data)
         return self._plan_rule_based(input_data)
 
-    async def _plan_with_llm(
-        self, input_data: TreatmentPlanningInput
-    ) -> TreatmentPlanningOutput:
+    async def _plan_with_llm(self, input_data: TreatmentPlanningInput) -> TreatmentPlanningOutput:
         """LLMを使用した治療計画."""
 
         prompt = f"""以下の患者の治療計画を立案してください：
 診断: {input_data.diagnosis}
 年齢: {input_data.patient_age}歳
 性別: {input_data.patient_gender}
-併存疾患: {', '.join(input_data.comorbidities) if input_data.comorbidities else 'なし'}
-アレルギー: {', '.join(input_data.allergies) if input_data.allergies else 'なし'}
-服用中薬: {', '.join(input_data.current_medications) if input_data.current_medications else 'なし'}"""
+併存疾患: {", ".join(input_data.comorbidities) if input_data.comorbidities else "なし"}
+アレルギー: {", ".join(input_data.allergies) if input_data.allergies else "なし"}
+服用中薬: {", ".join(input_data.current_medications) if input_data.current_medications else "なし"}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
         data = extract_json_payload(response)
@@ -125,9 +119,7 @@ JSON形式で以下を出力:
             return TreatmentPlanningOutput(**data)
         return self._plan_rule_based(input_data)
 
-    def _plan_rule_based(
-        self, input_data: TreatmentPlanningInput
-    ) -> TreatmentPlanningOutput:
+    def _plan_rule_based(self, input_data: TreatmentPlanningInput) -> TreatmentPlanningOutput:
         """ルールベースの治療計画."""
         return TreatmentPlanningOutput(
             diagnosis=input_data.diagnosis,

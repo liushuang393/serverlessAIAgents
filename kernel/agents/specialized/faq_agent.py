@@ -13,23 +13,24 @@ from __future__ import annotations
 
 import logging
 import uuid
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from kernel.agents.mixins import RAGCapableMixin
 from kernel.agents.agent_block import AgentBlock
+from kernel.agents.mixins import RAGCapableMixin
 from kernel.protocols.a2ui.rich_content import (
     ChartType,
     RichResponse,
 )
-from shared.services.query_classifier import classify_query, QueryType
+from shared.services.query_classifier import classify_query
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
     from kernel.runtime import CapabilityBundle
 
 
@@ -214,23 +215,17 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
     async def _handle_faq_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """FAQ クエリを処理."""
         agent_trace.append("Executing RAG retrieval")
-        retrieval_result = await self._retriever.run(
-            {"query": question, "top_k": self._config.rag_top_k}
-        )
+        retrieval_result = await self._retriever.run({"query": question, "top_k": self._config.rag_top_k})
         chunks = retrieval_result.get("chunks", [])
 
-        answer_result = await self._answer_generator.run(
-            {"question": question, "context": chunks}
-        )
+        answer_result = await self._answer_generator.run({"question": question, "context": chunks})
         answer = answer_result.get("answer", "")
         confidence = answer_result.get("confidence", 0.8)
         citations = answer_result.get("citations", [])
 
         rich_response = None
         if self._config.enable_rich_response:
-            rich_response = self._build_rich_response(
-                answer=answer, citations=citations, query_type="faq"
-            )
+            rich_response = self._build_rich_response(answer=answer, citations=citations, query_type="faq")
 
         suggestions = await self._generate_suggestions(question, "faq")
 
@@ -256,9 +251,7 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
     async def _handle_sql_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """SQL クエリを処理."""
         if self._text2sql_service is None:
-            return FAQResponse(
-                question=question, query_type="sql", answer="SQL サービス不可", error="not_init"
-            )
+            return FAQResponse(question=question, query_type="sql", answer="SQL サービス不可", error="not_init")
 
         sql_result = await self._text2sql_service.execute(action="query", question=question)
         if not sql_result.success:
@@ -301,7 +294,8 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
         if self._text2sql_service is not None:
             try:
                 sql_result = await self._text2sql_service.execute(
-                    action="query", question=question,
+                    action="query",
+                    question=question,
                 )
                 if sql_result.success and sql_result.data.get("data"):
                     sql_response = FAQResponse(
@@ -366,7 +360,6 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
 
         return response
 
-
     def _build_rich_response(
         self,
         answer: str,
@@ -385,9 +378,7 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
             response.add_table(data=data, title="Results")
             if len(data) > 0 and len(data[0]) >= 2:
                 keys = list(data[0].keys())
-                response.add_chart_from_data(
-                    data=data, x_key=keys[0], y_key=keys[1], chart_type=ChartType.BAR
-                )
+                response.add_chart_from_data(data=data, x_key=keys[0], y_key=keys[1], chart_type=ChartType.BAR)
         if citations and self._config.enable_citations:
             response.add_citations(citations)
         return response
@@ -396,12 +387,10 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
         """提案生成."""
         if self._suggestion_service:
             try:
-                res = await self._suggestion_service.execute(
-                    action="suggest", question=question, query_type=query_type
-                )
+                res = await self._suggestion_service.execute(action="suggest", question=question, query_type=query_type)
                 if res.success:
                     return res.data.get("suggestions", [])
-            except:
+            except Exception:
                 pass
         return [{"text": "詳細を教えて", "type": "followup"}]
 
@@ -413,7 +402,7 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
             return await self._gap_analyzer.run(
                 {"query_logs": [{"question": question, "confidence": response.confidence}]}
             )
-        except:
+        except Exception:
             return {}
 
     async def _ensure_initialized(self) -> None:
@@ -421,8 +410,8 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
         if self._initialized:
             return
 
-        from shared.services import SQLDialect, Text2SQLConfig, Text2SQLService
         from kernel.skills.builtin.knowledge_qa import AnswerGenerator, GapAnalyzer, Retriever
+        from shared.services import SQLDialect, Text2SQLConfig, Text2SQLService
 
         self._retriever = Retriever()
         self._answer_generator = AnswerGenerator(llm_client=self._llm_client)
@@ -430,13 +419,12 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
 
         try:
             dialect = SQLDialect(self._config.sql_dialect)
-        except:
+        except Exception:
             dialect = SQLDialect.POSTGRESQL
 
-        self._text2sql_service = Text2SQLService(
-            Text2SQLConfig(schema=self._config.sql_schema, dialect=dialect)
-        )
+        self._text2sql_service = Text2SQLService(Text2SQLConfig(schema=self._config.sql_schema, dialect=dialect))
 
         from shared.services import SuggestionConfig, SuggestionService
+
         self._suggestion_service = SuggestionService(SuggestionConfig())
         self._initialized = True

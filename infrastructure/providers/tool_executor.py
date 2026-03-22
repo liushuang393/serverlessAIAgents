@@ -32,22 +32,25 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from contracts.tool import ToolResult as ContractToolResult
 from pydantic import BaseModel, Field
 
+from contracts.tool import ToolResult as ContractToolResult
+from harness.approval import interrupt
+from harness.approval.types import ApprovalRequest
+from harness.governance import (
+    GovernanceDecision,
+    GovernanceEngine,
+)
 from infrastructure.providers.tool_provider import RegisteredTool, ToolProvider
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from harness.governance import (
-        GovernanceDecision,
-        GovernanceEngine,
         GovernanceResult,
         ToolExecutionContext,
     )
-    from harness.approval import interrupt
-    from harness.approval.types import ApprovalRequest
-    from collections.abc import Callable
 
 
 # =============================================================================
@@ -105,7 +108,6 @@ class ToolResult(ContractToolResult):
         content: 実行結果（文字列またはJSON）
         name: ツール名
     """
-
 
 
 class BatchResult(BaseModel):

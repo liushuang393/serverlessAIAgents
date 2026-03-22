@@ -7,10 +7,11 @@ import secrets
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from apps.faq_system.backend.db.models import ChatMessage
-from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.engine import CursorResult
+
+from apps.faq_system.backend.db.models import ChatMessage
+from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 
 
 if TYPE_CHECKING:

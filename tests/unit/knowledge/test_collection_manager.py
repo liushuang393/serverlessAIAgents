@@ -252,9 +252,7 @@ class TestCollectionManagerRAGService:
         assert rag_config.chunk_size == 800
         assert rag_config.top_k == 3
 
-    async def test_build_rag_config_nonexistent_raises(
-        self, collection_mgr: CollectionManager
-    ) -> None:
+    async def test_build_rag_config_nonexistent_raises(self, collection_mgr: CollectionManager) -> None:
         """存在しないコレクションの RAGConfig 構築で ValueError を送出."""
         with pytest.raises(ValueError, match="not found"):
             await collection_mgr.build_rag_config("nonexistent")
@@ -287,9 +285,7 @@ class TestCollectionManagerRAGService:
 class TestCollectionManagerAccessControl:
     """アクセス制御統合テスト."""
 
-    async def test_resolve_accessible_collections_fallback(
-        self, collection_mgr: CollectionManager
-    ) -> None:
+    async def test_resolve_accessible_collections_fallback(self, collection_mgr: CollectionManager) -> None:
         """auth_service 未接続時のフォールバック検証."""
         await collection_mgr.create_collection(
             collection_name="internal_kb",
@@ -362,9 +358,7 @@ class TestDocumentManagerUpload:
         assert doc.status == DocumentStatus.UPLOADED
         assert doc.content_hash is not None
 
-    async def test_upload_to_nonexistent_collection_raises(
-        self, document_mgr: DocumentManager
-    ) -> None:
+    async def test_upload_to_nonexistent_collection_raises(self, document_mgr: DocumentManager) -> None:
         """存在しないコレクションへのアップロードで ValueError を送出."""
         with pytest.raises(ValueError, match="not found"):
             await document_mgr.upload_document(

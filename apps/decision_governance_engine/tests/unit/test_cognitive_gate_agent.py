@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from apps.decision_governance_engine.agents.cognitive_gate_agent import CognitiveGateAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     CognitiveGateInput,

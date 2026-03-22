@@ -1,7 +1,7 @@
 """DGE AgentRegistry が Agent を A2AHub に登録することを検証."""
+
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest

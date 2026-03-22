@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from control_plane.agents.gallery_agent import GalleryAgent
 
 

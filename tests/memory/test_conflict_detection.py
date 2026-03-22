@@ -7,10 +7,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import pytest
-
-from shared.memory.memory_manager import MemoryManager
 from infrastructure.memory.types import MemoryEntry, MemoryType
+from shared.memory.memory_manager import MemoryManager
 
 
 def _make_entry(content: str, topic: str = "test", importance: float = 0.5) -> MemoryEntry:
@@ -34,12 +32,8 @@ class TestConflictDetection:
         await manager.start()
         try:
             # 非常に類似したテキスト（英語、スペース分割で TF-IDF が機能する）
-            entry1 = _make_entry(
-                "tanaka will approve the Q4 plan in the meeting tomorrow", topic="project"
-            )
-            entry2 = _make_entry(
-                "tanaka will approve the Q4 plan in the meeting next week", topic="project"
-            )
+            entry1 = _make_entry("tanaka will approve the Q4 plan in the meeting tomorrow", topic="project")
+            entry2 = _make_entry("tanaka will approve the Q4 plan in the meeting next week", topic="project")
 
             await manager._store_with_conflict_check(entry1)
             await manager._store_with_conflict_check(entry2)

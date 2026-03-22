@@ -11,6 +11,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
+from sqlalchemy import text
+
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.db import ensure_database_ready
 from apps.faq_system.backend.db.session import get_database_url, get_db_session
@@ -21,10 +26,6 @@ from apps.faq_system.routers.dependencies import (
     is_rag_enabled,
     is_sql_enabled,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
-from sqlalchemy import text
 
 
 if TYPE_CHECKING:

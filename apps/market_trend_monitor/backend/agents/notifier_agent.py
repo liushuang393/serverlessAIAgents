@@ -16,6 +16,7 @@ from apps.market_trend_monitor.backend.models import Notification, NotificationP
 
 from kernel.agents.agent_block import AgentBlock
 
+
 try:
     import httpx
 except ImportError:  # pragma: no cover - optional dependency

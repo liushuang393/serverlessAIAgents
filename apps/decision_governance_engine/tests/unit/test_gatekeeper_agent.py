@@ -1,6 +1,7 @@
 """Unit tests for GatekeeperAgent."""
 
 import pytest
+
 from apps.decision_governance_engine.agents.gatekeeper_agent import GatekeeperAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     GatekeeperInput,

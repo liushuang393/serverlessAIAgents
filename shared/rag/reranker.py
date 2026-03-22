@@ -161,7 +161,9 @@ class CohereReranker(BaseReranker):
 class CrossEncoderReranker(BaseReranker):
     def __init__(self, model_name: str | None = None) -> None:
         super().__init__()
-        self._model_name = model_name or os.getenv("RERANKER_CROSS_ENCODER_MODEL") or "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        self._model_name = (
+            model_name or os.getenv("RERANKER_CROSS_ENCODER_MODEL") or "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        )
         self._model: Any = None
 
     @property
@@ -201,9 +203,7 @@ class CrossEncoderReranker(BaseReranker):
 class CrossEncoderRuriReranker(CrossEncoderReranker):
     def __init__(self, model_name: str | None = None) -> None:
         super().__init__(
-            model_name=model_name
-            or os.getenv("RERANKER_CROSS_ENCODER_RURI_MODEL")
-            or "cl-nagoya/ruri-v3-reranker-310m"
+            model_name=model_name or os.getenv("RERANKER_CROSS_ENCODER_RURI_MODEL") or "cl-nagoya/ruri-v3-reranker-310m"
         )
 
     @property
@@ -302,12 +302,9 @@ class LLMListwiseReranker(BaseReranker):
             ),
             default=True,
         )
-        self._heavy_model = (
-            _clean_text(_pick_config_value(cfg, "model", "RERANKER_LLM_MODEL")) or ""
-        )
+        self._heavy_model = _clean_text(_pick_config_value(cfg, "model", "RERANKER_LLM_MODEL")) or ""
         self._light_model = (
-            _clean_text(_pick_config_value(cfg, "light_model", "RERANKER_LLM_LIGHT_MODEL"))
-            or self._heavy_model
+            _clean_text(_pick_config_value(cfg, "light_model", "RERANKER_LLM_LIGHT_MODEL")) or self._heavy_model
         )
 
         self._llm: Any = None
@@ -504,9 +501,7 @@ class LLMListwiseReranker(BaseReranker):
             [
                 {
                     "role": "system",
-                    "content": (
-                        "You are a reranker. Return compact, deterministic JSON only."
-                    ),
+                    "content": ("You are a reranker. Return compact, deterministic JSON only."),
                 },
                 {
                     "role": "user",
@@ -536,9 +531,7 @@ class LLMListwiseReranker(BaseReranker):
             docs_text.append(f"- id={payload.doc_id}\n  text={snippet}")
 
         stop_instruction = (
-            "- sufficient: boolean\n- required_info: string[] (missing facts)\n"
-            if include_stop_signal
-            else ""
+            "- sufficient: boolean\n- required_info: string[] (missing facts)\n" if include_stop_signal else ""
         )
 
         return (
@@ -742,16 +735,14 @@ def _register_builtin_rerankers() -> None:
     register_reranker(
         RerankerType.CROSS_ENCODER.value,
         lambda options: CrossEncoderReranker(
-            model_name=_clean_text((options or {}).get("model_name"))
-            or _clean_text((options or {}).get("model")),
+            model_name=_clean_text((options or {}).get("model_name")) or _clean_text((options or {}).get("model")),
         ),
         overwrite=True,
     )
     register_reranker(
         RerankerType.CROSS_ENCODER_RURI.value,
         lambda options: CrossEncoderRuriReranker(
-            model_name=_clean_text((options or {}).get("model_name"))
-            or _clean_text((options or {}).get("model")),
+            model_name=_clean_text((options or {}).get("model_name")) or _clean_text((options or {}).get("model")),
         ),
         overwrite=True,
     )

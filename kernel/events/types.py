@@ -44,4 +44,3 @@ class EventType(str, Enum):
 
 
 __all__ = ["EventType"]
-

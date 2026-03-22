@@ -513,10 +513,7 @@ class IntelligenceService:
         normalized = self._normalize_url(url)
         if not normalized:
             return False
-        for token in _REAL_SOURCE_BLACKLIST:
-            if token in normalized:
-                return False
-        return True
+        return all(token not in normalized for token in _REAL_SOURCE_BLACKLIST)
 
     @staticmethod
     def _normalize_url(value: str) -> str:

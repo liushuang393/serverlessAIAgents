@@ -3,6 +3,7 @@
 各 App はこのクラスを使ってリソース登録・一覧・削除を行う。
 auth_service への HTTP 呼び出しを隠蔽し、他 App でも再利用可能。
 """
+
 from __future__ import annotations
 
 import logging
@@ -144,17 +145,20 @@ class ResourceManager:
 
 def _resolve_auth_base_url(auth_client: Any) -> str:
     """auth_client から auth_service のベース URL を解決."""
-    base_url = getattr(auth_client, "base_url", None)
-    if isinstance(base_url, str):
-        normalized = base_url.strip().rstrip("/")
-        if normalized:
-            return normalized
+    # AuthClient は self._base_url にプライベートとして保存するため両方確認する
+    for attr in ("base_url", "_base_url"):
+        base_url = getattr(auth_client, attr, None)
+        if isinstance(base_url, str):
+            normalized = base_url.strip().rstrip("/")
+            if normalized:
+                return normalized
 
     config = getattr(auth_client, "config", None)
-    config_base_url = getattr(config, "base_url", None)
-    if isinstance(config_base_url, str):
-        normalized = config_base_url.strip().rstrip("/")
-        if normalized:
-            return normalized
+    for attr in ("base_url", "_base_url"):
+        config_base_url = getattr(config, attr, None)
+        if isinstance(config_base_url, str):
+            normalized = config_base_url.strip().rstrip("/")
+            if normalized:
+                return normalized
 
     return DEFAULT_AUTH_SERVICE_URL

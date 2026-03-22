@@ -22,22 +22,19 @@ Daytonaスタイルのライフサイクル管理を統合。
 
 from __future__ import annotations
 
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from kernel.flow.types import NextAction, NodeResult, NodeType
 
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from infrastructure.sandbox import (
         ExecutionResult,
-        ManagedSandbox,
         SandboxConfig,
-        Workspace,
     )
     from kernel.flow.context import FlowContext
 
@@ -103,7 +100,7 @@ class SandboxNode:
             self._logger.info(f"サンドボックス実行開始: {self.id}")
 
             # サンドボックスを作成・実行
-            from infrastructure.sandbox import ManagedSandbox  # noqa: PLC0415
+            from infrastructure.sandbox import ManagedSandbox
 
             async with await ManagedSandbox.create(
                 self.provider,
@@ -189,7 +186,7 @@ class WorkspaceNode:
             NodeResult
         """
         try:
-            from infrastructure.sandbox import ExecutionResult, Workspace  # noqa: PLC0415
+            from infrastructure.sandbox import ExecutionResult, Workspace
 
             ws_name = self.workspace_name or f"flow-{self.id}"
             self._logger.info(f"ワークスペース実行開始: {ws_name}")

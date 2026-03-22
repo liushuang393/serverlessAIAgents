@@ -31,7 +31,6 @@ from functools import wraps
 from typing import Any, TypeVar
 
 from infrastructure.observability.metrics import get_metrics
-
 from kernel.executor.reliability.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,

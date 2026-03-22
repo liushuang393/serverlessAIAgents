@@ -92,9 +92,8 @@ def _is_top_level_eager(node: ast.AST, tree: ast.Module) -> bool:
     for top in ast.iter_child_nodes(tree):
         if isinstance(top, ast.If):
             test = top.test
-            is_tc = (
-                (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING")
-                or (isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
+            is_tc = (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING") or (
+                isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
             )
             if is_tc:
                 for child in ast.walk(top):

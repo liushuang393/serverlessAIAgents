@@ -1,17 +1,21 @@
 """リソース定義シードのテスト."""
+
 from __future__ import annotations
 
-import httpx
+from typing import TYPE_CHECKING
+
 import pytest
+
+
+if TYPE_CHECKING:
+    import httpx
 
 
 class TestSeedFAQResourceDefinitions:
     """FAQ リソース定義シードの検証."""
 
     @pytest.mark.asyncio
-    async def test_seed_creates_definitions(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_seed_creates_definitions(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """FAQ リソース定義がシードされる."""
         # seed は main.py lifespan で呼ばれているため、
         # ensure_database_ready 後に definitions が存在するはず

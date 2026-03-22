@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
+# SQLAlchemy の Mapped 型解決に必要なため runtime import する（ruff TC003 を意図的に無効化）
+from datetime import datetime  # noqa: TC003
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column

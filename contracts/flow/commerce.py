@@ -104,7 +104,7 @@ class ICommerceFlow(ABC):
         """単一ステップを実行する."""
 
     @abstractmethod
-    def add_step(self, step: ICommerceStep) -> "ICommerceFlow":
+    def add_step(self, step: ICommerceStep) -> ICommerceFlow:
         """ステップを追加する."""
 
     @abstractmethod

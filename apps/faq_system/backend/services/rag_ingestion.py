@@ -18,10 +18,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-from apps.faq_system.backend.db.models import IngestionCheckpoint, IngestionRun, IngestionRunItem
-from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from sqlalchemy import Select, select
 
+from apps.faq_system.backend.db.models import IngestionCheckpoint, IngestionRun, IngestionRunItem
+from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from harness.guardrails.data_sanitizer import DataSanitizer
 from infrastructure.providers.db_provider import SQLAlchemyDBProvider
 from shared.rag.document_loader import UniversalLoader
@@ -61,8 +61,9 @@ except ImportError:  # pragma: no cover - optional dependency
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable
 
-    from apps.faq_system.backend.services.rag_runtime_config import RAGDataSourceConfig, RAGRuntimeConfig
     from sqlalchemy.sql.elements import ClauseElement
+
+    from apps.faq_system.backend.services.rag_runtime_config import RAGDataSourceConfig, RAGRuntimeConfig
 else:
     RAGDataSourceConfig = Any
     RAGRuntimeConfig = Any

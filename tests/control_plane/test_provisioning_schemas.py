@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import pytest
-from control_plane.schemas.provisioning_schemas import AppCreateRequest
 from pydantic import ValidationError
+
+from control_plane.schemas.provisioning_schemas import AppCreateRequest
 
 
 class TestAppCreateRequest:

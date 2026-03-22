@@ -11,7 +11,7 @@ import pytest
 from shared.services.unified_rag import UnifiedRAGService
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_embedding() -> AsyncMock:
     """モック Embedding プロバイダ."""
     emb = AsyncMock()
@@ -20,7 +20,7 @@ def mock_embedding() -> AsyncMock:
     return emb
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_vectordb() -> AsyncMock:
     """モック VectorDB プロバイダ."""
     vdb = AsyncMock()
@@ -36,13 +36,11 @@ def mock_vectordb() -> AsyncMock:
     return vdb
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_llm() -> AsyncMock:
     """モック LLM プロバイダ."""
     llm = AsyncMock()
-    llm.chat = AsyncMock(
-        return_value={"content": "AgentFlow is a lightweight AI agent framework."}
-    )
+    llm.chat = AsyncMock(return_value={"content": "AgentFlow is a lightweight AI agent framework."})
     return llm
 
 

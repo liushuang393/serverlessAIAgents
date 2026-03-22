@@ -19,12 +19,18 @@ import inspect
 import json
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kernel.agents.resilient_agent import ResilientAgent
 from kernel.protocols.a2a_hub import LocalA2AHub, get_hub
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from kernel.agent_decorator import RegisteredAgent
+
 
 _logger = logging.getLogger(__name__)
 
@@ -199,7 +205,6 @@ def _attach_shared_context(
                 continue
 
 
-
 # ============================================================================
 # AgentFactory — A2AHub 連携（設定ファイル自動インスタンス化）
 # ============================================================================
@@ -267,7 +272,8 @@ class AgentFactory:
         try:
             module = importlib.import_module(module_path)
         except ImportError as e:
-            raise AgentInstantiationError("(unknown)", module_path, e) from e
+            msg = "(unknown)"
+            raise AgentInstantiationError(msg, module_path, e) from e
 
         # モジュール内の Agent サブクラスを検索
         # 優先順位:
@@ -303,8 +309,6 @@ class AgentFactory:
 
         # @agent デコレータ経由の場合: RegisteredAgent から直接インスタンスを取得
         if agent_cls is None and decorated_cls is not None:
-            from kernel.agent_decorator import RegisteredAgent
-
             registered: RegisteredAgent = decorated_cls._agent_registered  # type: ignore[union-attr]
             try:
                 instance = registered.get_instance()
@@ -324,7 +328,8 @@ class AgentFactory:
 
         if agent_cls is None:
             msg = "No ResilientAgent/AgentBlock/@agent subclass found"
-            raise AgentInstantiationError("(none)", module_path, ValueError(msg))
+            msg = "(none)"
+            raise AgentInstantiationError(msg, module_path, ValueError(msg))
 
         # インスタンス化（複数フォールバック戦略）
         extra = init_kwargs or {}
@@ -424,6 +429,8 @@ class AgentFactory:
 
         _logger.info(
             "AgentFactory: %d agents instantiated, %d errors from %s",
-            len(result), len(errors), config_path,
+            len(result),
+            len(errors),
+            config_path,
         )
         return result

@@ -12,10 +12,7 @@ class NoOpRerankBackend:
 
     async def rerank(self, query: str, documents: list[str], *, top_k: int = 5) -> list[RerankResult]:
         del query
-        return [
-            RerankResult(index=index, text=text, score=0.0)
-            for index, text in enumerate(documents[:top_k])
-        ]
+        return [RerankResult(index=index, text=text, score=0.0) for index, text in enumerate(documents[:top_k])]
 
 
 class MockRerankBackend:

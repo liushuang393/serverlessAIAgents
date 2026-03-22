@@ -37,9 +37,7 @@ def _get_competitor_agent():
             CompetitorTrackingAgent,
         )
 
-        _competitor_agent = create_agent(
-            AgentFactorySpec(agent_class=CompetitorTrackingAgent, agent_type="reactor")
-        )
+        _competitor_agent = create_agent(AgentFactorySpec(agent_class=CompetitorTrackingAgent, agent_type="reactor"))
     return _competitor_agent
 
 

@@ -14,9 +14,10 @@
 import logging
 from typing import Any
 
-from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 
 
 logger = logging.getLogger("decision_api.knowledge")

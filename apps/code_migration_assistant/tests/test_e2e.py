@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from apps.code_migration_assistant.evolution.manager import EvolutionManager
 from apps.code_migration_assistant.output.organizer import OutputOrganizer
 from apps.code_migration_assistant.output.packager import OutputPackager
@@ -37,6 +38,7 @@ HAS_API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
 # ============================================================
 # COBOLProject テスト（APIキー不要）
 # ============================================================
+
 
 class TestCOBOLProject:
     """COBOLProjectクラスのテスト."""
@@ -56,6 +58,7 @@ class TestCOBOLProject:
         src_dir = tmp_path / "cobol_project"
         src_dir.mkdir()
         import shutil
+
         shutil.copy(SAMPLE_CBL, src_dir / "sample.cbl")
 
         project = COBOLProject(source=src_dir, work_dir=tmp_path)
@@ -103,6 +106,7 @@ class TestCOBOLProject:
 # OutputOrganizer テスト（APIキー不要）
 # ============================================================
 
+
 class TestOutputOrganizer:
     """OutputOrganizerクラスのテスト."""
 
@@ -145,9 +149,7 @@ class TestOutputOrganizer:
         saved_files = organizer.save_java_files(generated_code, version_dir)
 
         assert len(saved_files) == 2
-        controller_file = next(
-            (f for f in saved_files if "Controller" in f.name), None
-        )
+        controller_file = next((f for f in saved_files if "Controller" in f.name), None)
         assert controller_file is not None
 
     def test_save_java_files_no_markers(self, tmp_path: Path) -> None:
@@ -177,6 +179,7 @@ class TestOutputOrganizer:
 # OutputPackager テスト（APIキー不要）
 # ============================================================
 
+
 class TestOutputPackager:
     """OutputPackagerクラスのテスト."""
 
@@ -188,7 +191,8 @@ class TestOutputPackager:
         # ダミーJavaファイルを作成
         (version_dir / "03_transform").mkdir(exist_ok=True)
         (version_dir / "03_transform" / "Sample.java").write_text(
-            "public class Sample {}", encoding="utf-8",
+            "public class Sample {}",
+            encoding="utf-8",
         )
 
         packager = OutputPackager(tmp_path)
@@ -212,6 +216,7 @@ class TestOutputPackager:
 # ============================================================
 # EvolutionManager テスト（APIキー不要）
 # ============================================================
+
 
 class TestEvolutionManager:
     """EvolutionManagerクラスのテスト."""
@@ -249,7 +254,8 @@ class TestEvolutionManager:
         version_dir.mkdir()
 
         result = manager.evolve(
-            "SAMPLE", "DESIGN_ISSUE",
+            "SAMPLE",
+            "DESIGN_ISSUE",
             {"reason": "フィールド欠落", "evidence": {"field_coverage": "3/8"}},
             version_dir,
         )
@@ -286,6 +292,7 @@ class TestEvolutionManager:
 # E2Eテスト（APIキーが必要）
 # ============================================================
 
+
 @pytest.mark.skipif(not HAS_API_KEY, reason="ANTHROPIC_API_KEY が設定されていません")
 class TestMigrationPipelineFast:
     """パイプラインのE2Eテスト（APIキー必要、高速モード）."""
@@ -307,8 +314,12 @@ class TestMigrationPipelineFast:
 
         assert result.program_name == "SAMPLE"
         assert result.decision in (
-            "PASSED", "KNOWN_LEGACY", "DESIGN_ISSUE",
-            "TRANSFORM_ISSUE", "TEST_ISSUE", "ENV_ISSUE",
+            "PASSED",
+            "KNOWN_LEGACY",
+            "DESIGN_ISSUE",
+            "TRANSFORM_ISSUE",
+            "TEST_ISSUE",
+            "ENV_ISSUE",
         )
 
         # 出力ディレクトリが作成されていること
@@ -319,6 +330,7 @@ class TestMigrationPipelineFast:
 # ============================================================
 # パイプライン単体テスト（モック使用）
 # ============================================================
+
 
 class TestMigrationEngineUnit:
     """MigrationEngineの単体テスト（モック使用）."""

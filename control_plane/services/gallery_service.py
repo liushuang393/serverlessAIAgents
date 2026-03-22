@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
+from control_plane.marketplace.client import MarketplaceAgent, MarketplaceClient
 from control_plane.schemas.gallery_schemas import (
     FeaturedItem,
     FeaturedResponse,
@@ -29,8 +30,6 @@ from control_plane.services.component_library import (
     ComponentType,
     get_component_library,
 )
-
-from control_plane.marketplace.client import MarketplaceAgent, MarketplaceClient
 
 
 class GalleryService:

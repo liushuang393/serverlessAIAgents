@@ -9,17 +9,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from contracts.policy import ApprovalRequest
-from kernel.tools import KernelToolExecutor
-
 from harness.approval.service import ApprovalService
 from harness.evaluation.service import EvaluationService
 from harness.gating.tool_gate import ToolGate
+from kernel.tools import KernelToolExecutor
 
 
 if TYPE_CHECKING:
     from contracts.policy import EvalResult
     from contracts.tool import ToolRequest, ToolResult
-
     from harness.governance import ToolExecutionContext
     from infrastructure.sandbox.tool_provider import RegisteredTool, ToolProvider
 
@@ -70,4 +68,3 @@ class HarnessedToolRuntime:
                 metadata=decision.metadata,
             )
         return await self._executor.execute(request)
-

@@ -1,14 +1,15 @@
 """PipelineEngine が _initialize_agents で Agent を A2AHub に自動登録することを検証."""
+
 from __future__ import annotations
 
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from kernel.agents.resilient_agent import ResilientAgent
 from kernel.engines.pipeline_engine import PipelineEngine
 from kernel.protocols.a2a_hub import get_hub, reset_hub
-from pydantic import BaseModel
 
 
 class _StubInput(BaseModel):

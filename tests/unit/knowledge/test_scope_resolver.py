@@ -1,12 +1,13 @@
 """ScopeResolver のユニットテスト."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 import pytest
 
-from shared.rag.scope_resolver import CollectionTarget, ScopeResolver
 from infrastructure.security.auth_client.client import AuthClient
+from shared.rag.scope_resolver import CollectionTarget, ScopeResolver
 
 
 class TestScopeResolver:

@@ -9,7 +9,6 @@ from infrastructure.rerank.registry import get_rerank_backend
 
 if TYPE_CHECKING:
     from infrastructure.rerank.ports import RerankResult
-
     from shared.registry import ComponentToggle
 
 

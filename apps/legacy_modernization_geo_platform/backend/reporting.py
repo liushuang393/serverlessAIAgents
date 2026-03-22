@@ -6,13 +6,14 @@ from typing import Any
 
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountSignalArtifact,
-    CampaignReport,
     ArtifactMeta,
+    CampaignReport,
     GeoExecuteRequest,
     GeoQAReport,
     PublishManifest,
     normalize_content_language,
 )
+
 
 _REPORT_COPY: dict[str, dict[str, str]] = {
     "ja": {

@@ -7,8 +7,7 @@ CollectionManager / DocumentManager を利用した
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -26,7 +25,7 @@ from shared.services.base import ServiceResult
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def event_loop():
     """イベントループを提供."""
     loop = asyncio.new_event_loop()
@@ -34,7 +33,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture()
+@pytest.fixture
 async def session_factory() -> async_sessionmaker[AsyncSession]:
     """テスト用インメモリ SQLite セッションファクトリ."""
     engine = create_async_engine(
@@ -53,7 +52,7 @@ async def session_factory() -> async_sessionmaker[AsyncSession]:
     await engine.dispose()
 
 
-@pytest.fixture()
+@pytest.fixture
 async def collection_manager(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> CollectionManager:
@@ -61,7 +60,7 @@ async def collection_manager(
     return CollectionManager(session_factory=session_factory)
 
 
-@pytest.fixture()
+@pytest.fixture
 async def document_manager(
     collection_manager: CollectionManager,
     session_factory: async_sessionmaker[AsyncSession],
@@ -73,7 +72,7 @@ async def document_manager(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 async def sample_collection(
     collection_manager: CollectionManager,
 ) -> dict[str, Any]:
@@ -101,7 +100,7 @@ async def sample_collection(
 class TestCollectionCRUD:
     """コレクション CRUD エンドポイントのテスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_create_collection(
         self,
         collection_manager: CollectionManager,
@@ -117,7 +116,7 @@ class TestCollectionCRUD:
         assert model.app_name == "faq_system"
         assert model.chunk_strategy == "recursive"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_create_duplicate_collection_fails(
         self,
         collection_manager: CollectionManager,
@@ -130,7 +129,7 @@ class TestCollectionCRUD:
                 app_name="faq_system",
             )
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_list_collections(
         self,
         collection_manager: CollectionManager,
@@ -141,7 +140,7 @@ class TestCollectionCRUD:
         assert len(collections) == 1
         assert collections[0].collection_name == "test_collection"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_collection(
         self,
         collection_manager: CollectionManager,
@@ -153,7 +152,7 @@ class TestCollectionCRUD:
         assert model.display_name == "テスト KB"
         assert model.chunk_size == 500
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_update_collection(
         self,
         collection_manager: CollectionManager,
@@ -167,7 +166,7 @@ class TestCollectionCRUD:
         assert updated.chunk_size == 1000
         assert updated.top_k == 10
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_delete_collection(
         self,
         collection_manager: CollectionManager,
@@ -178,7 +177,7 @@ class TestCollectionCRUD:
         model = await collection_manager.get_collection("test_collection")
         assert model is None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_collection_stats(
         self,
         collection_manager: CollectionManager,
@@ -198,7 +197,7 @@ class TestCollectionCRUD:
 class TestDocumentManagement:
     """ドキュメント管理エンドポイントのテスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_upload_document(
         self,
         document_manager: DocumentManager,
@@ -215,7 +214,7 @@ class TestDocumentManagement:
         assert doc.status == "uploaded"
         assert doc.collection_name == "test_collection"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_upload_to_nonexistent_collection(
         self,
         document_manager: DocumentManager,
@@ -228,7 +227,7 @@ class TestDocumentManagement:
                 filename="test.txt",
             )
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_list_documents(
         self,
         document_manager: DocumentManager,
@@ -248,7 +247,7 @@ class TestDocumentManagement:
         docs = await document_manager.list_documents("test_collection")
         assert len(docs) == 2
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_document(
         self,
         document_manager: DocumentManager,
@@ -264,7 +263,7 @@ class TestDocumentManagement:
         assert doc is not None
         assert doc.filename == "detail.txt"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_preview_chunks(
         self,
         document_manager: DocumentManager,
@@ -285,7 +284,7 @@ class TestDocumentManagement:
         assert "content" in chunks[0]
         assert "length" in chunks[0]
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_index_document(
         self,
         document_manager: DocumentManager,
@@ -309,7 +308,7 @@ class TestDocumentManagement:
         assert indexed.status == "indexed"
         assert indexed.chunk_count >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_reindex_document(
         self,
         document_manager: DocumentManager,
@@ -334,7 +333,7 @@ class TestDocumentManagement:
         assert reindexed.status == "indexed"
         assert reindexed.chunk_count >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_delete_document(
         self,
         document_manager: DocumentManager,
@@ -350,7 +349,7 @@ class TestDocumentManagement:
         doc = await document_manager.get_document(uploaded.document_id)
         assert doc is None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_reindex_collection(
         self,
         document_manager: DocumentManager,
@@ -386,7 +385,7 @@ class TestDocumentManagement:
 class TestCollectionAccess:
     """コレクションアクセス制御テスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_resolve_accessible_collections(
         self,
         collection_manager: CollectionManager,
@@ -421,7 +420,7 @@ class TestCollectionAccess:
         assert len(guest_cols) == 1
         assert "external" in guest_cols[0].collection_name
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_build_rag_config(
         self,
         collection_manager: CollectionManager,

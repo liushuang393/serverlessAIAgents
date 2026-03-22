@@ -100,7 +100,7 @@ class DocumentExporter(ServiceBase[bytes]):
     def _check_reportlab(self) -> bool:
         """ReportLabが利用可能か確認."""
         try:
-            from reportlab.lib.pagesizes import A4
+            import reportlab.lib.pagesizes  # noqa: F401
 
             return True
         except ImportError:

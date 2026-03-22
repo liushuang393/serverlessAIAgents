@@ -12,6 +12,7 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     normalize_content_language,
 )
 
+
 _QA_COPY: dict[str, dict[str, str]] = {
     "ja": {
         "issue.evidence_count": "公開判定に必要な根拠数が不足しています。",

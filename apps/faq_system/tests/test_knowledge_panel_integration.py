@@ -11,6 +11,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from apps.faq_system.backend.security.permission_config import (
     KBPermission,
     PermissionConfig,

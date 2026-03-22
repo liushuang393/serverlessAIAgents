@@ -4,5 +4,4 @@
 正規の `infrastructure.providers.vectordb_provider` へ委譲する。
 """
 
-from infrastructure.providers.vectordb_provider import *  # noqa: F401,F403
-
+from infrastructure.providers.vectordb_provider import *  # noqa: F403

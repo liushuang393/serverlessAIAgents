@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import Any
 
 from control_plane.services.gallery_service import GalleryService
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 

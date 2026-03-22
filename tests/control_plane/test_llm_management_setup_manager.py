@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, ProviderConfig
 from control_plane.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMPreflightRequest,
@@ -14,6 +13,11 @@ from control_plane.schemas.llm_management_schemas import (
     LLMSetupCommandResult,
 )
 from control_plane.services.llm_management_setup_manager import LLMSetupManager
+from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, ProviderConfig
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class StubRunner:

@@ -6,6 +6,7 @@ import os
 import time
 
 import pytest
+
 from apps.messaging_hub.agents.file_organizer_agent import FileOrganizerAgent
 
 
@@ -35,7 +36,7 @@ async def test_smart_rename_executes_rename(tmp_path) -> None:
 
     assert result.errors == []
     assert result.files_renamed == 2
-    renamed_files = sorted(name for name in os.listdir(tmp_path) if os.path.isfile(tmp_path / name))  # noqa: PTH208,ASYNC240,PTH113
+    renamed_files = sorted(name for name in os.listdir(tmp_path) if os.path.isfile(tmp_path / name))  # noqa: PTH208, PTH113
     assert renamed_files[0].startswith("001_")
     assert renamed_files[1].startswith("002_")
 

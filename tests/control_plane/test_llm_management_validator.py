@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from infrastructure.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig, RoutingPolicyConfig
 from control_plane.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
+from infrastructure.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig, RoutingPolicyConfig
 
 
 def _base_config() -> LLMGatewayConfig:
@@ -52,6 +52,7 @@ def test_validate_or_raise_rejects_unknown_provider() -> None:
     try:
         validator.validate_or_raise(config)
     except LLMConfigValidationError as exc:
-        assert "未定義 provider 'unknown_provider'" in str(exc)
+        assert "未定義 provider 'unknown_provider'" in str(exc)  # noqa: PT017
     else:
-        raise AssertionError("expected LLMConfigValidationError")
+        msg = "expected LLMConfigValidationError"
+        raise AssertionError(msg)

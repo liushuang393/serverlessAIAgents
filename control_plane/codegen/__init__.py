@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import importlib
-from types import ModuleType
-
 import warnings as _warnings
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
 
 _warnings.warn(
-    "control_plane.codegen は apps.dev_studio.codegen に移動しました。"
-    " 新しいインポートパスを使用してください。",
+    "control_plane.codegen は apps.dev_studio.codegen に移動しました。 新しいインポートパスを使用してください。",
     DeprecationWarning,
     stacklevel=2,
 )

@@ -16,7 +16,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     normalize_content_language,
     schema_language_code,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -59,7 +58,7 @@ _COPY: dict[str, dict[str, str]] = {
         "paragraph.comparison": (
             "Compared with full replacement, phased modernization reduces outage risk and splits investment decisions."
         ),
-        "paragraph.next": "Start from \"{question}\" and prioritize asset inventory and sequencing.",
+        "paragraph.next": 'Start from "{question}" and prioritize asset inventory and sequencing.',
         "faq.1.answer": "Phased migration can run alongside stable day-to-day operations.",
         "faq.2.question": "How is this different from a full rewrite?",
         "faq.2.answer": "Investment and risk can be controlled milestone by milestone.",
@@ -109,9 +108,7 @@ class ContentDraftAgent(ResilientAgent[ContentDraftInput, ContentDraftOutput]):
         target_language = normalize_content_language(blueprint.target_language)
         copy = _COPY[target_language]
         pages: list[ContentDraftPage] = []
-        question = (
-            blueprint.pages[0].primary_question if blueprint.pages else copy["default_question"]
-        )
+        question = blueprint.pages[0].primary_question if blueprint.pages else copy["default_question"]
         evidence_lines = [
             f"- {copy['evidence_prefix']}: {entry.title} / {entry.publisher} / {entry.source_url}"
             for entry in evidence_matrix.entries[:4]
@@ -192,10 +189,7 @@ class ContentDraftAgent(ResilientAgent[ContentDraftInput, ContentDraftOutput]):
             ),
             pages=pages,
             target_language=target_language,
-            evidence=[
-                item.model_dump(mode="json")
-                for item in evidence_matrix.entries[:6]
-            ],
+            evidence=[item.model_dump(mode="json") for item in evidence_matrix.entries[:6]],
             unknowns=list(evidence_matrix.unknowns),
         )
         return ContentDraftOutput(artifact=artifact)

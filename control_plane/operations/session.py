@@ -8,9 +8,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from infrastructure.storage.database import DatabaseConfig, DatabaseManager
-from control_plane.operations.models import Base
 from sqlalchemy.engine.url import make_url
+
+from control_plane.operations.models import Base
+from infrastructure.storage.database import DatabaseConfig, DatabaseManager
 
 
 if TYPE_CHECKING:

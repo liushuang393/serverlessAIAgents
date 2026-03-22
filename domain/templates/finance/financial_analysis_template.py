@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """財務分析Agentテンプレート.
 
 企業財務分析を行うAgentテンプレート。
@@ -18,7 +17,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.templates.template_helpers import extract_json_payload
-from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -27,6 +25,8 @@ from kernel.templates.base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+from kernel.templates.template_runtime import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,7 @@ class FinancialAnalysisOutput(BaseModel):
     confidence: float = Field(ge=0, le=1)
 
 
-class FinancialAnalysisAgent(
-    ResilientAgent[FinancialAnalysisInput, FinancialAnalysisOutput]
-):
+class FinancialAnalysisAgent(ResilientAgent[FinancialAnalysisInput, FinancialAnalysisOutput]):
     """財務分析Agent."""
 
     name = "FinancialAnalysisAgent"
@@ -100,24 +98,20 @@ JSON形式で以下を出力:
         """入力をパース."""
         return FinancialAnalysisInput(**input_data)
 
-    async def process(
-        self, input_data: FinancialAnalysisInput
-    ) -> FinancialAnalysisOutput:
+    async def process(self, input_data: FinancialAnalysisInput) -> FinancialAnalysisOutput:
         """財務分析を実行."""
         if self._llm:
             return await self._analyze_with_llm(input_data)
         return self._analyze_rule_based(input_data)
 
-    async def _analyze_with_llm(
-        self, input_data: FinancialAnalysisInput
-    ) -> FinancialAnalysisOutput:
+    async def _analyze_with_llm(self, input_data: FinancialAnalysisInput) -> FinancialAnalysisOutput:
         """LLMを使用した財務分析."""
 
         prompt = f"""以下の企業の財務分析を実施してください：
 企業名: {input_data.company_name}
 会計年度: {input_data.fiscal_year}
 業界: {input_data.industry}
-分析タイプ: {', '.join(input_data.analysis_type)}
+分析タイプ: {", ".join(input_data.analysis_type)}
 財務データ: {input_data.financial_data}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
@@ -127,9 +121,7 @@ JSON形式で以下を出力:
             return FinancialAnalysisOutput(**data)
         return self._analyze_rule_based(input_data)
 
-    def _analyze_rule_based(
-        self, input_data: FinancialAnalysisInput
-    ) -> FinancialAnalysisOutput:
+    def _analyze_rule_based(self, input_data: FinancialAnalysisInput) -> FinancialAnalysisOutput:
         """ルールベースの財務分析."""
         data = input_data.financial_data
         ratios: list[FinancialRatio] = []
@@ -137,13 +129,15 @@ JSON形式で以下を出力:
         # ROE計算
         if "net_income" in data and "equity" in data and data["equity"] > 0:
             roe = data["net_income"] / data["equity"] * 100
-            ratios.append(FinancialRatio(
-                name="ROE",
-                value=round(roe, 2),
-                unit="%",
-                benchmark=10.0,
-                assessment="GOOD" if roe > 10 else "AVERAGE" if roe > 5 else "POOR",
-            ))
+            ratios.append(
+                FinancialRatio(
+                    name="ROE",
+                    value=round(roe, 2),
+                    unit="%",
+                    benchmark=10.0,
+                    assessment="GOOD" if roe > 10 else "AVERAGE" if roe > 5 else "POOR",
+                )
+            )
 
         return FinancialAnalysisOutput(
             company_name=input_data.company_name,

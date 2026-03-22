@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from contracts.base import ContractModel
 from pydantic import Field
 
+from contracts.base import ContractModel
 from shared.gateway.embedding.service import SharedEmbeddingGateway
 from shared.gateway.llm.service import SharedLLMGateway
 from shared.gateway.rerank.service import SharedRerankGateway
@@ -25,12 +25,8 @@ class RAGResult(ContractModel):
     """RAG パイプラインの実行結果."""
 
     answer: str = Field(default="", description="生成された回答")
-    sources: list[dict[str, Any]] = Field(
-        default_factory=list, description="参照されたソース一覧"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="パイプライン実行メタデータ"
-    )
+    sources: list[dict[str, Any]] = Field(default_factory=list, description="参照されたソース一覧")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="パイプライン実行メタデータ")
 
 
 class SharedRAGService:
@@ -122,10 +118,7 @@ class SharedRAGService:
         result = await self._llm.generate(role="rag", messages=messages)
         answer = str(result.get("content", result.get("text", "")))
 
-        sources = [
-            {"index": r.index, "score": r.score, "text": r.text[:200]}
-            for r in ranked
-        ]
+        sources = [{"index": r.index, "score": r.score, "text": r.text[:200]} for r in ranked]
 
         return RAGResult(
             answer=answer,

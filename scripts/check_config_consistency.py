@@ -15,6 +15,7 @@ import re
 import sys
 from pathlib import Path
 
+
 # プロジェクトルートを基準とする
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -57,7 +58,7 @@ def check_env_file(env_path: Path, app_name: str, ports: dict) -> list[str]:
             match = re.match(r"^[A-Z_]+PORT\s*=\s*(\d+)", line_stripped)
             if not match:
                 continue
-            actual_port = int(match.group(1))
+            int(match.group(1))
             # app_config.json のいずれかのポートと衝突していないか確認
             # ここでは、このアプリのポートと一致すれば OK、別のポートでも警告しない
             # （別アプリのポートは別途チェック）
@@ -78,8 +79,7 @@ def check_env_file(env_path: Path, app_name: str, ports: dict) -> list[str]:
                 actual = int(match.group(1))
                 if actual != expected_port:
                     issues.append(
-                        f"  [{env_path}:{lineno}] {app_prefix}_PORT={actual} "
-                        f"(app_config.json: api={expected_port})"
+                        f"  [{env_path}:{lineno}] {app_prefix}_PORT={actual} (app_config.json: api={expected_port})"
                     )
     return issues
 
@@ -117,9 +117,7 @@ def main() -> int:
         name = config.get("name", "unknown")
         ports = config.get("ports", {})
         path = config.get("_config_path", "")
-        port_str = ", ".join(
-            f"{k}={v}" for k, v in ports.items() if v is not None
-        )
+        port_str = ", ".join(f"{k}={v}" for k, v in ports.items() if v is not None)
         print(f"  {name:<40} {port_str or '(ポートなし)'}")
         print(f"    → {path}")
 
@@ -127,11 +125,7 @@ def main() -> int:
 
     # ポート衝突チェック
     registry = build_port_registry(configs)
-    conflicts = [
-        (port, name)
-        for port, name in registry.items()
-        if "⚠️CONFLICT" in name
-    ]
+    conflicts = [(port, name) for port, name in registry.items() if "⚠️CONFLICT" in name]
 
     all_issues: list[str] = []
 
@@ -151,7 +145,7 @@ def main() -> int:
     )
     if geo_config and root_env.exists():
         geo_api_port = geo_config.get("ports", {}).get("api")
-        geo_front_port = geo_config.get("ports", {}).get("frontend")
+        geo_config.get("ports", {}).get("frontend")
         content = root_env.read_text(encoding="utf-8")
         for lineno, line in enumerate(content.splitlines(), 1):
             stripped = line.strip()
@@ -161,10 +155,7 @@ def main() -> int:
             if match:
                 actual = int(match.group(1))
                 if geo_api_port and actual != geo_api_port:
-                    issue = (
-                        f"  [{root_env.name}:{lineno}] GEO_PLATFORM_PORT={actual} "
-                        f"(app_config.json: {geo_api_port})"
-                    )
+                    issue = f"  [{root_env.name}:{lineno}] GEO_PLATFORM_PORT={actual} (app_config.json: {geo_api_port})"
                     print(f"❌ 不一致: {issue}")
                     all_issues.append(issue)
                 else:
@@ -174,11 +165,9 @@ def main() -> int:
     if all_issues:
         print(f"❌ 合計 {len(all_issues)} 件の問題が見つかりました。")
         return 1
-    else:
-        print("✅ 全チェック通過 — app_config.json と設定ファイルは整合しています。")
-        return 0
+    print("✅ 全チェック通過 — app_config.json と設定ファイルは整合しています。")
+    return 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
-

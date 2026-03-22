@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 from shared.services.rag_service import ChunkStrategy as ServiceChunkStrategy
 from shared.services.rag_service import RAGConfig, RerankerType
 
+
 logger = logging.getLogger(__name__)
 
 # --- auth_service 未接続時のフォールバック RBAC マッピング ---
@@ -109,9 +110,7 @@ class CollectionManager:
         """
         async with self._session_factory() as session:
             existing = await session.execute(
-                select(CollectionConfigModel).where(
-                    CollectionConfigModel.collection_name == collection_name
-                )
+                select(CollectionConfigModel).where(CollectionConfigModel.collection_name == collection_name)
             )
             if existing.scalar_one_or_none() is not None:
                 msg = f"Collection '{collection_name}' already exists"
@@ -150,9 +149,7 @@ class CollectionManager:
         """
         async with self._session_factory() as session:
             result = await session.execute(
-                select(CollectionConfigModel).where(
-                    CollectionConfigModel.collection_name == collection_name
-                )
+                select(CollectionConfigModel).where(CollectionConfigModel.collection_name == collection_name)
             )
             return result.scalar_one_or_none()
 
@@ -202,9 +199,7 @@ class CollectionManager:
 
         async with self._session_factory() as session:
             result = await session.execute(
-                select(CollectionConfigModel).where(
-                    CollectionConfigModel.collection_name == collection_name
-                )
+                select(CollectionConfigModel).where(CollectionConfigModel.collection_name == collection_name)
             )
             model = result.scalar_one_or_none()
             if model is None:
@@ -231,9 +226,7 @@ class CollectionManager:
         """
         async with self._session_factory() as session:
             result = await session.execute(
-                select(CollectionConfigModel).where(
-                    CollectionConfigModel.collection_name == collection_name
-                )
+                select(CollectionConfigModel).where(CollectionConfigModel.collection_name == collection_name)
             )
             model = result.scalar_one_or_none()
             if model is None:
@@ -270,9 +263,7 @@ class CollectionManager:
             "document_count": model.document_count,
             "chunk_strategy": model.chunk_strategy,
             "retrieval_method": model.retrieval_method,
-            "last_indexed_at": (
-                model.last_indexed_at.isoformat() if model.last_indexed_at else None
-            ),
+            "last_indexed_at": (model.last_indexed_at.isoformat() if model.last_indexed_at else None),
         }
 
     # ------------------------------------------------------------------
@@ -305,9 +296,7 @@ class CollectionManager:
             "token": ServiceChunkStrategy.TOKEN,
             "markdown": ServiceChunkStrategy.MARKDOWN,
         }
-        chunk_strategy = strategy_map.get(
-            model.chunk_strategy, ServiceChunkStrategy.RECURSIVE
-        )
+        chunk_strategy = strategy_map.get(model.chunk_strategy, ServiceChunkStrategy.RECURSIVE)
 
         # リランカーのマッピング
         reranker_map: dict[str, RerankerType] = {
@@ -354,9 +343,7 @@ class CollectionManager:
         Returns:
             アクセス可能な CollectionConfigModel のリスト
         """
-        all_collections = await self.list_collections(
-            app_name=app_name, tenant_id=tenant_id
-        )
+        all_collections = await self.list_collections(app_name=app_name, tenant_id=tenant_id)
 
         if not all_collections:
             return []

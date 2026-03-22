@@ -1,1 +1,1 @@
-"""deployment-manager スキル."""
+"""deployment-manager スキル."""  # noqa: N999

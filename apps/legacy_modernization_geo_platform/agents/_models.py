@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from apps.legacy_modernization_geo_platform.backend.intelligence import (
+from pydantic import BaseModel, ConfigDict
+
+# Pydantic v2 が実行時に型を解決できるよう runtime import する（ruff TC001 を意図的に無効化）
+from apps.legacy_modernization_geo_platform.backend.intelligence import (  # noqa: TC001
     IntelligenceSnapshot,
 )
-from apps.legacy_modernization_geo_platform.backend.schemas import (
+from apps.legacy_modernization_geo_platform.backend.schemas import (  # noqa: TC001
     AccountScoreArtifact,
     AccountSignalArtifact,
     BrandMemoryArtifact,
@@ -19,7 +22,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     PublishManifest,
     QuestionGraphArtifact,
 )
-from pydantic import BaseModel, ConfigDict
 
 
 # -- Supervisor -----------------------------------------------------------

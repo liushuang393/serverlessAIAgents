@@ -172,7 +172,7 @@ class InventoryAdjuster(AgentBlock):
         Returns:
             調整計画
         """
-        import uuid
+        import uuid  # noqa: PLC0415
 
         plan_id = f"adj-{uuid.uuid4().hex[:8]}"
         current_prices = current_prices or {}
@@ -272,7 +272,7 @@ class InventoryAdjuster(AgentBlock):
 
     def _evaluate_price(
         self,
-        sku: str,
+        sku: str,  # noqa: ARG002
         current_price: float,
         recommended_price: float | None,
     ) -> bool:
@@ -288,7 +288,7 @@ class InventoryAdjuster(AgentBlock):
         stock: int,
         current_price: float,
         recommended_price: float | None,
-        stock_needs_adjustment: bool,
+        stock_needs_adjustment: bool,  # noqa: ARG002
     ) -> tuple[AdjustmentType, UrgencyLevel, str]:
         """調整タイプと緊急度を決定."""
         # 在庫切れ危機

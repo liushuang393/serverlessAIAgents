@@ -51,6 +51,7 @@ ALLOWED_EXCEPTIONS: list[tuple[str, str]] = [
     ("shared.auth_service.main", "control_plane.api"),
 ]
 
+
 class Violation(NamedTuple):
     """依存違反の記録。"""
 
@@ -240,9 +241,9 @@ class TestLayerBoundaries:
         vs = _get_violations()
         # ベースライン: 今回の修正後の残存数を計測し、ここに設定
         # 今後の修正で徐々に 0 に近づける
-        MAX_ALLOWED = 25  # P0 Phase2 修正後: 19件。新規違反防止の上限
-        assert len(vs) <= MAX_ALLOWED, (
-            f"依存違反が {len(vs)} 件（上限 {MAX_ALLOWED}）。"
+        max_allowed = 25  # P0 Phase2 修正後: 19件。新規違反防止の上限
+        assert len(vs) <= max_allowed, (
+            f"依存違反が {len(vs)} 件（上限 {max_allowed}）。"
             f"新たな違反が追加された可能性あり。\n"
             f"{self._format_violations(vs[:10])}..."
         )

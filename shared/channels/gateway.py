@@ -32,14 +32,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from kernel.runtime import WebSocketHub
-    from shared.channels.base import MessageChannelAdapter
     from kernel.skills.chatbot import ChatBotSkill, ChatSession
+    from shared.channels.base import MessageChannelAdapter
 
 
 logger = logging.getLogger(__name__)

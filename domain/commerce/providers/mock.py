@@ -88,8 +88,8 @@ class MockProductProvider(IProduct):
 
     async def get_recommendations(
         self,
-        user_id: str | None = None,
-        context: dict[str, Any] | None = None,
+        user_id: str | None = None,  # noqa: ARG002
+        context: dict[str, Any] | None = None,  # noqa: ARG002
         limit: int = 10,
     ) -> list[Product]:
         """推薦商品を取得."""
@@ -121,7 +121,7 @@ class MockOfferProvider(IOffer):
         self,
         product_id: str,
         *,
-        user_id: str | None = None,
+        user_id: str | None = None,  # noqa: ARG002
     ) -> list[Offer]:
         """商品に適用可能なオファーを取得."""
         return [offer for offer in self._offers.values() if offer.product_id == product_id and offer.is_valid()]
@@ -130,7 +130,7 @@ class MockOfferProvider(IOffer):
         self,
         intent_keywords: list[str],
         *,
-        user_context: dict[str, Any] | None = None,
+        user_context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> list[Offer]:
         """意図に基づくオファーを取得."""
         results = []
@@ -266,7 +266,7 @@ class MockPaymentProvider(IPayment):
         self,
         transaction: Transaction,
         payment_method: str,
-        payment_details: dict[str, Any],
+        payment_details: dict[str, Any],  # noqa: ARG002
     ) -> dict[str, Any]:
         """決済を処理."""
         payment_id = f"pay-{uuid.uuid4().hex[:8]}"
@@ -309,7 +309,7 @@ class MockIntentAnalyzer(IIntentAnalyzer):
         self,
         user_input: str,
         *,
-        conversation_context: list[dict[str, str]] | None = None,
+        conversation_context: list[dict[str, str]] | None = None,  # noqa: ARG002
         user_id: str | None = None,
     ) -> PurchaseIntent:
         """購買意図を分析."""
@@ -365,7 +365,7 @@ class MockOfferMatcher(IOfferProvider):
         self,
         products: list[Product],
         *,
-        user_context: dict[str, Any] | None = None,
+        user_context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> list[Offer]:
         """商品に対するオファーを取得."""
         all_offers = []
@@ -377,7 +377,7 @@ class MockOfferMatcher(IOfferProvider):
     async def rank_offers(
         self,
         offers: list[Offer],
-        intent: PurchaseIntent,
+        intent: PurchaseIntent,  # noqa: ARG002
     ) -> list[Offer]:
         """オファーをランキング."""
         return sorted(offers, key=lambda o: o.intent_match_score, reverse=True)
@@ -390,7 +390,7 @@ class MockDealRecommender(IDealRecommender):
         self,
         intent: PurchaseIntent,
         *,
-        products: list[Product] | None = None,
+        products: list[Product] | None = None,  # noqa: ARG002
         offers: list[Offer] | None = None,
         limit: int = 3,
     ) -> list[DirectOffer]:
@@ -414,9 +414,9 @@ class MockDealRecommender(IDealRecommender):
 
     async def get_alternatives(
         self,
-        recommendation: DirectOffer,
+        recommendation: DirectOffer,  # noqa: ARG002
         *,
-        limit: int = 3,
+        limit: int = 3,  # noqa: ARG002
     ) -> list[DirectOffer]:
         """代替案を取得."""
         return []
@@ -434,7 +434,7 @@ class MockCommerceAI(ICommerceAI):
         user_input: str,
         *,
         conversation_history: list[dict[str, str]] | None = None,
-        user_context: dict[str, Any] | None = None,
+        user_context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> PurchaseIntent:
         """購買意図を分析."""
         return await self._intent_analyzer.analyze(user_input, conversation_context=conversation_history)
@@ -447,7 +447,7 @@ class MockCommerceAI(ICommerceAI):
 
     async def recommend_products(
         self,
-        intent: PurchaseIntent,
+        intent: PurchaseIntent,  # noqa: ARG002
         *,
         available_products: list[Product] | None = None,
         limit: int = 5,
@@ -465,7 +465,7 @@ class MockCommerceAI(ICommerceAI):
         self,
         product: Product,
         *,
-        user_context: dict[str, Any] | None = None,
+        user_context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> str:
         """商品を説明."""
         return f"{product.name}: {product.description}"
@@ -475,7 +475,7 @@ class MockCommerceAI(ICommerceAI):
         product: Product,
         intent: PurchaseIntent,
         *,
-        existing_offers: list[Offer] | None = None,
+        existing_offers: list[Offer] | None = None,  # noqa: ARG002
     ) -> DirectOffer:
         """オファーを生成."""
         offer = Offer(
@@ -498,8 +498,8 @@ class MockCommerceAI(ICommerceAI):
         self,
         offer: DirectOffer,
         *,
-        user_budget: float | None = None,
-        alternatives: list[DirectOffer] | None = None,
+        user_budget: float | None = None,  # noqa: ARG002
+        alternatives: list[DirectOffer] | None = None,  # noqa: ARG002
     ) -> dict[str, Any]:
         """取引を評価."""
         return {
@@ -510,9 +510,9 @@ class MockCommerceAI(ICommerceAI):
 
     async def generate_response(
         self,
-        user_input: str,
+        user_input: str,  # noqa: ARG002
         *,
-        context: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,  # noqa: ARG002
         intent: PurchaseIntent | None = None,
     ) -> str:
         """応答を生成."""

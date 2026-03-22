@@ -9,6 +9,7 @@ from kernel.router.service import (
 )
 from kernel.router.task_template import TaskParameter, TaskTemplate, TemplateRegistry
 
+
 __all__ = [
     "ExecutiveSummary",
     "ExecutiveSummaryBuilder",

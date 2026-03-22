@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class ReplayRecorder:
         self._events.append(
             ReplayEvent(
                 event_type=event_type,
-                timestamp=datetime.now(tz=timezone.utc),
+                timestamp=datetime.now(tz=UTC),
                 payload=payload,
                 step_index=step_index,
             )
@@ -95,4 +96,3 @@ __all__ = [
     "ReplayRecorder",
     "ReplaySession",
 ]
-

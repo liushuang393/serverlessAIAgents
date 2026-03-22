@@ -8,11 +8,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from shared.auth_service.models.user import Base
-
 from infrastructure.database import DatabaseConfig, DatabaseManager
+from shared.auth_service.models.user import Base
 
 
 if TYPE_CHECKING:
@@ -24,10 +24,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-import os
-_AUTH_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_AUTH_DATA_DIR = os.path.join(_AUTH_BASE_DIR, "data")
-_AUTH_DB_PATH = os.path.join(_AUTH_DATA_DIR, "auth_service.db")
+_AUTH_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+_AUTH_DATA_DIR = _AUTH_BASE_DIR / "data"
+_AUTH_DB_PATH = _AUTH_DATA_DIR / "auth_service.db"
 _AUTH_DEFAULT_URL = f"sqlite+aiosqlite:///{_AUTH_DB_PATH}"
 
 

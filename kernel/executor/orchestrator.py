@@ -33,7 +33,6 @@ from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
 
-from shared.evolution.types import RetrievalMode, StrategyDecision
 from kernel.executor.executor import ExecutorAgent, ExecutorConfig, StepResult
 from kernel.executor.monitor import (
     AlertSeverity,
@@ -46,6 +45,7 @@ from kernel.planner.planner import (
     PlannerAgent,
     PlannerConfig,
 )
+from shared.evolution.types import RetrievalMode, StrategyDecision
 
 
 if TYPE_CHECKING:

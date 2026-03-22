@@ -10,13 +10,15 @@ CollectionManager / DocumentManager を使用した
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
-from shared.rag.collection_manager import CollectionManager
-from shared.rag.document_manager import DocumentManager
+
+if TYPE_CHECKING:
+    from shared.rag.collection_manager import CollectionManager
+    from shared.rag.document_manager import DocumentManager
 
 
 logger = logging.getLogger("cma.knowledge")
@@ -246,7 +248,10 @@ async def list_documents(
     """ドキュメント一覧."""
     doc_mgr = _get_doc_mgr()
     docs = await doc_mgr.list_documents(
-        collection_name=name, status=status, limit=limit, offset=offset,
+        collection_name=name,
+        status=status,
+        limit=limit,
+        offset=offset,
     )
     return {"total": len(docs), "documents": [d.to_dict() for d in docs]}
 

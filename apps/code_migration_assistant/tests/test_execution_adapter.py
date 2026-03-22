@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from apps.code_migration_assistant.backend.migration_execution_adapter import (
     CmaCliExecutionAdapter,
     ExecutionConfig,

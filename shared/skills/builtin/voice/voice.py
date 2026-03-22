@@ -27,8 +27,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from infrastructure.llm.gateway import LiteLLMGateway
 from contracts.runtime.context import get_runtime_context
+from infrastructure.llm.gateway import LiteLLMGateway
 
 
 logger = logging.getLogger(__name__)

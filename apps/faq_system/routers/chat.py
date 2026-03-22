@@ -9,6 +9,10 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.routers.dependencies import (
     build_agent_conversation_history,
@@ -18,10 +22,6 @@ from apps.faq_system.routers.dependencies import (
     register_artifacts,
     resolve_session_id,
 )
-from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
-
 from kernel.protocols.a2a_hub import get_hub
 
 

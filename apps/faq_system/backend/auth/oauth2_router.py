@@ -1,11 +1,11 @@
 import os
 import secrets
 
-from apps.faq_system.backend.auth.router import _SESSION_COOKIE_MAX_AGE
-from apps.faq_system.backend.auth.service import get_auth_service
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from apps.faq_system.backend.auth.router import _SESSION_COOKIE_MAX_AGE
+from apps.faq_system.backend.auth.service import get_auth_service
 from infrastructure.security.oauth2_provider import OAuth2Provider
 from infrastructure.security.providers.azure_ad import AzureADOAuth2Provider
 from infrastructure.security.providers.google import GoogleOAuth2Provider

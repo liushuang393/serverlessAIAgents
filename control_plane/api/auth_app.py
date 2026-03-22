@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from control_plane._legacy import load_symbol
 from typing import TYPE_CHECKING, Any
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from control_plane._legacy import load_symbol
 
 
 if TYPE_CHECKING:

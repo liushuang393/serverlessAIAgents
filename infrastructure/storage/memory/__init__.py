@@ -4,7 +4,7 @@
 接続を担当する。ビジネスロジックは legacy memory facade に留まる。
 """
 
-from infrastructure.storage.memory.types import (  # noqa: F401
+from infrastructure.storage.memory.types import (
     CompressionConfig,
     MemoryEntry,
     MemoryScope,
@@ -14,6 +14,7 @@ from infrastructure.storage.memory.types import (  # noqa: F401
     TopicBuffer,
     UpdateQueue,
 )
+
 
 __all__ = [
     "CompressionConfig",
@@ -25,4 +26,3 @@ __all__ = [
     "TopicBuffer",
     "UpdateQueue",
 ]
-

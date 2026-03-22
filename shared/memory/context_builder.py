@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from shared.memory.memory_manager import MemoryManager
     from infrastructure.memory.types import MemoryEntry
+    from shared.memory.memory_manager import MemoryManager
 
 
 # Gatingキーワード（日本語・中国語・英語）

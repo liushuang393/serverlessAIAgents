@@ -33,9 +33,7 @@ class UserAccount(Base):
     role: Mapped[str] = mapped_column(String(50), default="employee", nullable=False)
     auth_source: Mapped[str] = mapped_column(String(32), default="local_db", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
@@ -59,12 +57,8 @@ class AuthSession(Base):
     user_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    token_hash: Mapped[str] = mapped_column(
-        String(128), unique=True, nullable=False, index=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
-    )
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -78,12 +72,8 @@ class ProxyAuthNonce(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     nonce_hash: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
-    )
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
 
 Index("ix_auth_sessions_user_active", AuthSession.user_id, AuthSession.revoked_at)

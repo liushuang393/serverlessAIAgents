@@ -5,8 +5,8 @@ All upper layers must call this gateway instead of provider SDKs.
 
 from __future__ import annotations
 
-import base64
 import asyncio
+import base64
 import contextlib
 import json
 import logging
@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from infrastructure.llm.gateway.config import (
     EngineRuntimeStatus,
+    InferenceEngineConfig,
     LLMGatewayConfig,
     ModelConfig,
     load_gateway_config,
@@ -237,7 +238,7 @@ class LiteLLMGateway:
                 return "https://api.openai.com/v1"
             msg = f"model alias '{model_cfg.alias}' requires openai-compatible api_base for passthrough endpoint"
             raise RuntimeError(msg)
-        if api_base.endswith("/v1") or api_base.endswith("/openai"):
+        if api_base.endswith(("/v1", "/openai")):
             return api_base
         return f"{api_base}/v1"
 
@@ -898,7 +899,9 @@ class LiteLLMGateway:
 
     async def get_engine_statuses(self) -> list[EngineRuntimeStatus]:
         """Collect local inference engine statuses for platform management UI."""
-        return list(await asyncio.gather(*(self._probe_engine_status(engine) for engine in self._config.inference_engines)))
+        return list(
+            await asyncio.gather(*(self._probe_engine_status(engine) for engine in self._config.inference_engines))
+        )
 
     async def _probe_engine_status(self, engine: InferenceEngineConfig) -> EngineRuntimeStatus:
         if not engine.enabled:

@@ -56,7 +56,7 @@ class TestOrchestratorA2ARegistration:
 
         settings = GeoPlatformSettings.from_env()
         mock_repo = MagicMock()
-        orchestrator = GeoOrchestrator(settings=settings, repository=mock_repo)
+        GeoOrchestrator(settings=settings, repository=mock_repo)
 
         hub = get_hub()
         # BrandMemory は Hub に登録済みのはず

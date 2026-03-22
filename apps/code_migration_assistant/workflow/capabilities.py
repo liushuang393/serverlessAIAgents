@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """Stage capability contracts and skill-first execution adapter."""
 
 from __future__ import annotations
 
 import inspect
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 
 StageRunner = Callable[[dict[str, Any]], dict[str, Any] | Awaitable[dict[str, Any]]]
@@ -116,7 +116,7 @@ class SkillStageAdapter:
                     status="applied",
                 ),
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             if capability.fallback_policy != "native_fallback":
                 raise
             output = await self._run_native(native_runner, payload)

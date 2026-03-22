@@ -182,10 +182,10 @@ class SupabaseProvider(DatabaseProvider):
     async def connect(self) -> None:
         """建立 Supabase 连接."""
         try:
-            from supabase import create_client
+            from supabase import create_client  # noqa: PLC0415
         except ImportError:
             msg = "supabase 库未安装，请运行: pip install supabase"
-            raise ConnectionError(msg)
+            raise ConnectionError(msg)  # noqa: B904
 
         try:
             # 使用 service_role_key 绕过 RLS（如果提供）
@@ -194,7 +194,7 @@ class SupabaseProvider(DatabaseProvider):
             logger.info("Supabase 连接成功")
         except Exception as e:
             msg = f"Supabase 连接失败: {e}"
-            raise ConnectionError(msg)
+            raise ConnectionError(msg)  # noqa: B904
 
     async def disconnect(self) -> None:
         """断开 Supabase 连接."""
@@ -233,7 +233,7 @@ class SupabaseProvider(DatabaseProvider):
             return response.data
         except Exception as e:
             msg = f"Supabase 查询失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def insert(
         self,
@@ -249,9 +249,9 @@ class SupabaseProvider(DatabaseProvider):
         except Exception as e:
             if "RLS" in str(e) or "policy" in str(e).lower():
                 msg = f"RLS 策略阻止操作: {e}"
-                raise RLSError(msg)
+                raise RLSError(msg)  # noqa: B904
             msg = f"Supabase 插入失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def update(
         self,
@@ -269,9 +269,9 @@ class SupabaseProvider(DatabaseProvider):
         except Exception as e:
             if "RLS" in str(e) or "policy" in str(e).lower():
                 msg = f"RLS 策略阻止操作: {e}"
-                raise RLSError(msg)
+                raise RLSError(msg)  # noqa: B904
             msg = f"Supabase 更新失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def delete(
         self,
@@ -288,14 +288,14 @@ class SupabaseProvider(DatabaseProvider):
         except Exception as e:
             if "RLS" in str(e) or "policy" in str(e).lower():
                 msg = f"RLS 策略阻止操作: {e}"
-                raise RLSError(msg)
+                raise RLSError(msg)  # noqa: B904
             msg = f"Supabase 删除失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def execute(
         self,
         query: str,
-        params: list[Any] | None = None,
+        params: list[Any] | None = None,  # noqa: ARG002
     ) -> list[dict[str, Any]]:
         """执行原生 SQL（通过 RPC）."""
         try:
@@ -303,7 +303,7 @@ class SupabaseProvider(DatabaseProvider):
             return response.data or []
         except Exception as e:
             msg = f"Supabase SQL 执行失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def health_check(self) -> bool:
         """Supabase 健康检查."""
@@ -362,10 +362,10 @@ class TursoProvider(DatabaseProvider):
     async def connect(self) -> None:
         """建立 Turso 连接."""
         try:
-            import libsql_experimental as libsql
+            import libsql_experimental as libsql  # noqa: PLC0415
         except ImportError:
             msg = "libsql-experimental 库未安装，请运行: pip install libsql-experimental"
-            raise ConnectionError(msg)
+            raise ConnectionError(msg)  # noqa: B904
 
         try:
             self._client = libsql.connect(
@@ -375,7 +375,7 @@ class TursoProvider(DatabaseProvider):
             logger.info("Turso 连接成功")
         except Exception as e:
             msg = f"Turso 连接失败: {e}"
-            raise ConnectionError(msg)
+            raise ConnectionError(msg)  # noqa: B904
 
     async def disconnect(self) -> None:
         """断开 Turso 连接."""
@@ -474,7 +474,7 @@ class TursoProvider(DatabaseProvider):
             return []
         except Exception as e:
             msg = f"Turso 查询失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def health_check(self) -> bool:
         """Turso 健康检查."""
@@ -502,10 +502,10 @@ class PostgresProvider(DatabaseProvider):
     async def connect(self) -> None:
         """建立 PostgreSQL 连接池."""
         try:
-            import asyncpg
+            import asyncpg  # noqa: PLC0415
         except ImportError:
             msg = "asyncpg 库未安装，请运行: pip install asyncpg"
-            raise ConnectionError(msg)
+            raise ConnectionError(msg)  # noqa: B904
 
         try:
             self._pool = await asyncpg.create_pool(
@@ -521,7 +521,7 @@ class PostgresProvider(DatabaseProvider):
             logger.info("PostgreSQL 连接池创建成功")
         except Exception as e:
             msg = f"PostgreSQL 连接失败: {e}"
-            raise ConnectionError(msg)
+            raise ConnectionError(msg)  # noqa: B904
 
     async def disconnect(self) -> None:
         """关闭 PostgreSQL 连接池."""
@@ -640,7 +640,7 @@ class PostgresProvider(DatabaseProvider):
                 return [dict(row) for row in rows]
         except Exception as e:
             msg = f"PostgreSQL 查询失败: {e}"
-            raise QueryError(msg)
+            raise QueryError(msg)  # noqa: B904
 
     async def health_check(self) -> bool:
         """PostgreSQL 健康检查."""
@@ -1035,7 +1035,7 @@ class DatabaseManager:
                 logger.info(f"已执行迁移: {migration['name']}")
             except Exception as e:
                 msg = f"迁移 {migration['name']} 执行失败: {e}"
-                raise MigrationError(msg)
+                raise MigrationError(msg)  # noqa: B904
 
         return executed
 

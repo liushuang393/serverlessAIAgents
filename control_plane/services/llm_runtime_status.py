@@ -72,9 +72,7 @@ async def resolve_provider_runtime_statuses(
 
         provider_linked_engines = linked_engines.get(provider_name, [])
         if provider_linked_engines:
-            ordered_statuses.append(
-                _resolve_linked_engine_status(base_status, provider_linked_engines, engine_by_name)
-            )
+            ordered_statuses.append(_resolve_linked_engine_status(base_status, provider_linked_engines, engine_by_name))
             continue
 
         if provider.api_key_env is None and provider_name in _ACTIVE_PROBE_PROVIDERS:

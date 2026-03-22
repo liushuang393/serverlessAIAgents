@@ -4,12 +4,12 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from shared.memory.importance_adjuster import ImportanceAdjuster
 from infrastructure.memory.types import (
     MemoryEntry,
     MemoryStability,
     MemoryType,
 )
+from shared.memory.importance_adjuster import ImportanceAdjuster
 
 
 class TestImportanceAdjuster:

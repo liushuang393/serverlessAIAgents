@@ -52,11 +52,7 @@ def _to_response(job: CollectJobModel) -> JobResponse:
 async def get_latest_job() -> JobResponse:
     """最新の収集ジョブ状態を取得."""
     async with async_session() as session:
-        result = await session.execute(
-            select(CollectJobModel)
-            .order_by(desc(CollectJobModel.started_at))
-            .limit(1)
-        )
+        result = await session.execute(select(CollectJobModel).order_by(desc(CollectJobModel.started_at)).limit(1))
         job = result.scalar_one_or_none()
 
     if job is None:
@@ -71,9 +67,7 @@ async def get_latest_job() -> JobResponse:
 async def get_job(job_id: str) -> JobResponse:
     """指定ジョブIDの状態を取得."""
     async with async_session() as session:
-        result = await session.execute(
-            select(CollectJobModel).where(CollectJobModel.id == job_id)
-        )
+        result = await session.execute(select(CollectJobModel).where(CollectJobModel.id == job_id))
         job = result.scalar_one_or_none()
 
     if job is None:

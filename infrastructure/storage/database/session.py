@@ -235,4 +235,3 @@ class DatabaseManager:
             return self._async_engine
         msg = "非同期エンジンが未初期化"
         raise RuntimeError(msg)
-

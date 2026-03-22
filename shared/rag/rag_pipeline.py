@@ -23,12 +23,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from infrastructure.llm.providers import get_embedding, get_llm, get_vectordb
 from shared.rag.document_loader import (
     ChunkingConfig,
     DocumentChunk,
     UniversalLoader,
 )
-from infrastructure.llm.providers import get_embedding, get_llm, get_vectordb
 
 
 if TYPE_CHECKING:

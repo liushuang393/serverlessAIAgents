@@ -3,27 +3,16 @@
 from __future__ import annotations
 
 import pytest
-
-from kernel.protocols.a2a_hub import get_hub, reset_hub
 from apps.legacy_modernization_geo_platform.backend.schemas import (
-    AccountScoreArtifact,
-    AccountScoreEntry,
     AccountSignalArtifact,
     ArtifactMeta,
     BrandMemoryArtifact,
-    ContentBlueprintArtifact,
-    ContentBlueprintPage,
-    EvidenceMatrixArtifact,
-    EvidenceMatrixEntry,
     ExecuteInputs,
     ExecuteTargets,
-    FunnelCluster,
     GeoExecuteRequest,
-    LegacySemanticsArtifact,
-    PersonaQuestionSet,
-    QuestionGraphArtifact,
-    SignalEntry,
 )
+
+from kernel.protocols.a2a_hub import get_hub, reset_hub
 
 
 @pytest.fixture(autouse=True)
@@ -33,7 +22,7 @@ def _clean_hub():
     reset_hub()
 
 
-@pytest.fixture()
+@pytest.fixture
 def geo_request():
     return GeoExecuteRequest(
         campaign_name="test-campaign",
@@ -50,11 +39,11 @@ def geo_request():
 
 class TestBrandMemoryAgent:
     async def test_process_returns_artifact(self, geo_request):
-        from apps.legacy_modernization_geo_platform.agents.brand_memory_agent import (
-            BrandMemoryAgent,
-        )
         from apps.legacy_modernization_geo_platform.agents._models import (
             BrandMemoryInput,
+        )
+        from apps.legacy_modernization_geo_platform.agents.brand_memory_agent import (
+            BrandMemoryAgent,
         )
 
         agent = BrandMemoryAgent()
@@ -71,19 +60,17 @@ class TestBrandMemoryAgent:
         agent = BrandMemoryAgent()
         hub = get_hub()
         hub.register(agent)
-        result = await hub.call(
-            "BrandMemory", {"task_id": "t1", "request": geo_request}
-        )
+        result = await hub.call("BrandMemory", {"task_id": "t1", "request": geo_request})
         assert "artifact" in result
 
 
 class TestAccountScoreAgent:
     async def test_process_returns_artifact(self, geo_request):
-        from apps.legacy_modernization_geo_platform.agents.account_score_agent import (
-            AccountScoreAgent,
-        )
         from apps.legacy_modernization_geo_platform.agents._models import (
             AccountScoreInput,
+        )
+        from apps.legacy_modernization_geo_platform.agents.account_score_agent import (
+            AccountScoreAgent,
         )
 
         signal = AccountSignalArtifact(
@@ -94,9 +81,7 @@ class TestAccountScoreAgent:
             modernization_fit_score=85,
         )
         agent = AccountScoreAgent()
-        inp = AccountScoreInput(
-            task_id="t1", request=geo_request, signal_artifact=signal
-        )
+        inp = AccountScoreInput(task_id="t1", request=geo_request, signal_artifact=signal)
         result = await agent.process(inp)
         assert result.artifact.account_scores
         assert result.artifact.meta.task_id == "t1"
@@ -104,11 +89,11 @@ class TestAccountScoreAgent:
 
 class TestLegacySemanticsAgent:
     async def test_process_returns_artifact(self, geo_request):
-        from apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent import (
-            LegacySemanticsAgent,
-        )
         from apps.legacy_modernization_geo_platform.agents._models import (
             LegacySemanticsInput,
+        )
+        from apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent import (
+            LegacySemanticsAgent,
         )
 
         brand = BrandMemoryArtifact(
@@ -119,9 +104,7 @@ class TestLegacySemanticsAgent:
             target_regions=["Japan"],
         )
         agent = LegacySemanticsAgent()
-        inp = LegacySemanticsInput(
-            task_id="t1", request=geo_request, brand_memory=brand
-        )
+        inp = LegacySemanticsInput(task_id="t1", request=geo_request, brand_memory=brand)
         result = await agent.process(inp)
         assert result.artifact.business_processes
         assert result.artifact.meta.task_id == "t1"

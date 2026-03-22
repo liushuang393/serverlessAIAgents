@@ -14,11 +14,12 @@
 import logging
 from typing import Any
 
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.config import (
     get_config,
 )
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger("decision_api.config")

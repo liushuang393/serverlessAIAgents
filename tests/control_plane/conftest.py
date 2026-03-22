@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 import pytest
+from httpx import Response
+
 from control_plane.schemas.app_config_schemas import AppConfig
 from control_plane.services.agent_aggregator import AgentAggregatorService
 from control_plane.services.app_discovery import AppDiscoveryService
@@ -26,7 +28,6 @@ from control_plane.services.app_lifecycle import (
 from control_plane.services.rag_overview import RAGOverviewService
 from control_plane.services.skill_catalog import SkillCatalogService
 from control_plane.services.tenant_invitation import TenantInvitationService
-from httpx import Response
 
 
 if TYPE_CHECKING:

@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from kernel.runtime.multi_tenant.manager import TenantManager, get_tenant_manager
 from control_plane.publish.runtime import ComponentLibrary, ComponentType, get_component_library
+from kernel.runtime.multi_tenant.manager import TenantManager, get_tenant_manager
 
 
 @dataclass(frozen=True, slots=True)

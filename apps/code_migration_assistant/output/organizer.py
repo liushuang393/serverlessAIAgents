@@ -90,8 +90,12 @@ class OutputOrganizer:
             {stage: artifact_data} の辞書
         """
         stage_order = [
-            "analyzer", "designer", "transformer",
-            "test_generator", "verifier", "quality_gate",
+            "analyzer",
+            "designer",
+            "transformer",
+            "test_generator",
+            "verifier",
+            "quality_gate",
         ]
         artifacts: dict[str, Any] = {}
 
@@ -188,7 +192,7 @@ class OutputOrganizer:
                     )
                     saved_files.append(saved)
                 # 新しいファイル開始
-                current_file_path = line[len("// --- [FILE: "):-len("] ---")].strip()
+                current_file_path = line[len("// --- [FILE: ") : -len("] ---")].strip()
                 current_content = []
             else:
                 current_content.append(line)
@@ -302,10 +306,12 @@ class OutputOrganizer:
         lines.append(f"品質判定: **{decision}**")
         lines.append(f"理由: {quality.get('reason', '不明')}")
 
-        lines.extend([
-            "",
-            "## 生成ファイル",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 生成ファイル",
+            ]
+        )
 
         transform = final_version.get("transform_dir", "")
         if transform:

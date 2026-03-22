@@ -15,7 +15,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     QuestionGraphArtifact,
     normalize_content_language,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -111,26 +110,17 @@ class QuestionGraphAgent(ResilientAgent[QuestionGraphInput, QuestionGraphOutput]
         personas = [
             PersonaQuestionSet(
                 role="cio",
-                questions=[
-                    item.format(stack=stack, industry=industry)
-                    for item in cio_questions
-                ],
+                questions=[item.format(stack=stack, industry=industry) for item in cio_questions],
                 high_intent_questions=[str(copy["cio_high_intent"]).format(stack=stack, industry=industry)],
             ),
             PersonaQuestionSet(
                 role="it_manager",
-                questions=[
-                    item.format(stack=stack, industry=industry)
-                    for item in it_manager_questions
-                ],
+                questions=[item.format(stack=stack, industry=industry) for item in it_manager_questions],
                 high_intent_questions=[str(copy["it_manager_high_intent"]).format(stack=stack, industry=industry)],
             ),
             PersonaQuestionSet(
                 role="engineering_lead",
-                questions=[
-                    item.format(stack=stack, industry=industry)
-                    for item in engineering_lead_questions
-                ],
+                questions=[item.format(stack=stack, industry=industry) for item in engineering_lead_questions],
                 high_intent_questions=[
                     str(copy["engineering_lead_high_intent"]).format(stack=stack, industry=industry),
                 ],
@@ -139,11 +129,7 @@ class QuestionGraphAgent(ResilientAgent[QuestionGraphInput, QuestionGraphOutput]
         funnel_clusters = [
             FunnelCluster(
                 stage="comparison",
-                questions=[
-                    item
-                    for persona in personas
-                    for item in persona.high_intent_questions[:1]
-                ],
+                questions=[item for persona in personas for item in persona.high_intent_questions[:1]],
                 recommended_page_type="comparison_page",
             ),
             FunnelCluster(

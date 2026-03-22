@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contracts.base import ComponentSpec, ComponentToggle, LayerName
 
+
 __all__ = [
     "ComponentSpec",
     "ComponentToggle",

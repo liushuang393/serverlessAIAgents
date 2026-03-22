@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -112,4 +113,3 @@ __all__ = [
     "ValidationSeverity",
     "Validator",
 ]
-

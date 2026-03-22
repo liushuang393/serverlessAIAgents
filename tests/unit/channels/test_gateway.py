@@ -2,8 +2,8 @@
 
 import pytest
 
-from kernel.skills.chatbot import ChatBotSkill
 from kernel.runtime import WebSocketHub
+from kernel.skills.chatbot import ChatBotSkill
 from shared.channels.base import MessageChannelAdapter, UserInfo
 from shared.channels.gateway import MessageGateway
 

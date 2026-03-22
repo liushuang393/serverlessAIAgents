@@ -15,7 +15,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     CognitiveBias,
     HiddenAssumption,
 )
-
 from kernel import ResilientAgent
 
 

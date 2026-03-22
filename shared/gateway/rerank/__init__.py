@@ -4,4 +4,3 @@ from shared.gateway.rerank.service import SharedRerankGateway
 
 
 __all__ = ["SharedRerankGateway"]
-

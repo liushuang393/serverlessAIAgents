@@ -6,11 +6,11 @@
 from __future__ import annotations
 
 import asyncio
-import signal
 from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
+
 from control_plane.schemas.app_config_schemas import AppConfig
 from control_plane.services.app_lifecycle import (
     AppActionResult,
@@ -205,10 +205,13 @@ class TestAppLifecycleManager:
             json={"status": "ok"},
             request=httpx.Request("GET", "http://localhost:8099/health"),
         )
-        with patch("control_plane.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
-            lifecycle,
-            "_is_tcp_port_open",
-            side_effect=lambda _host, port, _timeout: port in {3004, 5433},
+        with (
+            patch("control_plane.services.app_lifecycle.httpx.AsyncClient") as mock_cls,
+            patch.object(
+                lifecycle,
+                "_is_tcp_port_open",
+                side_effect=lambda _host, port, _timeout: port in {3004, 5433},
+            ),
         ):
             mock_client = AsyncMock()
             mock_client.get.return_value = mock_resp
@@ -247,10 +250,13 @@ class TestAppLifecycleManager:
             json={"status": "ok"},
             request=httpx.Request("GET", "http://localhost:8099/health"),
         )
-        with patch("control_plane.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
-            lifecycle,
-            "_is_tcp_port_open",
-            side_effect=lambda _host, port, _timeout: port == 5433,
+        with (
+            patch("control_plane.services.app_lifecycle.httpx.AsyncClient") as mock_cls,
+            patch.object(
+                lifecycle,
+                "_is_tcp_port_open",
+                side_effect=lambda _host, port, _timeout: port == 5433,
+            ),
         ):
             mock_client = AsyncMock()
             mock_client.get.return_value = mock_resp
@@ -296,23 +302,30 @@ class TestAppLifecycleManager:
             command_source="fallback",
             execution_mode="docker",
         )
-        with patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
-        ), patch.object(
-            lifecycle,
-            "_detect_execution_mode",
-            new=AsyncMock(return_value=("docker", {"reason": "compose_first_default"})),
-        ), patch.object(
-            lifecycle,
-            "_run_compose_action",
-            new=AsyncMock(return_value=compose_result),
-        ) as mocked_compose, patch.object(
-            lifecycle,
-            "_run_process_action",
-            new=AsyncMock(),
-        ) as mocked_process:
+        with (
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
+            patch.object(
+                lifecycle,
+                "_detect_execution_mode",
+                new=AsyncMock(return_value=("docker", {"reason": "compose_first_default"})),
+            ),
+            patch.object(
+                lifecycle,
+                "_run_compose_action",
+                new=AsyncMock(return_value=compose_result),
+            ) as mocked_compose,
+            patch.object(
+                lifecycle,
+                "_run_process_action",
+                new=AsyncMock(),
+            ) as mocked_process,
+        ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is True
@@ -342,30 +355,37 @@ class TestAppLifecycleManager:
         config_path.parent.mkdir(parents=True)
         config_path.write_text("{}", encoding="utf-8")
 
-        with patch.object(
-            lifecycle,
-            "_detect_execution_mode",
-            new=AsyncMock(
-                return_value=(
-                    "local",
-                    {
-                        "reason": "local_running",
-                        "local": {"running": True, "running_roles": ["backend"]},
-                    },
-                )
+        with (
+            patch.object(
+                lifecycle,
+                "_detect_execution_mode",
+                new=AsyncMock(
+                    return_value=(
+                        "local",
+                        {
+                            "reason": "local_running",
+                            "local": {"running": True, "running_roles": ["backend"]},
+                        },
+                    )
+                ),
             ),
-        ), patch.object(
-            lifecycle,
-            "check_health",
-            new=AsyncMock(return_value=HealthCheckResult("local_running_app", AppStatus.HEALTHY)),
-        ), patch.object(
-            lifecycle,
-            "_run_process_action",
-            new=AsyncMock(),
-        ) as mocked_process, patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
+            patch.object(
+                lifecycle,
+                "check_health",
+                new=AsyncMock(return_value=HealthCheckResult("local_running_app", AppStatus.HEALTHY)),
+            ),
+            patch.object(
+                lifecycle,
+                "_run_process_action",
+                new=AsyncMock(),
+            ) as mocked_process,
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
         ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
@@ -407,19 +427,23 @@ class TestAppLifecycleManager:
             execution_mode="docker",
         )
 
-        with patch.object(
-            lifecycle,
-            "_detect_execution_mode",
-            new=AsyncMock(return_value=("docker", {"reason": "docker_running"})),
-        ), patch.object(
-            lifecycle,
-            "_run_compose_action",
-            new=AsyncMock(return_value=compose_result),
-        ) as mocked_compose, patch.object(
-            lifecycle,
-            "_stop_local_processes",
-            new=AsyncMock(return_value={"success": True, "killed": ["backend(pid=12345)"], "errors": []}),
-        ) as mocked_local_stop:
+        with (
+            patch.object(
+                lifecycle,
+                "_detect_execution_mode",
+                new=AsyncMock(return_value=("docker", {"reason": "docker_running"})),
+            ),
+            patch.object(
+                lifecycle,
+                "_run_compose_action",
+                new=AsyncMock(return_value=compose_result),
+            ) as mocked_compose,
+            patch.object(
+                lifecycle,
+                "_stop_local_processes",
+                new=AsyncMock(return_value={"success": True, "killed": ["backend(pid=12345)"], "errors": []}),
+            ) as mocked_local_stop,
+        ):
             result = await lifecycle._stop_app_once(cfg, config_path=config_path)
 
         assert result.success is True
@@ -461,18 +485,22 @@ class TestAppLifecycleManager:
             execution_mode="docker",
         )
 
-        with patch.object(
-            lifecycle,
-            "_detect_execution_mode",
-            new=AsyncMock(return_value=("docker", {"reason": "docker_running"})),
-        ), patch.object(
-            lifecycle,
-            "_run_compose_action",
-            new=AsyncMock(return_value=compose_result),
-        ), patch.object(
-            lifecycle,
-            "_stop_local_processes",
-            new=AsyncMock(return_value={"success": False, "killed": [], "errors": ["backend: kill 失敗"]}),
+        with (
+            patch.object(
+                lifecycle,
+                "_detect_execution_mode",
+                new=AsyncMock(return_value=("docker", {"reason": "docker_running"})),
+            ),
+            patch.object(
+                lifecycle,
+                "_run_compose_action",
+                new=AsyncMock(return_value=compose_result),
+            ),
+            patch.object(
+                lifecycle,
+                "_stop_local_processes",
+                new=AsyncMock(return_value={"success": False, "killed": [], "errors": ["backend: kill 失敗"]}),
+            ),
         ):
             result = await lifecycle._stop_app_once(cfg, config_path=config_path)
 
@@ -529,13 +557,18 @@ class TestAppLifecycleManager:
             async def communicate(self):
                 return b"", b""
 
-        with patch(
-            "control_plane.services.app_lifecycle.asyncio.create_subprocess_shell",
-            new=AsyncMock(return_value=_Proc()),
-        ) as mocked, patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+        with (
+            patch(
+                "control_plane.services.app_lifecycle.asyncio.create_subprocess_shell",
+                new=AsyncMock(return_value=_Proc()),
+            ) as mocked,
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
         ):
             result = await lifecycle.start_local_dev(cfg, config_path=config_path)
 
@@ -588,22 +621,29 @@ class TestAppLifecycleManager:
             error="frontend プロセスが直後に終了しました",
         )
 
-        with patch.object(
-            lifecycle,
-            "_start_local_process",
-            new=AsyncMock(side_effect=[backend_launch, frontend_launch]),
-        ), patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
-        ), patch.object(
-            lifecycle,
-            "_preflight_local_dependencies",
-            new=AsyncMock(return_value=([], None)),
-        ), patch.object(
-            lifecycle._diagnostic_service,
-            "diagnose_action_failure",
-            new=AsyncMock(return_value={"summary": "frontend crash"}),
+        with (
+            patch.object(
+                lifecycle,
+                "_start_local_process",
+                new=AsyncMock(side_effect=[backend_launch, frontend_launch]),
+            ),
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
+            patch.object(
+                lifecycle,
+                "_preflight_local_dependencies",
+                new=AsyncMock(return_value=([], None)),
+            ),
+            patch.object(
+                lifecycle._diagnostic_service,
+                "diagnose_action_failure",
+                new=AsyncMock(return_value={"summary": "frontend crash"}),
+            ),
         ):
             result = await lifecycle.start_local_dev(cfg, config_path=config_path)
 
@@ -633,14 +673,17 @@ class TestAppLifecycleManager:
         config_path.write_text("{}", encoding="utf-8")
         (config_path.parent / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
 
-        with patch.object(
-            lifecycle,
-            "_is_tcp_port_open",
-            side_effect=[False, True],
-        ), patch.object(
-            lifecycle,
-            "_auto_start_local_dependencies",
-            new=AsyncMock(return_value=(["dependency auto-start: docker compose up -d faq-db"], None)),
+        with (
+            patch.object(
+                lifecycle,
+                "_is_tcp_port_open",
+                side_effect=[False, True],
+            ),
+            patch.object(
+                lifecycle,
+                "_auto_start_local_dependencies",
+                new=AsyncMock(return_value=(["dependency auto-start: docker compose up -d faq-db"], None)),
+            ),
         ):
             notes, error = await lifecycle._preflight_local_dependencies(cfg, config_path=config_path)
 
@@ -669,14 +712,17 @@ class TestAppLifecycleManager:
         config_path.write_text("{}", encoding="utf-8")
         (config_path.parent / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
 
-        with patch.object(
-            lifecycle,
-            "_is_tcp_port_open",
-            side_effect=[False, False],
-        ), patch.object(
-            lifecycle,
-            "_auto_start_local_dependencies",
-            new=AsyncMock(return_value=(["dependency auto-start: docker compose up -d faq-db"], None)),
+        with (
+            patch.object(
+                lifecycle,
+                "_is_tcp_port_open",
+                side_effect=[False, False],
+            ),
+            patch.object(
+                lifecycle,
+                "_auto_start_local_dependencies",
+                new=AsyncMock(return_value=(["dependency auto-start: docker compose up -d faq-db"], None)),
+            ),
         ):
             notes, error = await lifecycle._preflight_local_dependencies(cfg, config_path=config_path)
 
@@ -727,18 +773,24 @@ class TestAppLifecycleManager:
             execution_mode="docker",
         )
 
-        with patch.object(
-            lifecycle,
-            "_run_compose_action",
-            new=AsyncMock(return_value=compose_result),
-        ) as mocked_compose, patch.object(
-            lifecycle,
-            "_detect_execution_mode",
-            new=AsyncMock(return_value=("docker", {"reason": "compose_first_default"})),
-        ), patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
+        with (
+            patch.object(
+                lifecycle,
+                "_run_compose_action",
+                new=AsyncMock(return_value=compose_result),
+            ) as mocked_compose,
+            patch.object(
+                lifecycle,
+                "_detect_execution_mode",
+                new=AsyncMock(return_value=("docker", {"reason": "compose_first_default"})),
+            ),
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
         ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
@@ -786,23 +838,33 @@ class TestAppLifecycleManager:
             execution_mode="docker",
         )
 
-        with patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": ["codex"], "authenticated_tools": ["codex"]}}),
-        ), patch.object(
-            lifecycle._diagnostic_service,
-            "attach_retry_trace",
-            new=lambda diagnostic, _: diagnostic,
-        ), patch.object(
-            lifecycle,
-            "_start_app_once",
-            new=AsyncMock(side_effect=[failed, recovered]),
-        ), patch.object(
-            lifecycle._repair_service,
-            "attempt_action_repair",
-            new=AsyncMock(return_value={"tool": "codex", "attempt": 1, "success": True}),
-        ) as mocked_repair:
+        with (
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={
+                        "ready": True,
+                        "final": {"available_tools": ["codex"], "authenticated_tools": ["codex"]},
+                    }
+                ),
+            ),
+            patch.object(
+                lifecycle._diagnostic_service,
+                "attach_retry_trace",
+                new=lambda diagnostic, _: diagnostic,
+            ),
+            patch.object(
+                lifecycle,
+                "_start_app_once",
+                new=AsyncMock(side_effect=[failed, recovered]),
+            ),
+            patch.object(
+                lifecycle._repair_service,
+                "attempt_action_repair",
+                new=AsyncMock(return_value={"tool": "codex", "attempt": 1, "success": True}),
+            ) as mocked_repair,
+        ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is True
@@ -843,23 +905,33 @@ class TestAppLifecycleManager:
             execution_mode="docker",
         )
 
-        with patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": ["codex", "claude"], "authenticated_tools": ["codex", "claude"]}}),
-        ), patch.object(
-            lifecycle._diagnostic_service,
-            "attach_retry_trace",
-            new=lambda diagnostic, _: diagnostic,
-        ), patch.object(
-            lifecycle,
-            "_start_app_once",
-            new=AsyncMock(side_effect=[failed, failed, failed, failed, failed]),
-        ), patch.object(
-            lifecycle._repair_service,
-            "attempt_action_repair",
-            new=AsyncMock(return_value={"tool": "codex", "attempt": 1, "success": False}),
-        ) as mocked_repair:
+        with (
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={
+                        "ready": True,
+                        "final": {"available_tools": ["codex", "claude"], "authenticated_tools": ["codex", "claude"]},
+                    }
+                ),
+            ),
+            patch.object(
+                lifecycle._diagnostic_service,
+                "attach_retry_trace",
+                new=lambda diagnostic, _: diagnostic,
+            ),
+            patch.object(
+                lifecycle,
+                "_start_app_once",
+                new=AsyncMock(side_effect=[failed, failed, failed, failed, failed]),
+            ),
+            patch.object(
+                lifecycle._repair_service,
+                "attempt_action_repair",
+                new=AsyncMock(return_value={"tool": "codex", "attempt": 1, "success": False}),
+            ) as mocked_repair,
+        ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is False
@@ -900,14 +972,19 @@ class TestAppLifecycleManager:
             execution_mode="docker",
         )
 
-        with patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
-        ), patch.object(
-            lifecycle,
-            "_start_app_once",
-            new=AsyncMock(return_value=failed),
+        with (
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
+            patch.object(
+                lifecycle,
+                "_start_app_once",
+                new=AsyncMock(return_value=failed),
+            ),
         ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
@@ -945,19 +1022,25 @@ class TestAppLifecycleManager:
         config_path.parent.mkdir(parents=True)
         config_path.write_text("{}", encoding="utf-8")
 
-        with patch.object(
-            lifecycle,
-            "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
-        ), patch.object(
-            lifecycle,
-            "_start_local_dev_once",
-            new=AsyncMock(side_effect=asyncio.CancelledError),
-        ), patch.object(
-            lifecycle,
-            "_stop_local_processes",
-            new=AsyncMock(return_value={"success": True, "killed": [], "errors": []}),
-        ) as mocked_stop:
+        with (
+            patch.object(
+                lifecycle,
+                "_run_cli_preflight",
+                new=AsyncMock(
+                    return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}
+                ),
+            ),
+            patch.object(
+                lifecycle,
+                "_start_local_dev_once",
+                new=AsyncMock(side_effect=asyncio.CancelledError),
+            ),
+            patch.object(
+                lifecycle,
+                "_stop_local_processes",
+                new=AsyncMock(return_value={"success": True, "killed": [], "errors": []}),
+            ) as mocked_stop,
+        ):
             result = await lifecycle.start_local_dev(cfg, config_path=config_path)
 
         assert result.success is False
@@ -980,12 +1063,15 @@ class TestAppLifecycleManager:
             async def communicate(self):
                 return b"12345\n", b""
 
-        with patch(
-            "control_plane.services.app_lifecycle.asyncio.create_subprocess_shell",
-            new=AsyncMock(return_value=_Proc()),
-        ), patch(
-            "control_plane.services.app_lifecycle.asyncio.sleep",
-            new=AsyncMock(side_effect=asyncio.CancelledError),
+        with (
+            patch(
+                "control_plane.services.app_lifecycle.asyncio.create_subprocess_shell",
+                new=AsyncMock(return_value=_Proc()),
+            ),
+            patch(
+                "control_plane.services.app_lifecycle.asyncio.sleep",
+                new=AsyncMock(side_effect=asyncio.CancelledError),
+            ),
         ):
             launch = await lifecycle._start_local_process(
                 app_name="cancel_wait_app",

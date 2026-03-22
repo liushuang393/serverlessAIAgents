@@ -20,13 +20,13 @@ from pydantic import BaseModel, Field
 class OfferType(str, Enum):
     """オファータイプ."""
 
-    DISCOUNT = "discount"           # 割引
-    COUPON = "coupon"               # クーポン
-    BUNDLE = "bundle"               # バンドル
-    FREE_SHIPPING = "free_shipping" # 送料無料
-    CASHBACK = "cashback"           # キャッシュバック
-    LOYALTY = "loyalty"             # ロイヤリティポイント
-    FLASH_SALE = "flash_sale"       # タイムセール
+    DISCOUNT = "discount"  # 割引
+    COUPON = "coupon"  # クーポン
+    BUNDLE = "bundle"  # バンドル
+    FREE_SHIPPING = "free_shipping"  # 送料無料
+    CASHBACK = "cashback"  # キャッシュバック
+    LOYALTY = "loyalty"  # ロイヤリティポイント
+    FLASH_SALE = "flash_sale"  # タイムセール
     FIRST_PURCHASE = "first_purchase"  # 初回購入特典
 
 
@@ -58,12 +58,8 @@ class Offer(BaseModel):
     final_price: float | None = Field(default=None, ge=0, description="最終価格")
 
     # 条件
-    conditions: dict[str, Any] = Field(
-        default_factory=dict, description="適用条件"
-    )
-    min_purchase_amount: float | None = Field(
-        default=None, ge=0, description="最低購入金額"
-    )
+    conditions: dict[str, Any] = Field(default_factory=dict, description="適用条件")
+    min_purchase_amount: float | None = Field(default=None, ge=0, description="最低購入金額")
     max_uses: int | None = Field(default=None, ge=1, description="最大使用回数")
 
     # 有効期間
@@ -71,12 +67,8 @@ class Offer(BaseModel):
     valid_until: datetime | None = Field(default=None, description="有効終了日時")
 
     # 意図広告用属性
-    intent_match_score: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="意図マッチスコア"
-    )
-    target_intents: list[str] = Field(
-        default_factory=list, description="ターゲット意図キーワード"
-    )
+    intent_match_score: float = Field(default=0.0, ge=0.0, le=1.0, description="意図マッチスコア")
+    target_intents: list[str] = Field(default_factory=list, description="ターゲット意図キーワード")
 
     # メタ情報
     description: str = Field(default="", description="オファー説明")
@@ -123,16 +115,10 @@ class DirectOffer(BaseModel):
     """
 
     offer: Offer = Field(..., description="基本オファー情報")
-    intent_context: dict[str, Any] = Field(
-        default_factory=dict, description="意図コンテキスト"
-    )
-    presentation_timing: str = Field(
-        default="immediate", description="提示タイミング"
-    )
+    intent_context: dict[str, Any] = Field(default_factory=dict, description="意図コンテキスト")
+    presentation_timing: str = Field(default="immediate", description="提示タイミング")
     ai_generated: bool = Field(default=False, description="AI生成フラグ")
-    confidence: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="推薦信頼度"
-    )
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="推薦信頼度")
 
     # 表示情報
     headline: str = Field(default="", description="見出し")
@@ -140,4 +126,3 @@ class DirectOffer(BaseModel):
     urgency_message: str | None = Field(default=None, description="緊急性メッセージ")
 
     model_config = {"frozen": False, "extra": "allow"}
-

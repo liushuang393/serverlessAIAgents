@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """リスク評価Agentテンプレート.
 
 金融取引・投資判断のリスク評価を行うAgentテンプレート。
@@ -18,7 +17,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.templates.template_helpers import extract_json_payload
-from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -29,6 +27,8 @@ from kernel.templates.base_template import (
     TemplateValidationRule,
     ValidationRuleType,
 )
+from kernel.templates.template_runtime import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,16 +100,14 @@ JSON形式で以下を出力:
             return await self._analyze_with_llm(input_data)
         return self._analyze_rule_based(input_data)
 
-    async def _analyze_with_llm(
-        self, input_data: RiskAssessmentInput
-    ) -> RiskAssessmentOutput:
+    async def _analyze_with_llm(self, input_data: RiskAssessmentInput) -> RiskAssessmentOutput:
         """LLMを使用したリスク評価."""
 
         prompt = f"""以下の資産のリスクを評価してください：
 資産タイプ: {input_data.asset_type}
 評価額: {input_data.amount:,.0f} {input_data.currency}
 評価期間: {input_data.time_horizon}
-リスク要因: {', '.join(input_data.risk_factors) if input_data.risk_factors else '自動判定'}
+リスク要因: {", ".join(input_data.risk_factors) if input_data.risk_factors else "自動判定"}
 追加情報: {input_data.context}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
@@ -119,9 +117,7 @@ JSON形式で以下を出力:
             return RiskAssessmentOutput(**data)
         return self._analyze_rule_based(input_data)
 
-    def _analyze_rule_based(
-        self, input_data: RiskAssessmentInput
-    ) -> RiskAssessmentOutput:
+    def _analyze_rule_based(self, input_data: RiskAssessmentInput) -> RiskAssessmentOutput:
         """ルールベースのリスク評価."""
         # 簡易的なルールベース評価
         base_score = 50.0

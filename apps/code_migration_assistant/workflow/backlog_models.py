@@ -93,4 +93,3 @@ class SessionStatus(str, Enum):
 def now_iso() -> str:
     """Return utc timestamp in ISO8601."""
     return datetime.now(tz=UTC).isoformat()
-

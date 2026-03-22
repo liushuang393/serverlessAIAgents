@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
-from shared.registry.base import Registry
 from kernel.protocols.a2ui.components import A2UIComponent, ComponentType
+from shared.registry.base import Registry
 
 
 class A2UIRenderer(ABC):

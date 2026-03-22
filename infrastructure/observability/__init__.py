@@ -5,19 +5,14 @@
 """
 
 # --- アダプタパターン (ports / exporters / registry) ---
-from infrastructure.observability.exporters import (  # noqa: F401
+from infrastructure.observability.exporters import (
     InMemoryTraceExporter,
     LoggingTraceExporter,
     NoOpTraceExporter,
 )
-from infrastructure.observability.ports import TraceExporter  # noqa: F401
-from infrastructure.observability.registry import (  # noqa: F401
-    TraceExporterRegistry,
-    get_trace_exporter,
-)
 
 # --- ログ ---
-from infrastructure.observability.logging import (  # noqa: F401
+from infrastructure.observability.logging import (
     AgentFlowLogger,
     LogLevel,
     get_context,
@@ -27,7 +22,7 @@ from infrastructure.observability.logging import (  # noqa: F401
 )
 
 # --- メトリクス ---
-from infrastructure.observability.metrics import (  # noqa: F401
+from infrastructure.observability.metrics import (
     Counter,
     Gauge,
     Histogram,
@@ -37,21 +32,26 @@ from infrastructure.observability.metrics import (  # noqa: F401
 )
 
 # --- OTLP ---
-from infrastructure.observability.otel_exporter import OTLPExporter  # noqa: F401
+from infrastructure.observability.otel_exporter import OTLPExporter
+from infrastructure.observability.ports import TraceExporter
+from infrastructure.observability.registry import (
+    TraceExporterRegistry,
+    get_trace_exporter,
+)
 
 # --- Sentry ---
-from infrastructure.observability.sentry_integration import (  # noqa: F401
+from infrastructure.observability.sentry_integration import (
     capture_exception,
     capture_message,
     setup_sentry,
 )
 
 # --- セットアップ ---
-from infrastructure.observability.setup import setup_observability  # noqa: F401
-from infrastructure.observability.startup import log_startup_info  # noqa: F401
+from infrastructure.observability.setup import setup_observability
+from infrastructure.observability.startup import log_startup_info
 
 # --- トレーシング ---
-from infrastructure.observability.tracing import (  # noqa: F401
+from infrastructure.observability.tracing import (
     Span,
     Tracer,
     get_tracer,
@@ -60,39 +60,39 @@ from infrastructure.observability.tracing import (  # noqa: F401
 
 
 __all__ = [
-    # アダプタパターン
-    "InMemoryTraceExporter",
-    "LoggingTraceExporter",
-    "NoOpTraceExporter",
-    "TraceExporter",
-    "TraceExporterRegistry",
-    "get_trace_exporter",
     # ログ
     "AgentFlowLogger",
-    "LogLevel",
-    "get_context",
-    "get_logger",
-    "replace_context",
-    "setup_logging",
     # メトリクス
     "Counter",
     "Gauge",
     "Histogram",
+    # アダプタパターン
+    "InMemoryTraceExporter",
+    "LogLevel",
+    "LoggingTraceExporter",
     "MetricsCollector",
-    "get_metrics",
-    "setup_metrics",
+    "NoOpTraceExporter",
     # OTLP
     "OTLPExporter",
+    # トレーシング
+    "Span",
+    "TraceExporter",
+    "TraceExporterRegistry",
+    "Tracer",
     # Sentry
     "capture_exception",
     "capture_message",
-    "setup_sentry",
+    "get_context",
+    "get_logger",
+    "get_metrics",
+    "get_trace_exporter",
+    "get_tracer",
+    "log_startup_info",
+    "replace_context",
+    "setup_logging",
+    "setup_metrics",
     # セットアップ
     "setup_observability",
-    "log_startup_info",
-    # トレーシング
-    "Span",
-    "Tracer",
-    "get_tracer",
+    "setup_sentry",
     "setup_tracing",
 ]

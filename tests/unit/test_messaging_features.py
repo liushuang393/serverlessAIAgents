@@ -15,9 +15,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from shared.channels.signal import SignalAdapter
-from shared.channels.teams import TeamsAdapter
-from shared.channels.whatsapp import WhatsAppAdapter
 from kernel.skills.conversation_export import (
     ConversationExportSkill,
     ExportConfig,
@@ -26,6 +23,9 @@ from kernel.skills.conversation_export import (
 )
 from kernel.skills.vision import VisionConfig, VisionProvider, VisionResult, VisionSkill
 from kernel.skills.voice import TTSVoice, VoiceConfig, VoiceProvider, VoiceSkill
+from shared.channels.signal import SignalAdapter
+from shared.channels.teams import TeamsAdapter
+from shared.channels.whatsapp import WhatsAppAdapter
 
 
 # =============================================================================

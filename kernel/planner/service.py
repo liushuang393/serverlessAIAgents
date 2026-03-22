@@ -106,14 +106,11 @@ class ExecutionPlan(BaseModel):
 
     def get_ready_steps(self) -> list[PlanStep]:
         """実行準備完了のステップを取得（依存関係が全て解決済み）."""
-        completed_ids = {
-            step.id for step in self.steps if step.status == StepStatus.COMPLETED
-        }
+        completed_ids = {step.id for step in self.steps if step.status == StepStatus.COMPLETED}
         return [
             step
             for step in self.steps
-            if step.status == StepStatus.PENDING
-            and all(dep in completed_ids for dep in step.dependencies)
+            if step.status == StepStatus.PENDING and all(dep in completed_ids for dep in step.dependencies)
         ]
 
     def get_step(self, step_id: str) -> PlanStep | None:
@@ -127,9 +124,7 @@ class ExecutionPlan(BaseModel):
         """進捗率を取得（0.0-1.0）."""
         if not self.steps:
             return 0.0
-        completed = sum(
-            1 for step in self.steps if step.status == StepStatus.COMPLETED
-        )
+        completed = sum(1 for step in self.steps if step.status == StepStatus.COMPLETED)
         return completed / len(self.steps)
 
 
@@ -219,11 +214,7 @@ class PlannerAgent:
         available_tools: list[str],
     ) -> ExecutionPlan:
         """LLMで計画を作成."""
-        tools_desc = (
-            "\n".join(f"- {tool}" for tool in available_tools)
-            if available_tools
-            else "なし"
-        )
+        tools_desc = "\n".join(f"- {tool}" for tool in available_tools) if available_tools else "なし"
 
         prompt = (
             "以下の目標を達成するための実行計画を作成してください。\n\n"
@@ -233,7 +224,7 @@ class PlannerAgent:
             f"- ステップ間の依存関係を明示すること\n"
             f"- 並列実行可能なステップを識別すること\n"
             f"- 最大{self._config.max_steps}ステップ以内\n\n"
-            'JSON形式で回答:\n'
+            "JSON形式で回答:\n"
             '{\n  "name": "計画名",\n  "description": "計画の説明",\n'
             '  "steps": [\n    {\n      "name": "ステップ名",\n'
             '      "description": "説明",\n'
@@ -267,18 +258,14 @@ class PlannerAgent:
                     order=i,
                     tool_uri=step_data.get("tool_uri"),
                     params=step_data.get("params", {}),
-                    timeout_seconds=step_data.get(
-                        "timeout_seconds", self._config.default_timeout
-                    ),
+                    timeout_seconds=step_data.get("timeout_seconds", self._config.default_timeout),
                 )
                 name_to_id[step.name] = step.id
                 steps.append(step)
 
             for i, step_data in enumerate(data.get("steps", [])):
                 dep_names = step_data.get("dependencies", [])
-                steps[i].dependencies = [
-                    name_to_id[name] for name in dep_names if name in name_to_id
-                ]
+                steps[i].dependencies = [name_to_id[name] for name in dep_names if name in name_to_id]
 
             return ExecutionPlan(
                 name=data.get("name", "自動生成計画"),
@@ -368,7 +355,7 @@ class PlannerAgent:
             f"失敗ステップ: {failed_step.name}\n"
             f"説明: {failed_step.description}\nエラー: {error}\n\n"
             f"元の目標: {plan.goal}\n\n"
-            'JSON形式で代替ステップを提案:\n'
+            "JSON形式で代替ステップを提案:\n"
             '{\n  "alternative_steps": [\n    {\n'
             '      "name": "ステップ名",\n      "description": "説明",\n'
             '      "step_type": "tool_call|llm_generation",\n'

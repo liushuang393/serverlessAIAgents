@@ -21,6 +21,7 @@ from kernel.patterns.deep_agent.da_pool import AgentPool
 from kernel.patterns.deep_agent.da_progress import ProgressManager
 from kernel.patterns.deep_agent.da_stores import MemoryEvolutionStore, MemoryRuntimeStore
 
+
 __all__ = [
     "AgentMessage",
     "AgentPool",

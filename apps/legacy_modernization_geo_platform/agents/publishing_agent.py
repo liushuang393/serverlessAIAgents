@@ -10,7 +10,6 @@ from apps.legacy_modernization_geo_platform.agents._models import (
 )
 from apps.legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.legacy_modernization_geo_platform.backend.settings import APP_ROOT, GeoPlatformSettings
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 

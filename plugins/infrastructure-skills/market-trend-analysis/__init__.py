@@ -1,1 +1,1 @@
-"""market-trend-analysis スキル."""
+"""market-trend-analysis スキル."""  # noqa: N999

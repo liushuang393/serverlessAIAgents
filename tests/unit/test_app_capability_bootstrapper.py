@@ -15,8 +15,8 @@ from kernel.protocols.mcp_client import MCPClient
 from kernel.protocols.mcp_config import MCPConfig
 from kernel.runtime import AppCapabilityBootstrapper, CapabilityBundle
 from kernel.skills.gateway import SkillGateway
-from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
 from shared.config.manifest import load_app_manifest_dict
+from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
 
 
 if TYPE_CHECKING:

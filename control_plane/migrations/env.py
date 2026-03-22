@@ -3,8 +3,8 @@
 from logging.config import fileConfig
 
 from alembic import context
-from control_plane.db.models import Base
 
+from control_plane.db.models import Base
 from infrastructure.database import MigrationEnv
 
 

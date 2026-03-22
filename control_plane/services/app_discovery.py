@@ -18,12 +18,6 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from infrastructure.llm.contracts import (
-    LLMContractsConfig,
-    resolve_known_model_ids,
-    resolve_known_providers,
-)
-from shared.config.manifest import load_app_manifest
 from control_plane.schemas.app_config_schemas import (
     AppConfig,
     BlueprintConfig,
@@ -33,6 +27,12 @@ from control_plane.schemas.app_config_schemas import (
 )
 from control_plane.schemas.capability_schemas import CapabilitySpec
 from control_plane.services.agent_taxonomy import AgentTaxonomyService
+from infrastructure.llm.contracts import (
+    LLMContractsConfig,
+    resolve_known_model_ids,
+    resolve_known_providers,
+)
+from shared.config.manifest import load_app_manifest
 
 
 def _flatten_capability_item(item: Any) -> list[str]:

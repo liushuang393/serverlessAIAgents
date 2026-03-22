@@ -7,6 +7,7 @@ from harness.risk.service import (
     RiskLevel,
 )
 
+
 __all__ = [
     "RiskAssessment",
     "RiskAssessor",

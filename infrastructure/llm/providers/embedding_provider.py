@@ -1,4 +1,3 @@
 """infrastructure.llm.providers.embedding_provider — shim."""
 
-from infrastructure.providers.embedding_provider import *  # noqa: F401,F403
-
+from infrastructure.providers.embedding_provider import *  # noqa: F403

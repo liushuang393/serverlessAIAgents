@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import time
-from collections.abc import AsyncIterator
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest, TaskEvent, TaskStatus
+from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
+from apps.legacy_modernization_geo_platform.main import create_app
 from fastapi.testclient import TestClient
 
 from infrastructure.security.auth_client.client import RemoteUser
 from kernel.runtime import resolve_app_runtime
-from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest, TaskEvent, TaskStatus
-from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
-from apps.legacy_modernization_geo_platform.main import create_app
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
 
 
 def _build_settings(tmp_path: Path) -> GeoPlatformSettings:
@@ -77,7 +81,8 @@ def _wait_for_status(
         if payload.get("status") == expected:
             return payload
         time.sleep(0.1)
-    raise AssertionError(f"Task {task_id} did not reach status {expected}")
+    msg = f"Task {task_id} did not reach status {expected}"
+    raise AssertionError(msg)
 
 
 def test_execute_request_defaults() -> None:
@@ -310,7 +315,8 @@ def test_rewrite_command_updates_draft(monkeypatch, tmp_path: Path) -> None:
             break
         time.sleep(0.1)
     else:
-        raise AssertionError("Draft was not rewritten")
+        msg = "Draft was not rewritten"
+        raise AssertionError(msg)
 
 
 def test_agent_runtime_endpoints_expose_cards_and_stream(

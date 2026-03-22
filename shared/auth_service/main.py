@@ -97,6 +97,7 @@ def _get_app() -> FastAPI:
     """Platform entrypoint が存在する場合はそちらを返す."""
     try:
         from control_plane.api.auth_app import app as _platform_app
+
         return _platform_app
     except ImportError:
         return create_app()

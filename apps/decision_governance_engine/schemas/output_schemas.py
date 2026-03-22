@@ -10,6 +10,8 @@ import hashlib
 from datetime import datetime
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ClarificationOutput,
     DaoOutput,
@@ -18,7 +20,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ReviewOutput,
     ShuOutput,
 )
-from pydantic import BaseModel, Field
 
 
 class HumanReview(BaseModel):

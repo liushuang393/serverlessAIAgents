@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
+
 from control_plane.schemas.app_config_schemas import (
     AgentInfo,
     AppConfig,
@@ -19,7 +21,6 @@ from control_plane.schemas.app_config_schemas import (
 from control_plane.schemas.capability_schemas import CapabilitySpec
 from control_plane.services.app_discovery import _flatten_capability_item
 from control_plane.services.capability_registry import CapabilityRegistry
-from pydantic import ValidationError
 
 
 class TestPortsConfig:
@@ -496,9 +497,7 @@ class TestFlattenCapabilityItem:
 
     def test_dict_form_parsed_and_expanded(self) -> None:
         """dict 形式は CapabilitySpec にパースされて展開される."""
-        result = _flatten_capability_item(
-            {"domain": "reasoning", "actions": ["analysis"], "artifacts": ["report"]}
-        )
+        result = _flatten_capability_item({"domain": "reasoning", "actions": ["analysis"], "artifacts": ["report"]})
         assert result == ["reasoning.analysis.report"]
 
     def test_invalid_dict_falls_back_to_str(self) -> None:

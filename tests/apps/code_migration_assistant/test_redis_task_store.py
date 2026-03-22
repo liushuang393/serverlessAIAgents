@@ -7,12 +7,11 @@ from collections import defaultdict
 from typing import Any
 
 import pytest
-
 from apps.code_migration_assistant.backend.task_store import RedisTaskStore
 
 
 class _FakePubSub:
-    def __init__(self, redis: "_FakeRedis") -> None:
+    def __init__(self, redis: _FakeRedis) -> None:
         self._redis = redis
         self._queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self._channels: set[str] = set()
@@ -91,7 +90,7 @@ class _FakeRedis:
             await subscriber.push_message(channel, payload)
         return len(subscribers)
 
-    def pubsub(self, ignore_subscribe_messages: bool = True) -> _FakePubSub:  # noqa: ARG002
+    def pubsub(self, ignore_subscribe_messages: bool = True) -> _FakePubSub:
         return _FakePubSub(self)
 
     def register_subscriber(self, channel: str, subscriber: _FakePubSub) -> None:

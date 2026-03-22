@@ -153,8 +153,10 @@ class TestRAGEngine:
             vector_store="test-collection",
         )
         # UnifiedRAGService の retrieve をモック
-        with patch.object(engine.rag_service, "retrieve", new_callable=AsyncMock, return_value=mock_docs), \
-             patch.object(engine.rag_service, "_ensure_connected", new_callable=AsyncMock):
+        with (
+            patch.object(engine.rag_service, "retrieve", new_callable=AsyncMock, return_value=mock_docs),
+            patch.object(engine.rag_service, "_ensure_connected", new_callable=AsyncMock),
+        ):
             result = await engine.run({"question": "What is AI?"})
 
         assert "answer" in result

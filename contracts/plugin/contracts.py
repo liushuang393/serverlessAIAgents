@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from pydantic import Field, field_validator
 
 from contracts.base import ContractModel
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class PluginBinding(ContractModel):

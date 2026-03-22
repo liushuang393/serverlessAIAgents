@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from kernel.core import ResilientAgent
 from harness.policies.policy_engine import PolicyEngine
+from kernel.core import ResilientAgent
 from shared.services.fewshot_manager import (
     FewshotExample,
     FewshotManager,

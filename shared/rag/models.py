@@ -7,7 +7,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+# SQLAlchemy の Mapped 型解決に必要なため runtime import する（ruff TC003 を意図的に無効化）
+from datetime import datetime  # noqa: TC003
 from enum import Enum
 from typing import Any
 
@@ -44,9 +45,7 @@ class CollectionConfigModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # --- 識別 ---
-    collection_name: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False, index=True
-    )
+    collection_name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     app_name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     tenant_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
 
@@ -74,9 +73,7 @@ class CollectionConfigModel(Base):
 
     # --- 統計 ---
     document_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    last_indexed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # --- タイムスタンプ ---
     created_at: Mapped[datetime] = mapped_column(
@@ -111,9 +108,7 @@ class CollectionConfigModel(Base):
             "vector_db_type": self.vector_db_type,
             "vector_db_url": self.vector_db_url,
             "document_count": self.document_count,
-            "last_indexed_at": (
-                self.last_indexed_at.isoformat() if self.last_indexed_at else None
-            ),
+            "last_indexed_at": (self.last_indexed_at.isoformat() if self.last_indexed_at else None),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -131,12 +126,8 @@ class DocumentRecordModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # --- 識別 ---
-    document_id: Mapped[str] = mapped_column(
-        String(64), unique=True, nullable=False, index=True
-    )
-    collection_name: Mapped[str] = mapped_column(
-        String(255), nullable=False, index=True
-    )
+    document_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    collection_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
 
     # --- ファイル情報 ---
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
@@ -144,9 +135,7 @@ class DocumentRecordModel(Base):
     file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # --- 処理状態 ---
-    status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default=DocumentStatus.UPLOADED.value
-    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default=DocumentStatus.UPLOADED.value)
     chunk_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     chunk_ids_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
@@ -163,9 +152,7 @@ class DocumentRecordModel(Base):
         nullable=False,
         server_default=func.now(),
     )
-    indexed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # --- エラー ---
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

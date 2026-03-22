@@ -36,6 +36,7 @@ def _lazy(module_path: str, name: str) -> Any:
 def _get_auth_context_type() -> type:
     """AuthContext 型を遅延取得."""
     from harness.security.policy_engine import AuthContext
+
     return AuthContext
 
 

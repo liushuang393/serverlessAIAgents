@@ -6,16 +6,11 @@ Orchestrates RAG, SQL, and Maintenance services into a unified experience.
 import logging
 from typing import Any
 
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from shared.services.chart_service import ChartService
-    from shared.services.rag_service import RAGService
-    from shared.services.semantic_layer import SemanticLayerService
-    from shared.services.suggestion_service import SuggestionService
-    from shared.services.text2sql_service import Text2SQLService
-
+from shared.services.chart_service import ChartService
+from shared.services.rag_service import RAGService
+from shared.services.semantic_layer import SemanticLayerService
+from shared.services.suggestion_service import SuggestionService
+from shared.services.text2sql_service import Text2SQLService
 
 
 logger = logging.getLogger(__name__)

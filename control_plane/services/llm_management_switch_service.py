@@ -5,12 +5,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from infrastructure.llm.gateway import (
-    LiteLLMGateway,
-    LLMGatewayConfig,
-    ModelConfig,
-    ProviderConfig,
-)
 from control_plane.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMSwitchDiffItem,
@@ -24,6 +18,12 @@ from control_plane.services.llm_management_validator import (
     provider_default_api_key_env,
 )
 from control_plane.services.llm_runtime_status import resolve_provider_runtime_statuses
+from infrastructure.llm.gateway import (
+    LiteLLMGateway,
+    LLMGatewayConfig,
+    ModelConfig,
+    ProviderConfig,
+)
 
 
 if TYPE_CHECKING:

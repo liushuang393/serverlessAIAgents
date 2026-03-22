@@ -297,7 +297,7 @@ class AdMonitor(AgentBlock):
 
     def _generate_alerts(self, performance: AdPerformance) -> list[AdAlert]:
         """アラートを生成."""
-        import uuid
+        import uuid  # noqa: PLC0415
 
         alerts: list[AdAlert] = []
         metrics = performance.metrics

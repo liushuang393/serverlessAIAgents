@@ -26,6 +26,7 @@ from kernel.tools.tool_registry import (
     reset_global_tool_registry,
 )
 
+
 __all__ = [
     "BoundTools",
     "CatalogEntry",

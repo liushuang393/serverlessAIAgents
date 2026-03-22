@@ -5,13 +5,15 @@ from __future__ import annotations
 
 def test_shared_config_exports_get_settings() -> None:
     """`from shared.config import get_settings` should stay valid."""
-    from shared.config import AgentFlowSettings
-    from shared.config import get_settings
-    from shared.config import load_app_manifest_dict
-    from shared.config import load_app_manifest_dict_payload
-    from shared.config import load_app_manifest_dict_text
-    from shared.config import load_app_manifest_payload
-    from shared.config import load_app_manifest_text
+    from shared.config import (
+        AgentFlowSettings,
+        get_settings,
+        load_app_manifest_dict,
+        load_app_manifest_dict_payload,
+        load_app_manifest_dict_text,
+        load_app_manifest_payload,
+        load_app_manifest_text,
+    )
 
     settings = get_settings()
 

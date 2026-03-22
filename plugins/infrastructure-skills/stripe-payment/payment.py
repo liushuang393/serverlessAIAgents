@@ -87,10 +87,10 @@ class StripePayment:
     def _initialize(self) -> None:
         """初始化 Stripe 客户端."""
         try:
-            import stripe
+            import stripe  # noqa: PLC0415
         except ImportError:
             msg = "stripe 库未安装，请运行: pip install stripe"
-            raise ImportError(msg)
+            raise ImportError(msg)  # noqa: B904
 
         stripe.api_key = self._config.secret_key
         self._stripe = stripe
@@ -160,7 +160,7 @@ class StripePayment:
             return session
 
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # Customer Portal
@@ -187,7 +187,7 @@ class StripePayment:
             )
             return session.url
         except self._stripe.error.StripeError as e:
-            raise CustomerError(str(e), getattr(e, "code", None))
+            raise CustomerError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # Webhook 处理
@@ -218,10 +218,10 @@ class StripePayment:
                 self._config.webhook_secret,
             )
         except self._stripe.error.SignatureVerificationError as e:
-            raise SignatureVerificationError(str(e))
+            raise SignatureVerificationError(str(e))  # noqa: B904
         except ValueError as e:
             msg = f"无效的 payload: {e}"
-            raise WebhookError(msg)
+            raise WebhookError(msg)  # noqa: B904
 
     async def handle_webhook_event(
         self,
@@ -286,7 +286,7 @@ class StripePayment:
         except Exception as e:
             logger.exception(f"事件处理失败: {event_type} ({event_id}): {e}")
             msg = f"事件处理失败: {e}"
-            raise WebhookError(msg)
+            raise WebhookError(msg)  # noqa: B904
 
     def idempotent(self, key_prefix: str) -> Callable:
         """幂等性装饰器.
@@ -339,7 +339,7 @@ class StripePayment:
             subscriptions = self._stripe.Subscription.list(**params)
             return list(subscriptions.data)
         except self._stripe.error.StripeError as e:
-            raise SubscriptionError(str(e), getattr(e, "code", None))
+            raise SubscriptionError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def get_subscription(self, subscription_id: str) -> Any:
         """获取订阅详情.
@@ -353,7 +353,7 @@ class StripePayment:
         try:
             return self._stripe.Subscription.retrieve(subscription_id)
         except self._stripe.error.StripeError as e:
-            raise SubscriptionError(str(e), getattr(e, "code", None))
+            raise SubscriptionError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def update_subscription(
         self,
@@ -393,7 +393,7 @@ class StripePayment:
             return updated
 
         except self._stripe.error.StripeError as e:
-            raise SubscriptionError(str(e), getattr(e, "code", None))
+            raise SubscriptionError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def cancel_subscription(
         self,
@@ -422,7 +422,7 @@ class StripePayment:
             return cancelled
 
         except self._stripe.error.StripeError as e:
-            raise SubscriptionError(str(e), getattr(e, "code", None))
+            raise SubscriptionError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def pause_subscription(self, subscription_id: str) -> Any:
         """暂停订阅.
@@ -441,7 +441,7 @@ class StripePayment:
             logger.info(f"已暂停订阅: {subscription_id}")
             return paused
         except self._stripe.error.StripeError as e:
-            raise SubscriptionError(str(e), getattr(e, "code", None))
+            raise SubscriptionError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def resume_subscription(self, subscription_id: str) -> Any:
         """恢复订阅.
@@ -460,7 +460,7 @@ class StripePayment:
             logger.info(f"已恢复订阅: {subscription_id}")
             return resumed
         except self._stripe.error.StripeError as e:
-            raise SubscriptionError(str(e), getattr(e, "code", None))
+            raise SubscriptionError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # 退款
@@ -495,7 +495,7 @@ class StripePayment:
             return refund
 
         except self._stripe.error.StripeError as e:
-            raise RefundError(str(e), getattr(e, "code", None))
+            raise RefundError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # 发票
@@ -528,7 +528,7 @@ class StripePayment:
             invoices = self._stripe.Invoice.list(**params)
             return list(invoices.data)
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def create_invoice(
         self,
@@ -570,7 +570,7 @@ class StripePayment:
             return invoice
 
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # 产品/价格管理
@@ -603,7 +603,7 @@ class StripePayment:
             logger.info(f"已创建产品: {product.id}")
             return product
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def create_price(
         self,
@@ -636,7 +636,7 @@ class StripePayment:
             logger.info(f"已创建价格: {price.id}")
             return price
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def list_prices(
         self,
@@ -662,7 +662,7 @@ class StripePayment:
             prices = self._stripe.Price.list(**params)
             return list(prices.data)
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # 客户管理
@@ -695,7 +695,7 @@ class StripePayment:
             logger.info(f"已创建客户: {customer.id}")
             return customer
         except self._stripe.error.StripeError as e:
-            raise CustomerError(str(e), getattr(e, "code", None))
+            raise CustomerError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def get_customer(self, customer_id: str) -> Any:
         """获取客户.
@@ -709,7 +709,7 @@ class StripePayment:
         try:
             return self._stripe.Customer.retrieve(customer_id)
         except self._stripe.error.StripeError as e:
-            raise CustomerError(str(e), getattr(e, "code", None))
+            raise CustomerError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def get_or_create_customer(
         self,
@@ -736,7 +736,7 @@ class StripePayment:
             # 创建新客户
             return await self.create_customer(email, name, metadata)
         except self._stripe.error.StripeError as e:
-            raise CustomerError(str(e), getattr(e, "code", None))
+            raise CustomerError(str(e), getattr(e, "code", None))  # noqa: B904
 
     # ========================================================================
     # 测试工具
@@ -760,7 +760,7 @@ class StripePayment:
             logger.info(f"已创建测试时钟: {clock.id}")
             return clock
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904
 
     async def advance_test_clock(
         self,
@@ -788,4 +788,4 @@ class StripePayment:
             logger.info(f"已推进测试时钟: {test_clock_id} -> {frozen_time}")
             return clock
         except self._stripe.error.StripeError as e:
-            raise PaymentError(str(e), getattr(e, "code", None))
+            raise PaymentError(str(e), getattr(e, "code", None))  # noqa: B904

@@ -7,6 +7,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+
 from control_plane.db import close_platform_db
 from control_plane.schemas.llm_management_schemas import (
     LLMEngineDeployRequest,
@@ -17,7 +18,6 @@ from control_plane.services.llm_management import LLMManagementService
 from control_plane.services.llm_management_persistence import PlatformEngineDeploymentRecord
 from control_plane.services.llm_management_setup_manager import LLMSetupCommandResult
 from control_plane.services.llm_runtime_status import resolve_provider_runtime_statuses
-
 from infrastructure.llm.gateway import EngineRuntimeStatus, ProviderConfig
 
 
@@ -258,8 +258,10 @@ async def test_resolve_provider_runtime_statuses_probes_custom_provider_success(
 
     async def _fake_get(self, url: str, *args, **kwargs):  # type: ignore[no-untyped-def]
         del self, args, kwargs
+
         class _Response:
             status_code = 200
+
         assert url.endswith("/v1/models")
         return _Response()
 
@@ -293,8 +295,10 @@ async def test_resolve_provider_runtime_statuses_probes_custom_provider_failure(
 
     async def _fake_get(self, url: str, *args, **kwargs):  # type: ignore[no-untyped-def]
         del self, args, kwargs
+
         class _Response:
             status_code = 503
+
         return _Response()
 
     monkeypatch.setattr("control_plane.services.llm_runtime_status.httpx.AsyncClient.get", _fake_get)

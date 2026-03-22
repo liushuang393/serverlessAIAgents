@@ -195,7 +195,8 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         latitude = first.get("latitude")
         longitude = first.get("longitude")
         if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
-            raise ValueError("invalid geocoding coordinates")
+            msg = "invalid geocoding coordinates"
+            raise ValueError(msg)
 
         return first
 
@@ -210,10 +211,7 @@ class WeatherService(ServiceBase[dict[str, Any]]):
             "latitude": latitude,
             "longitude": longitude,
             "current": "temperature_2m,weather_code,wind_speed_10m",
-            "daily": (
-                "weather_code,temperature_2m_max,temperature_2m_min,"
-                "precipitation_probability_max"
-            ),
+            "daily": ("weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"),
             "timezone": "auto",
             "forecast_days": days,
         }
@@ -233,11 +231,13 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         current = forecast.get("current")
         daily = forecast.get("daily")
         if not isinstance(current, dict) or not isinstance(daily, dict):
-            raise ValueError("invalid forecast payload")
+            msg = "invalid forecast payload"
+            raise ValueError(msg)
 
         weather_code = self._safe_int(current.get("weather_code"))
         if weather_code is None:
-            raise ValueError("invalid weather_code")
+            msg = "invalid weather_code"
+            raise ValueError(msg)
 
         current_payload = {
             "time": str(current.get("time", "")),
@@ -273,14 +273,16 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         rain_prob = daily.get("precipitation_probability_max")
 
         if not all(isinstance(item, list) for item in [times, codes, temp_max, temp_min, rain_prob]):
-            raise ValueError("invalid daily payload")
+            msg = "invalid daily payload"
+            raise ValueError(msg)
 
         forecast_days: list[dict[str, Any]] = []
         upper_bound = min(days, len(times), len(codes), len(temp_max), len(temp_min), len(rain_prob))
         for idx in range(upper_bound):
             code = self._safe_int(codes[idx])
             if code is None:
-                raise ValueError("invalid daily weather code")
+                msg = "invalid daily weather code"
+                raise ValueError(msg)
             forecast_days.append(
                 {
                     "date": str(times[idx]),

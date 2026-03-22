@@ -46,24 +46,15 @@ class ArtifactStore:
 
     def list_by_flow(self, flow_id: str) -> list[ArtifactManifest]:
         """flow_id に紐づく成果物一覧を返す."""
-        return [
-            m for m in self._store.values()
-            if m.flow_id == flow_id
-        ]
+        return [m for m in self._store.values() if m.flow_id == flow_id]
 
     def list_by_trace(self, trace_id: str) -> list[ArtifactManifest]:
         """trace_id に紐づく成果物一覧を返す."""
-        return [
-            m for m in self._store.values()
-            if m.trace_id == trace_id
-        ]
+        return [m for m in self._store.values() if m.trace_id == trace_id]
 
     def list_by_type(self, artifact_type: str) -> list[ArtifactManifest]:
         """artifact_type で成果物を絞り込む."""
-        return [
-            m for m in self._store.values()
-            if m.artifact_type == artifact_type
-        ]
+        return [m for m in self._store.values() if m.artifact_type == artifact_type]
 
     def list_all(self) -> list[ArtifactManifest]:
         """全成果物を返す."""
@@ -86,8 +77,4 @@ class ArtifactStore:
 
     def resolve(self, artifact_ids: list[str]) -> list[ArtifactManifest]:
         """ID リストから一括解決する. 存在しないIDは無視."""
-        return [
-            self._store[aid]
-            for aid in artifact_ids
-            if aid in self._store
-        ]
+        return [self._store[aid] for aid in artifact_ids if aid in self._store]

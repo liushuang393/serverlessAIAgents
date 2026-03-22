@@ -6,10 +6,11 @@ import asyncio
 import logging
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Callable, TypeVar
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import uuid4
+
+from pydantic import BaseModel
 
 from apps.legacy_modernization_geo_platform.agents._models import (
     ReportAssemblerOutput,
@@ -20,7 +21,6 @@ from apps.legacy_modernization_geo_platform.backend.intelligence import (
 from apps.legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.legacy_modernization_geo_platform.backend.qa import GeoQualityGate
 from apps.legacy_modernization_geo_platform.backend.reporting import build_campaign_report
-from apps.legacy_modernization_geo_platform.backend.repository import GeoRepository
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreArtifact,
     AccountSignalArtifact,
@@ -45,11 +45,17 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     TaskStatus,
     normalize_content_language,
 )
-from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
-from fastapi import WebSocket
-from pydantic import BaseModel
 
-from kernel.agents.app_agent_runtime import AppAgentRuntime
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from fastapi import WebSocket
+
+    from apps.legacy_modernization_geo_platform.backend.repository import GeoRepository
+    from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
+    from kernel.agents.app_agent_runtime import AppAgentRuntime
 
 
 logger = logging.getLogger(__name__)
@@ -132,7 +138,7 @@ class GeoOrchestrator:
         """Start a new task asynchronously."""
         if self._broadcast_loop is None:
             self._broadcast_loop = asyncio.get_running_loop()
-        task_id = f"geo-{datetime.now(timezone.utc):%Y%m%d%H%M%S}-{uuid4().hex[:6]}"
+        task_id = f"geo-{datetime.now(UTC):%Y%m%d%H%M%S}-{uuid4().hex[:6]}"
         runtime = GeoTaskRuntime(task_id=task_id, request=request)
         self._runtimes[task_id] = runtime
         self._repository.create_task(task_id, request, TaskStatus.QUEUED)
@@ -221,7 +227,8 @@ class GeoOrchestrator:
         """Apply an operator command."""
         runtime = self._runtimes.get(task_id)
         if runtime is None:
-            raise KeyError(f"Task not found: {task_id}")
+            msg = f"Task not found: {task_id}"
+            raise KeyError(msg)
 
         applied = False
         message = "Command accepted"
@@ -289,7 +296,6 @@ class GeoOrchestrator:
         from apps.legacy_modernization_geo_platform.agents.evidence_matrix_agent import EvidenceMatrixAgent
         from apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent import LegacySemanticsAgent
         from apps.legacy_modernization_geo_platform.agents.question_graph_agent import QuestionGraphAgent
-
         from kernel.protocols.a2a_hub import get_hub
 
         hub = get_hub()
@@ -826,11 +832,7 @@ class GeoOrchestrator:
         adjustment_note = _REWRITE_ADJUSTMENT_NOTE_COPY[language]
         rewritten_pages: list[ContentDraftPage] = []
         for page in draft.pages:
-            rewritten_body = (
-                f"{page.body_markdown}\n\n## {section_title}\n"
-                f"- {note}\n"
-                f"- {adjustment_note}"
-            )
+            rewritten_body = f"{page.body_markdown}\n\n## {section_title}\n- {note}\n- {adjustment_note}"
             rewritten_pages.append(
                 ContentDraftPage(
                     slug=page.slug,
@@ -942,5 +944,5 @@ class GeoOrchestrator:
                 status=TaskStatus.CANCELLED,
                 current_stage=runtime.current_stage,
             )
-            raise RuntimeError("Task cancelled")
-
+            msg = "Task cancelled"
+            raise RuntimeError(msg)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """コンプライアンスチェックAgentテンプレート.
 
 金融規制コンプライアンスチェックを行うAgentテンプレート。
@@ -18,7 +17,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.templates.template_helpers import extract_json_payload
-from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -29,6 +27,8 @@ from kernel.templates.base_template import (
     TemplateValidationRule,
     ValidationRuleType,
 )
+from kernel.templates.template_runtime import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -93,24 +93,20 @@ JSON形式で以下を出力:
         """入力をパース."""
         return ComplianceCheckInput(**input_data)
 
-    async def process(
-        self, input_data: ComplianceCheckInput
-    ) -> ComplianceCheckOutput:
+    async def process(self, input_data: ComplianceCheckInput) -> ComplianceCheckOutput:
         """コンプライアンスチェックを実行."""
         if self._llm:
             return await self._check_with_llm(input_data)
         return self._check_rule_based(input_data)
 
-    async def _check_with_llm(
-        self, input_data: ComplianceCheckInput
-    ) -> ComplianceCheckOutput:
+    async def _check_with_llm(self, input_data: ComplianceCheckInput) -> ComplianceCheckOutput:
         """LLMを使用したコンプライアンスチェック."""
 
         prompt = f"""以下のコンプライアンスチェックを実施してください：
 チェックタイプ: {input_data.check_type}
 対象タイプ: {input_data.entity_type}
 管轄地域: {input_data.jurisdiction}
-適用規制: {', '.join(input_data.regulations) if input_data.regulations else '自動判定'}
+適用規制: {", ".join(input_data.regulations) if input_data.regulations else "自動判定"}
 対象データ: {input_data.entity_data}"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{prompt}")
@@ -120,22 +116,22 @@ JSON形式で以下を出力:
             return ComplianceCheckOutput(**data)
         return self._check_rule_based(input_data)
 
-    def _check_rule_based(
-        self, input_data: ComplianceCheckInput
-    ) -> ComplianceCheckOutput:
+    def _check_rule_based(self, input_data: ComplianceCheckInput) -> ComplianceCheckOutput:
         """ルールベースのコンプライアンスチェック."""
         violations: list[ComplianceViolation] = []
         warnings: list[str] = []
 
         # 基本チェック
         if not input_data.entity_data.get("id"):
-            violations.append(ComplianceViolation(
-                rule_id="KYC-001",
-                rule_name="本人確認",
-                severity="HIGH",
-                description="本人確認情報が不足しています",
-                remediation="本人確認書類の提出が必要です",
-            ))
+            violations.append(
+                ComplianceViolation(
+                    rule_id="KYC-001",
+                    rule_name="本人確認",
+                    severity="HIGH",
+                    description="本人確認情報が不足しています",
+                    remediation="本人確認書類の提出が必要です",
+                )
+            )
 
         is_compliant = len([v for v in violations if v.severity in ["HIGH", "CRITICAL"]]) == 0
         score = 100 - len(violations) * 20

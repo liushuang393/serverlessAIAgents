@@ -15,5 +15,5 @@ from __future__ import annotations
 
 from infrastructure.security.auth_client.client import AuthClient, RemoteUser
 
-__all__ = ["AuthClient", "RemoteUser"]
 
+__all__ = ["AuthClient", "RemoteUser"]

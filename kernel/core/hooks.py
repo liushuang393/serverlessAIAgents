@@ -49,9 +49,7 @@ class LifecycleHooks:
 
     def __init__(self) -> None:
         """ライフサイクルフックコンテナを初期化."""
-        self._hooks: dict[HookType, list[Callable[..., Awaitable[None]]]] = {
-            hook_type: [] for hook_type in HookType
-        }
+        self._hooks: dict[HookType, list[Callable[..., Awaitable[None]]]] = {hook_type: [] for hook_type in HookType}
 
     def register(self, hook_type: HookType, callback: Callable[..., Awaitable[None]]) -> None:
         """フックコールバックを登録.
@@ -111,4 +109,3 @@ class LifecycleHooks:
             登録済みコールバックのコピー
         """
         return self._hooks[hook_type].copy()
-

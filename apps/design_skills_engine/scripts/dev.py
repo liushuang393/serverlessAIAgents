@@ -53,13 +53,13 @@ def start_docker_dependencies(app_dir: Path):
                 has_gpu = True
             except (subprocess.CalledProcessError, FileNotFoundError):
                 has_gpu = False
-            
+
             if not has_gpu:
                 print("No GPU detected, using CPU override...")
                 compose_cmd.extend(["-f", cpu_override.name])
 
         result = subprocess.run(
-            compose_cmd + ["config", "--services"], cwd=str(app_dir), capture_output=True, text=True, check=True
+            [*compose_cmd, "config", "--services"], cwd=str(app_dir), capture_output=True, text=True, check=True
         )
         all_services = result.stdout.strip().split("\n")
 
@@ -71,7 +71,7 @@ def start_docker_dependencies(app_dir: Path):
             return
 
         print(f"Starting infrastructure services: {', '.join(services_to_start)}")
-        subprocess.run(compose_cmd + ["up", "-d", *services_to_start], cwd=str(app_dir), check=True)
+        subprocess.run([*compose_cmd, "up", "-d", *services_to_start], cwd=str(app_dir), check=True)
         print("Infrastructure services started.")
 
     except subprocess.CalledProcessError as e:

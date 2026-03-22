@@ -241,4 +241,3 @@ class CmaCliExecutionAdapter(ExecutionAdapter):
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         zip_base = output_dir.parent / f"download_{task_id}_{timestamp}"
         return Path(shutil.make_archive(str(zip_base), "zip", root_dir=str(output_dir)))
-

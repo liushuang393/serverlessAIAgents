@@ -77,7 +77,10 @@ async def test_chat_wrapper_with_tools_calls_tool_call(
     mock_get_settings.return_value = mock_settings
 
     mock_response = MagicMock()
-    mock_response.model_dump.return_value = {"content": None, "tool_calls": [{"id": "x", "name": "search", "arguments": "{}"}]}
+    mock_response.model_dump.return_value = {
+        "content": None,
+        "tool_calls": [{"id": "x", "name": "search", "arguments": "{}"}],
+    }
     client = MagicMock()
     client.tool_call = AsyncMock(return_value=mock_response)
     mock_llm_client.return_value = client

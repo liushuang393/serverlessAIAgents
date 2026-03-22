@@ -14,8 +14,8 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
-from infrastructure.llm.providers import get_llm
 from control_plane.wizard.models import AgentSpec, TestCase
+from infrastructure.llm.providers import get_llm
 
 
 class TestSynthesizer:

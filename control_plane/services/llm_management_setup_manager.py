@@ -10,7 +10,6 @@ from typing import Protocol
 import httpx
 import yaml
 
-from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, resolve_secret
 from control_plane.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMPreflightReport,
@@ -23,6 +22,7 @@ from control_plane.services.llm_management_validator import (
     LLMConfigValidator,
     provider_default_api_key_env,
 )
+from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, resolve_secret
 
 
 _DANGEROUS_TOKENS: set[str] = {
@@ -389,6 +389,7 @@ class LLMSetupManager:
                 status="dry_run",
                 message=f"ヘルスチェックを予定しています: GET {url}",
             )
+        return None
 
     async def _wait_for_engine_health(
         self,
@@ -421,40 +422,8 @@ class LLMSetupManager:
             return_code=1,
             allowed=True,
             timed_out=True,
-            error=(
-                f"health_check_timeout after {attempts} attempts: "
-                f"{last_error or 'engine is not ready'}"
-            ),
+            error=(f"health_check_timeout after {attempts} attempts: {last_error or 'engine is not ready'}"),
         )
-
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(url)
-            if response.status_code < 400:
-                return LLMPreflightStep(
-                    category="backend",
-                    target=backend_name,
-                    phase="health",
-                    status="success",
-                    message=f"ヘルスチェックに成功しました: {url}",
-                )
-            return LLMPreflightStep(
-                category="backend",
-                target=backend_name,
-                phase="health",
-                status="failed",
-                message=f"ヘルスチェックに失敗しました: status={response.status_code}",
-                remediation=[f"backend endpoint と health_path を確認してください: {url}"],
-            )
-        except Exception as exc:
-            return LLMPreflightStep(
-                category="backend",
-                target=backend_name,
-                phase="health",
-                status="failed",
-                message=f"ヘルスチェックに失敗しました: {exc}",
-                remediation=[f"backend endpoint に到達できるか確認してください: {url}"],
-            )
 
     async def _run_command(
         self,

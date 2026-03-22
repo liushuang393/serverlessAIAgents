@@ -1,5 +1,7 @@
 """後方互換: shared/skills/builtin/chatbot/ からの re-export."""
+
 from kernel.skills.builtin._compat import register_submodule_alias
+
 
 register_submodule_alias(
     "kernel.skills.builtin.chatbot",
@@ -7,4 +9,4 @@ register_submodule_alias(
     ["chatbot"],
 )
 
-from shared.skills.builtin.chatbot import *  # noqa: F401,F403
+from shared.skills.builtin.chatbot import *  # noqa: F403

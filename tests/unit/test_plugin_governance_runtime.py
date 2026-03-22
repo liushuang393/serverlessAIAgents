@@ -16,8 +16,8 @@ from harness.governance import (
     ToolExecutionContext,
 )
 from harness.governance.plugin_registry import PluginRegistry
-from infrastructure.llm.providers.tool_provider import OperationType, RegisteredTool
 from harness.policies.policy_engine import AuthContext, AuthMode
+from infrastructure.llm.providers.tool_provider import OperationType, RegisteredTool
 
 
 if TYPE_CHECKING:
@@ -393,7 +393,9 @@ async def test_framework_permission_mismatch_is_warning_only(tmp_path: Path) -> 
     """framework では manifest 権限との差分を warning として扱う."""
     audit = _InMemoryAuditLogger()
     registry = _write_enterprise_connector_fixture(
-        tmp_path, product_lines=["framework"], required_permissions=["repo.write"],
+        tmp_path,
+        product_lines=["framework"],
+        required_permissions=["repo.write"],
     )
     engine = GovernanceEngine(audit_logger=audit, auth_mode=AuthMode.RBAC, plugin_registry=registry)
     tool = _write_tool(

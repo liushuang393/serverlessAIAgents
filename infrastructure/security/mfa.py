@@ -18,6 +18,7 @@ import logging
 import struct
 import time
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,4 +120,3 @@ class TimeBasedMFA:
 
 
 __all__ = ["TimeBasedMFA"]
-

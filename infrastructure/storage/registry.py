@@ -50,12 +50,10 @@ class StorageRegistry:
             backend_cls: BaseStorageBackend のサブクラス
         """
         if not isinstance(backend_cls, type) or not issubclass(
-            backend_cls, BaseStorageBackend,
+            backend_cls,
+            BaseStorageBackend,
         ):
-            msg = (
-                f"backend_cls は BaseStorageBackend のサブクラスである必要があります: "
-                f"{backend_cls}"
-            )
+            msg = f"backend_cls は BaseStorageBackend のサブクラスである必要があります: {backend_cls}"
             raise TypeError(msg)
         cls._backends[scheme.lower()] = backend_cls
         logger.info("ストレージバックエンド登録: scheme=%s, cls=%s", scheme, backend_cls.__name__)
@@ -90,10 +88,7 @@ class StorageRegistry:
         backend_cls = cls._backends.get(scheme_lower)
         if backend_cls is None:
             available = ", ".join(sorted(cls._backends.keys())) or "(なし)"
-            msg = (
-                f"未登録のストレージ scheme: '{scheme_lower}'. "
-                f"登録済み: {available}"
-            )
+            msg = f"未登録のストレージ scheme: '{scheme_lower}'. 登録済み: {available}"
             raise KeyError(msg)
         return backend_cls(**kwargs)
 
@@ -134,4 +129,3 @@ def _register_builtins() -> None:
 
 # モジュールロード時に組み込みバックエンドを自動登録
 _register_builtins()
-

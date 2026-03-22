@@ -48,7 +48,10 @@ class StorageBackend(Protocol):
 
     # Virtual Filesystem
     async def write_file(
-        self, path: str, content: bytes | str, metadata: dict[str, Any] | None = None,
+        self,
+        path: str,
+        content: bytes | str,
+        metadata: dict[str, Any] | None = None,
     ) -> None: ...
     async def read_file(self, path: str) -> bytes | None: ...
     async def list_files(self, prefix: str = "") -> list[dict[str, Any]]: ...
@@ -83,7 +86,7 @@ class BaseStorageBackend(ABC):
         """名前空間プレフィックスを除去."""
         prefix = f"{self._namespace}:"
         if key.startswith(prefix):
-            return key[len(prefix):]
+            return key[len(prefix) :]
         return key
 
     async def connect(self) -> None:
@@ -160,4 +163,3 @@ def get_backend(
 
     msg = f"Unknown storage scheme: {scheme}. Available: {StorageRegistry.available_schemes()}"
     raise ValueError(msg)
-

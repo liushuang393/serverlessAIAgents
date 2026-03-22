@@ -13,7 +13,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     EvidenceMatrixArtifact,
     EvidenceMatrixEntry,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -40,9 +39,7 @@ class EvidenceMatrixAgent(
         for index, question in enumerate(questions[:6]):
             if not intelligence_snapshot.sources:
                 break
-            source = intelligence_snapshot.sources[
-                index % len(intelligence_snapshot.sources)
-            ]
+            source = intelligence_snapshot.sources[index % len(intelligence_snapshot.sources)]
             entries.append(
                 EvidenceMatrixEntry(
                     claim=f"{question} に対して、段階移行と業務ルール保持の両立が重要である。",

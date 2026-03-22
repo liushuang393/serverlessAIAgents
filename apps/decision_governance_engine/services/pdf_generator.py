@@ -150,41 +150,57 @@ class PDFGeneratorService:
 
         # CJK対応スタイル
         title_style = ParagraphStyle("CJKTitle", parent=styles["Title"], fontSize=18, fontName=cjk_font)
-        heading_style = ParagraphStyle(
-            "CJKHeading", parent=styles["Heading2"], fontName=cjk_font, spaceAfter=6,
-            textColor=colors.white, backColor=colors.Color(0.24, 0.25, 0.48),
-            leftIndent=8, rightIndent=8, spaceBefore=12,
+        ParagraphStyle(
+            "CJKHeading",
+            parent=styles["Heading2"],
+            fontName=cjk_font,
+            spaceAfter=6,
+            textColor=colors.white,
+            backColor=colors.Color(0.24, 0.25, 0.48),
+            leftIndent=8,
+            rightIndent=8,
+            spaceBefore=12,
         )
         subheading_style = ParagraphStyle("CJKSubHeading", parent=styles["Heading3"], fontName=cjk_font, fontSize=11)
         normal_style = ParagraphStyle(
             "CJKNormal", parent=styles["Normal"], fontName=cjk_font, spaceBefore=3, spaceAfter=3
         )
         highlight_style = ParagraphStyle(
-            "CJKHighlight", parent=normal_style,
-            backColor=colors.Color(0.90, 0.93, 1.0), textColor=colors.black,
+            "CJKHighlight",
+            parent=normal_style,
+            backColor=colors.Color(0.90, 0.93, 1.0),
+            textColor=colors.black,
         )
         warning_style = ParagraphStyle(
-            "CJKWarning", parent=normal_style,
-            backColor=colors.Color(1.0, 0.95, 0.85), textColor=colors.black,
+            "CJKWarning",
+            parent=normal_style,
+            backColor=colors.Color(1.0, 0.95, 0.85),
+            textColor=colors.black,
         )
-        prohibition_style = ParagraphStyle(
-            "CJKProhibition", parent=normal_style,
-            backColor=colors.Color(1.0, 0.90, 0.90), textColor=colors.Color(0.6, 0.0, 0.0),
+        ParagraphStyle(
+            "CJKProhibition",
+            parent=normal_style,
+            backColor=colors.Color(1.0, 0.90, 0.90),
+            textColor=colors.Color(0.6, 0.0, 0.0),
         )
 
         # セクションヘッダーを背景色付きTableとして生成するヘルパー
         def section_header(text: str, bg: Any) -> Any:
             t = Table([[text]], colWidths=[17 * cm])
-            t.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1), bg),
-                ("FONTNAME", (0, 0), (-1, -1), cjk_font),
-                ("FONTSIZE", (0, 0), (-1, -1), 13),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ]))
+            t.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, -1), bg),
+                        ("FONTNAME", (0, 0), (-1, -1), cjk_font),
+                        ("FONTSIZE", (0, 0), (-1, -1), 13),
+                        ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                        ("TOPPADDING", (0, 0), (-1, -1), 8),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ]
+                )
+            )
             return t
 
         # ========== タイトル ==========
@@ -730,9 +746,7 @@ class PDFGeneratorService:
 
         if is_signed:
             elements.append(Spacer(1, 0.2 * cm))
-            elements.append(Paragraph(
-                f"✓ 電子署名済み: {approver_name} ({signed_at_display})", highlight_style
-            ))
+            elements.append(Paragraph(f"✓ 電子署名済み: {approver_name} ({signed_at_display})", highlight_style))
 
         doc.build(elements)
         return buffer.getvalue()
@@ -776,9 +790,9 @@ class PDFGeneratorService:
             seal_text = approver_name[:2] if approver_name else "印"
             signed_badge = (
                 f'<div class="success" style="text-align:center;margin-top:15px">'
-                f'✓ 電子署名済み: {approver_name} &nbsp; {approver_date}'
+                f"✓ 電子署名済み: {approver_name} &nbsp; {approver_date}"
                 f'<div style="display:inline-block;width:80px;height:80px;border:3px solid #c53030;'
-                f'border-radius:50%;line-height:80px;text-align:center;color:#c53030;font-weight:bold;'
+                f"border-radius:50%;line-height:80px;text-align:center;color:#c53030;font-weight:bold;"
                 f'font-size:14px;margin-top:10px;margin-left:20px">{seal_text}</div></div>'
             )
         elif sig_block.get("approver_name"):

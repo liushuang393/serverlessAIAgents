@@ -25,7 +25,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     RegulatoryConsideration,
     ShuOutput,
 )
-
 from kernel import ResilientAgent
 
 

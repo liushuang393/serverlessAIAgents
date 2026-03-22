@@ -18,6 +18,9 @@ import logging
 import time
 from uuid import uuid4
 
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.contract_schemas import (
     DecisionGovResponseV1,
@@ -35,8 +38,6 @@ from apps.decision_governance_engine.services.intelligence_service import (
     IntelligenceConfig,
     IntelligenceService,
 )
-from fastapi import APIRouter
-from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger("decision_api.product_launch")

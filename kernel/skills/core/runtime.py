@@ -166,8 +166,7 @@ class SkillRuntime:
         # 動的インポート失敗時（依存の sys.modules 汚染等）はサブプロセスで再試行
         if not result.success and "No module named" in (result.error or ""):
             self._logger.info(
-                f"Direct execution failed due to import error, "
-                f"retrying via subprocess: {script_path.name}"
+                f"Direct execution failed due to import error, retrying via subprocess: {script_path.name}"
             )
             return await self._execute_subprocess(skill, script_path, input_data, effective_timeout)
 

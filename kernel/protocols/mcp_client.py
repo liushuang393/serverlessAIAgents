@@ -14,11 +14,12 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from kernel.protocols.mcp_config import MCPConfig, MCPServerConfig
 
 if TYPE_CHECKING:
-    from kernel.core.security import AuditLogger, ParameterValidator, ToolWhitelist
     from mcp import ClientSession
+
+    from kernel.core.security import AuditLogger, ParameterValidator, ToolWhitelist
+    from kernel.protocols.mcp_config import MCPConfig, MCPServerConfig
 
 # mcp パッケージの遅延インポート用モジュール変数
 # _ensure_mcp_imports() で初期化され、テストからは patch で差し替え可能
@@ -37,7 +38,7 @@ def _ensure_mcp_imports() -> None:
     Raises:
         ImportError: mcp パッケージがインストールされていない場合
     """
-    global ClientSession, StdioServerParameters, stdio_client, _mcp_imported  # noqa: PLW0603
+    global ClientSession, StdioServerParameters, stdio_client, _mcp_imported
     if _mcp_imported:
         return
     try:
@@ -49,10 +50,7 @@ def _ensure_mcp_imports() -> None:
         stdio_client = _stdio_client
         _mcp_imported = True
     except ImportError as exc:
-        msg = (
-            "mcp パッケージが必要です。"
-            " `pip install mcp` でインストールしてください。"
-        )
+        msg = "mcp パッケージが必要です。 `pip install mcp` でインストールしてください。"
         raise ImportError(msg) from exc
 
 
@@ -112,7 +110,7 @@ class MCPClient:
         self._contexts: dict[str, Any] = {}  # stdio_client コンテキストを保持
 
         # セキュリティコンポーネント（遅延インポート）
-        from kernel.core.security import (  # noqa: PLC0415
+        from kernel.core.security import (
             AuditLogger,
             ParameterValidator,
             ToolWhitelist,
@@ -414,7 +412,7 @@ class MCPClient:
         """
         return self._tools.get(tool_uri)
 
-    async def __aenter__(self) -> "MCPClient":
+    async def __aenter__(self) -> MCPClient:
         """非同期コンテキストマネージャーのエントリー."""
         await self.connect()
         return self

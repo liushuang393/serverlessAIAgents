@@ -27,8 +27,10 @@ def _make_mock_llm() -> MagicMock:
 @pytest.fixture(autouse=True)
 def _patch_get_llm():
     """全テストで get_llm をモック化し、APIキー不在エラーを回避."""
-    with patch("kernel.skills.rag.get_llm", return_value=_make_mock_llm()), \
-         patch("kernel.skills.chatbot.get_llm", return_value=_make_mock_llm()):
+    with (
+        patch("kernel.skills.rag.get_llm", return_value=_make_mock_llm()),
+        patch("kernel.skills.chatbot.get_llm", return_value=_make_mock_llm()),
+    ):
         yield
 
 

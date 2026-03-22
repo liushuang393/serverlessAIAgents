@@ -8,7 +8,6 @@ Tests cover:
 """
 
 import pytest
-
 from apps.dev_studio.wizard.models import (
     AgentSpec,
     CapabilityGap,

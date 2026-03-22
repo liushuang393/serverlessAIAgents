@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 
 from control_plane.services.agent_taxonomy import AgentTaxonomyService
 from control_plane.services.protocol_surface_inspector import inspect_protocol_surface
-
 from harness.governance.plugin_registry import PluginRegistry
 
 

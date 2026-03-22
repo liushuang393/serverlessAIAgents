@@ -10,6 +10,8 @@ import logging
 import secrets
 from typing import Any
 
+from sqlalchemy import select
+
 from shared.auth_service.db.session import get_db_session
 from shared.auth_service.models.authorization import (
     Permission,
@@ -20,7 +22,6 @@ from shared.auth_service.models.authorization import (
     UserRole,
 )
 from shared.auth_service.models.user import UserAccount
-from sqlalchemy import select
 
 
 logger = logging.getLogger(__name__)
@@ -73,13 +74,18 @@ DEFAULT_PERMISSIONS: list[dict[str, str | bool]] = [
 ROLE_PERMISSIONS_MAP: dict[str, list[str]] = {
     "admin": ["*"],
     "manager": [
-        "users:read", "roles:read",
-        "faq:read", "faq:write",
-        "analytics:read", "analytics:write",
+        "users:read",
+        "roles:read",
+        "faq:read",
+        "faq:write",
+        "analytics:read",
+        "analytics:write",
         "system:read",
     ],
     "employee": [
-        "users:read", "faq:read", "analytics:read",
+        "users:read",
+        "faq:read",
+        "analytics:read",
     ],
 }
 
@@ -139,11 +145,13 @@ async def seed_authorization() -> None:
                 perm = perm_map.get(perm_name)
                 if perm is None:
                     continue
-                session.add(RolePermission(
-                    id=_gen_id("rp"),
-                    role_id=role.id,
-                    permission_id=perm.id,
-                ))
+                session.add(
+                    RolePermission(
+                        id=_gen_id("rp"),
+                        role_id=role.id,
+                        permission_id=perm.id,
+                    )
+                )
 
         # 既存 UserAccount.role から user_roles を自動同期
         result = await session.execute(select(UserAccount))
@@ -152,12 +160,14 @@ async def seed_authorization() -> None:
             role = role_map.get(user.role)
             if role is None:
                 continue
-            session.add(UserRole(
-                id=_gen_id("ur"),
-                user_id=user.id,
-                role_id=role.id,
-                assigned_by="system",
-            ))
+            session.add(
+                UserRole(
+                    id=_gen_id("ur"),
+                    user_id=user.id,
+                    role_id=role.id,
+                    assigned_by="system",
+                )
+            )
 
         await session.commit()
         logger.info(
@@ -223,8 +233,10 @@ FAQ_RESOURCE_DEFINITIONS: list[dict[str, Any]] = [
 # ロール → 許可リソース マッピング（resource_permissions 用）
 FAQ_ROLE_RESOURCE_MAP: dict[str, list[str]] = {
     "admin": [
-        "faq__default__common", "faq__default__manager",
-        "faq__default__sales", "faq__default__employee",
+        "faq__default__common",
+        "faq__default__manager",
+        "faq__default__sales",
+        "faq__default__employee",
         "faq__default__confidential",
     ],
     "manager": ["faq__default__common", "faq__default__manager"],
@@ -239,9 +251,7 @@ async def seed_faq_resource_definitions() -> None:
     async with get_db_session() as session:
         # 既存チェック
         existing = await session.scalar(
-            select(ResourceDefinition.id).where(
-                ResourceDefinition.app_name == "faq_system"
-            ).limit(1)
+            select(ResourceDefinition.id).where(ResourceDefinition.app_name == "faq_system").limit(1)
         )
         if existing is not None:
             logger.debug("FAQ リソース定義が既に存在するためスキップ")
@@ -263,20 +273,20 @@ async def seed_faq_resource_definitions() -> None:
 
         # resource_permissions 作成
         for role_name, resource_ids in FAQ_ROLE_RESOURCE_MAP.items():
-            role = await session.scalar(
-                select(Role).where(Role.name == role_name)
-            )
+            role = await session.scalar(select(Role).where(Role.name == role_name))
             if role is None:
                 continue
             for resource_id in resource_ids:
                 level = "admin" if role_name == "admin" else "read"
-                session.add(ResourcePermission(
-                    id=_gen_id("rsp"),
-                    role_id=role.id,
-                    resource_type="vector_db",
-                    resource_id=resource_id,
-                    permission_level=level,
-                ))
+                session.add(
+                    ResourcePermission(
+                        id=_gen_id("rsp"),
+                        role_id=role.id,
+                        resource_type="vector_db",
+                        resource_id=resource_id,
+                        permission_level=level,
+                    )
+                )
 
         await session.commit()
         logger.info("FAQ リソース定義をシードしました: %d 件", len(FAQ_RESOURCE_DEFINITIONS))

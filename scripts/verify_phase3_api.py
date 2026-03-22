@@ -8,6 +8,8 @@ from pathlib import Path
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from httpx import ASGITransport, AsyncClient
+
 from control_plane.main import create_app
 from control_plane.routers.agents import init_agent_services
 from control_plane.routers.apps import init_app_services
@@ -18,7 +20,6 @@ from control_plane.services.app_discovery import AppDiscoveryService
 from control_plane.services.app_lifecycle import AppLifecycleManager
 from control_plane.services.rag_overview import RAGOverviewService
 from control_plane.services.skill_catalog import SkillCatalogService
-from httpx import ASGITransport, AsyncClient
 
 
 PASS = 0

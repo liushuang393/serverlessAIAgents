@@ -12,12 +12,13 @@ from fastapi import HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse
 
 from infrastructure.security.auth_client import AuthClient
-from infrastructure.security.auth_client.client import RemoteUser
 from shared.config.manifest import load_app_manifest_dict
 
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from infrastructure.security.auth_client.client import RemoteUser
 
 
 _T = TypeVar("_T")
@@ -32,6 +33,7 @@ _DEFAULT_AUTH_SERVICE_AUDIENCE_ENV = "AUTH_SERVICE_JWT_AUDIENCE"
 
 HTTPAuthBackend = Callable[[Request], Awaitable[_T | None] | _T | None]
 WSAuthBackend = Callable[[WebSocket], Awaitable[_T | None] | _T | None]
+
 
 @dataclass(slots=True)
 class AuthPrincipal:
@@ -301,7 +303,9 @@ class ContractAuthGuard:
 
     def _build_auth_client(self, auth: Mapping[str, Any]) -> AuthClient:
         token_policy = _mapping_or_empty(auth.get("token_policy"))
-        base_url = _clean_text(token_policy.get("auth_service_url")) or os.getenv(_DEFAULT_AUTH_SERVICE_URL_ENV, "").strip()
+        base_url = (
+            _clean_text(token_policy.get("auth_service_url")) or os.getenv(_DEFAULT_AUTH_SERVICE_URL_ENV, "").strip()
+        )
         if not base_url:
             raise HTTPException(
                 status_code=503,

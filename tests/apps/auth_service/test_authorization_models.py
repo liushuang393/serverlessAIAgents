@@ -80,18 +80,14 @@ class TestPermissionModel:
         async with get_db_session() as session:
             expected = ["*", "users:read", "users:write", "faq:read", "faq:write"]
             for perm_name in expected:
-                perm = await session.scalar(
-                    select(Permission).where(Permission.name == perm_name)
-                )
+                perm = await session.scalar(select(Permission).where(Permission.name == perm_name))
                 assert perm is not None, f"{perm_name} パーミッションが存在しません"
 
     async def test_permission_has_resource_type(self) -> None:
         """パーミッションにリソース種別が設定されている."""
         await ensure_database_ready()
         async with get_db_session() as session:
-            perm = await session.scalar(
-                select(Permission).where(Permission.name == "users:read")
-            )
+            perm = await session.scalar(select(Permission).where(Permission.name == "users:read"))
             assert perm is not None
             assert perm.resource_type == "users"
             assert perm.action == "read"
@@ -141,9 +137,7 @@ class TestUserRoleModel:
         await ensure_database_ready()
         async with get_db_session() as session:
             # admin ユーザー
-            admin_account = await session.scalar(
-                select(UserAccount).where(UserAccount.username == "admin")
-            )
+            admin_account = await session.scalar(select(UserAccount).where(UserAccount.username == "admin"))
             assert admin_account is not None
             result = await session.execute(
                 select(Role.name)

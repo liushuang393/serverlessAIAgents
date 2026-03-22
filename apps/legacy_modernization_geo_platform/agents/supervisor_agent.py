@@ -8,7 +8,6 @@ from apps.legacy_modernization_geo_platform.agents._models import (
     SupervisorInput,
     SupervisorOutput,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 

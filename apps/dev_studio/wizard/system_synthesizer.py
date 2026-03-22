@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
-from infrastructure.llm.providers import get_llm
 from apps.dev_studio.wizard.models import (
     AgentSpec,
     CapabilityGap,
@@ -26,6 +25,7 @@ from apps.dev_studio.wizard.models import (
     ValidationStatus,
 )
 from apps.dev_studio.wizard.test_synthesizer import TestSynthesizer
+from infrastructure.llm.providers import get_llm
 
 
 class SystemSynthesizer:

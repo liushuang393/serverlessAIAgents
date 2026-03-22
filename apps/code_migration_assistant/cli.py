@@ -231,18 +231,11 @@ def _load_cobol_modules(source_path: Path) -> tuple[dict[str, str], list[str]]:
 
 
 def _is_backlog_completed(state: Any) -> bool:
-    return all(
-        task.status in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED}
-        for task in state.tasks
-    )
+    return all(task.status in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED} for task in state.tasks)
 
 
 def _remaining_tasks(state: Any) -> int:
-    return sum(
-        1
-        for task in state.tasks
-        if task.status not in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED}
-    )
+    return sum(1 for task in state.tasks if task.status not in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED})
 
 
 async def run_contract_payload(
@@ -655,9 +648,7 @@ async def run_contract_payload(
         "run_id": run_id,
         "task_id": run_id,
         "session_id": session_id,
-        "session_status": (
-            SessionStatus.BACKLOG_COMPLETED.value if backlog_completed else session_status.value
-        ),
+        "session_status": (SessionStatus.BACKLOG_COMPLETED.value if backlog_completed else session_status.value),
         "dispatched_task": {
             "task_id": dispatched.task_id,
             "module": dispatched.module,
@@ -669,9 +660,7 @@ async def run_contract_payload(
         "evidence_root": str(backlog_store.evidence_root),
         "output_dir": str(run_output_dir),
         "backlog_completed": backlog_completed,
-        "decision": stage_decision or (
-            "PASSED" if backlog_completed else session_status.value.upper()
-        ),
+        "decision": stage_decision or ("PASSED" if backlog_completed else session_status.value.upper()),
         "artifact_paths": stage_result.get("artifact_paths", {}),
         "corrections": corrections,
         "error": stage_result.get("error"),
@@ -726,7 +715,9 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
         "is_acceptable": bool(last_summary.get("backlog_completed", False)),
         "java_code": java_code,
         "feedback": [],
-        "errors": [] if last_summary.get("backlog_completed", False) else [str(last_summary.get("error", "migration failed"))],
+        "errors": []
+        if last_summary.get("backlog_completed", False)
+        else [str(last_summary.get("error", "migration failed"))],
     }
 
 

@@ -11,6 +11,10 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from control_plane.deploy.targets.aws_lambda import AWSLambdaTarget
+from control_plane.deploy.targets.docker import DockerTarget
+from control_plane.deploy.targets.github_actions import GitHubActionsTarget
+from control_plane.deploy.targets.vercel import VercelTarget
 from kernel.core.interfaces import (
     ConfigField,
     DeployConfig,
@@ -21,10 +25,6 @@ from kernel.core.interfaces import (
     IDeployExecutor,
     ValidationResult,
 )
-from control_plane.deploy.targets.aws_lambda import AWSLambdaTarget
-from control_plane.deploy.targets.docker import DockerTarget
-from control_plane.deploy.targets.github_actions import GitHubActionsTarget
-from control_plane.deploy.targets.vercel import VercelTarget
 
 
 if TYPE_CHECKING:

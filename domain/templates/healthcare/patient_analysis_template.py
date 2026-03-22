@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """患者データ分析Agentテンプレート.
 
 患者データの分析を行うAgentテンプレート。
@@ -18,7 +17,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.templates.template_helpers import extract_json_payload
-from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -27,6 +25,8 @@ from kernel.templates.base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+from kernel.templates.template_runtime import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -71,9 +71,7 @@ class PatientAnalysisOutput(BaseModel):
     follow_up_actions: list[str] = Field(default_factory=list)
 
 
-class PatientAnalysisAgent(
-    ResilientAgent[PatientAnalysisInput, PatientAnalysisOutput]
-):
+class PatientAnalysisAgent(ResilientAgent[PatientAnalysisInput, PatientAnalysisOutput]):
     """患者データ分析Agent."""
 
     name = "PatientAnalysisAgent"
@@ -102,17 +100,13 @@ JSON形式で以下を出力:
         """入力をパース."""
         return PatientAnalysisInput(**input_data)
 
-    async def process(
-        self, input_data: PatientAnalysisInput
-    ) -> PatientAnalysisOutput:
+    async def process(self, input_data: PatientAnalysisInput) -> PatientAnalysisOutput:
         """患者データ分析を実行."""
         if self._llm:
             return await self._analyze_with_llm(input_data)
         return self._analyze_rule_based(input_data)
 
-    async def _analyze_with_llm(
-        self, input_data: PatientAnalysisInput
-    ) -> PatientAnalysisOutput:
+    async def _analyze_with_llm(self, input_data: PatientAnalysisInput) -> PatientAnalysisOutput:
         """LLMを使用した患者データ分析."""
 
         prompt = f"""以下の患者データを分析してください：
@@ -129,9 +123,7 @@ JSON形式で以下を出力:
             return PatientAnalysisOutput(**data)
         return self._analyze_rule_based(input_data)
 
-    def _analyze_rule_based(
-        self, input_data: PatientAnalysisInput
-    ) -> PatientAnalysisOutput:
+    def _analyze_rule_based(self, input_data: PatientAnalysisInput) -> PatientAnalysisOutput:
         """ルールベースの患者データ分析."""
         return PatientAnalysisOutput(
             patient_id=input_data.patient_id,

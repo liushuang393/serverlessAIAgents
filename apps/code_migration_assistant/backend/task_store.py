@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Task store abstractions for backend runtime state."""
 
 from __future__ import annotations
@@ -10,7 +9,8 @@ import logging
 import threading
 import uuid
 from collections.abc import AsyncIterator, Callable
-from typing import Any, Generic, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar
+
 
 T = TypeVar("T")
 
@@ -36,7 +36,7 @@ class TaskStore(Protocol[T]):
         """Expose dictionary view for compatibility."""
 
 
-class InMemoryTaskStore(Generic[T]):
+class InMemoryTaskStore[T]:
     """In-memory default store implementation."""
 
     def __init__(self) -> None:
@@ -66,7 +66,7 @@ class InMemoryTaskStore(Generic[T]):
 RedisClientFactory = Callable[[], Any]
 
 
-class RedisTaskStore(Generic[T]):
+class RedisTaskStore[T]:
     """Redis-backed distributed task state + event store."""
 
     def __init__(
@@ -121,7 +121,7 @@ class RedisTaskStore(Generic[T]):
                 self._connected = True
                 logger.info("RedisTaskStore connected: %s", self._redis_url)
                 return True
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.warning("RedisTaskStore connection failed", exc_info=True)
                 self._client = None
                 self._connected = False
@@ -151,7 +151,7 @@ class RedisTaskStore(Generic[T]):
                 await client.setex(key, self._state_ttl_seconds, payload)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
 
@@ -167,7 +167,7 @@ class RedisTaskStore(Generic[T]):
             raw = await client.get(key)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
         if raw is None:
@@ -188,7 +188,7 @@ class RedisTaskStore(Generic[T]):
                 await client.delete(key)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
         return previous
@@ -204,7 +204,7 @@ class RedisTaskStore(Generic[T]):
             await client.expire(key, self._state_ttl_seconds)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
 
@@ -217,7 +217,7 @@ class RedisTaskStore(Generic[T]):
             raw_events = await client.lrange(key, 0, safe_limit - 1)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
         normalized: list[dict[str, Any]] = []
@@ -244,7 +244,7 @@ class RedisTaskStore(Generic[T]):
             await client.publish(self.event_channel, json.dumps(payload, ensure_ascii=False))
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
 
@@ -255,7 +255,7 @@ class RedisTaskStore(Generic[T]):
             await client.publish(self.command_channel, json.dumps(command, ensure_ascii=False))
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
 
@@ -268,7 +268,7 @@ class RedisTaskStore(Generic[T]):
             await client.setex(key, self._state_ttl_seconds, payload)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
 
@@ -283,7 +283,7 @@ class RedisTaskStore(Generic[T]):
             await client.delete(key)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001
+        except Exception:
             await self._mark_disconnected(client)
             raise
 
@@ -314,7 +314,7 @@ class RedisTaskStore(Generic[T]):
                     message = await pubsub.get_message(timeout=1.0)
                 except asyncio.CancelledError:
                     raise
-                except Exception:  # noqa: BLE001
+                except Exception:
                     await self._mark_disconnected(client)
                     raise
                 if message is None:
@@ -334,11 +334,11 @@ class RedisTaskStore(Generic[T]):
         finally:
             try:
                 await pubsub.unsubscribe(channel)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("Redis pubsub unsubscribe failed", exc_info=True)
             try:
                 await pubsub.close()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("Redis pubsub close failed", exc_info=True)
 
     def _create_client(self) -> Any:
@@ -367,7 +367,7 @@ class RedisTaskStore(Generic[T]):
             self._connected = False
         try:
             await client.close()
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("Redis client close failed during disconnect mark", exc_info=True)
 
     def _state_key(self, task_id: str) -> str:

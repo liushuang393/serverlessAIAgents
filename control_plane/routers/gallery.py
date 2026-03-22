@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from control_plane.engine import PlatformEngine
 from control_plane.schemas.gallery_schemas import (
     FeaturedResponse,
@@ -19,7 +21,6 @@ from control_plane.schemas.gallery_schemas import (
     GallerySearchRequest,
     GallerySearchResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query
 
 
 router = APIRouter(prefix="/api/studios/framework/gallery", tags=["gallery"])

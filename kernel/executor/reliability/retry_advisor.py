@@ -76,9 +76,7 @@ class RetryAdvisor:
                 reason="input schema validation failed",
             )
 
-        agent_output_validation_error = importlib.import_module(
-            "kernel.core.exceptions"
-        ).AgentOutputValidationError
+        agent_output_validation_error = importlib.import_module("kernel.core.exceptions").AgentOutputValidationError
         if isinstance(error, agent_output_validation_error):
             return RetryAdvice(
                 action=RetryAction.REPAIR,

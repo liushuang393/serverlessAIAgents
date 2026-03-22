@@ -5,13 +5,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from shared.memory.memory_distiller import MemoryDistiller
 from infrastructure.memory.types import (
     MemoryEntry,
     MemorySemanticLevel,
     MemoryStability,
     MemoryType,
 )
+from shared.memory.memory_distiller import MemoryDistiller
 
 
 class TestMemoryDistiller:

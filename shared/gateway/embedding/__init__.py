@@ -4,4 +4,3 @@ from shared.gateway.embedding.service import SharedEmbeddingGateway
 
 
 __all__ = ["SharedEmbeddingGateway"]
-

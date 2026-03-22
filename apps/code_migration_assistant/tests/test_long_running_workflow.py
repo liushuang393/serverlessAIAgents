@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+from apps.code_migration_assistant import cli
 from apps.code_migration_assistant.workflow.backlog_models import (
     BacklogTaskStatus,
     ImmutableTaskFields,
@@ -15,8 +17,6 @@ from apps.code_migration_assistant.workflow.backlog_store import BacklogStore
 from apps.code_migration_assistant.workflow.dispatcher import BacklogDispatcher
 from apps.code_migration_assistant.workflow.evidence_gate import EvidenceGate
 from apps.code_migration_assistant.workflow.preflight import PreflightCheck, PreflightReport
-
-from apps.code_migration_assistant import cli
 
 
 def _write_sample_cobol(path: Path) -> None:

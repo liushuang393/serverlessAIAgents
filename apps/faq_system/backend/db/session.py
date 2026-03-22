@@ -10,10 +10,10 @@ from __future__ import annotations
 import asyncio
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.db.models import Base
-
 from infrastructure.database import DatabaseConfig, DatabaseManager
 
 
@@ -28,11 +28,10 @@ if TYPE_CHECKING:
 # 環境変数ヘルパー
 # ---------------------------------------------------------------------------
 
-_FAQ_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_FAQ_DATA_DIR = os.path.join(_FAQ_BASE_DIR, "data")
-_FAQ_DB_PATH = os.path.join(_FAQ_DATA_DIR, "faq_system.db")
+_FAQ_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+_FAQ_DATA_DIR = _FAQ_BASE_DIR / "data"
+_FAQ_DB_PATH = _FAQ_DATA_DIR / "faq_system.db"
 _FAQ_DEFAULT_URL = f"sqlite+aiosqlite:///{_FAQ_DB_PATH}"
-
 
 
 def _sqlite_sync_mode_enabled() -> bool:

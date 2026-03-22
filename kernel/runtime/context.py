@@ -21,6 +21,7 @@ from contracts.runtime.context import (
     set_runtime_context,
 )
 
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -70,7 +71,7 @@ def resolve_settings(context: RuntimeContext | None = None) -> AgentFlowSettings
     """Resolve settings using runtime context override if provided."""
     if context is not None and context.settings is not None:
         return context.settings
-    from infrastructure.config import get_settings  # noqa: WPS433 — 循環回避
+    from infrastructure.config import get_settings
 
     return get_settings()
 

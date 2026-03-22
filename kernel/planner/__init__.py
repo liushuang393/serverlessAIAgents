@@ -9,12 +9,12 @@ from kernel.planner.service import (
     StepType,
 )
 
+
 __all__ = [
     "ExecutionPlan",
+    "PlanStep",
     "PlannerAgent",
     "PlannerConfig",
-    "PlanStep",
     "StepStatus",
     "StepType",
 ]
-

@@ -20,7 +20,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     Irreversibility,
     IrreversibilityLevel,
 )
-
 from kernel import ResilientAgent
 from kernel.core.exceptions import AgentOutputValidationError
 

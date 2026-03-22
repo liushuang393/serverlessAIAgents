@@ -324,11 +324,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                             "author": news_article.get("author", "Unknown"),
                             "is_breakthrough": is_breakthrough,
                             "language": news_article.get("language", "en"),
-                            **(
-                                news_article.get("metadata")
-                                if isinstance(news_article.get("metadata"), dict)
-                                else {}
-                            ),
+                            **(news_article.get("metadata") if isinstance(news_article.get("metadata"), dict) else {}),
                         },
                     )
                     articles.append(article)

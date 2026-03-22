@@ -1,12 +1,14 @@
-# -*- coding: utf-8 -*-
 """Transformation reflection loop helpers."""
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.code_migration_assistant.workflow.models import TransformationIterationRecord
+
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 
 async def run_reflection_loop(

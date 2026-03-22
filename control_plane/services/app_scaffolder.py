@@ -613,7 +613,6 @@ class AppScaffolderService:
         (app_dir / "prompts").mkdir(parents=True, exist_ok=False)
         (app_dir / "data").mkdir(parents=True, exist_ok=True)
 
-
         self._write_file(app_dir / "__init__.py", "", created)
         self._write_file(
             app_dir / "agents" / "__init__.py",
@@ -795,7 +794,9 @@ class AppScaffolderService:
             seen_names.add(clean_name)
 
             module_name = AppScaffolderService._to_snake(clean_name)
-            normalized_agent_type = self._taxonomy.normalize_agent_type(item.agent_type) or self._taxonomy.normalize_agent_type(
+            normalized_agent_type = self._taxonomy.normalize_agent_type(
+                item.agent_type
+            ) or self._taxonomy.normalize_agent_type(
                 item.role,
             )
             resolved_agent_type = normalized_agent_type or "specialist"

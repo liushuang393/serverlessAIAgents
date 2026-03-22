@@ -53,15 +53,15 @@ class Prediction:
     """
 
     id: str
-    statement: str                           # 予測内容
-    target_date: date                        # 予測対象日
-    confidence: float                        # 予測時信頼度 (0-1)
-    claim_id: str | None = None              # 関連主張ID
+    statement: str  # 予測内容
+    target_date: date  # 予測対象日
+    confidence: float  # 予測時信頼度 (0-1)
+    claim_id: str | None = None  # 関連主張ID
     created_at: datetime = field(default_factory=datetime.now)
     status: PredictionStatus = PredictionStatus.PENDING
-    actual_outcome: str | None = None        # 実際の結果
-    review_note: str | None = None           # レビューメモ
-    reviewed_at: datetime | None = None      # レビュー日時
+    actual_outcome: str | None = None  # 実際の結果
+    review_note: str | None = None  # レビューメモ
+    reviewed_at: datetime | None = None  # レビュー日時
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -76,9 +76,7 @@ class Prediction:
             "status": self.status.value,
             "actual_outcome": self.actual_outcome,
             "review_note": self.review_note,
-            "reviewed_at": (
-                self.reviewed_at.isoformat() if self.reviewed_at else None
-            ),
+            "reviewed_at": (self.reviewed_at.isoformat() if self.reviewed_at else None),
             "metadata": self.metadata,
         }
 
@@ -163,12 +161,8 @@ class PredictionAccuracy:
             "incorrect_count": self.incorrect_count,
             "pending_count": self.pending_count,
             "accuracy_rate": self.accuracy_rate,
-            "period_start": (
-                self.period_start.isoformat() if self.period_start else None
-            ),
-            "period_end": (
-                self.period_end.isoformat() if self.period_end else None
-            ),
+            "period_start": (self.period_start.isoformat() if self.period_start else None),
+            "period_end": (self.period_end.isoformat() if self.period_end else None),
         }
 
 

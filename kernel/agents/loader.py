@@ -7,15 +7,17 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from kernel.core.exceptions import AgentBlockValidationError
-from kernel.core.metadata import AgentMetadata
 from kernel.core.schemas import SchemaLoader
 
+
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from kernel.agents.agent_block import AgentBlock
+    from kernel.core.metadata import AgentMetadata
 
 
 class AgentLoader:

@@ -3,6 +3,7 @@
 各 App はこのクラスを使ってリソース登録・一覧・削除を行う。
 auth_service への HTTP 呼び出しを隠蔽し、他 App でも再利用可能。
 """
+
 from __future__ import annotations
 
 import logging

@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import importlib
-from types import ModuleType
+from typing import TYPE_CHECKING
 
 from kernel.skills.builtin._compat import register_submodule_alias
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
 
 register_submodule_alias(
     "kernel.skills.builtin.knowledge_qa",

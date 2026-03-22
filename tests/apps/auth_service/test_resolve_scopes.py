@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
-import httpx
+from typing import TYPE_CHECKING
+
 import pytest
+
+
+if TYPE_CHECKING:
+    import httpx
 
 
 @pytest.fixture

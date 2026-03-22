@@ -197,9 +197,9 @@ class TestA2UIEmitter:
 
         assert len(agui_emitter.events) == 1
         event = agui_emitter.events[0]
-        assert getattr(event, "event_type") == AGUIEventType.A2UI_COMPONENT
-        assert getattr(event, "surface_id") == "approval"
-        assert getattr(event, "component")["type"] == "card"
+        assert event.event_type == AGUIEventType.A2UI_COMPONENT
+        assert event.surface_id == "approval"
+        assert event.component["type"] == "card"
 
     @pytest.mark.asyncio
     async def test_emit_update_and_clear_use_typed_agui_events(self) -> None:
@@ -225,7 +225,7 @@ class TestA2UIEmitter:
 
         assert len(agui_emitter.events) == 2
         update_event, clear_event = agui_emitter.events
-        assert getattr(update_event, "event_type") == AGUIEventType.A2UI_UPDATE
-        assert getattr(update_event, "component_id") == "draft-card"
-        assert getattr(clear_event, "event_type") == AGUIEventType.A2UI_CLEAR
-        assert getattr(clear_event, "surface_id") == "content"
+        assert update_event.event_type == AGUIEventType.A2UI_UPDATE
+        assert update_event.component_id == "draft-card"
+        assert clear_event.event_type == AGUIEventType.A2UI_CLEAR
+        assert clear_event.surface_id == "content"

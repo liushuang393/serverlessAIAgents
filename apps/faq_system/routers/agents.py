@@ -15,6 +15,9 @@ import os
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+
 from apps.faq_system.backend.agents import (
     AnalyticsAgent,
     AnalyticsConfig,
@@ -32,9 +35,6 @@ from apps.faq_system.routers.dependencies import (
     create_faq_app_agent,
     resolve_default_collection,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-
 from kernel.protocols.a2a_hub import get_hub
 
 

@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from kernel.agents.agent_factory import (
+    AgentFactory,
     AgentFactorySpec,
     AgentSharedContext,
-    AgentFactory,
     TieredMemory,
     create,
 )
 from kernel.protocols.a2a_hub import LocalA2AHub
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class InjectedAgent:

@@ -307,7 +307,7 @@ class SQLAlchemyDBProvider:
             return "mysql"
         if lowered.startswith("sqlite"):
             return "sqlite"
-        if lowered.startswith("mssql") or lowered.startswith("sqlserver"):
+        if lowered.startswith(("mssql", "sqlserver")):
             return "mssql"
         parsed = urlparse(url)
         return (parsed.scheme or "").split("+", 1)[0].lower()
@@ -354,7 +354,6 @@ class SQLAlchemyDBProvider:
         limit: int | None = None,
     ) -> list[dict[str, Any]]:
         """テーブルからデータを取得."""
-        from sqlalchemy import text
 
         table_name = self._validate_identifier(table)
         safe_columns = "*"
@@ -381,8 +380,7 @@ class SQLAlchemyDBProvider:
                 limit_clause = f" LIMIT {limit}"
 
         sql = f"SELECT {safe_columns} FROM {table_name}{where_clause}{limit_clause}"
-        rows = await self._execute_text_rows(sql, params)
-        return rows
+        return await self._execute_text_rows(sql, params)
 
     async def insert(self, table: str, data: dict[str, Any]) -> dict[str, Any]:
         """テーブルへ1行挿入."""

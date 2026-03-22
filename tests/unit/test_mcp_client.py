@@ -8,6 +8,7 @@ import kernel.protocols.mcp_client as _mcp_mod
 from kernel.protocols.mcp_client import MCPClient
 from kernel.protocols.mcp_config import MCPConfig, MCPServerConfig
 
+
 # テスト環境で mcp パッケージの遅延インポートを事前に完了させる。
 # これにより @patch でモジュール変数を差し替えた後、
 # _ensure_mcp_imports() が本物のクラスで上書きすることを防止する。
@@ -550,7 +551,6 @@ class TestMCPClient:
         assert definitions[0]["function"]["description"] == ""
 
 
-
 class TestMCPLazyImport:
     """MCP遅延インポートのテスト."""
 
@@ -561,7 +561,6 @@ class TestMCPLazyImport:
         モジュールのインポート時点では mcp は不要。
         """
         import importlib
-        import sys
 
         # mcp_client モジュールを再ロードしてインポートエラーが出ないことを確認
         # (mcp パッケージ自体はテスト環境にあるため、実際の ImportError は起きないが
@@ -574,22 +573,22 @@ class TestMCPLazyImport:
         from kernel import protocols
 
         # __getattr__ 経由で取得
-        client_cls = getattr(protocols, "MCPClient")
+        client_cls = protocols.MCPClient
         assert client_cls.__name__ == "MCPClient"
 
     def test_protocols_init_lazy_imports_lazy_mcp_client(self):
         """LazyMCPClient が遅延インポートで取得できることを検証."""
         from kernel import protocols
 
-        lazy_cls = getattr(protocols, "LazyMCPClient")
+        lazy_cls = protocols.LazyMCPClient
         assert lazy_cls.__name__ == "LazyMCPClient"
 
     def test_protocols_init_lazy_imports_tool_index_entry(self):
         """ToolIndexEntry/ToolSearchResult が遅延インポートで取得できることを検証."""
         from kernel import protocols
 
-        entry_cls = getattr(protocols, "ToolIndexEntry")
-        result_cls = getattr(protocols, "ToolSearchResult")
+        entry_cls = protocols.ToolIndexEntry
+        result_cls = protocols.ToolSearchResult
         assert entry_cls.__name__ == "ToolIndexEntry"
         assert result_cls.__name__ == "ToolSearchResult"
 
@@ -598,4 +597,4 @@ class TestMCPLazyImport:
         from kernel import protocols
 
         with pytest.raises(AttributeError, match="has no attribute"):
-            getattr(protocols, "NonExistentClass")
+            protocols.NonExistentClass  # noqa: B018

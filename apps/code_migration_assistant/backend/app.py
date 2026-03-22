@@ -10,16 +10,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from apps.code_migration_assistant.backend.knowledge_router import router as knowledge_router
-from apps.code_migration_assistant.backend.migration_router import router as migration_ui_router
-from apps.code_migration_assistant.backend.task_store import RedisTaskStore
-from apps.code_migration_assistant.engine import CodeMigrationEngine
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
+from apps.code_migration_assistant.backend.knowledge_router import router as knowledge_router
+from apps.code_migration_assistant.backend.migration_router import router as migration_ui_router
+from apps.code_migration_assistant.backend.task_store import RedisTaskStore
+from apps.code_migration_assistant.engine import CodeMigrationEngine
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from shared.config.manifest import load_app_manifest
 
@@ -755,7 +755,6 @@ async def _init_knowledge_managers() -> None:
             init_knowledge_db,
         )
         from apps.code_migration_assistant.backend.knowledge_router import init_managers
-
         from shared.rag.collection_manager import CollectionManager
         from shared.rag.document_manager import DocumentManager
 

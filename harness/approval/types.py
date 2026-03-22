@@ -10,8 +10,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from pydantic import BaseModel, Field
+
+from contracts.policy import ApprovalRequest as ContractApprovalRequest
 
 
 class InterruptType(str, Enum):

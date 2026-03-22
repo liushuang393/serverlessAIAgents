@@ -26,9 +26,7 @@ class TemplateMetadata(BaseModel):
     category: str = Field(..., description="カテゴリ")
     author: str = Field(..., description="作成者")
     version: str = Field(..., description="バージョン")
-    parameters: list[TemplateParameter] = Field(
-        default_factory=list, description="カスタマイズパラメーター"
-    )
+    parameters: list[TemplateParameter] = Field(default_factory=list, description="カスタマイズパラメーター")
 
 
 class TemplateParameter(BaseModel):

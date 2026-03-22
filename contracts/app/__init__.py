@@ -11,12 +11,12 @@ from contracts.app.contracts import (
     DeploymentSpec,
     EntryPointsConfig,
     EvolutionConfig,
-    PluginBinding,
     PortsConfig,
     ReleaseContractConfig,
     RuntimeConfig,
     VisibilityConfig,
 )
+from contracts.plugin import PluginBinding
 
 
 __all__ = [

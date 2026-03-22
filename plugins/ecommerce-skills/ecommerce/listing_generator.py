@@ -187,7 +187,7 @@ class ListingGenerator(AgentBlock):
     def _extract_keywords(
         self,
         product_info: dict[str, Any],
-        competitor_data: dict[str, Any] | None,
+        competitor_data: dict[str, Any] | None,  # noqa: ARG002
     ) -> list[str]:
         """キーワードを抽出."""
         keywords: list[str] = []
@@ -250,8 +250,8 @@ class ListingGenerator(AgentBlock):
     async def _generate_bullet_points(
         self,
         product_info: dict[str, Any],
-        keywords: list[str],
-        platform: str,
+        keywords: list[str],  # noqa: ARG002
+        platform: str,  # noqa: ARG002
     ) -> list[str]:
         """箇条書きを生成."""
         features = product_info.get("features", [])
@@ -277,7 +277,7 @@ class ListingGenerator(AgentBlock):
         self,
         product_info: dict[str, Any],
         keywords: list[str],
-        platform: str,
+        platform: str,  # noqa: ARG002
     ) -> str:
         """説明文を生成."""
         if self._llm_client:

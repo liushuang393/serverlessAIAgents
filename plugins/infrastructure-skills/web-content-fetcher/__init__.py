@@ -1,1 +1,1 @@
-"""web-content-fetcher スキル."""
+"""web-content-fetcher スキル."""  # noqa: N999

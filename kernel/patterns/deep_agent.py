@@ -38,12 +38,12 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from infrastructure.tool_provider import RegisteredTool, ToolProvider
 from kernel.agents.agent_block import AgentBlock
 from kernel.patterns.coordinator import CoordinationPattern, CoordinatorBase
 from kernel.patterns.shared_context import SharedContext
 from kernel.protocols.mcp_client import MCPClient
 from kernel.protocols.mcp_lazy_client import LazyMCPClient, ToolSearchResult
-from infrastructure.tool_provider import RegisteredTool, ToolProvider
 from kernel.skills import Skill, SkillRegistry
 from kernel.skills.engine import SkillEngine
 

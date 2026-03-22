@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from control_plane.services.llm_management_config_store import LLMConfigStore
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_load_creates_default_config(tmp_path: Path) -> None:

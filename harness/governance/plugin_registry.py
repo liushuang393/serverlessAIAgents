@@ -15,16 +15,21 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel, Field
+
 from contracts.plugin import (
     PluginBinding as ContractPluginBinding,
+)
+from contracts.plugin import (
     PluginDescriptor,
+)
+from contracts.plugin import (
     PluginRuntimeAssessment as ContractPluginRuntimeAssessment,
 )
 from harness.governance.plugin_signature import (
     PluginSignatureVerifier,
     SignatureStatus,
 )
-from pydantic import BaseModel, Field
 from shared.config.manifest import load_app_manifest
 
 
@@ -110,12 +115,7 @@ class PluginManifestLoader:
             plugin_version = PluginRegistry._normalize_optional_text(raw.get("version"))
             risk_tier = PluginRegistry._normalize_optional_text(raw.get("risk_tier"))
             compatibility = raw.get("compatibility")
-            if (
-                plugin_id is None
-                or plugin_version is None
-                or risk_tier is None
-                or not isinstance(compatibility, dict)
-            ):
+            if plugin_id is None or plugin_version is None or risk_tier is None or not isinstance(compatibility, dict):
                 _logger.warning("plugin manifest missing required fields: %s", manifest_path)
                 return None
 
@@ -170,7 +170,7 @@ class AppBindingResolver:
         except Exception as exc:
             _logger.warning("app manifest load failed (%s): %s", config_path, exc)
             return None
- 
+
 
 class PluginPolicyEvaluator:
     """Encapsulate runtime policy checks for plugin manifests and bindings."""
@@ -192,9 +192,7 @@ class PluginPolicyEvaluator:
         assessment.plugin_signature_status = manifest.signature_status
         assessment.plugin_signature_reason = manifest.signature_reason
         if manifest.signature_status != "verified":
-            message = (
-                f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}"
-            )
+            message = f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}"
             if self._signature_enforcement == "deny":
                 assessment.errors.append(message)
             else:
@@ -204,9 +202,7 @@ class PluginPolicyEvaluator:
             manifest.raw.get("required_permissions")
         )
         missing_permissions = [
-            permission
-            for permission in assessment.manifest_required_permissions
-            if permission not in tool_permissions
+            permission for permission in assessment.manifest_required_permissions if permission not in tool_permissions
         ]
         if missing_permissions:
             self._add_violation(
@@ -232,10 +228,7 @@ class PluginPolicyEvaluator:
                 ),
             )
 
-        if (
-            manifest.compatibility_product_lines
-            and assessment.product_line not in manifest.compatibility_product_lines
-        ):
+        if manifest.compatibility_product_lines and assessment.product_line not in manifest.compatibility_product_lines:
             self._add_violation(
                 assessment,
                 f"plugin '{manifest.id}' は product_line={manifest.compatibility_product_lines} のみ対応です",

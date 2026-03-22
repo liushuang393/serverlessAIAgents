@@ -7,10 +7,16 @@ import os
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Iterator
+from typing import TYPE_CHECKING
 
 import yaml
+
 from infrastructure.llm.gateway import LLMGatewayConfig, load_gateway_config
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 
 try:
     import fcntl
@@ -33,8 +39,7 @@ class LLMConfigStore:
     def load(self) -> LLMGatewayConfig:
         """Load config from disk (creates default when missing)."""
         with self._lock(exclusive=True):
-            config = load_gateway_config(self._config_path)
-        return config
+            return load_gateway_config(self._config_path)
 
     def load_with_version(self) -> tuple[LLMGatewayConfig, str | None]:
         """Load config and current version digest."""
@@ -65,7 +70,7 @@ class LLMConfigStore:
                 os.fsync(temp.fileno())
                 temp_path = Path(temp.name)
 
-            os.replace(temp_path, self._config_path)
+            temp_path.replace(self._config_path)
             version = self._file_version()
         return version or ""
 

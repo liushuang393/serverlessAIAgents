@@ -4,6 +4,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from apps.decision_governance_engine.agents.shu_agent import ShuAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ActionPhase,

@@ -162,9 +162,7 @@ class MigrationEngine:
             # パイプラインからのステージ進捗イベントをリアルタイムで yield
             while True:
                 try:
-                    stage_event = await asyncio.wait_for(
-                        stage_event_queue.get(), timeout=300.0
-                    )
+                    stage_event = await asyncio.wait_for(stage_event_queue.get(), timeout=300.0)
                 except TimeoutError:
                     logger.warning("ステージイベント待機タイムアウト")
                     break
@@ -292,9 +290,7 @@ class MigrationEngine:
 
         while True:
             try:
-                stage_event = await asyncio.wait_for(
-                    stage_event_queue.get(), timeout=300.0
-                )
+                stage_event = await asyncio.wait_for(stage_event_queue.get(), timeout=300.0)
             except TimeoutError:
                 logger.warning("ステージイベント待機タイムアウト")
                 break
@@ -365,11 +361,13 @@ class MigrationEngine:
 
                 logger.info("[%s] %s 開始", stage, program_name)
 
-                await event_queue.put(SSEEvent(
-                    event_type="stage_start",
-                    stage=stage,
-                    data={"message": f"{stage} 実行中...", "program": program_name},
-                ))
+                await event_queue.put(
+                    SSEEvent(
+                        event_type="stage_start",
+                        stage=stage,
+                        data={"message": f"{stage} 実行中...", "program": program_name},
+                    )
+                )
 
                 prompt = self._build_prompt(
                     stage=stage,
@@ -418,17 +416,19 @@ class MigrationEngine:
                         if stage == "analyzer"
                         else "設計内容に外部システムへの依存があります。変換を進める前に確認してください。"
                     )
-                    await event_queue.put(SSEEvent(
-                        event_type="hitl_required",
-                        stage=stage,
-                        data={
-                            "request_id": hitl_request_id,
-                            "artifact": stage_data,
-                            "unknowns": stage_data.get("unknowns", []),
-                            "question": question,
-                        },
-                        _hitl_event=hitl_ev,
-                    ))
+                    await event_queue.put(
+                        SSEEvent(
+                            event_type="hitl_required",
+                            stage=stage,
+                            data={
+                                "request_id": hitl_request_id,
+                                "artifact": stage_data,
+                                "unknowns": stage_data.get("unknowns", []),
+                                "question": question,
+                            },
+                            _hitl_event=hitl_ev,
+                        )
+                    )
                     # ルーターがHITLを受け取り、応答するまで待機
                     await hitl_ev.wait()
 
@@ -465,12 +465,14 @@ class MigrationEngine:
         result_text = ""
 
         if ClaudeAgentOptions is None or query is None:
-            return json.dumps({
-                "error": "claude_agent_sdk がインストールされていません",
-                "stage": stage,
-                "decision": "ENV_ISSUE",
-                "reason": "claude_agent_sdk not installed",
-            })
+            return json.dumps(
+                {
+                    "error": "claude_agent_sdk がインストールされていません",
+                    "stage": stage,
+                    "decision": "ENV_ISSUE",
+                    "reason": "claude_agent_sdk not installed",
+                }
+            )
 
         options = ClaudeAgentOptions(
             allowed_tools=agent_def.tools,
@@ -486,12 +488,14 @@ class MigrationEngine:
                     result_text = message.result or ""
         except Exception as exc:
             logger.exception("[%s] エージェント実行エラー: %s", stage, exc)
-            result_text = json.dumps({
-                "error": str(exc),
-                "stage": stage,
-                "decision": "ENV_ISSUE",
-                "reason": f"エージェント実行エラー: {exc}",
-            })
+            result_text = json.dumps(
+                {
+                    "error": str(exc),
+                    "stage": stage,
+                    "decision": "ENV_ISSUE",
+                    "reason": f"エージェント実行エラー: {exc}",
+                }
+            )
 
         return result_text
 
@@ -537,7 +541,8 @@ class MigrationEngine:
         cobol_ctx = f"\nCOBOLファイルパス: {cobol_path}" if cobol_path else ""
         copy_ctx = (
             f'\n同ディレクトリのCOPYファイルは Glob("{cobol_path.parent}/**/*.cpy") で探索できます'
-            if cobol_path else ""
+            if cobol_path
+            else ""
         )
         java_src_dir = version_dir / "03_transform" if version_dir else None
         java_ctx = f"\nJava出力先: {java_src_dir}/src/main/java/" if java_src_dir else ""
@@ -554,7 +559,8 @@ class MigrationEngine:
         if stage == "designer":
             analysis = json.dumps(
                 artifacts.get("analyzer", {}),
-                ensure_ascii=False, indent=2,
+                ensure_ascii=False,
+                indent=2,
             )
             return (
                 f"以下の分析結果をもとにJava Spring Boot移行設計を行い、"
@@ -567,11 +573,13 @@ class MigrationEngine:
         if stage == "transformer":
             analysis = json.dumps(
                 artifacts.get("analyzer", {}),
-                ensure_ascii=False, indent=2,
+                ensure_ascii=False,
+                indent=2,
             )
             design = json.dumps(
                 artifacts.get("designer", {}),
-                ensure_ascii=False, indent=2,
+                ensure_ascii=False,
+                indent=2,
             )
             return (
                 f"以下の分析結果と設計書に基づいて、"
@@ -586,7 +594,8 @@ class MigrationEngine:
         if stage == "test_generator":
             analysis = json.dumps(
                 artifacts.get("analyzer", {}),
-                ensure_ascii=False, indent=2,
+                ensure_ascii=False,
+                indent=2,
             )
             transformer_result = artifacts.get("transformer", {})
             java_code = transformer_result.get("target_code", "")
@@ -602,7 +611,8 @@ class MigrationEngine:
         if stage == "verifier":
             analysis = json.dumps(
                 artifacts.get("analyzer", {}),
-                ensure_ascii=False, indent=2,
+                ensure_ascii=False,
+                indent=2,
             )
             transformer_result = artifacts.get("transformer", {})
             java_code = transformer_result.get("target_code", "")
@@ -619,8 +629,7 @@ class MigrationEngine:
 
         if stage == "quality_gate":
             all_artifacts = {
-                k: v for k, v in artifacts.items()
-                if k in ("analyzer", "designer", "transformer", "verifier")
+                k: v for k, v in artifacts.items() if k in ("analyzer", "designer", "transformer", "verifier")
             }
             artifacts_json = json.dumps(all_artifacts, ensure_ascii=False, indent=2)
             return (

@@ -206,9 +206,7 @@ class TestGetSkillsGrouped:
         """グループ内スキル数合計が /skills の total と一致."""
         grouped_resp = phase3_test_client.get("/api/studios/framework/skills/grouped")
         list_resp = phase3_test_client.get("/api/studios/framework/skills")
-        grouped_total = sum(
-            len(g["skills"]) for g in grouped_resp.json()["groups"]
-        )
+        grouped_total = sum(len(g["skills"]) for g in grouped_resp.json()["groups"])
         assert grouped_total == list_resp.json()["total"]
 
 

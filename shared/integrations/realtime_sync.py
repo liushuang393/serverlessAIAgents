@@ -31,13 +31,11 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
+from kernel.state.store import GlobalStateStore
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-if TYPE_CHECKING:
-    from kernel.state.store import GlobalStateStore
 
 
 class SyncEventType(str, Enum):

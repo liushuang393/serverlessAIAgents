@@ -17,7 +17,6 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
-
 from kernel import agent
 
 
@@ -190,14 +189,11 @@ class CodeTransformationAgent:
                 1,
             )
 
-        target_code = target_code.replace(
-            "    public void executeProgram() {\n"
-            '        System.out.println("Program execution placeholder");\n'
-            "    }",
+        return target_code.replace(
+            '    public void executeProgram() {\n        System.out.println("Program execution placeholder");\n    }',
             "    public void executeProgram() {\n" + call_lines + "\n    }",
             1,
         )
-        return target_code
 
     def _remove_todo_markers(self, target_code: str) -> tuple[str, bool]:
         """TODO マーカーを除去する."""

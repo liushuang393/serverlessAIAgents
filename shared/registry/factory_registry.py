@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from contracts.registry import RegisteredComponent, ToggleableFactoryRegistry
 
+
 __all__ = [
     "RegisteredComponent",
     "ToggleableFactoryRegistry",

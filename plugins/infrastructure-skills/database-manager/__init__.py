@@ -1,1 +1,1 @@
-"""database-manager スキル."""
+"""database-manager スキル."""  # noqa: N999

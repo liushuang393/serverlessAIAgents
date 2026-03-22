@@ -11,6 +11,8 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from sqlalchemy import delete, select, update
+
 from shared.auth_service.api.schemas import UserInfo
 from shared.auth_service.config import Settings, get_settings
 from shared.auth_service.core.jwt import JWTManager, TokenPair
@@ -18,7 +20,6 @@ from shared.auth_service.core.password import PasswordManager
 from shared.auth_service.db.session import ensure_database_ready, get_db_session
 from shared.auth_service.models.token import PasswordResetToken, RefreshToken, TokenBlacklist
 from shared.auth_service.models.user import AuthSession, UserAccount
-from sqlalchemy import delete, select, update
 
 
 logger = logging.getLogger(__name__)
@@ -614,7 +615,9 @@ class AuthService:
             if len(permissions) > self._settings.AUTHZ_MAX_JWT_PERMISSIONS:
                 logger.warning(
                     "ユーザー %s のパーミッション数 (%d) が上限 (%d) を超過。JWT 埋め込みを打ち切り。",
-                    user.user_id, len(permissions), self._settings.AUTHZ_MAX_JWT_PERMISSIONS,
+                    user.user_id,
+                    len(permissions),
+                    self._settings.AUTHZ_MAX_JWT_PERMISSIONS,
                 )
                 permissions = permissions[: self._settings.AUTHZ_MAX_JWT_PERMISSIONS]
             # ユーザー情報オブジェクトにもパーミッションを反映（レスポンス用）
@@ -738,9 +741,7 @@ class AuthService:
             )
             await session.commit()
 
-    def _account_to_user_info(
-        self, account: UserAccount, permissions: list[str] | None = None
-    ) -> UserInfo:
+    def _account_to_user_info(self, account: UserAccount, permissions: list[str] | None = None) -> UserInfo:
         """UserAccount を UserInfo に変換."""
         scopes = self._resolve_requested_scopes(None)
         return UserInfo(

@@ -149,10 +149,7 @@ class OutputPackager:
     @staticmethod
     def _get_latest_version(program_dir: Path) -> int:
         """最新バージョン番号を取得する."""
-        versions = [
-            d for d in program_dir.iterdir()
-            if d.is_dir() and d.name.startswith("v")
-        ]
+        versions = [d for d in program_dir.iterdir() if d.is_dir() and d.name.startswith("v")]
         if not versions:
             msg = f"バージョンが存在しません: {program_dir}"
             raise FileNotFoundError(msg)

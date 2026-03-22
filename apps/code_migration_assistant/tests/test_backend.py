@@ -15,6 +15,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 from apps.code_migration_assistant.backend.migration_router import (
     router as migration_router,
 )
@@ -25,13 +28,12 @@ from apps.code_migration_assistant.backend.migration_task_store import (
     TaskStore,
 )
 from apps.code_migration_assistant.pipeline.engine import MigrationEngine
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 
 # ============================================================
 # TaskStore テスト
 # ============================================================
+
 
 class TestTaskStore:
     """TaskStore のユニットテスト."""
@@ -227,62 +229,77 @@ class TestTaskStore:
 # MigrationEngine._should_hitl テスト
 # ============================================================
 
+
 class TestShouldHITL:
     """MigrationEngine._should_hitl の条件テスト."""
 
     def test_false_when_no_conditions(self) -> None:
         """条件ゼロの場合は False."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": [],
-            "has_database_access": False,
-            "has_external_calls": False,
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": [],
+                "has_database_access": False,
+                "has_external_calls": False,
+            }
+        )
         assert result is False
 
     def test_false_when_few_unknowns(self) -> None:
         """unknowns が 4 件以下は False."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": ["a", "b", "c", "d"],
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": ["a", "b", "c", "d"],
+            }
+        )
         assert result is False
 
     def test_true_when_five_unknowns(self) -> None:
         """unknowns が 5 件以上で True."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": ["a", "b", "c", "d", "e"],
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": ["a", "b", "c", "d", "e"],
+            }
+        )
         assert result is True
 
     def test_true_when_many_unknowns(self) -> None:
         """unknowns が多数でも True."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": [f"field_{i}" for i in range(10)],
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": [f"field_{i}" for i in range(10)],
+            }
+        )
         assert result is True
 
     def test_true_when_database_access(self) -> None:
         """has_database_access が True なら True."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": [],
-            "has_database_access": True,
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": [],
+                "has_database_access": True,
+            }
+        )
         assert result is True
 
     def test_true_when_external_calls(self) -> None:
         """has_external_calls が True なら True."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": [],
-            "has_external_calls": True,
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": [],
+                "has_external_calls": True,
+            }
+        )
         assert result is True
 
     def test_true_when_combined(self) -> None:
         """複数条件が重なっても True（最初にマッチした条件で判定）."""
-        result = MigrationEngine._should_hitl({
-            "unknowns": ["a"],
-            "has_database_access": True,
-            "has_external_calls": True,
-        })
+        result = MigrationEngine._should_hitl(
+            {
+                "unknowns": ["a"],
+                "has_database_access": True,
+                "has_external_calls": True,
+            }
+        )
         assert result is True
 
     def test_false_with_empty_dict(self) -> None:
@@ -294,6 +311,7 @@ class TestShouldHITL:
 # ============================================================
 # ルーターエンドポイント テスト（FastAPI TestClient）
 # ============================================================
+
 
 @pytest.fixture
 def test_client(tmp_path: Path) -> TestClient:
@@ -507,6 +525,7 @@ class TestRouterEndpoints:
 # ============================================================
 # Evolution Manager 追加テスト
 # ============================================================
+
 
 class TestEvolutionManagerExtra:
     """EvolutionManager の追加テスト（Phase 4 改善分）."""

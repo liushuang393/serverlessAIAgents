@@ -10,6 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,6 +74,11 @@ class AuthClient:
         self._jwt_algorithm = jwt_algorithm
         self._jwt_issuer = jwt_issuer
         self._jwt_audience = jwt_audience
+
+    @property
+    def base_url(self) -> str:
+        """auth_service のベース URL を返す（末尾スラッシュなし）."""
+        return self._base_url
 
     async def verify_token(self, token: str) -> RemoteUser | None:
         """JWT トークンを検証してユーザー情報を返す.
@@ -182,4 +188,3 @@ class AuthClient:
 
 
 __all__ = ["AuthClient", "RemoteUser"]
-

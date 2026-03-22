@@ -17,6 +17,10 @@ import time
 from typing import Any
 from uuid import UUID, uuid4
 
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.routers.report import cache_report
 from apps.decision_governance_engine.schemas.input_schemas import (
@@ -32,9 +36,6 @@ from apps.decision_governance_engine.services.decision_contract_builder import (
 from apps.decision_governance_engine.services.human_review_policy import (
     enrich_review_with_policy,
 )
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger("decision_api.decision")
@@ -822,7 +823,7 @@ async def process_decision_stream(
 
         # SSE heartbeat interval: send a keepalive comment every N seconds
         # to prevent TCP idle timeout during long LLM processing
-        HEARTBEAT_INTERVAL_SECS = 20
+        heartbeat_interval_secs = 20
 
         logger.info("[SSE] ストリーム開始")
         # 即座に接続確認イベントを送信
@@ -866,7 +867,7 @@ async def process_decision_stream(
             # ── heartbeat queue ────────────────────────────────────────────
             # Use an asyncio.Queue so the engine producer task keeps running
             # while we can send SSE heartbeat comments during LLM silence.
-            _SENTINEL = object()
+            _sentinel = object()
             queue: asyncio.Queue[Any] = asyncio.Queue()
 
             async def _producer() -> None:
@@ -876,21 +877,19 @@ async def process_decision_stream(
                 except Exception as _exc:
                     await queue.put(_exc)
                 finally:
-                    await queue.put(_SENTINEL)
+                    await queue.put(_sentinel)
 
             producer_task = asyncio.create_task(_producer())
             try:
                 while True:
                     try:
-                        item = await asyncio.wait_for(
-                            queue.get(), timeout=HEARTBEAT_INTERVAL_SECS
-                        )
-                    except asyncio.TimeoutError:
+                        item = await asyncio.wait_for(queue.get(), timeout=heartbeat_interval_secs)
+                    except TimeoutError:
                         # Send SSE keepalive comment; does NOT cancel the producer
                         yield ": heartbeat\n\n"
                         continue
 
-                    if item is _SENTINEL:
+                    if item is _sentinel:
                         break
                     if isinstance(item, Exception):
                         raise item

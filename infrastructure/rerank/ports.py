@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from contracts.base import ContractModel
 from pydantic import Field
+
+from contracts.base import ContractModel
 
 
 class RerankResult(ContractModel):

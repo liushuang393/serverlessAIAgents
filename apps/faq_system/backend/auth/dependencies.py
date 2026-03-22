@@ -13,13 +13,13 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket
+
 from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.auth.service import AuthService, get_auth_service
 from apps.faq_system.backend.security.proxy_auth import proxy_auth_verifier
-from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket
-
-from infrastructure.security.auth_client import AuthClient
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.security.auth_client import AuthClient
 
 
 if TYPE_CHECKING:

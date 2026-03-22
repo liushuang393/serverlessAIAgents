@@ -16,9 +16,9 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from control_plane.engine import PlatformEngine
 from infrastructure.llm.gateway.config import register_platform_secret_resolver
 from kernel.runtime.app_manifest import resolve_app_runtime
-from control_plane.engine import PlatformEngine
 
 
 if TYPE_CHECKING:
@@ -85,7 +85,9 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     app_lifecycle_cls = _load_legacy_symbol("control_plane.lifecycle.runtime", "AppLifecycleManager")
     app_scaffolder_cls = _load_legacy_symbol("control_plane.discovery.runtime", "AppScaffolderService")
     port_allocator_cls = _load_legacy_symbol("control_plane.lifecycle.runtime", "PortAllocatorService")
-    init_app_config_event_store = _load_legacy_symbol("control_plane.config_center.runtime", "init_app_config_event_store")
+    init_app_config_event_store = _load_legacy_symbol(
+        "control_plane.config_center.runtime", "init_app_config_event_store"
+    )
     config_watcher_cls = _load_legacy_symbol("control_plane.config_center.runtime", "ConfigWatcherService")
     agent_aggregator_cls = _load_legacy_symbol("control_plane.registry.runtime", "AgentAggregatorService")
     skill_catalog_cls = _load_legacy_symbol("control_plane.registry.runtime", "SkillCatalogService")
@@ -404,7 +406,15 @@ def main() -> None:
                     host=args.host,
                     port=args.port,
                     reload=True,
-                    reload_dirs=["control_plane", "contracts", "infrastructure", "shared", "kernel", "harness", "domain"],
+                    reload_dirs=[
+                        "control_plane",
+                        "contracts",
+                        "infrastructure",
+                        "shared",
+                        "kernel",
+                        "harness",
+                        "domain",
+                    ],
                 )
             else:
                 uvicorn.run(create_app(), host=args.host, port=args.port)

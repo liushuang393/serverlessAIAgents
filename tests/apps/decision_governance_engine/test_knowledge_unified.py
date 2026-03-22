@@ -14,7 +14,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import StaticPool
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from shared.rag.collection_manager import CollectionManager
 from shared.rag.document_manager import DocumentManager
@@ -59,12 +59,12 @@ async def managers(async_engine):
 async def collections_client(managers):
     """knowledge_collections ルーター用クライアント（認証バイパス）."""
     col_mgr, doc_mgr = managers
+    from apps.decision_governance_engine.routers.auth import UserInfo
     from apps.decision_governance_engine.routers.knowledge_collections import (
         init_managers,
         require_auth,
         router,
     )
-    from apps.decision_governance_engine.routers.auth import UserInfo
     from fastapi import FastAPI
 
     init_managers(col_mgr, doc_mgr)

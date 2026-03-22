@@ -80,4 +80,3 @@ class DatabaseConfig(BaseModel):
         if env_val:
             return env_val.lower() in {"1", "true", "yes", "on"}
         return self.echo
-

@@ -289,11 +289,7 @@ class FlowBuilder:
             enable_memory=enable_memory if enable_memory is not None else self._config.enable_memory,
             max_revisions=max_revisions if max_revisions is not None else self._config.max_revisions,
             auto_initialize=auto_initialize if auto_initialize is not None else self._config.auto_initialize,
-            honor_termination=(
-                honor_termination
-                if honor_termination is not None
-                else self._config.honor_termination
-            ),
+            honor_termination=(honor_termination if honor_termination is not None else self._config.honor_termination),
         )
         return self
 

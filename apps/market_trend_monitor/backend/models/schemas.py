@@ -176,4 +176,3 @@ class Notification:
             "timestamp": self.timestamp.isoformat(),
             "metadata": self.metadata,
         }
-

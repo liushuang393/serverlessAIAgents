@@ -3,19 +3,24 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from control_plane import AppRegistryService, DiscoveryService, LifecycleService
-
-from shared import load_app_manifest
-from shared.config.manifest import load_app_manifest_dict
-from shared.config.manifest import load_app_manifest_dict_payload
-from shared.config.manifest import load_app_manifest_dict_text
-from shared.config.manifest import load_app_manifest_payload
-from shared.config.manifest import load_app_manifest_text
 
 from contracts import AppManifest
+from control_plane import AppRegistryService, DiscoveryService, LifecycleService
+from shared import load_app_manifest
+from shared.config.manifest import (
+    load_app_manifest_dict,
+    load_app_manifest_dict_payload,
+    load_app_manifest_dict_text,
+    load_app_manifest_payload,
+    load_app_manifest_text,
+)
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_load_app_manifest_maps_app_config_to_contract(tmp_path) -> None:
@@ -33,7 +38,10 @@ def test_load_app_manifest_maps_app_config_to_contract(tmp_path) -> None:
                 "audit_profile": "business",
                 "version": "1.2.3",
                 "ports": {"api": 8123},
-                "runtime": {"commands": {"start": "python -m demo"}, "urls": {"health": "http://localhost:8123/health"}},
+                "runtime": {
+                    "commands": {"start": "python -m demo"},
+                    "urls": {"health": "http://localhost:8123/health"},
+                },
             }
         ),
         encoding="utf-8",

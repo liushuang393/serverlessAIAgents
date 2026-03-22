@@ -191,7 +191,7 @@ class DailyReportGenerator(AgentBlock):
         Returns:
             生成されたレポート
         """
-        import uuid
+        import uuid  # noqa: PLC0415
 
         report_date = report_date or date.today()
         report_id = f"report-{report_date.isoformat()}-{uuid.uuid4().hex[:6]}"
@@ -397,7 +397,7 @@ class DailyReportGenerator(AgentBlock):
     async def _generate_executive_summary(
         self,
         summary: DailySummary,
-        sections: list[ReportSection],
+        sections: list[ReportSection],  # noqa: ARG002
     ) -> str:
         """エグゼクティブサマリーを生成."""
         if self._llm_client:

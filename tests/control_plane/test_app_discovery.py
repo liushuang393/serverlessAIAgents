@@ -9,6 +9,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
+
 from control_plane.schemas.app_config_schemas import AppConfig
 from control_plane.services.app_discovery import AppDiscoveryService
 

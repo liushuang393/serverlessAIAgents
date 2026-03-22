@@ -9,14 +9,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi import BackgroundTasks
-from fastapi import HTTPException
+from apps.code_migration_assistant.backend import app as backend_app
+from apps.code_migration_assistant.engine import CodeMigrationEngine
+from fastapi import BackgroundTasks, HTTPException
 from starlette.requests import Request
 
 from harness.approval.types import ApprovalRequest
 from shared.integrations.context_bridge import FlowContext, SourceSystemType
-from apps.code_migration_assistant.backend import app as backend_app
-from apps.code_migration_assistant.engine import CodeMigrationEngine
 
 
 def _make_runtime(task_id: str, artifacts_dir: Path) -> backend_app.TaskRuntime:
@@ -561,6 +560,7 @@ def test_redis_listener_forwards_remote_event_to_websocket() -> None:
     original_store = backend_app._redis_store
     backend_app._redis_store = _OneShotDistributedStore(payload)
     try:
+
         async def _run_listener_once() -> None:
             listener = asyncio.create_task(backend_app._redis_event_listener())
             try:

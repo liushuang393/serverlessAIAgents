@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING
 
+from apps.auth_service.models.user import Base, _utcnow
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from apps.auth_service.models.user import Base, _utcnow
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from apps.auth_service.models.user import UserAccount
 
 
@@ -23,16 +24,12 @@ class PasswordResetToken(Base):
     user_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    token_hash: Mapped[str] = mapped_column(
-        String(128), unique=True, nullable=False, index=True
-    )
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    user: Mapped["UserAccount"] = relationship("UserAccount")
+    user: Mapped[UserAccount] = relationship("UserAccount")
 
 
 class RefreshToken(Base):
@@ -44,17 +41,11 @@ class RefreshToken(Base):
     user_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("user_accounts.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    token_hash: Mapped[str] = mapped_column(
-        String(128), unique=True, nullable=False, index=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
-    )
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    family: Mapped[str] = mapped_column(
-        String(64), nullable=False, index=True
-    )  # トークンローテーション用ファミリーID
+    family: Mapped[str] = mapped_column(String(64), nullable=False, index=True)  # トークンローテーション用ファミリーID
 
 
 class TokenBlacklist(Base):
@@ -64,9 +55,5 @@ class TokenBlacklist(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     jti: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
-    )
-    revoked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
-    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)

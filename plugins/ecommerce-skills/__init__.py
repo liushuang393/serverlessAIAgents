@@ -1,1 +1,1 @@
-"""ecommerce スキルプラグイン."""
+"""ecommerce スキルプラグイン."""  # noqa: N999

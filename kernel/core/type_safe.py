@@ -103,4 +103,3 @@ def safe_float(
     if max_value is not None:
         result = min(max_value, result)
     return result
-

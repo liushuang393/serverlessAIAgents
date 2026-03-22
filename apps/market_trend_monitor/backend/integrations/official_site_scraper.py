@@ -15,6 +15,7 @@ from apps.market_trend_monitor.backend.models import Article, SourceType
 
 from kernel import get_llm
 
+
 try:
     import httpx
 except ImportError:  # pragma: no cover - optional dependency

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 
 

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
 from control_plane.services.capability_registry import CapabilityRegistry
 
 
@@ -365,12 +366,14 @@ class SkillCatalogService:
 
         result = []
         for cat_id, meta in SKILL_CATEGORIES.items():
-            result.append({
-                "id": cat_id,
-                "icon": meta["icon"],
-                "order": meta["order"],
-                "skill_count": cat_counts.get(cat_id, 0),
-            })
+            result.append(
+                {
+                    "id": cat_id,
+                    "icon": meta["icon"],
+                    "order": meta["order"],
+                    "skill_count": cat_counts.get(cat_id, 0),
+                }
+            )
         return sorted(result, key=lambda x: x["order"])
 
     def get_skills_by_category(self, category: str) -> list[SkillInfo]:
@@ -402,12 +405,14 @@ class SkillCatalogService:
             skills = sorted(grouped.get(cat_id, []), key=lambda s: s.name)
             if not skills:
                 continue
-            result.append({
-                "id": cat_id,
-                "icon": meta["icon"],
-                "order": meta["order"],
-                "skills": [s.to_dict() for s in skills],
-            })
+            result.append(
+                {
+                    "id": cat_id,
+                    "icon": meta["icon"],
+                    "order": meta["order"],
+                    "skills": [s.to_dict() for s in skills],
+                }
+            )
         return result
 
     # ------------------------------------------------------------------

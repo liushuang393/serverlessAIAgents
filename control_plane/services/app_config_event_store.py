@@ -59,8 +59,6 @@ class AppConfigEventStore:
         try:
             while True:
                 yield await queue.get()
-        except asyncio.CancelledError:
-            raise
         finally:
             async with self._lock:
                 subscribers = self._subscribers.get(app_name, [])

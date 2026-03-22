@@ -16,9 +16,9 @@ def reset_registries():
 @pytest.mark.asyncio
 async def test_simple_engine_auto_binds_tools():
     """SimpleEngine がツールを自動バインドすることを確認."""
+    from kernel.engines import SimpleEngine
     from kernel.tools.tool_discovery import ToolDiscoveryService
     from kernel.tools.tool_registry import get_global_tool_registry
-    from kernel.engines import SimpleEngine
 
     # ツールを登録
     registry = get_global_tool_registry()
@@ -52,9 +52,9 @@ async def test_simple_engine_auto_binds_tools():
 @pytest.mark.asyncio
 async def test_simple_engine_binds_skills_as_tools():
     """SimpleEngine がスキルをツールとしてバインドすることを確認."""
+    from kernel.engines import SimpleEngine
     from kernel.tools.tool_discovery import ToolDiscoveryService
     from kernel.tools.tool_registry import get_global_tool_registry
-    from kernel.engines import SimpleEngine
 
     # スキルを発見
     registry = get_global_tool_registry()

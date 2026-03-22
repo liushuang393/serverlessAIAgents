@@ -54,6 +54,9 @@ _load_faq_app_env()
 
 # --- 循環参照回避のため、FastAPI 起動前にパッケージパス等を微調整する場合に備え ---
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from apps.faq_system.backend.auth.dependencies import (
     get_faq_contract_auth_guard,
 )
@@ -79,9 +82,6 @@ from apps.faq_system.routers.dependencies import (
     start_rag_ingestion_scheduler,
     stop_rag_ingestion_scheduler,
 )
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from infrastructure.database import DatabaseConfig, DatabaseManager
 from infrastructure.observability.startup import log_startup_info
 from shared.config.manifest import load_app_manifest_dict
@@ -177,7 +177,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     # CollectionManager / DocumentManager 初期化
     from apps.faq_system.routers.collections import init_managers as init_collection_managers
-
     from shared.rag.collection_manager import CollectionManager
     from shared.rag.document_manager import DocumentManager
 

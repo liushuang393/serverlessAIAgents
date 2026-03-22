@@ -4,4 +4,3 @@ from shared.rag.service import SharedRAGService
 
 
 __all__ = ["SharedRAGService"]
-

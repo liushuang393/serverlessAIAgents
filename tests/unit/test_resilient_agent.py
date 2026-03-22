@@ -9,13 +9,13 @@ from typing import Any
 import pytest
 from pydantic import BaseModel
 
+from kernel.agents.resilient_agent import ResilientAgent
 from kernel.core.exceptions import (
     AgentExecutionError,
     AgentOutputValidationError,
     AgentRetryExhaustedError,
     AgentTimeoutError,
 )
-from kernel.agents.resilient_agent import ResilientAgent
 
 
 class TestInput(BaseModel):

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from control_plane._legacy import resolve_export
 from typing import Any
+
+from control_plane._legacy import resolve_export
 
 
 _EXPORT_MAP = {

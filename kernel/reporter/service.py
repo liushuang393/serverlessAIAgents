@@ -249,7 +249,6 @@ class SimpleReportBuilder(ReportBuilder):
         }
 
 
-
 class SectionedReportBuilder(ReportBuilder):
     """セクション構造レポートビルダー.
 

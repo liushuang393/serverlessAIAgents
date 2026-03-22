@@ -121,13 +121,17 @@ class SkillMetadata:
             raise TypeError(msg)
 
         # Claude Code CLI fields (kebab-case and snake_case)
-        _CLI_FIELDS = {
-            "allowed-tools", "allowed_tools",
+        _cli_fields = {
+            "allowed-tools",
+            "allowed_tools",
             "context",
             "agent",
-            "user-invocable", "user_invocable",
-            "disable-model-invocation", "disable_model_invocation",
-            "argument-hint", "argument_hint",
+            "user-invocable",
+            "user_invocable",
+            "disable-model-invocation",
+            "disable_model_invocation",
+            "argument-hint",
+            "argument_hint",
             "hooks",
         }
 
@@ -149,7 +153,7 @@ class SkillMetadata:
             "learned",
             "confidence",
             "usage_count",
-        } | _CLI_FIELDS
+        } | _cli_fields
         extra = {k: v for k, v in data.items() if k not in known_fields}
 
         def _ensure_list(value: Any) -> list[str]:
@@ -181,7 +185,9 @@ class SkillMetadata:
             context=str(data.get("context", "")),
             agent=bool(data.get("agent", False)),
             user_invocable=bool(data.get("user-invocable", data.get("user_invocable", False))),
-            disable_model_invocation=bool(data.get("disable-model-invocation", data.get("disable_model_invocation", False))),
+            disable_model_invocation=bool(
+                data.get("disable-model-invocation", data.get("disable_model_invocation", False))
+            ),
             argument_hint=str(data.get("argument-hint", data.get("argument_hint", ""))),
             hooks=dict(data.get("hooks", {})),
             extra=extra,

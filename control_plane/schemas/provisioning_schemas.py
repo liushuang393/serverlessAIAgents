@@ -133,14 +133,17 @@ class AppCreateRequest(BaseModel):
         description="バインド済みプラグイン",
     )
     template: str | None = Field(default=None, description="Business 作成向けテンプレートID")
-    app_template: Literal[
-        "faq_knowledge_service",
-        "intelligence_monitoring",
-        "decision_governance",
-        "workflow_orchestrator",
-        "multichannel_assistant",
-        "ops_automation_runner",
-    ] | None = Field(default=None, description="App テンプレート")
+    app_template: (
+        Literal[
+            "faq_knowledge_service",
+            "intelligence_monitoring",
+            "decision_governance",
+            "workflow_orchestrator",
+            "multichannel_assistant",
+            "ops_automation_runner",
+        ]
+        | None
+    ) = Field(default=None, description="App テンプレート")
     data_sources: list[str] = Field(default_factory=list, description="Business 作成向けデータソース")
     permission_scopes: list[str] = Field(
         default_factory=list,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """診断支援Agentテンプレート.
 
 医療診断の支援を行うAgentテンプレート。
@@ -21,7 +20,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.templates.template_helpers import extract_json_payload
-from kernel.templates.template_runtime import ResilientAgent
 from kernel.templates.base_template import (
     AgentTemplate,
     IndustryType,
@@ -30,6 +28,8 @@ from kernel.templates.base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+from kernel.templates.template_runtime import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +67,7 @@ class DiagnosticSupportOutput(BaseModel):
     disclaimer: str = "この結果は参考情報であり、最終的な診断は医師が行ってください。"
 
 
-class DiagnosticSupportAgent(
-    ResilientAgent[DiagnosticSupportInput, DiagnosticSupportOutput]
-):
+class DiagnosticSupportAgent(ResilientAgent[DiagnosticSupportInput, DiagnosticSupportOutput]):
     """診断支援Agent."""
 
     name = "DiagnosticSupportAgent"
@@ -96,25 +94,21 @@ JSON形式で以下を出力:
         """入力をパース."""
         return DiagnosticSupportInput(**input_data)
 
-    async def process(
-        self, input_data: DiagnosticSupportInput
-    ) -> DiagnosticSupportOutput:
+    async def process(self, input_data: DiagnosticSupportInput) -> DiagnosticSupportOutput:
         """診断支援を実行."""
         if self._llm:
             return await self._analyze_with_llm(input_data)
         return self._analyze_rule_based(input_data)
 
-    async def _analyze_with_llm(
-        self, input_data: DiagnosticSupportInput
-    ) -> DiagnosticSupportOutput:
+    async def _analyze_with_llm(self, input_data: DiagnosticSupportInput) -> DiagnosticSupportOutput:
         """LLMを使用した診断支援."""
 
         prompt = f"""以下の患者情報に基づいて鑑別診断を支援してください：
 年齢: {input_data.patient_age}歳
 性別: {input_data.patient_gender}
-症状: {', '.join(input_data.symptoms)}
-既往歴: {', '.join(input_data.medical_history) if input_data.medical_history else 'なし'}
-服用中薬: {', '.join(input_data.current_medications) if input_data.current_medications else 'なし'}
+症状: {", ".join(input_data.symptoms)}
+既往歴: {", ".join(input_data.medical_history) if input_data.medical_history else "なし"}
+服用中薬: {", ".join(input_data.current_medications) if input_data.current_medications else "なし"}
 バイタル: {input_data.vital_signs}
 検査結果: {input_data.lab_results}"""
 
@@ -125,9 +119,7 @@ JSON形式で以下を出力:
             return DiagnosticSupportOutput(**data)
         return self._analyze_rule_based(input_data)
 
-    def _analyze_rule_based(
-        self, input_data: DiagnosticSupportInput
-    ) -> DiagnosticSupportOutput:
+    def _analyze_rule_based(self, input_data: DiagnosticSupportInput) -> DiagnosticSupportOutput:
         """ルールベースの診断支援."""
         red_flags: list[str] = []
         urgency = "LOW"

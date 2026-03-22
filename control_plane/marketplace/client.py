@@ -258,7 +258,7 @@ class MarketplaceClient:
                 archive.extractall(install_path)
             return
 
-        if suffixes.endswith(".tar.gz") or suffixes.endswith(".tgz") or suffixes.endswith(".tar"):
+        if suffixes.endswith((".tar.gz", ".tgz", ".tar")):
             with tarfile.open(artifact_path, "r:*") as archive:
                 for member in archive.getmembers():
                     target = (install_path / member.name).resolve()
@@ -280,10 +280,7 @@ class MarketplaceClient:
     def _has_manifest(install_path: Path) -> bool:
         """インストール済みディレクトリに manifest があるか確認."""
         candidates = ["agent.yaml", "agent.yml", "app_config.json"]
-        for name in candidates:
-            if (install_path / name).is_file():
-                return True
-        return False
+        return any((install_path / name).is_file() for name in candidates)
 
     def uninstall(self, agent_id: str) -> bool:
         """エージェントをアンインストール.

@@ -17,6 +17,7 @@ import sys
 
 import html2text
 
+
 # --- scrapling の遅延インポート（依存不足時にフォールバック可能にする）---
 _HAS_SCRAPLING = False
 try:
@@ -30,6 +31,7 @@ except (ImportError, ModuleNotFoundError):
 # ---------------------------------------------------------------------------
 # 共通ユーティリティ
 # ---------------------------------------------------------------------------
+
 
 def fix_lazy_images(html_raw):
     """data-src 懒加载を src に昇格（微信公众号等）."""
@@ -60,6 +62,7 @@ def _clean(md, max_chars):
 # Strategy 1: Scrapling
 # ---------------------------------------------------------------------------
 
+
 def scrapling_fetch(url, max_chars=30000):
     """Scrapling + html2text で抽出."""
     page = Fetcher(auto_match=False).get(
@@ -73,8 +76,13 @@ def scrapling_fetch(url, max_chars=30000):
         selectors = ["div#js_content", "div.rich_media_content"]
     else:
         selectors = [
-            "article", "main", ".post-content", ".entry-content",
-            ".article-body", '[class*="body"]', '[class*="content"]',
+            "article",
+            "main",
+            ".post-content",
+            ".entry-content",
+            ".article-body",
+            '[class*="body"]',
+            '[class*="content"]',
             '[class*="article"]',
         ]
 
@@ -93,6 +101,7 @@ def scrapling_fetch(url, max_chars=30000):
 # ---------------------------------------------------------------------------
 # Strategy 2: requests + html2text（軽量フォールバック）
 # ---------------------------------------------------------------------------
+
 
 def requests_fetch(url, max_chars=30000):
     """requests + html2text で抽出（scrapling 不可時のフォールバック）."""
@@ -118,6 +127,7 @@ def requests_fetch(url, max_chars=30000):
 # ---------------------------------------------------------------------------
 # Public API（SkillRuntime から呼ばれる）
 # ---------------------------------------------------------------------------
+
 
 def fetch(input_data):
     """SkillRuntime 用エントリポイント.

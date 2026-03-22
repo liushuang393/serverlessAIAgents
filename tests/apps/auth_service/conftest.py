@@ -5,12 +5,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
-import pathlib
 from typing import Any
 
 import httpx
 import pytest
+
 
 # テスト用 SQLite DB パスを設定（import 前に環境変数を設定）
 os.environ["AUTH_DATABASE_URL"] = "sqlite+aiosqlite:///./test_auth_service.db"
@@ -39,7 +40,7 @@ def auth_app():
     return create_app()
 
 
-@pytest.fixture()
+@pytest.fixture
 async def client(auth_app: Any) -> httpx.AsyncClient:
     """テスト用 AsyncClient を提供."""
     # DB 状態をリセットして現在のイベントループで再初期化
@@ -62,39 +63,48 @@ async def client(auth_app: Any) -> httpx.AsyncClient:
         yield ac
 
 
-@pytest.fixture()
+@pytest.fixture
 async def admin_token(client: httpx.AsyncClient) -> str:
     """admin ユーザーのアクセストークンを取得."""
-    resp = await client.post("/auth/login", json={
-        "username": "admin",
-        "password": "admin123",
-    })
+    resp = await client.post(
+        "/auth/login",
+        json={
+            "username": "admin",
+            "password": "admin123",
+        },
+    )
     data = resp.json()
     assert data["success"] is True, f"admin ログイン失敗: {data}"
     token: str = data["access_token"]
     return token
 
 
-@pytest.fixture()
+@pytest.fixture
 async def manager_token(client: httpx.AsyncClient) -> str:
     """manager ユーザーのアクセストークンを取得."""
-    resp = await client.post("/auth/login", json={
-        "username": "tanaka",
-        "password": "tanaka123",
-    })
+    resp = await client.post(
+        "/auth/login",
+        json={
+            "username": "tanaka",
+            "password": "tanaka123",
+        },
+    )
     data = resp.json()
     assert data["success"] is True, f"manager ログイン失敗: {data}"
     token: str = data["access_token"]
     return token
 
 
-@pytest.fixture()
+@pytest.fixture
 async def employee_token(client: httpx.AsyncClient) -> str:
     """employee ユーザーのアクセストークンを取得."""
-    resp = await client.post("/auth/login", json={
-        "username": "suzuki",
-        "password": "suzuki123",
-    })
+    resp = await client.post(
+        "/auth/login",
+        json={
+            "username": "suzuki",
+            "password": "suzuki123",
+        },
+    )
     data = resp.json()
     assert data["success"] is True, f"employee ログイン失敗: {data}"
     token: str = data["access_token"]
@@ -114,14 +124,13 @@ def _cleanup_aiosqlite_threads():
     process alive indefinitely after all tests have finished.
     """
     yield
-    import shared.auth_service.db.session as db_mod
     import asyncio
 
+    import shared.auth_service.db.session as db_mod
+
     async def _shutdown() -> None:
-        try:
+        with contextlib.suppress(Exception):
             await db_mod.close_db()
-        except Exception:
-            pass
 
     try:
         loop = asyncio.new_event_loop()

@@ -9,6 +9,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
 from apps.faq_system.backend.auth.dependencies import require_auth, require_role
 from apps.faq_system.backend.config import KnowledgeBaseUpdateRequest, kb_registry
 from apps.faq_system.backend.services.rag_runtime_config import load_rag_runtime_config
@@ -16,9 +20,6 @@ from apps.faq_system.routers.dependencies import (
     invalidate_service_cache,
     resolve_default_collection,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:

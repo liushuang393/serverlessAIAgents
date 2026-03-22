@@ -21,6 +21,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+
 # 遅延インポートマッピング（循環参照回避）
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     # components

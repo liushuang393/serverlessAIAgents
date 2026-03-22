@@ -25,6 +25,9 @@ import secrets
 from typing import Any
 from urllib.parse import urlencode, urlparse
 
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
+
 from shared.auth_service.api.schemas import (
     AuthResponse,
     ChangePasswordRequest,
@@ -43,8 +46,6 @@ from shared.auth_service.api.schemas import (
 )
 from shared.auth_service.config import get_settings
 from shared.auth_service.service import AuthService, get_auth_service
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
-from fastapi.responses import RedirectResponse
 
 
 logger = logging.getLogger(__name__)

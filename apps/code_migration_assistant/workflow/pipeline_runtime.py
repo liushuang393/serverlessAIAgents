@@ -24,7 +24,6 @@ from apps.code_migration_assistant.workflow.models import (
     TransformationIterationRecord,
     build_meta,
 )
-
 from shared.integrations.context_bridge import get_current_context
 
 
@@ -46,11 +45,7 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
 
     execution_options = resolve_execution_options(inputs)
     fast_mode_raw = inputs.get("fast_mode")
-    fast_mode = (
-        execution_options.verification_mode == "fast"
-        if fast_mode_raw is None
-        else bool(fast_mode_raw)
-    )
+    fast_mode = execution_options.verification_mode == "fast" if fast_mode_raw is None else bool(fast_mode_raw)
 
     task_id = str(inputs.get("task_id") or f"task-{uuid.uuid4().hex[:12]}")
     trace_id = str(inputs.get("trace_id") or task_id)

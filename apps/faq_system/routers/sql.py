@@ -7,15 +7,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.routers.dependencies import (
     get_sales_agent,
     get_sql_service,
     is_sql_enabled,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-
 from kernel.protocols.a2a_hub import get_hub
 
 

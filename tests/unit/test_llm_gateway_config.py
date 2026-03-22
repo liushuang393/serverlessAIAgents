@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import yaml
 
 from infrastructure.llm.gateway.config import build_provider_runtime_statuses, load_gateway_config, resolve_secret
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_resolve_secret_prefers_env_over_dotenv(tmp_path: Path, monkeypatch) -> None:
@@ -121,8 +125,6 @@ def test_load_gateway_config_migrates_legacy_yaml_defaults(tmp_path: Path) -> No
 
     reloaded = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     persisted_models = {
-        str(item.get("model_id") or item.get("alias"))
-        for item in reloaded.get("models", [])
-        if isinstance(item, dict)
+        str(item.get("model_id") or item.get("alias")) for item in reloaded.get("models", []) if isinstance(item, dict)
     }
     assert "platform_text_default" in persisted_models

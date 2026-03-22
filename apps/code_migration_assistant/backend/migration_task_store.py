@@ -6,8 +6,11 @@ import asyncio
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TaskStatus(str, Enum):
@@ -143,4 +146,3 @@ def get_task_store() -> TaskStore:
     if _store is None:
         _store = TaskStore()
     return _store
-

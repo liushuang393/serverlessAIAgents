@@ -7,6 +7,7 @@ from shared.memory.knowledge.memory_store import InMemoryKnowledgeStore
 from shared.memory.knowledge.memvid_store import is_memvid_available
 from shared.memory.knowledge.types import KnowledgeEntry, KnowledgeSource
 
+
 # グローバルシングルトン
 _global_manager: KnowledgeManager | None = None
 
@@ -17,7 +18,7 @@ def get_knowledge_manager(*, _new_instance: bool = False) -> KnowledgeManager:
     Args:
         _new_instance: True の場合、新しいインスタンスを生成して返す（テスト用）。
     """
-    global _global_manager  # noqa: PLW0603
+    global _global_manager
     if _new_instance:
         return KnowledgeManager()
     if _global_manager is None:
@@ -41,7 +42,7 @@ def get_knowledge_store(*, backend: str = "memory") -> InMemoryKnowledgeStore:
 
 def reset_knowledge_manager() -> None:
     """グローバル KnowledgeManager をリセット（テスト用）."""
-    global _global_manager  # noqa: PLW0603
+    global _global_manager
     _global_manager = None
 
 

@@ -1,12 +1,13 @@
 """ResourceManager のユニットテスト."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 import pytest
 
-from shared.rag.resource_manager import ResourceDefinition, ResourceManager
 from infrastructure.security.auth_client.client import AuthClient
+from shared.rag.resource_manager import ResourceDefinition, ResourceManager
 
 
 class TestResourceManager:

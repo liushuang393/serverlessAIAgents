@@ -115,4 +115,3 @@ class PreflightRunner:
                 detail=f"module artifact root missing: {module_root}",
             )
         return PreflightCheck(name="smoke_stage", ok=True, detail="stage smoke passed")
-

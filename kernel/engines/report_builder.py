@@ -17,6 +17,7 @@ from kernel.reporter.service import (
     create_pie_chart,
 )
 
+
 __all__ = [
     "ChartData",
     "ExecutiveSummary",

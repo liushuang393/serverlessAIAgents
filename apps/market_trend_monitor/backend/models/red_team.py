@@ -91,8 +91,8 @@ class CounterArgument:
     主張に対する反対意見を表現します。
     """
 
-    argument: str                            # 反論内容
-    strength: float = 0.5                    # 反論の強さ (0-1)
+    argument: str  # 反論内容
+    strength: float = 0.5  # 反論の強さ (0-1)
     evidence_ids: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -111,8 +111,8 @@ class InvalidationCondition:
     主張が無効になる条件を表現します。
     """
 
-    condition: str                           # 失効条件の説明
-    probability: float = 0.0                 # 発生確率 (0-1)
+    condition: str  # 失効条件の説明
+    probability: float = 0.0  # 発生確率 (0-1)
     trigger_indicators: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -134,11 +134,9 @@ class RedTeamAnalysis:
     id: str
     claim_id: str
     counter_arguments: list[CounterArgument] = field(default_factory=list)
-    invalidation_conditions: list[InvalidationCondition] = field(
-        default_factory=list
-    )
-    overall_uncertainty: float = 0.0         # 総合不確実性 (0-1)
-    recommendation: str = ""                 # 推奨アクション
+    invalidation_conditions: list[InvalidationCondition] = field(default_factory=list)
+    overall_uncertainty: float = 0.0  # 総合不確実性 (0-1)
+    recommendation: str = ""  # 推奨アクション
     analyzed_at: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -148,9 +146,7 @@ class RedTeamAnalysis:
             "id": self.id,
             "claim_id": self.claim_id,
             "counter_arguments": [ca.to_dict() for ca in self.counter_arguments],
-            "invalidation_conditions": [
-                ic.to_dict() for ic in self.invalidation_conditions
-            ],
+            "invalidation_conditions": [ic.to_dict() for ic in self.invalidation_conditions],
             "overall_uncertainty": self.overall_uncertainty,
             "recommendation": self.recommendation,
             "analyzed_at": self.analyzed_at.isoformat(),
@@ -165,16 +161,14 @@ class RedTeamAnalysis:
         # 反論の強さの加重平均
         counter_weight = 0.0
         if self.counter_arguments:
-            counter_weight = sum(
-                ca.strength for ca in self.counter_arguments
-            ) / len(self.counter_arguments)
+            counter_weight = sum(ca.strength for ca in self.counter_arguments) / len(self.counter_arguments)
 
         # 失効条件の確率加重
         invalidation_weight = 0.0
         if self.invalidation_conditions:
-            invalidation_weight = sum(
-                ic.probability for ic in self.invalidation_conditions
-            ) / len(self.invalidation_conditions)
+            invalidation_weight = sum(ic.probability for ic in self.invalidation_conditions) / len(
+                self.invalidation_conditions
+            )
 
         # 総合不確実性の計算（50:50の重み付け）
         self.overall_uncertainty = (counter_weight + invalidation_weight) / 2
@@ -208,9 +202,7 @@ class RedTeamAnalysisSchema(BaseModel):
     id: str
     claim_id: str
     counter_arguments: list[CounterArgumentSchema] = Field(default_factory=list)
-    invalidation_conditions: list[InvalidationConditionSchema] = Field(
-        default_factory=list
-    )
+    invalidation_conditions: list[InvalidationConditionSchema] = Field(default_factory=list)
     overall_uncertainty: float = Field(ge=0.0, le=1.0, default=0.0)
     recommendation: str = ""
     analyzed_at: str

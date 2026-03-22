@@ -1,19 +1,16 @@
-# -*- coding: utf-8 -*-
 """Strategy refresh unit tests for Code Migration Assistant."""
 
 from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from shared.integrations.context_bridge import FlowContext, SourceSystemType
 from apps.code_migration_assistant.agents.business_semantics_agent import BusinessSemanticsAgent
 from apps.code_migration_assistant.agents.migration_design_agent import MigrationDesignAgent
-from apps.code_migration_assistant.engine import CodeMigrationEngine, MIGRATION_ANALYSIS
+from apps.code_migration_assistant.engine import MIGRATION_ANALYSIS, CodeMigrationEngine
 from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner
 from apps.code_migration_assistant.workflow.models import (
     BusinessSemanticsArtifact,
@@ -24,14 +21,21 @@ from apps.code_migration_assistant.workflow.models import (
     MigrationDesignArtifact,
     QualityDecision,
     QualityGateArtifact,
-    TestSynthesisArtifact as _TestSynthesisArtifact,
     TransformationArtifact,
     TransformationIterationArtifact,
     TransformationIterationRecord,
     build_meta,
 )
+from apps.code_migration_assistant.workflow.models import (
+    TestSynthesisArtifact as _TestSynthesisArtifact,
+)
 from apps.code_migration_assistant.workflow.pipeline_runtime import run_pipeline
 from apps.code_migration_assistant.workflow.reflection import run_reflection_loop
+from shared.integrations.context_bridge import FlowContext, SourceSystemType
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class _StaticAgent:
@@ -75,7 +79,8 @@ class _FixerSpy:
 
 class _FailIfCalledFixer:
     def process(self, _input_data: dict[str, Any]) -> dict[str, Any]:
-        raise AssertionError("limited fixer must not be called")
+        msg = "limited fixer must not be called"
+        raise AssertionError(msg)
 
 
 def _build_flow_context() -> FlowContext:
@@ -415,7 +420,8 @@ def test_reflection_loop_retries_until_threshold() -> None:
     )
 
     assert accepted is True
-    assert final_score is not None and final_score >= 85.0
+    assert final_score is not None
+    assert final_score >= 85.0
     assert len(records) == 2
     assert payload["target_code"] == "code-2"
 
@@ -524,7 +530,8 @@ def test_stage_capability_runner_skill_first_and_fallback() -> None:
         _payload: dict[str, Any],
         _capability: Any,
     ) -> dict[str, Any]:
-        raise RuntimeError("skill failed")
+        msg = "skill failed"
+        raise RuntimeError(msg)
 
     fallback_runner = StageCapabilityRunner(skill_mode="skill_first", skill_executor=_skill_fail)
     fallback_execution = asyncio.run(

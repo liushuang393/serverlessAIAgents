@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from contracts.app import AppManifest
 from control_plane.schemas.app_config_schemas import AppConfig
 from control_plane.services.app_lifecycle import AppLifecycleManager
 from control_plane.services.runtime_command_resolver import RuntimeCommandResolver
+
+
+if TYPE_CHECKING:
+    from contracts.app import AppManifest
 
 
 class LifecycleService:

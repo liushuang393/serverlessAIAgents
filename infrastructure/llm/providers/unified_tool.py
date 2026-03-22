@@ -1,6 +1,6 @@
 """infrastructure.llm.providers.unified_tool 後方互換shim → infrastructure.providers.unified_tool."""
 
-from infrastructure.providers.unified_tool import *  # noqa: F401,F403
+from infrastructure.providers.unified_tool import *  # noqa: F403
 from infrastructure.providers.unified_tool import (
     BuiltinToolProvider,
     ToolDefinition,
@@ -9,6 +9,7 @@ from infrastructure.providers.unified_tool import (
     ToolType,
     UnifiedToolProvider,
 )
+
 
 __all__ = [
     "BuiltinToolProvider",

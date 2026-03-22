@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from infrastructure.config.settings import AgentFlowSettings, clear_settings_cache, get_settings
 
+
 if TYPE_CHECKING:
     from contracts.runtime.context import RuntimeContext
 
@@ -31,4 +32,3 @@ __all__ = [
     "get_settings",
     "resolve_settings",
 ]
-

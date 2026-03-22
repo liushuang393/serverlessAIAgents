@@ -7,6 +7,7 @@ from apps.market_trend_monitor.agents.data_analytics_agent import (
     DataAnalyticsOutput,
 )
 
+
 __all__ = [
     "DataAnalyticsAgent",
     "DataAnalyticsConfig",

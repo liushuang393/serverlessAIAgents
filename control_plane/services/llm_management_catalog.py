@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, get_args
 
-from infrastructure.llm.gateway import load_gateway_config
-from infrastructure.llm.models import MODELS
 from control_plane.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMCatalogBackend,
@@ -20,6 +18,8 @@ from control_plane.services.llm_management_validator import (
     provider_default_api_base,
     provider_default_api_key_env,
 )
+from infrastructure.llm.gateway import load_gateway_config
+from infrastructure.llm.models import MODELS
 
 
 _PROVIDER_ALIASES: dict[str, list[str]] = {

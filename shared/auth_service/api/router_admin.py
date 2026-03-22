@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
 from shared.auth_service.api.dependencies import require_permission
-from shared.auth_service.api.schemas import UserInfo
 from shared.auth_service.api.schemas_authorization import (
     AdminResetPasswordRequest,
     PaginatedUsersResponse,
@@ -24,6 +24,10 @@ from shared.auth_service.core.authorization import get_authorization_service
 from shared.auth_service.core.password import PasswordManager
 from shared.auth_service.db.session import get_db_session
 from shared.auth_service.models.user import UserAccount
+
+
+if TYPE_CHECKING:
+    from shared.auth_service.api.schemas import UserInfo
 
 
 logger = logging.getLogger(__name__)
@@ -53,10 +57,7 @@ async def list_users(
         # ページネーション
         offset = (page - 1) * page_size
         result = await session.execute(
-            select(UserAccount)
-            .order_by(UserAccount.created_at.desc())
-            .offset(offset)
-            .limit(page_size)
+            select(UserAccount).order_by(UserAccount.created_at.desc()).offset(offset).limit(page_size)
         )
         accounts = result.scalars().all()
 

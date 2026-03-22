@@ -1,11 +1,11 @@
 import os
 from typing import Any
 
-from apps.faq_system.backend.auth.router import _SESSION_COOKIE_MAX_AGE
-from apps.faq_system.backend.auth.service import get_auth_service
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from apps.faq_system.backend.auth.router import _SESSION_COOKIE_MAX_AGE
+from apps.faq_system.backend.auth.service import get_auth_service
 from infrastructure.security.saml import SAMLProvider
 
 

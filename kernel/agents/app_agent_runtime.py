@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import time
-from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from kernel.agents.agent_factory import AgentFactory
-from kernel.protocols.a2a_card import AgentCard
 from kernel.protocols.a2a_hub import LocalA2AHub
 from kernel.protocols.a2a_server import A2AServer
 from kernel.protocols.agui_events import (
@@ -22,6 +19,13 @@ from kernel.protocols.agui_events import (
     NodeErrorEvent,
     NodeStartEvent,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
+    from kernel.protocols.a2a_card import AgentCard
 
 
 @dataclass(slots=True)

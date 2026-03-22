@@ -135,4 +135,3 @@ class AgentCapabilitySpec(BaseModel):
 
 
 __all__ = ["AgentCapabilitySpec", "CapabilityRequirement", "LLMRequirements"]
-

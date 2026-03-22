@@ -16,8 +16,8 @@ __all__ = [
     "CommerceFlowStatus",
     "FlowDefinition",
     "FlowExecutionState",
-    "FlowStepType",
     "FlowStatus",
+    "FlowStepType",
     "ICommerceFlow",
     "ICommerceStep",
 ]

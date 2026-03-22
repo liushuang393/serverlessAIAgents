@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+from apps.code_migration_assistant import cli
 from apps.code_migration_assistant.workflow.backlog_models import BacklogTaskStatus
 from apps.code_migration_assistant.workflow.backlog_store import BacklogStore
 from apps.code_migration_assistant.workflow.preflight import PreflightCheck, PreflightReport
-
-from apps.code_migration_assistant import cli
 
 
 def _write_sample_cobol(path: Path) -> None:
@@ -190,4 +190,3 @@ async def test_run_contract_payload_quality_issue_returns_needs_fix(
     assert summary["session_status"] == "needs_fix"
     assert summary["dispatched_task"]["task_id"] == "SAMPLE:quality"
     assert summary["backlog_completed"] is False
-

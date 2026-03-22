@@ -54,7 +54,9 @@ class CLIDiagnosticService:
         )
 
         merged_output = "\n".join(
-            part for part in (diagnostic.get("stdout", ""), diagnostic.get("stderr", "")) if isinstance(part, str) and part
+            part
+            for part in (diagnostic.get("stdout", ""), diagnostic.get("stderr", ""))
+            if isinstance(part, str) and part
         )
         summary = self._build_summary(error=error, stderr=stderr, cli_output=merged_output)
         recommendations = self._build_recommendations(error=error, stderr=stderr, cli_output=merged_output)
@@ -156,7 +158,9 @@ class CLIDiagnosticService:
         if "npm" in merged and "not found" in merged:
             recs.append("Install Node.js/npm, then re-run frontend startup commands.")
         if "module not found" in merged or "no module named" in merged:
-            recs.append('Activate the project Python environment and install dependencies (e.g. `pip install -e ".[dev,apps]"`).')
+            recs.append(
+                'Activate the project Python environment and install dependencies (e.g. `pip install -e ".[dev,apps]"`).'
+            )
         if "eaddrinuse" in merged or "address already in use" in merged:
             recs.append("Port conflict detected. Stop conflicting process or adjust `ports.*` in app_config.")
         if "permission denied" in merged:

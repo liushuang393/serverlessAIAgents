@@ -33,7 +33,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     StrategicProhibition,
     StrategyType,
 )
-
 from kernel import ResilientAgent
 from kernel.core.exceptions import AgentOutputValidationError
 from kernel.core.type_safe import safe_enum

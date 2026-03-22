@@ -70,9 +70,7 @@ class Product(BaseModel):
     name: str = Field(..., description="商品名", max_length=200)
     description: str = Field(default="", description="商品説明", max_length=5000)
     brand: str = Field(default="", description="ブランド名")
-    category: ProductCategory = Field(
-        default=ProductCategory.OTHER, description="商品カテゴリ"
-    )
+    category: ProductCategory = Field(default=ProductCategory.OTHER, description="商品カテゴリ")
 
     # 価格・在庫
     price: float = Field(..., ge=0, description="価格")
@@ -85,26 +83,16 @@ class Product(BaseModel):
     video_urls: list[str] = Field(default_factory=list, description="動画URL一覧")
 
     # 属性
-    attributes: dict[str, Any] = Field(
-        default_factory=dict, description="商品属性（サイズ、色など）"
-    )
+    attributes: dict[str, Any] = Field(default_factory=dict, description="商品属性（サイズ、色など）")
     tags: list[str] = Field(default_factory=list, description="タグ一覧")
 
     # AI推薦用拡張属性
-    ai_features: dict[str, Any] = Field(
-        default_factory=dict, description="AI理解用特徴（埋め込みベクトル等）"
-    )
-    intent_keywords: list[str] = Field(
-        default_factory=list, description="意図検索キーワード"
-    )
-    recommendation_score: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="推薦スコア"
-    )
+    ai_features: dict[str, Any] = Field(default_factory=dict, description="AI理解用特徴（埋め込みベクトル等）")
+    intent_keywords: list[str] = Field(default_factory=list, description="意図検索キーワード")
+    recommendation_score: float = Field(default=0.0, ge=0.0, le=1.0, description="推薦スコア")
 
     # UCP互換フィールド
-    ucp_metadata: dict[str, Any] = Field(
-        default_factory=dict, description="UCP標準メタデータ"
-    )
+    ucp_metadata: dict[str, Any] = Field(default_factory=dict, description="UCP標準メタデータ")
 
     # メタ情報
     created_at: datetime = Field(default_factory=datetime.now, description="作成日時")
@@ -159,4 +147,3 @@ class Product(BaseModel):
             },
             "metadata": self.ucp_metadata,
         }
-

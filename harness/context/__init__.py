@@ -9,6 +9,7 @@ from harness.context.retrieval_gate import RetrievalDecision, RetrievalGate, Ret
 from harness.context.tool_selector import ToolRelevanceSelector, ToolScore
 from harness.context.turn_compressor import CompressionResult, TurnBasedCompressor, TurnConfig
 
+
 __all__ = [
     "BuiltContext",
     "CompressionResult",

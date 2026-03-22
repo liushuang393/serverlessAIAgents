@@ -11,8 +11,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from plugins.infrastructure_skills.deployment_manager.exceptions import (
     BuildError,
     ConfigError,
@@ -21,6 +19,7 @@ from plugins.infrastructure_skills.deployment_manager.exceptions import (
     RollbackError,
     TimeoutError,
 )
+from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger(__name__)

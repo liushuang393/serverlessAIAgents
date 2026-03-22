@@ -14,12 +14,12 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any, Literal
 
-from contracts.app import AppManifest
-from contracts.plugin import PluginBinding
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from infrastructure.llm.contracts import LLMContractsConfig
+from contracts.app import AppManifest
+from contracts.plugin import PluginBinding
 from control_plane.schemas.capability_schemas import CapabilitySpec
+from infrastructure.llm.contracts import LLMContractsConfig
 
 
 # CapabilitySpec または レガシーフラット文字列の Union 型

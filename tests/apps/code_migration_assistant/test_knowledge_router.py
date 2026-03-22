@@ -7,8 +7,8 @@ FastAPI TestClient で各エンドポイントを検証する。
 from __future__ import annotations
 
 import io
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
@@ -19,6 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from shared.rag.collection_manager import CollectionManager
 from shared.rag.document_manager import DocumentManager
 from shared.rag.models import Base as RAGBase
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +51,7 @@ async def session_factory(async_engine) -> async_sessionmaker[AsyncSession]:
 @pytest_asyncio.fixture
 async def managers(session_factory):
     @asynccontextmanager
-    async def _factory() -> AsyncGenerator[AsyncSession, None]:
+    async def _factory() -> AsyncGenerator[AsyncSession]:
         async with session_factory() as session:
             yield session
 

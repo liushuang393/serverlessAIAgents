@@ -73,7 +73,9 @@ def test_upload_uses_legacy_backend_when_configured(monkeypatch: Any, tmp_path: 
     with TestClient(backend_app.app) as client:
         upload = client.post(
             "/api/migrate/upload",
-            files={"file": ("sample.cbl", b"       IDENTIFICATION DIVISION.\n       PROGRAM-ID. SAMPLE.\n", "text/plain")},
+            files={
+                "file": ("sample.cbl", b"       IDENTIFICATION DIVISION.\n       PROGRAM-ID. SAMPLE.\n", "text/plain")
+            },
             params={"fast": "true", "model": "claude-opus-4-6"},
         )
         assert upload.status_code == 200

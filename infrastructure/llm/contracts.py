@@ -116,7 +116,7 @@ class LLMContractsConfig(BaseModel):
 
 def detect_calling_app_name() -> str | None:
     """呼び出しスタックから app 名を推定する."""
-    from contracts.runtime.context import get_runtime_context  # noqa: WPS433 — 循環回避
+    from contracts.runtime.context import get_runtime_context
 
     runtime_context = get_runtime_context()
     if runtime_context is not None:
@@ -141,7 +141,7 @@ def detect_calling_app_name() -> str | None:
 
 def detect_calling_agent_name() -> str | None:
     """呼び出しスタックから agent クラス名を推定する."""
-    from contracts.runtime.context import get_runtime_context  # noqa: WPS433 — 循環回避
+    from contracts.runtime.context import get_runtime_context
 
     runtime_context = get_runtime_context()
     if runtime_context is not None:

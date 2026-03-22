@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine
+from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -93,4 +95,3 @@ __all__ = [
     "CleanupResult",
     "CleanupTask",
 ]
-

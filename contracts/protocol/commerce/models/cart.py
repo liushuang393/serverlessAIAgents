@@ -29,15 +29,11 @@ class CartItem(BaseModel):
     currency: str = Field(default="JPY", description="通貨コード")
 
     # オファー適用
-    applied_offers: list[str] = Field(
-        default_factory=list, description="適用オファーID一覧"
-    )
+    applied_offers: list[str] = Field(default_factory=list, description="適用オファーID一覧")
     discount_amount: float = Field(default=0.0, ge=0, description="割引額")
 
     # メタ情報
-    attributes: dict[str, Any] = Field(
-        default_factory=dict, description="商品属性（サイズ、色など）"
-    )
+    attributes: dict[str, Any] = Field(default_factory=dict, description="商品属性（サイズ、色など）")
     added_at: datetime = Field(default_factory=datetime.now, description="追加日時")
 
     model_config = {"frozen": False, "extra": "allow"}
@@ -74,9 +70,7 @@ class Cart(BaseModel):
     items: list[CartItem] = Field(default_factory=list, description="カートアイテム一覧")
 
     # オファー
-    applied_offers: list[str] = Field(
-        default_factory=list, description="カート全体に適用されたオファーID"
-    )
+    applied_offers: list[str] = Field(default_factory=list, description="カート全体に適用されたオファーID")
     cart_discount: float = Field(default=0.0, ge=0, description="カート割引額")
 
     # 配送
@@ -92,9 +86,7 @@ class Cart(BaseModel):
     expires_at: datetime | None = Field(default=None, description="有効期限")
 
     # AI属性
-    ai_recommendations: list[str] = Field(
-        default_factory=list, description="AI推薦商品ID一覧"
-    )
+    ai_recommendations: list[str] = Field(default_factory=list, description="AI推薦商品ID一覧")
 
     model_config = {"frozen": False, "extra": "allow"}
 
@@ -165,4 +157,3 @@ class Cart(BaseModel):
         self.applied_offers.clear()
         self.cart_discount = 0.0
         self.updated_at = datetime.now()
-

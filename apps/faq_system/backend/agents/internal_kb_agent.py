@@ -28,10 +28,10 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from harness.policies.policy_engine import AuthContext, AuthMode, PolicyEngine
 from kernel.core import ResilientAgent
 from shared.integrations.ticket_generator import TicketGenerator
 from shared.rag.isolated_kb import IsolatedKBManager, KBType
-from harness.policies.policy_engine import AuthContext, AuthMode, PolicyEngine
 
 
 if TYPE_CHECKING:
@@ -198,7 +198,6 @@ class InternalKBAgent(ResilientAgent):
         self._policy_engine = policy_engine or PolicyEngine()
         self._logger = logging.getLogger(self.name)
         self._initialized = False
-
 
     async def process(self, input_data: Any) -> Any:
         """process メソッド（run() にデリゲート）."""

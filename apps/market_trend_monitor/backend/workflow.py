@@ -270,12 +270,15 @@ class MarketTrendWorkflow(SafetyMixin):
         self._flow = f or flow
         self.init_safety(enabled=enable_safety)
         # TokenBudgetManager: 入力キーワード・コンテキストのToken予算管理（手動トリガー）
-        self._budget_manager = TokenBudgetManager(config=budget_config or BudgetConfig(
-            system_prompt_budget=500,
-            rag_context_budget=2000,
-            history_budget=2000,
-            total_budget=6000,
-        ))
+        self._budget_manager = TokenBudgetManager(
+            config=budget_config
+            or BudgetConfig(
+                system_prompt_budget=500,
+                rag_context_budget=2000,
+                history_budget=2000,
+                total_budget=6000,
+            )
+        )
         # RiskAssessor: 最終レポート配信前のリスク評価（手動トリガー）
         self._risk_assessor = RiskAssessor(threshold=RiskLevel.HIGH)
 
@@ -384,8 +387,7 @@ class MarketTrendWorkflow(SafetyMixin):
             "level": risk_assessment.overall_level.value,
             "is_acceptable": risk_assessment.is_acceptable,
             "factors": [
-                {"name": f.name, "level": f.level.value, "description": f.description}
-                for f in risk_assessment.factors
+                {"name": f.name, "level": f.level.value, "description": f.description} for f in risk_assessment.factors
             ],
             "mitigations": risk_assessment.mitigations,
         }

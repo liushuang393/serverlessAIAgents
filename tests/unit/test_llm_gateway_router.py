@@ -73,7 +73,8 @@ async def test_generate_fallback_and_cost_tracking(monkeypatch: pytest.MonkeyPat
         metadata: dict[str, Any] | None,
     ) -> dict[str, Any]:
         if model_cfg.alias == "reasoning_primary":
-            raise RuntimeError("primary failed")
+            msg = "primary failed"
+            raise RuntimeError(msg)
         return {
             "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 1000, "completion_tokens": 500, "total_tokens": 1500},

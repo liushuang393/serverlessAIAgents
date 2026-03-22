@@ -69,7 +69,6 @@ DEFAULT_DATABASE_URL = str(
 )
 
 
-
 def _default_cors_origins() -> list[str]:
     """CORSのデフォルト許可オリジンを構築する."""
     frontend_port = _parse_port(os.getenv("MARKET_TREND_MONITOR_FRONTEND_PORT"), DEFAULT_FRONTEND_PORT)

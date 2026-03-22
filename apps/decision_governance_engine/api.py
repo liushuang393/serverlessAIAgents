@@ -28,6 +28,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from apps.decision_governance_engine.flow_config import (
     register_flow_definition,
     setup_result_store,
@@ -44,9 +47,6 @@ from apps.decision_governance_engine.routers.product_launch import router as pro
 from apps.decision_governance_engine.routers.report import router as report_router
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
 from apps.decision_governance_engine.startup import log_startup_info
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from infrastructure.observability.logging import LogLevel, setup_logging
 
 
@@ -72,8 +72,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
         # RAG 管理テーブルの初期化
         try:
-            from shared.rag.models import Base as RAGBase
             from apps.decision_governance_engine.repositories.database import _db
+            from shared.rag.models import Base as RAGBase
 
             engine = _db.get_async_engine()
             async with engine.begin() as conn:
@@ -84,12 +84,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
         # CollectionManager / DocumentManager の初期化
         try:
-            from shared.rag.collection_manager import CollectionManager
-            from shared.rag.document_manager import DocumentManager
             from apps.decision_governance_engine.repositories.database import get_db_session
             from apps.decision_governance_engine.routers.knowledge_collections import (
                 init_managers as init_collection_managers,
             )
+            from shared.rag.collection_manager import CollectionManager
+            from shared.rag.document_manager import DocumentManager
 
             col_mgr = CollectionManager(session_factory=get_db_session)
             doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_db_session)
@@ -146,13 +146,14 @@ app.include_router(knowledge_collections_router)
 app.include_router(product_launch_router)
 app.include_router(report_router)
 app.include_router(workflow_router)
- 
- 
+
+
 # ========================================
 # グローバル例外ハンドラ
 # ========================================
 from fastapi import Request
 from fastapi.responses import JSONResponse
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -163,8 +164,8 @@ async def global_exception_handler(request: Request, exc: Exception):
             "detail": "Internal Server Error",
             "message": str(exc),
             "type": type(exc).__name__,
-            "path": request.url.path
-        }
+            "path": request.url.path,
+        },
     )
 
 

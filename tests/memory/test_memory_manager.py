@@ -197,8 +197,8 @@ async def test_long_term_memory_delete() -> None:
     """LongTermMemory.delete() が記憶と更新キューを両方削除することを確認."""
     import datetime
 
-    from shared.memory.long_term_memory import LongTermMemory
     from infrastructure.memory.types import MemoryEntry, MemoryType
+    from shared.memory.long_term_memory import LongTermMemory
 
     ltm = LongTermMemory(enable_auto_consolidation=False)
     await ltm.start()

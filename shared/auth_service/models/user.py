@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime
+# SQLAlchemy の Mapped 型解決に必要なため runtime import する（ruff TC003 を意図的に無効化）
+from datetime import datetime  # noqa: TC003
 
 import sqlalchemy as sa
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
     """SQLAlchemy 宣言的ベースクラス."""
-    pass
 
 
 class UserAccount(Base):

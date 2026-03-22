@@ -28,8 +28,8 @@ from infrastructure.llm.providers import get_llm
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from kernel.patterns.coordinator import CoordinatorBase
     from infrastructure.llm_provider import LLMProvider
+    from kernel.patterns.coordinator import CoordinatorBase
     from shared.skills.builtin.rag import RAGSkill
 
 

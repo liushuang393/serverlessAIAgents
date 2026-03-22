@@ -13,6 +13,7 @@ from kernel.reporter.service import (
     create_pie_chart,
 )
 
+
 __all__ = [
     "ChartData",
     "ExecutiveSummary",
@@ -25,4 +26,3 @@ __all__ = [
     "create_line_chart",
     "create_pie_chart",
 ]
-

@@ -1,1 +1,1 @@
-"""stripe-payment スキル."""
+"""stripe-payment スキル."""  # noqa: N999

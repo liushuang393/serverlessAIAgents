@@ -58,6 +58,7 @@ class MemoryStorageBackend(BaseStorageBackend):
         self._data[prefixed] = value
         if ttl is not None:
             from datetime import timedelta
+
             self._ttl[prefixed] = datetime.now() + timedelta(seconds=ttl)
         elif prefixed in self._ttl:
             del self._ttl[prefixed]
@@ -120,6 +121,7 @@ class MemoryStorageBackend(BaseStorageBackend):
     async def mset(self, items: dict[str, Any], ttl: int | None = None) -> None:
         """複数キーを一括設定."""
         from datetime import timedelta
+
         expire_at = None
         if ttl is not None:
             expire_at = datetime.now() + timedelta(seconds=ttl)
@@ -131,10 +133,11 @@ class MemoryStorageBackend(BaseStorageBackend):
             elif prefixed in self._ttl:
                 del self._ttl[prefixed]
 
-
     # Virtual Filesystem
     async def write_file(
-        self, path: str, content: bytes | str,
+        self,
+        path: str,
+        content: bytes | str,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """仮想ファイルを書き込み."""
@@ -206,8 +209,6 @@ class MemoryStorageBackend(BaseStorageBackend):
             "connected": self._connected,
             "key_count": len(ns_keys),
             "file_count": len(ns_files),
-            "total_file_size": sum(
-                len(v) for k, v in self._files.items() if k.startswith(prefix)
-            ),
+            "total_file_size": sum(len(v) for k, v in self._files.items() if k.startswith(prefix)),
             "ttl_keys": len([k for k in self._ttl if k.startswith(prefix)]),
         }

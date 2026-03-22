@@ -18,8 +18,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from kernel.agents.resilient_agent import ResilientAgent
 from infrastructure.llm.providers import get_llm
+from kernel.agents.resilient_agent import ResilientAgent
 from kernel.skills.calendar import CalendarEvent
 
 

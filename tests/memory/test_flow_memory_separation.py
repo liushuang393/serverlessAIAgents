@@ -4,9 +4,9 @@ import datetime
 
 import pytest
 
+from infrastructure.memory.types import MemoryEntry, MemoryType
 from kernel.flow.context import FlowContext
 from shared.memory.memory_manager import MemoryManager
-from infrastructure.memory.types import MemoryEntry, MemoryType
 
 
 @pytest.mark.asyncio
@@ -41,9 +41,7 @@ class TestFlowMemorySeparation:
 
         # 長期記憶は影響を受けない
         memories = await manager.recall(topic="sep_test")
-        assert any(m.id == "sep-test-001" for m in memories), (
-            "FlowContext.clear()が長期記憶に影響してはいけない"
-        )
+        assert any(m.id == "sep-test-001" for m in memories), "FlowContext.clear()が長期記憶に影響してはいけない"
 
         await manager.stop()
 
@@ -117,8 +115,6 @@ class TestFlowMemorySeparation:
 
         # 長期記憶はまだ存在する
         memories = await manager.recall(topic="persist_test")
-        assert any(m.id == "persist-001" for m in memories), (
-            "flow.run()は長期記憶を削除してはいけない"
-        )
+        assert any(m.id == "persist-001" for m in memories), "flow.run()は長期記憶を削除してはいけない"
 
         await manager.stop()

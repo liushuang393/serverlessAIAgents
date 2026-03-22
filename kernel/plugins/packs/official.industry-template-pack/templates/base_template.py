@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agentテンプレート基底クラス.
 
 業界別Agentテンプレートの基底クラスと共通インフラを提供。
@@ -18,6 +17,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
 
 if TYPE_CHECKING:
     from kernel import ResilientAgent
@@ -165,9 +165,7 @@ class AgentTemplate(ABC, BaseModel):
                 errors.append(error)
         return errors
 
-    def _apply_validation_rule(
-        self, rule: TemplateValidationRule, config: dict[str, Any]
-    ) -> str | None:
+    def _apply_validation_rule(self, rule: TemplateValidationRule, config: dict[str, Any]) -> str | None:
         """バリデーションルールを適用.
 
         Args:
@@ -348,4 +346,3 @@ def register_template(template: AgentTemplate) -> None:
         template: 登録するテンプレート
     """
     TemplateRegistry().register(template)
-

@@ -52,7 +52,6 @@ async def test_mcp_tools() -> bool:
             JavaGenerator,
             MCPToolRequest,
         )
-
         from kernel import MCPToolClient as MCPClient
 
         # MCPClientを作成

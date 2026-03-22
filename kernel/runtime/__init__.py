@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     )
     from kernel.runtime.bootstrap import AppCapabilityBootstrapper
     from kernel.runtime.capability_bundle import CapabilityBundle
+    from kernel.runtime.config_watcher import ConfigWatcher
     from kernel.runtime.context import (
         RuntimeContext,
         get_env,
@@ -35,7 +36,6 @@ if TYPE_CHECKING:
         set_runtime_context,
         use_runtime_context,
     )
-    from kernel.runtime.config_watcher import ConfigWatcher
     from kernel.runtime.init import init_agentflow, init_bizcore
     from kernel.runtime.lifecycle import (
         HookInfo,
@@ -54,11 +54,6 @@ if TYPE_CHECKING:
         RewardSignal,
         TrajectoryAdapter,
         TransitionSample,
-    )
-    from kernel.runtime.store import (
-        MemoryRunStore,
-        RunRecord,
-        RunStore,
     )
     from kernel.runtime.lightning_backend import (
         LightningRuntimeConfig,
@@ -92,6 +87,11 @@ if TYPE_CHECKING:
         ResourceFactory,
         ResourcePool,
     )
+    from kernel.runtime.store import (
+        MemoryRunStore,
+        RunRecord,
+        RunStore,
+    )
     from kernel.runtime.tenant_isolation import (
         TenantConfig,
         TenantContext,
@@ -103,22 +103,22 @@ if TYPE_CHECKING:
         require_tenant,
     )
     from kernel.runtime.websocket import (
+        WebSocketHub,
+        WebSocketProtocol,
         WSClient,
         WSHandler,
         WSMessage,
         WSMessageType,
         WSMiddleware,
         WSNext,
-        WebSocketHub,
-        WebSocketProtocol,
     )
 
 
 __all__ = [
+    "AppCapabilityBootstrapper",
     "AppRuntimeHosts",
     "AppRuntimePorts",
     "AppRuntimeUrls",
-    "AppCapabilityBootstrapper",
     "CapabilityBundle",
     "ConfigWatcher",
     "HookInfo",
@@ -133,6 +133,8 @@ __all__ = [
     "LightningTrainingRequest",
     "LightningTrainingResult",
     "MemoryLightningStore",
+    # store
+    "MemoryRunStore",
     "PoolConfig",
     "PoolStats",
     "PooledResource",
@@ -148,6 +150,8 @@ __all__ = [
     "ResourceFactory",
     "ResourcePool",
     "RewardSignal",
+    "RunRecord",
+    "RunStore",
     "RuntimeContext",
     "TenantConfig",
     "TenantContext",
@@ -174,8 +178,8 @@ __all__ = [
     "get_runtime_context",
     "get_tenant_id",
     "get_tenant_isolation",
-    "init_bizcore",
     "init_agentflow",
+    "init_bizcore",
     "is_microsoft_lightning_available",
     "require_scope",
     "require_tenant",
@@ -185,10 +189,6 @@ __all__ = [
     "set_runtime_context",
     "train_with_lightning_backend",
     "use_runtime_context",
-    # store
-    "MemoryRunStore",
-    "RunRecord",
-    "RunStore",
 ]
 
 

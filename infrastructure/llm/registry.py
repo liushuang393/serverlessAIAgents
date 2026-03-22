@@ -17,9 +17,7 @@ class LLMBackendRegistry:
     """LLM backend の差し替え口."""
 
     def __init__(self) -> None:
-        self._registry: ToggleableFactoryRegistry[LLMBackend] = ToggleableFactoryRegistry(
-            component_name="llm_backend"
-        )
+        self._registry: ToggleableFactoryRegistry[LLMBackend] = ToggleableFactoryRegistry(component_name="llm_backend")
         self._registry.register(
             ComponentSpec(name="llm_backend", layer=LayerName.INFRASTRUCTURE, implementation="default"),
             lambda: AgentFlowLLMBackend(),

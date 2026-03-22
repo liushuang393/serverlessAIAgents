@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+
 from shared.auth_service.config import get_settings
 from shared.auth_service.db import session as session_module
 

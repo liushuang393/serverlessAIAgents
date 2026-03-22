@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kernel.core.exceptions import AgentBlockValidationError
 from kernel.agents.loader import AgentLoader
+from kernel.core.exceptions import AgentBlockValidationError
 from kernel.core.metadata import (
     AgentMetadata,
     DependencySpec,

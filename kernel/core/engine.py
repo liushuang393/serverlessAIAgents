@@ -136,8 +136,6 @@ class AgentFlowEngine:
         """
         self._hooks.unregister(hook_type, callback)
 
-
-
     def register_workflow(self, workflow: WorkflowConfig) -> None:
         """ワークフロー設定を登録.
 
@@ -195,7 +193,8 @@ class AgentFlowEngine:
 
                 async def coordinator_func(data: dict[str, Any]) -> dict[str, Any]:
                     if self._is_cancelled(context.execution_id):
-                        raise asyncio.CancelledError(f"execution cancelled: {context.execution_id}")
+                        msg = f"execution cancelled: {context.execution_id}"
+                        raise asyncio.CancelledError(msg)
                     task_input = data.get("inputs", data)
                     if isinstance(task_input, dict):
                         result = await coordinator._execute_sequential(task_input)
@@ -204,14 +203,16 @@ class AgentFlowEngine:
                     if "outputs" in data:
                         data["outputs"]["coordinator_result"] = result
                     if self._is_cancelled(context.execution_id):
-                        raise asyncio.CancelledError(f"execution cancelled: {context.execution_id}")
+                        msg = f"execution cancelled: {context.execution_id}"
+                        raise asyncio.CancelledError(msg)
                     return cast("dict[str, Any]", result)
 
                 return coordinator_func
 
             async def node_func(data: dict[str, Any]) -> dict[str, Any]:
                 if self._is_cancelled(context.execution_id):
-                    raise asyncio.CancelledError(f"execution cancelled: {context.execution_id}")
+                    msg = f"execution cancelled: {context.execution_id}"
+                    raise asyncio.CancelledError(msg)
                 return data
 
             return node_func
@@ -236,15 +237,12 @@ class AgentFlowEngine:
         for node_config in workflow.nodes:
             node_id = node_config["id"]
             is_start = node_config.get("type") == "start"
-            is_not_target = not any(
-                (e.get("target") or e.get("to")) == node_id for e in workflow.edges
-            )
+            is_not_target = not any((e.get("target") or e.get("to")) == node_id for e in workflow.edges)
             if is_start or is_not_target:
                 start_node = nodes[node_id]
                 break
 
         return AsyncFlow(start=start_node)
-
 
     async def execute(self, workflow_id: str, inputs: dict[str, Any]) -> ExecutionResult:
         """ワークフローを実行.
@@ -296,28 +294,36 @@ class AgentFlowEngine:
             await self._hooks.trigger(HookType.ON_COMPLETE, context, output)
             duration = time.time() - start_time
             self._logger.info(
-                f"Execution completed: workflow={workflow_id}, "
-                f"execution={execution_id}, duration={duration:.2f}s"
+                f"Execution completed: workflow={workflow_id}, execution={execution_id}, duration={duration:.2f}s"
             )
             return ExecutionResult(
-                status="success", output=output, error=None, duration=duration, context=context,
+                status="success",
+                output=output,
+                error=None,
+                duration=duration,
+                context=context,
             )
 
         except asyncio.CancelledError:
             await self._hooks.trigger(HookType.ON_CANCEL, context)
             duration = time.time() - start_time
             return ExecutionResult(
-                status="cancelled", output={}, error="execution_cancelled",
-                duration=duration, context=context,
+                status="cancelled",
+                output={},
+                error="execution_cancelled",
+                duration=duration,
+                context=context,
             )
         except Exception as e:
             await self._hooks.trigger(HookType.ON_ERROR, context, e)
             duration = time.time() - start_time
-            self._logger.exception(
-                f"Execution failed: workflow={workflow_id}, execution={execution_id}"
-            )
+            self._logger.exception(f"Execution failed: workflow={workflow_id}, execution={execution_id}")
             return ExecutionResult(
-                status="error", output={}, error=str(e), duration=duration, context=context,
+                status="error",
+                output={},
+                error=str(e),
+                duration=duration,
+                context=context,
             )
         finally:
             self._running_tasks.pop(execution_id, None)
@@ -340,7 +346,9 @@ class AgentFlowEngine:
             task.cancel()
 
         context = self._execution_contexts.get(execution_id) or ExecutionContext(
-            workflow_id="unknown", execution_id=execution_id, inputs={},
+            workflow_id="unknown",
+            execution_id=execution_id,
+            inputs={},
         )
         await self._hooks.trigger(HookType.ON_CANCEL, context)
 

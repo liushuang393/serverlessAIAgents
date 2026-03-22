@@ -2,4 +2,5 @@
 
 from contracts.skill.contracts import SkillManifest
 
+
 __all__ = ["SkillManifest"]

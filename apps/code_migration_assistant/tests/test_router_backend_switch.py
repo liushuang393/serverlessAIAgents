@@ -7,13 +7,14 @@ import time
 from pathlib import Path
 from typing import Any
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 from apps.code_migration_assistant.backend.migration_execution_adapter import (
     ExecutionConfig,
     ExecutionResult,
 )
 from apps.code_migration_assistant.backend.migration_router import router as migration_router
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 
 def _create_test_app() -> FastAPI:

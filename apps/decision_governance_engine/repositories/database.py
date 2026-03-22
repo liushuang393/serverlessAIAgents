@@ -15,9 +15,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from apps.decision_governance_engine.repositories.models import Base
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.decision_governance_engine.repositories.models import Base
 from infrastructure.database import DatabaseConfig, DatabaseManager
 
 

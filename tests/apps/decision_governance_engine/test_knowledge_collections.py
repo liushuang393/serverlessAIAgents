@@ -7,10 +7,8 @@ FastAPI TestClient で各エンドポイントを検証する。
 from __future__ import annotations
 
 import io
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
-from unittest.mock import patch
+from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
@@ -23,9 +21,14 @@ from shared.rag.document_manager import DocumentManager
 from shared.rag.models import Base as RAGBase
 
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+
 # ---------------------------------------------------------------------------
 # テスト用非同期 DB セットアップ
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def async_engine():
@@ -50,8 +53,9 @@ async def session_factory(async_engine) -> async_sessionmaker[AsyncSession]:
 @pytest_asyncio.fixture
 async def managers(session_factory):
     """CollectionManager / DocumentManager ペアを生成."""
+
     @asynccontextmanager
-    async def _factory() -> AsyncGenerator[AsyncSession, None]:
+    async def _factory() -> AsyncGenerator[AsyncSession]:
         async with session_factory() as session:
             yield session
 
@@ -63,6 +67,7 @@ async def managers(session_factory):
 # ---------------------------------------------------------------------------
 # テスト用 FastAPI アプリ
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def client(managers):

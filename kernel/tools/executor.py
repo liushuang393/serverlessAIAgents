@@ -6,7 +6,6 @@ import time
 from typing import TYPE_CHECKING
 
 from contracts.tool import ToolCallStatus, ToolRequest, ToolResult
-
 from kernel.events.sinks import EventSink, NoOpEventSink
 
 

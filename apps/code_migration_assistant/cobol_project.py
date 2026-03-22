@@ -7,8 +7,11 @@ COBOLファイル（単一または zip）を受け取り、
 from __future__ import annotations
 
 import zipfile
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 _COBOL_EXTENSIONS = {".cbl", ".cob", ".cobol", ".cpy"}
@@ -78,7 +81,8 @@ class COBOLProject:
             ValueError: 未対応のファイル形式の場合
         """
         if not self.source.exists():
-            raise FileNotFoundError(f"ソースファイルが存在しません: {self.source}")
+            msg = f"ソースファイルが存在しません: {self.source}"
+            raise FileNotFoundError(msg)
 
         if self.source.suffix.lower() == ".zip":
             self._setup_from_zip()
@@ -87,10 +91,8 @@ class COBOLProject:
         elif self.source.is_dir():
             self._setup_from_directory()
         else:
-            raise ValueError(
-                f"未対応のファイル形式: {self.source.suffix}. "
-                f"対応形式: {', '.join(['.zip', *_COBOL_EXTENSIONS])}"
-            )
+            msg = f"未対応のファイル形式: {self.source.suffix}. 対応形式: {', '.join(['.zip', *_COBOL_EXTENSIONS])}"
+            raise ValueError(msg)
 
     def get_cobol_files(self) -> list[COBOLFile]:
         """変換対象COBOLファイルのリストを返す.
@@ -102,7 +104,8 @@ class COBOLProject:
             RuntimeError: setup() が未実行の場合
         """
         if self._cobol_files is None:
-            raise RuntimeError("setup() を先に実行してください")
+            msg = "setup() を先に実行してください"
+            raise RuntimeError(msg)
         return self._cobol_files
 
     def get_project_root(self) -> Path:
@@ -112,7 +115,8 @@ class COBOLProject:
             RuntimeError: setup() が未実行の場合
         """
         if self._project_root is None:
-            raise RuntimeError("setup() を先に実行してください")
+            msg = "setup() を先に実行してください"
+            raise RuntimeError(msg)
         return self._project_root
 
     def get_copy_files(self) -> list[Path]:
@@ -162,4 +166,3 @@ class COBOLProject:
             for path in sorted(root.rglob(f"*{ext}")):
                 files.append(COBOLFile(path, root))
         return files
-

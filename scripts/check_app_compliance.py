@@ -14,6 +14,7 @@ Usage:
   python scripts/check_app_compliance.py --json
   python scripts/check_app_compliance.py --app faq_system
 """
+
 from __future__ import annotations
 
 import argparse
@@ -50,9 +51,7 @@ def check_app(app_dir: Path) -> dict:
             missing = REQUIRED_CONFIG_FIELDS - set(config.keys())
             result["config_missing_fields"] = sorted(missing)
             if missing:
-                result["issues"].append(
-                    f"app_config.json に必須フィールド不足: {missing}"
-                )
+                result["issues"].append(f"app_config.json に必須フィールド不足: {missing}")
         except json.JSONDecodeError:
             result["issues"].append("app_config.json が不正な JSON")
     else:
@@ -63,9 +62,7 @@ def check_app(app_dir: Path) -> dict:
     has_init = (app_dir / "__init__.py").exists()
     result["has_entry_point"] = has_main or has_init
     if not result["has_entry_point"]:
-        result["issues"].append(
-            "エントリーポイント (main.py / __init__.py) なし"
-        )
+        result["issues"].append("エントリーポイント (main.py / __init__.py) なし")
 
     # 3. フレームワーク import
     framework_imports: set[str] = set()
@@ -83,9 +80,7 @@ def check_app(app_dir: Path) -> dict:
     result["framework_imports"] = sorted(framework_imports)
     result["uses_framework"] = len(framework_imports) > 0
     if not result["uses_framework"]:
-        result["issues"].append(
-            "フレームワーク (kernel/harness等) を利用していない"
-        )
+        result["issues"].append("フレームワーク (kernel/harness等) を利用していない")
 
     # 4. 型アノテーション率
     total_funcs = 0
@@ -100,44 +95,27 @@ def check_app(app_dir: Path) -> dict:
                 total_funcs += 1
                 has_return = node.returns is not None
                 args = node.args
-                all_args = (
-                    args.args + args.posonlyargs + args.kwonlyargs
-                )
+                all_args = args.args + args.posonlyargs + args.kwonlyargs
                 # self/cls は除外
-                non_self = [
-                    a for a in all_args if a.arg not in ("self", "cls")
-                ]
-                all_typed = all(
-                    a.annotation is not None for a in non_self
-                )
+                non_self = [a for a in all_args if a.arg not in ("self", "cls")]
+                all_typed = all(a.annotation is not None for a in non_self)
                 if has_return and all_typed:
                     typed_funcs += 1
     result["total_functions"] = total_funcs
     result["typed_functions"] = typed_funcs
-    result["type_coverage"] = (
-        round(typed_funcs / total_funcs * 100, 1)
-        if total_funcs > 0
-        else 0.0
-    )
+    result["type_coverage"] = round(typed_funcs / total_funcs * 100, 1) if total_funcs > 0 else 0.0
 
     # 5. テスト存在
-    has_test_dir = any(
-        (app_dir / d).is_dir() for d in ("tests", "test")
-    )
+    has_test_dir = any((app_dir / d).is_dir() for d in ("tests", "test"))
     has_test_files = any(app_dir.rglob("test_*.py"))
     # tests/ ルートにも app 名のテストがあるか
     root_tests = list((ROOT / "tests").rglob(f"*{name}*"))
-    result["has_tests"] = (
-        has_test_dir or has_test_files or len(root_tests) > 0
-    )
+    result["has_tests"] = has_test_dir or has_test_files or len(root_tests) > 0
     if not result["has_tests"]:
         result["issues"].append("テストが存在しない")
 
     # 6. README
-    result["has_readme"] = (
-        (app_dir / "README.md").exists()
-        or (app_dir / "README_JA.md").exists()
-    )
+    result["has_readme"] = (app_dir / "README.md").exists() or (app_dir / "README_JA.md").exists()
     if not result["has_readme"]:
         result["issues"].append("README.md が存在しない")
 
@@ -147,9 +125,7 @@ def check_app(app_dir: Path) -> dict:
 
 def main() -> int:
     """メインエントリポイント."""
-    parser = argparse.ArgumentParser(
-        description="App コンプライアンスチェッカー"
-    )
+    parser = argparse.ArgumentParser(description="App コンプライアンスチェッカー")
     parser.add_argument("--json", action="store_true", help="JSON 出力")
     parser.add_argument("--app", type=str, help="特定 app のみチェック")
     parser.add_argument(
@@ -159,11 +135,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    app_dirs = sorted(
-        d
-        for d in APPS_DIR.iterdir()
-        if d.is_dir() and not d.name.startswith(("_", "."))
-    )
+    app_dirs = sorted(d for d in APPS_DIR.iterdir() if d.is_dir() and not d.name.startswith(("_", ".")))
     if args.app:
         app_dirs = [d for d in app_dirs if d.name == args.app]
 
@@ -176,10 +148,7 @@ def main() -> int:
         print(json.dumps({"apps": results}, indent=2, ensure_ascii=False))
     else:
         # テーブル出力
-        print(
-            f"{'App':<35} {'Config':>6} {'Entry':>5} {'FW':>4} "
-            f"{'Type%':>5} {'Test':>4} {'README':>6} {'Status':>8}"
-        )
+        print(f"{'App':<35} {'Config':>6} {'Entry':>5} {'FW':>4} {'Type%':>5} {'Test':>4} {'README':>6} {'Status':>8}")
         print("-" * 85)
         for name, r in results.items():
             status = "OK" if r["compliant"] else "NG"

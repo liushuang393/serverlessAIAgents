@@ -251,9 +251,7 @@ async def test_auth_service_returns_503_when_base_url_missing(
     guard = _build_auth_service_guard(config_path)
 
     with pytest.raises(HTTPException) as exc_info:
-        await guard.require_http(
-            _build_request("/api/geo/task", headers={"authorization": "Bearer valid-token"})
-        )
+        await guard.require_http(_build_request("/api/geo/task", headers={"authorization": "Bearer valid-token"}))
     assert exc_info.value.status_code == 503
 
 

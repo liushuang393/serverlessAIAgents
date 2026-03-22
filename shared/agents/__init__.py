@@ -7,6 +7,7 @@ from shared.agents.sales_agent import (
     SalesOutput,
 )
 
+
 __all__ = [
     "SalesAgent",
     "SalesAgentConfig",

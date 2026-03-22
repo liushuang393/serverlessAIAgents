@@ -7,10 +7,10 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from apps.faq_system.backend.agents.internal_kb_agent import InternalKBAgent, InternalKBConfig
 
-from shared.integrations.ticket_generator import TicketGenerator
+from apps.faq_system.backend.agents.internal_kb_agent import InternalKBAgent, InternalKBConfig
 from harness.policies.policy_engine import PolicyEngine
+from shared.integrations.ticket_generator import TicketGenerator
 
 
 # ---------------------------------------------------------------------------

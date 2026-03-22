@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from apps.faq_system.backend.auth.dependencies import require_auth, require_role
-from apps.faq_system.backend.security.permission_config import KBPermission, PermissionConfig
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+from apps.faq_system.backend.auth.dependencies import require_auth, require_role
+from apps.faq_system.backend.security.permission_config import KBPermission, PermissionConfig
 
 
 if TYPE_CHECKING:

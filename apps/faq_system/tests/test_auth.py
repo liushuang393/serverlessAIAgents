@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+
 from apps.faq_system.backend.auth.dependencies import resolve_user
 from apps.faq_system.backend.auth.service import get_auth_service, reset_auth_service_singleton
 from apps.faq_system.backend.db import close_db

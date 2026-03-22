@@ -18,6 +18,9 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.repositories import DecisionRepository
 from apps.decision_governance_engine.routers.report import _get_report_from_db, cache_report
@@ -34,12 +37,9 @@ from apps.decision_governance_engine.services.human_review_policy import (
     enrich_review_with_policy,
     load_human_review_policy,
 )
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
+from infrastructure.llm.providers import get_llm
 from kernel.agents.agent_factory import AgentFactorySpec
 from kernel.agents.agent_factory import create as create_agent
-from infrastructure.llm.providers import get_llm
 from shared.utils import extract_json
 
 
@@ -62,9 +62,7 @@ class ReviewApprovalRequest(BaseModel):
     approved: bool = Field(..., description="承認/却下")
     reviewer_name: str = Field(..., description="確認者名")
     reviewer_email: str | None = Field(default=None, description="確認者メール")
-    review_notes: str | None = Field(
-        default=None, max_length=500, description="確認コメント"
-    )
+    review_notes: str | None = Field(default=None, max_length=500, description="確認コメント")
 
 
 class ReviewApprovalResponse(BaseModel):
@@ -81,9 +79,7 @@ class FindingRecheckRequest(BaseModel):
 
     report_id: str = Field(..., description="レポートID")
     finding_index: int = Field(..., ge=0, description="確認対象の指摘インデックス")
-    confirmation_note: str = Field(
-        ..., min_length=10, max_length=2000, description="人間確認コメント"
-    )
+    confirmation_note: str = Field(..., min_length=10, max_length=2000, description="人間確認コメント")
     acknowledged: bool = Field(..., description="確認チェックボックス")
     request_id: str | None = Field(default=None, description="履歴リクエストID（UUID）")
     reviewer_name: str | None = Field(default=None, description="確認者名")
@@ -254,9 +250,7 @@ async def get_review_status(report_id: str) -> HumanReview:
         HTTPException: レポートが見つからない場合
     """
     if report_id not in _review_storage:
-        raise HTTPException(
-            status_code=404, detail=f"レポート {report_id} が見つかりません"
-        )
+        raise HTTPException(status_code=404, detail=f"レポート {report_id} が見つかりません")
 
     return _review_storage[report_id]
 
@@ -269,9 +263,7 @@ async def get_pending_reviews() -> list[str]:
         list[str]: 未確認レポートIDのリスト
     """
     return [
-        report_id
-        for report_id, review in _review_storage.items()
-        if review.requires_review and review.approved is None
+        report_id for report_id, review in _review_storage.items() if review.requires_review and review.approved is None
     ]
 
 
@@ -320,7 +312,9 @@ def _build_default_finding(raw: Any) -> ReviewFinding:
         failure_point=str(data.get("failure_point", "")),
         impact_scope=str(data.get("impact_scope", "")),
         minimal_patch=data.get("minimal_patch") if isinstance(data.get("minimal_patch"), dict) else None,
-        score_improvements=data.get("score_improvements", []) if isinstance(data.get("score_improvements"), list) else [],
+        score_improvements=data.get("score_improvements", [])
+        if isinstance(data.get("score_improvements"), list)
+        else [],
         action_type=data.get("action_type", "RECALC"),
     )
 
@@ -334,10 +328,7 @@ def _parse_review_output(raw_review: Any) -> ReviewOutput:
         raise ValueError(msg)
 
     enriched_review = enrich_review_with_policy(raw_review)
-    findings = [
-        _build_default_finding(item)
-        for item in enriched_review.get("findings", [])
-    ]
+    findings = [_build_default_finding(item) for item in enriched_review.get("findings", [])]
     raw_confidence = enriched_review.get("confidence_score", 0.0)
     try:
         confidence = float(raw_confidence)
@@ -350,21 +341,13 @@ def _parse_review_output(raw_review: Any) -> ReviewOutput:
         else []
     )
     raw_confidence_breakdown = enriched_review.get("confidence_breakdown")
-    confidence_breakdown = (
-        raw_confidence_breakdown
-        if isinstance(raw_confidence_breakdown, dict)
-        else None
-    )
+    confidence_breakdown = raw_confidence_breakdown if isinstance(raw_confidence_breakdown, dict) else None
 
     return ReviewOutput(
         overall_verdict=enriched_review.get("overall_verdict", "REVISE"),
         findings=findings,
         confidence_score=confidence,
-        final_warnings=[
-            str(item)
-            for item in enriched_review.get("final_warnings", [])
-            if isinstance(item, str)
-        ],
+        final_warnings=[str(item) for item in enriched_review.get("final_warnings", []) if isinstance(item, str)],
         confidence_breakdown=confidence_breakdown,
         checkpoint_items=checkpoint_items,
         auto_recalc_enabled=bool(enriched_review.get("auto_recalc_enabled", True)),
@@ -601,11 +584,7 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
             updated_review=None,
         )
 
-    remaining_findings = [
-        finding
-        for idx, finding in enumerate(review.findings)
-        if idx != request.finding_index
-    ]
+    remaining_findings = [finding for idx, finding in enumerate(review.findings) if idx != request.finding_index]
     verdict, confidence = ReviewAgent.derive_verdict_and_confidence(
         findings=remaining_findings,
     )
@@ -698,11 +677,7 @@ async def log_finding_note(request: FindingNoteRequest) -> FindingNoteResponse:
 
 def _extract_finding_boost_delta(finding: ReviewFinding) -> float:
     """所見チェック時の固定加点を算出."""
-    positive_deltas = [
-        float(item.delta)
-        for item in finding.score_improvements
-        if float(item.delta) > 0
-    ]
+    positive_deltas = [float(item.delta) for item in finding.score_improvements if float(item.delta) > 0]
     if not positive_deltas:
         return DEFAULT_FINDING_CHECK_BOOST
     return max(positive_deltas)
@@ -846,10 +821,7 @@ def _calculate_base_feasibility_pct(report: Any) -> int:
         return 0
 
     judgment_framework = _to_mapping(fa.get("judgment_framework", {}))
-    path_scores = [
-        _derive_path_feasibility_pct(_to_mapping(path), judgment_framework)
-        for path in recommended_paths
-    ]
+    path_scores = [_derive_path_feasibility_pct(_to_mapping(path), judgment_framework) for path in recommended_paths]
     if not path_scores:
         return 0
     return _clamp_pct(max(path_scores))
@@ -1017,10 +989,15 @@ async def apply_checkpoints(
             continue
         target_metric = _infer_checkpoint_target_metric(item)
         confidence_delta = float(item.score_boost)
-        feasibility_delta = float(item.score_boost) if target_metric in {
-            METRIC_TARGET_FEASIBILITY,
-            METRIC_TARGET_BOTH,
-        } else 0.0
+        feasibility_delta = (
+            float(item.score_boost)
+            if target_metric
+            in {
+                METRIC_TARGET_FEASIBILITY,
+                METRIC_TARGET_BOTH,
+            }
+            else 0.0
+        )
         checkpoint_confidence_boost += confidence_delta
         checkpoint_feasibility_boost += feasibility_delta
         applied_contributions.append(
@@ -1049,10 +1026,15 @@ async def apply_checkpoints(
 
         target_metric = _infer_finding_target_metric(finding)
         confidence_delta = _extract_finding_boost_delta(finding)
-        feasibility_delta = confidence_delta if target_metric in {
-            METRIC_TARGET_FEASIBILITY,
-            METRIC_TARGET_BOTH,
-        } else 0.0
+        feasibility_delta = (
+            confidence_delta
+            if target_metric
+            in {
+                METRIC_TARGET_FEASIBILITY,
+                METRIC_TARGET_BOTH,
+            }
+            else 0.0
+        )
         finding_confidence_boost += confidence_delta
         finding_feasibility_boost += feasibility_delta
         if note_text and target_metric in {METRIC_TARGET_FEASIBILITY, METRIC_TARGET_BOTH}:
@@ -1083,21 +1065,11 @@ async def apply_checkpoints(
 
     llm_bonus, bonus_reasons = await _evaluate_finding_bonus_with_ai(checked_finding_payloads)
     llm_feasibility_bonus = (
-        llm_bonus * (feasibility_note_count / len(checked_finding_payloads))
-        if checked_finding_payloads
-        else 0.0
+        llm_bonus * (feasibility_note_count / len(checked_finding_payloads)) if checked_finding_payloads else 0.0
     )
-    total_confidence_score = (
-        base_confidence_pct
-        + checkpoint_confidence_boost
-        + finding_confidence_boost
-        + llm_bonus
-    )
+    total_confidence_score = base_confidence_pct + checkpoint_confidence_boost + finding_confidence_boost + llm_bonus
     total_feasibility_score = (
-        base_feasibility_pct
-        + checkpoint_feasibility_boost
-        + finding_feasibility_boost
-        + llm_feasibility_bonus
+        base_feasibility_pct + checkpoint_feasibility_boost + finding_feasibility_boost + llm_feasibility_bonus
     )
     recalculated_confidence_pct = _clamp_pct(total_confidence_score)
     recalculated_feasibility_pct = _clamp_pct(total_feasibility_score)

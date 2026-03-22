@@ -16,6 +16,8 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import desc, select
+
 from apps.decision_governance_engine.repositories.database import (
     get_db_session,
     get_redis,
@@ -25,7 +27,6 @@ from apps.decision_governance_engine.repositories.models import (
     DecisionRecord,
     EvidenceItem,
 )
-from sqlalchemy import desc, select
 
 
 logger = logging.getLogger(__name__)

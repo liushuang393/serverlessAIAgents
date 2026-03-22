@@ -8,8 +8,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from plugins.infrastructure_skills.auth_provider.exceptions import (
     AuthError,
     EmailNotConfirmedError,
@@ -17,6 +15,7 @@ from plugins.infrastructure_skills.auth_provider.exceptions import (
     TokenExpiredError,
     UserNotFoundError,
 )
+from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger(__name__)

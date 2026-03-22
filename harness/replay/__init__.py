@@ -7,6 +7,7 @@ from harness.replay.service import (
     ReplaySession,
 )
 
+
 __all__ = [
     "ReplayEvent",
     "ReplayMode",

@@ -4,17 +4,16 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-
-from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from apps.decision_governance_engine.services.intelligence_service import (
-        IntelligenceConfig,
         IntelligenceResult,
         IntelligenceService,
     )
+    from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest
 
 
 @dataclass(slots=True)
@@ -36,7 +35,7 @@ class NormalizedEvidenceSource:
     def is_fresh(self) -> bool:
         """Return whether the source is still considered fresh."""
         anchor = _ensure_utc(self.published_at or self.retrieved_at)
-        return datetime.now(timezone.utc) - anchor <= timedelta(days=30)
+        return datetime.now(UTC) - anchor <= timedelta(days=30)
 
     @property
     def citation_ready(self) -> bool:
@@ -70,7 +69,7 @@ class IntelligenceSnapshot:
 class GeoIntelligenceAdapter:
     """Wrap the shared intelligence service with GEO-specific defaults."""
 
-    def __init__(self, service: "IntelligenceService | None" = None) -> None:
+    def __init__(self, service: IntelligenceService | None = None) -> None:
         """Initialize the live intelligence adapter."""
         if service is None:
             from apps.decision_governance_engine.services.intelligence_service import (
@@ -172,7 +171,7 @@ class GeoIntelligenceAdapter:
         """Return deterministic intelligence for automated tests."""
         stack = (request.targets.legacy_stacks or ["COBOL"])[0]
         industry = (request.targets.industries or ["manufacturing"])[0]
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         sources = [
             NormalizedEvidenceSource(
                 url=f"https://example.test/{industry}/{stack.lower()}-modernization",
@@ -217,5 +216,5 @@ class GeoIntelligenceAdapter:
 def _ensure_utc(value: datetime) -> datetime:
     """Normalize datetimes to timezone-aware UTC."""
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

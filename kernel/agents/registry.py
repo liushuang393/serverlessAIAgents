@@ -7,4 +7,5 @@ re-export する。
 
 from shared.registry.base import ProtocolRegistry, Registry
 
+
 __all__ = ["ProtocolRegistry", "Registry"]

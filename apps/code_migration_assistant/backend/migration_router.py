@@ -21,6 +21,10 @@ import tempfile
 from pathlib import Path
 from typing import Annotated, Any
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel
+
 from apps.code_migration_assistant.backend.migration_execution_adapter import (
     CmaCliExecutionAdapter,
     ExecutionConfig,
@@ -34,9 +38,6 @@ from apps.code_migration_assistant.backend.migration_task_store import (
     get_task_store,
 )
 from apps.code_migration_assistant.cobol_project import COBOLFile, COBOLProject
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
 
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ class TaskStatusResponse(BaseModel):
 
 
 # ---------- ヘルパー関数 ----------
+
 
 def _get_output_root() -> Path:
     """出力ルートディレクトリを返す（テスト時は上書き可能）."""
@@ -306,6 +308,7 @@ async def _sse_generator(task_id: str, store: TaskStore, last_event_id: int = 0)
 
 
 # ---------- エンドポイント ----------
+
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_cobol(

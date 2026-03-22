@@ -15,6 +15,7 @@ from typing import Any
 try:
     from claude_agent_sdk import AgentDefinition
 except ModuleNotFoundError:  # pragma: no cover - SDK 未導入環境向けフォールバック
+
     @dataclass
     class AgentDefinition:
         """claude_agent_sdk.AgentDefinition の互換型."""
@@ -22,6 +23,7 @@ except ModuleNotFoundError:  # pragma: no cover - SDK 未導入環境向けフ�
         description: str
         prompt: str
         tools: list[str]
+
 
 # プロンプトファイルのディレクトリ
 _PROMPTS_DIR = Path(__file__).parent / "prompts"
@@ -159,10 +161,12 @@ def get_stage_info() -> list[dict[str, Any]]:
     result = []
     for stage in list_stages():
         prompt_path = get_prompt_path(stage)
-        result.append({
-            "stage": stage,
-            "prompt_file": str(prompt_path),
-            "prompt_exists": prompt_path.exists(),
-            "prompt_size": prompt_path.stat().st_size if prompt_path.exists() else 0,
-        })
+        result.append(
+            {
+                "stage": stage,
+                "prompt_file": str(prompt_path),
+                "prompt_exists": prompt_path.exists(),
+                "prompt_size": prompt_path.stat().st_size if prompt_path.exists() else 0,
+            }
+        )
     return result

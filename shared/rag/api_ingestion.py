@@ -49,7 +49,12 @@ class APIIngestor:
         self._uri = source_uri
         self._headers = headers or {}
         self._text_fields = text_fields or [
-            "text", "content", "body", "answer", "description", "question",
+            "text",
+            "content",
+            "body",
+            "answer",
+            "description",
+            "question",
         ]
         self._timeout = timeout
 
@@ -105,9 +110,7 @@ class APIIngestor:
                         break
                 else:
                     # テキストフィールドなし: 全文字列値を結合
-                    combined = " ".join(
-                        str(v) for v in item.values() if isinstance(v, str) and str(v).strip()
-                    )
+                    combined = " ".join(str(v) for v in item.values() if isinstance(v, str) and str(v).strip())
                     if combined:
                         texts.append(combined)
         return [t for t in texts if t.strip()]

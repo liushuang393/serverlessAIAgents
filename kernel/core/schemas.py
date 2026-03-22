@@ -136,4 +136,3 @@ class SchemaLoader:
             AgentMetadata の JSON スキーマ
         """
         return AgentMetadata.model_json_schema()
-

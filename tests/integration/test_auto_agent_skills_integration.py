@@ -27,9 +27,9 @@ async def test_full_auto_agent_skills_workflow():
     from kernel import agent
     from kernel.agents.agent_registry import get_global_agent_registry
     from kernel.agents.capability_spec import CapabilityRequirement
+    from kernel.engines import SimpleEngine
     from kernel.tools.tool_discovery import ToolDiscoveryService
     from kernel.tools.tool_registry import get_global_tool_registry
-    from kernel.engines import SimpleEngine
 
     # Step 1: Skills を発見
     tool_registry = get_global_tool_registry()

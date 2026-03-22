@@ -6,9 +6,12 @@ from typing import Any
 
 from kernel.agents.specialized.faq_agent import (
     FAQAgent as KernelFAQAgent,
+)
+from kernel.agents.specialized.faq_agent import (
     FAQAgentConfig,
     FAQResponse,
 )
+
 
 # Alias for backward compatibility if needed, but we'll use the kernel one
 EnhancedFAQConfig = FAQAgentConfig

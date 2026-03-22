@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from contracts.policy import ApprovalRequest as ContractApprovalRequest
-
 from apps.legacy_modernization_geo_platform.backend.schemas import ApprovalRequest, ApprovalStatus
+
+from contracts.policy import ApprovalRequest as ContractApprovalRequest
 
 
 def test_approval_request_reuses_canonical_contract() -> None:

@@ -6,8 +6,9 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 from sqlalchemy.engine import CursorResult
+
+from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 
 
 def _make_user(user_id: str = "user-1") -> MagicMock:

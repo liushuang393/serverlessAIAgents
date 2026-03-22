@@ -197,9 +197,7 @@ class FlowExecutor:
                     if node.node_type == NodeType.REVIEW and result.success:
                         review_data = result.data if isinstance(result.data, dict) else {}
                         verdict = str(
-                            review_data.get("overall_verdict")
-                            or review_data.get("verdict")
-                            or "PASS"
+                            review_data.get("overall_verdict") or review_data.get("verdict") or "PASS"
                         ).upper()
                         if verdict == "REJECT":
                             verdict = "COACH"

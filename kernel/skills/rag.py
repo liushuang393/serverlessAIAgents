@@ -18,9 +18,9 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from infrastructure.llm.providers import get_llm
 from shared.memory.memory_manager import MemoryManager
 from shared.memory.types import CompressionConfig
-from infrastructure.llm.providers import get_llm
 
 
 if TYPE_CHECKING:

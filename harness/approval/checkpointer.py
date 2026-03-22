@@ -181,7 +181,6 @@ class MemoryCheckpointer(Checkpointer):
         return sorted(checkpoints, key=lambda x: x.created_at, reverse=True)
 
 
-
 def get_checkpointer(backend: str | None = None) -> Checkpointer:
     """Checkpointer ファクトリ関数.
 

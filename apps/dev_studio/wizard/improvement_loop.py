@@ -19,9 +19,9 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.llm.providers import get_llm
 from apps.dev_studio.wizard.gap_detector import CapabilityGapDetector
 from apps.dev_studio.wizard.system_synthesizer import SystemSynthesizer
+from infrastructure.llm.providers import get_llm
 
 
 if TYPE_CHECKING:

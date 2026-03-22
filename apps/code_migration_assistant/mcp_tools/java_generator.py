@@ -12,9 +12,9 @@
 
 from typing import Any
 
+from infrastructure.llm import LLMClient, LLMConfig
 from kernel import MCPTool, MCPToolRequest, MCPToolResponse
 from shared.config import get_settings
-from infrastructure.llm import LLMClient, LLMConfig
 
 
 class JavaGenerator(MCPTool):

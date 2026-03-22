@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import secrets
+from typing import TYPE_CHECKING
 
-import httpx
 import pytest
+
+
+if TYPE_CHECKING:
+    import httpx
 
 
 def _unique_id(prefix: str = "test") -> str:
@@ -17,9 +21,7 @@ class TestResourceDefinitionsAPI:
     """resource-definitions CRUD テスト."""
 
     @pytest.mark.asyncio
-    async def test_list_empty(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_list_empty(self, client: httpx.AsyncClient, admin_token: str) -> None:
         resp = await client.get(
             "/auth/authorization/resource-definitions",
             headers={"Authorization": f"Bearer {admin_token}"},
@@ -28,9 +30,7 @@ class TestResourceDefinitionsAPI:
         assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
-    async def test_create_and_get(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_create_and_get(self, client: httpx.AsyncClient, admin_token: str) -> None:
         headers = {"Authorization": f"Bearer {admin_token}"}
         rid = _unique_id("faq__test__common")
         payload = {
@@ -62,9 +62,7 @@ class TestResourceDefinitionsAPI:
         assert len(resp2.json()) >= 1
 
     @pytest.mark.asyncio
-    async def test_delete(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_delete(self, client: httpx.AsyncClient, admin_token: str) -> None:
         headers = {"Authorization": f"Bearer {admin_token}"}
         rid = _unique_id("test__delete")
         # 作成

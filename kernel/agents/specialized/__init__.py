@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
+
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "FAQAgent": ("kernel.agents.specialized.faq_agent", "FAQAgent"),
     "FAQAgentConfig": ("kernel.agents.specialized.faq_agent", "FAQAgentConfig"),

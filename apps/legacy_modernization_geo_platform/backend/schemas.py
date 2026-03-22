@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
-from contracts.policy import ApprovalRequest as ContractApprovalRequest
-from pydantic import BaseModel, Field
-from pydantic import field_validator
-from pydantic import model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from kernel.skills.gateway import RiskLevel
 
 
@@ -55,7 +53,7 @@ def html_language_code(language: str | None) -> str:
 
 def _utcnow() -> datetime:
     """Return a timezone-aware UTC timestamp."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class TaskStatus(str, Enum):
@@ -196,7 +194,9 @@ class ApprovalRequest(ContractApprovalRequest):
         payload["priority"] = str(payload.get("priority") or _approval_priority(action)).strip() or _approval_priority(
             action
         )
-        payload["reason"] = str(payload.get("reason") or comment_text or _approval_reason(action, reviewer_name)).strip()
+        payload["reason"] = str(
+            payload.get("reason") or comment_text or _approval_reason(action, reviewer_name)
+        ).strip()
         if not payload["reason"]:
             payload["reason"] = _approval_reason(action, reviewer_name)
         existing_context = payload.get("context")

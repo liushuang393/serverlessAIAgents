@@ -10,10 +10,11 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import select
+
 from shared.auth_service.core.password import PasswordManager
 from shared.auth_service.db.session import get_db_session
 from shared.auth_service.models.user import UserAccount
-from sqlalchemy import select
 
 
 logger = logging.getLogger(__name__)

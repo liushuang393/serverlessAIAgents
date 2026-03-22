@@ -94,10 +94,7 @@ class MigrationEnv:
         if alembic_url:
             return alembic_url
 
-        msg = (
-            f"DB URL が未設定: 環境変数 {self._db_url_env} 、"
-            "db_url_default、alembic.ini のいずれかを設定してください"
-        )
+        msg = f"DB URL が未設定: 環境変数 {self._db_url_env} 、db_url_default、alembic.ini のいずれかを設定してください"
         raise RuntimeError(msg)
 
     def auto_stamp_existing_db(self, connection: Connection) -> None:
@@ -132,14 +129,12 @@ class MigrationEnv:
             )
         else:
             _logger.info(
-                "既存テーブル検出（alembic_version なし）。"
-                "初期リビジョン %s を自動 stamp",
+                "既存テーブル検出（alembic_version なし）。初期リビジョン %s を自動 stamp",
                 self._initial_revision,
             )
             connection.execute(
                 text(
-                    "CREATE TABLE alembic_version "
-                    "(version_num VARCHAR(32) NOT NULL)",
+                    "CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)",
                 ),
             )
             connection.execute(
@@ -147,7 +142,6 @@ class MigrationEnv:
                 {"rev": self._initial_revision},
             )
         connection.commit()
-
 
     def _do_run_migrations(self, connection: Connection) -> None:
         """コネクション上でマイグレーション実行（共通内部処理）."""

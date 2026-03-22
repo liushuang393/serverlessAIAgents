@@ -12,7 +12,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     ArtifactMeta,
     LegacySemanticsArtifact,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -26,17 +25,11 @@ class LegacySemanticsAgent(
     max_retries = 1
     enable_code_execution = False
 
-    async def process(
-        self, input_data: LegacySemanticsInput
-    ) -> LegacySemanticsOutput:
+    async def process(self, input_data: LegacySemanticsInput) -> LegacySemanticsOutput:
         request = input_data.request
         task_id = input_data.task_id
         brand_memory = input_data.brand_memory
-        stack = (
-            request.targets.legacy_stacks
-            or brand_memory.supported_stacks
-            or ["legacy"]
-        )[0]
+        stack = (request.targets.legacy_stacks or brand_memory.supported_stacks or ["legacy"])[0]
         artifact = LegacySemanticsArtifact(
             meta=ArtifactMeta(
                 task_id=task_id,

@@ -300,10 +300,10 @@ class PriceAnalyzer(AgentBlock):
         avg_price: float,
         median_price: float,
         std_dev: float,
-        min_price: float,
-        max_price: float,
+        min_price: float,  # noqa: ARG002
+        max_price: float,  # noqa: ARG002
         strategy: PriceStrategy,
-        position: MarketPosition,
+        position: MarketPosition,  # noqa: ARG002
     ) -> list[str]:
         """分析インサイトを生成."""
         insights: list[str] = []

@@ -20,9 +20,9 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from contracts.runtime.context import RuntimeContext
     from infrastructure.config import AgentFlowSettings
     from infrastructure.llm.llm_client import LLMClient
-    from contracts.runtime.context import RuntimeContext
 
 
 logger = logging.getLogger(__name__)

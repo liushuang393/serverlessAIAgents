@@ -43,8 +43,7 @@ class TestForgetLowImportance:
         for mid in long_term_before:
             if mid == memory_id:
                 assert mid not in manager._base._long_term._memories, (
-                    "forget_low_importance() はtracker削除だけでなく"
-                    "長期記憶からも削除する必要がある"
+                    "forget_low_importance() はtracker削除だけでなく長期記憶からも削除する必要がある"
                 )
 
         assert forgotten_count >= 0

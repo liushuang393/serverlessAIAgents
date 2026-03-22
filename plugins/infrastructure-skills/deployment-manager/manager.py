@@ -176,10 +176,10 @@ class VercelProvider(DeploymentProvider):
         """确保 HTTP 客户端已初始化."""
         if self._client is None:
             try:
-                import httpx
+                import httpx  # noqa: PLC0415
             except ImportError:
                 msg = "httpx 库未安装，请运行: pip install httpx"
-                raise ConfigError(msg)
+                raise ConfigError(msg)  # noqa: B904
 
             self._client = httpx.AsyncClient(
                 base_url=self.BASE_URL,
@@ -211,15 +211,15 @@ class VercelProvider(DeploymentProvider):
             return response.json()
         except Exception as e:
             msg = f"Vercel API 错误: {e}"
-            raise ProviderError(msg)
+            raise ProviderError(msg)  # noqa: B904
 
     async def deploy(
         self,
         project_name: str,
-        source_path: str,
+        source_path: str,  # noqa: ARG002
         environment: str = "production",
         env_vars: dict[str, str] | None = None,
-        auto_assign_domains: bool = True,
+        auto_assign_domains: bool = True,  # noqa: ARG002
         **kwargs: Any,
     ) -> Deployment:
         """部署到 Vercel."""
@@ -314,7 +314,7 @@ class VercelProvider(DeploymentProvider):
 
     async def get_deployment(
         self,
-        project_name: str,
+        project_name: str,  # noqa: ARG002
         deployment_id: str,
     ) -> Deployment:
         """获取部署详情."""
@@ -342,7 +342,7 @@ class VercelProvider(DeploymentProvider):
 
     async def delete_deployment(
         self,
-        project_name: str,
+        project_name: str,  # noqa: ARG002
         deployment_id: str,
     ) -> bool:
         """删除部署."""
@@ -355,7 +355,7 @@ class VercelProvider(DeploymentProvider):
         project_name: str,
         source_path: str,
         branch: str | None = None,
-        pr_number: int | None = None,
+        pr_number: int | None = None,  # noqa: ARG002
     ) -> Deployment:
         """创建预览部署."""
         return await self.deploy(
@@ -473,10 +473,10 @@ class CloudflareProvider(DeploymentProvider):
         """确保 HTTP 客户端已初始化."""
         if self._client is None:
             try:
-                import httpx
+                import httpx  # noqa: PLC0415
             except ImportError:
                 msg = "httpx 库未安装，请运行: pip install httpx"
-                raise ConfigError(msg)
+                raise ConfigError(msg)  # noqa: B904
 
             self._client = httpx.AsyncClient(
                 base_url=self.BASE_URL,
@@ -512,16 +512,16 @@ class CloudflareProvider(DeploymentProvider):
             if isinstance(e, ProviderError):
                 raise
             msg = f"Cloudflare API 错误: {e}"
-            raise ProviderError(msg)
+            raise ProviderError(msg)  # noqa: B904
 
     async def deploy(
         self,
         project_name: str,
-        source_path: str,
+        source_path: str,  # noqa: ARG002
         environment: str = "production",
         env_vars: dict[str, str] | None = None,
         branch: str | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ARG002
     ) -> Deployment:
         """部署到 Cloudflare Pages."""
         account_id = self._config.account_id
@@ -859,7 +859,7 @@ class DeploymentManager:
             branch=branch,
         )
 
-    async def delete_preview(self, preview_id: str) -> bool:
+    async def delete_preview(self, preview_id: str) -> bool:  # noqa: ARG002
         """删除预览部署.
 
         Args:

@@ -18,7 +18,7 @@ async def test_process_returns_cli_proposal_when_escalation_triggered() -> None:
     """When escalation condition is true, process should return confirmation proposal."""
     coordinator = PersonalAssistantCoordinator()
 
-    def _always_true(*, message, intent):  # noqa: ANN001, D401
+    def _always_true(*, message, intent):
         return True
 
     coordinator._should_propose_cli = _always_true  # type: ignore[method-assign]

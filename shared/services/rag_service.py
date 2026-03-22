@@ -179,9 +179,9 @@ class RAGService(ServiceBase[dict[str, Any]]):
         if self._started:
             return
 
+        from infrastructure.llm.providers import get_embedding, get_llm, get_vectordb
         from shared.rag.chunking import ChunkConfig, get_chunker
         from shared.rag.reranker import get_reranker
-        from infrastructure.llm.providers import get_embedding, get_llm, get_vectordb
 
         self._llm = get_llm(temperature=0.1)
         self._embedding = get_embedding()

@@ -5,12 +5,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
-import httpx
 import pytest
 
 from tests.apps.auth_service.conftest import auth_headers
+
+
+if TYPE_CHECKING:
+    import httpx
 
 
 pytestmark = pytest.mark.asyncio
@@ -24,9 +27,7 @@ pytestmark = pytest.mark.asyncio
 class TestRolesAPI:
     """ロール API のテスト."""
 
-    async def test_list_roles_as_admin(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_list_roles_as_admin(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """admin はロール一覧を取得できる."""
         resp = await client.get(
             "/auth/authorization/roles",
@@ -40,9 +41,7 @@ class TestRolesAPI:
         assert "manager" in role_names
         assert "employee" in role_names
 
-    async def test_list_roles_forbidden_for_employee(
-        self, client: httpx.AsyncClient, employee_token: str
-    ) -> None:
+    async def test_list_roles_forbidden_for_employee(self, client: httpx.AsyncClient, employee_token: str) -> None:
         """employee はロール一覧を取得できない（403）."""
         resp = await client.get(
             "/auth/authorization/roles",
@@ -50,9 +49,7 @@ class TestRolesAPI:
         )
         assert resp.status_code == 403
 
-    async def test_get_role_detail(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_get_role_detail(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """ロール詳細を取得."""
         resp = await client.get(
             "/auth/authorization/roles/admin",
@@ -64,9 +61,7 @@ class TestRolesAPI:
         assert data["is_system"] is True
         assert "*" in data["permissions"]
 
-    async def test_create_and_delete_role(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_create_and_delete_role(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """ロール作成 → 削除."""
         headers = auth_headers(admin_token)
 
@@ -92,9 +87,7 @@ class TestRolesAPI:
         )
         assert resp.status_code == 200
 
-    async def test_cannot_delete_system_role(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_cannot_delete_system_role(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """システムロールは削除できない."""
         resp = await client.delete(
             "/auth/authorization/roles/admin",
@@ -102,9 +95,7 @@ class TestRolesAPI:
         )
         assert resp.status_code == 403
 
-    async def test_update_role(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_update_role(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """ロール更新."""
         headers = auth_headers(admin_token)
 
@@ -141,9 +132,7 @@ class TestRolesAPI:
 class TestPermissionsAPI:
     """パーミッション API のテスト."""
 
-    async def test_list_permissions(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_list_permissions(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """パーミッション一覧を取得."""
         resp = await client.get(
             "/auth/authorization/permissions",
@@ -165,9 +154,7 @@ class TestPermissionsAPI:
 class TestRolePermissionsAPI:
     """ロール-パーミッション割り当て API のテスト."""
 
-    async def test_assign_and_remove_permission(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_assign_and_remove_permission(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """パーミッション割り当て → 解除."""
         headers = auth_headers(admin_token)
 
@@ -202,9 +189,7 @@ class TestRolePermissionsAPI:
         assert resp.status_code == 200
 
         # クリーンアップ
-        await client.delete(
-            "/auth/authorization/roles/perm_test_role", headers=headers
-        )
+        await client.delete("/auth/authorization/roles/perm_test_role", headers=headers)
 
 
 # ---------------------------------------------------------------------------
@@ -215,14 +200,10 @@ class TestRolePermissionsAPI:
 class TestUserRolesAPI:
     """ユーザーロール管理 API のテスト."""
 
-    async def test_get_user_roles(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_get_user_roles(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """ユーザーのロール一覧を取得."""
         # admin の user_id を取得
-        me_resp = await client.get(
-            "/auth/me", headers=auth_headers(admin_token)
-        )
+        me_resp = await client.get("/auth/me", headers=auth_headers(admin_token))
         user_id = me_resp.json()["user"]["user_id"]
 
         resp = await client.get(
@@ -233,13 +214,9 @@ class TestUserRolesAPI:
         data = resp.json()
         assert "admin" in data["roles"]
 
-    async def test_get_user_permissions(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_get_user_permissions(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """ユーザーの有効パーミッション一覧を取得."""
-        me_resp = await client.get(
-            "/auth/me", headers=auth_headers(admin_token)
-        )
+        me_resp = await client.get("/auth/me", headers=auth_headers(admin_token))
         user_id = me_resp.json()["user"]["user_id"]
 
         resp = await client.get(
@@ -259,9 +236,7 @@ class TestUserRolesAPI:
 class TestAuthorizationCheck:
     """認可チェック API のテスト."""
 
-    async def test_check_admin_permission(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_check_admin_permission(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """admin の認可チェック → allowed=True."""
         resp = await client.post(
             "/auth/authorization/check",
@@ -271,9 +246,7 @@ class TestAuthorizationCheck:
         assert resp.status_code == 200
         assert resp.json()["allowed"] is True
 
-    async def test_check_employee_lacks_write(
-        self, client: httpx.AsyncClient, employee_token: str
-    ) -> None:
+    async def test_check_employee_lacks_write(self, client: httpx.AsyncClient, employee_token: str) -> None:
         """employee が faq:write をチェック → allowed=False."""
         resp = await client.post(
             "/auth/authorization/check",
@@ -292,9 +265,7 @@ class TestAuthorizationCheck:
 class TestResourceAccessCheck:
     """リソースアクセスチェック API のテスト."""
 
-    async def test_no_mapping_default_open(
-        self, client: httpx.AsyncClient, employee_token: str
-    ) -> None:
+    async def test_no_mapping_default_open(self, client: httpx.AsyncClient, employee_token: str) -> None:
         """マッピング未設定 → allowed=True."""
         resp = await client.post(
             "/auth/authorization/check-resource",
@@ -309,9 +280,7 @@ class TestResourceAccessCheck:
         data = resp.json()
         assert data["allowed"] is True
 
-    async def test_admin_resource_check(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_admin_resource_check(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """admin はリソースチェックで常に allowed."""
         resp = await client.post(
             "/auth/authorization/check-resource",
@@ -335,9 +304,7 @@ class TestResourceAccessCheck:
 class TestResourcePermissionsAPI:
     """リソースパーミッション API のテスト."""
 
-    async def test_create_and_list_resource_permissions(
-        self, client: httpx.AsyncClient, admin_token: str
-    ) -> None:
+    async def test_create_and_list_resource_permissions(self, client: httpx.AsyncClient, admin_token: str) -> None:
         """リソースパーミッション作成 → 一覧確認."""
         headers = auth_headers(admin_token)
 

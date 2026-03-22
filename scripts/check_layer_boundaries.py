@@ -151,9 +151,7 @@ def find_violations() -> list[tuple[str, int, str]]:
             for line_number, imported_root in _eager_imported_roots(tree):
                 if imported_root not in forbidden:
                     continue
-                violations.append(
-                    (str(path.relative_to(ROOT)), line_number, imported_root)
-                )
+                violations.append((str(path.relative_to(ROOT)), line_number, imported_root))
     return violations
 
 

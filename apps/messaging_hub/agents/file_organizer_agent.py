@@ -7,7 +7,6 @@
     >>> analysis = await agent.analyze_directory("~/Downloads")
     >>> result = await agent.organize("~/Downloads", dry_run=True)
 """
-# ruff: noqa: ASYNC240
 
 from __future__ import annotations
 
@@ -22,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from kernel.agents.resilient_agent import ResilientAgent
+
 
 if TYPE_CHECKING:
     from kernel.skills.gateway import SkillGateway

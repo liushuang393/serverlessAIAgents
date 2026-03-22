@@ -1,4 +1,5 @@
 """RAGAccessControl のユニットテスト."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
@@ -37,7 +38,9 @@ class TestRAGAccessControl:
     async def test_get_search_targets(self, rac: RAGAccessControl, mock_resolver: AsyncMock) -> None:
         """role に応じた collection 一覧を返す."""
         targets = await rac.get_search_targets(
-            role="manager", app_name="faq_system", tenant_id="default",
+            role="manager",
+            app_name="faq_system",
+            tenant_id="default",
         )
         assert len(targets) == 2
         assert targets[0].collection == "faq__default__common"

@@ -98,4 +98,3 @@ class BacklogDispatcher:
             "last_session_id": session_id,
             "updated_at": now_iso(),
         }
-

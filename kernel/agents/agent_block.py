@@ -14,10 +14,10 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+
 if TYPE_CHECKING:
     from kernel.core.engine import AgentFlowEngine
     from kernel.core.metadata import AgentMetadata
-    from kernel.core.schemas import SchemaLoader
     from kernel.protocols.a2a_card import AgentCard
     from kernel.protocols.agui_emitter import AGUIEventEmitter
 
@@ -223,10 +223,9 @@ class AgentBlock(ABC):
         await self.cleanup()
 
 
-
 def _apply_auto_adapt() -> None:
     """auto_adapt デコレーターを遅延適用（循環インポート回避）."""
-    global AgentBlock  # noqa: PLW0603
+    global AgentBlock
     try:
         from kernel.agents.decorators import auto_adapt
 

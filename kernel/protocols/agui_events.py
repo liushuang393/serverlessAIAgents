@@ -338,14 +338,14 @@ def to_legacy_dict(event: AGUIEvent) -> dict[str, Any]:
 
 __all__ = [
     "LEGACY_EVENT_TYPE_MAP",
+    "A2UIClearEvent",
+    "A2UIComponentEvent",
+    "A2UIUpdateEvent",
     "AGUIEvent",
     "AGUIEventType",
     "ApprovalRequiredEvent",
     "ApprovalSubmittedEvent",
     "ApprovalTimeoutEvent",
-    "A2UIClearEvent",
-    "A2UIComponentEvent",
-    "A2UIUpdateEvent",
     "ClarificationQuestion",
     "ClarificationReceivedEvent",
     "ClarificationRequiredEvent",

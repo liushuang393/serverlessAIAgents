@@ -6,12 +6,12 @@ from typing import Any
 
 from control_plane.services.agent_aggregator import AgentAggregatorService
 from control_plane.services.app_discovery import AppDiscoveryService
-from control_plane.services.app_registry import AppRegistryService
 from control_plane.services.app_lifecycle import (
     AppLifecycleManager,
     AppStatus,
     HealthCheckResult,
 )
+from control_plane.services.app_registry import AppRegistryService
 from control_plane.services.app_scaffolder import AppScaffolderService
 from control_plane.services.capability_registry import CapabilityRegistry
 from control_plane.services.component_library import (
@@ -29,6 +29,7 @@ from control_plane.services.publish_orchestrator import PublishOrchestrator
 from control_plane.services.rag_overview import RAGOverviewService
 from control_plane.services.skill_catalog import SkillCatalogService
 from control_plane.services.studio_service import StudioService
+
 # NOTE: tenant_dashboard is lazily imported to avoid circular import:
 #   dashboards.service → publish.runtime → services.__init__ → tenant_dashboard → dashboards.service
 from control_plane.services.tenant_invitation import TenantInvitationService
@@ -49,14 +50,15 @@ def __getattr__(name: str) -> Any:
         module_path, symbol_name = _LAZY_IMPORTS[name]
         module = importlib.import_module(module_path)
         return getattr(module, symbol_name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 __all__ = [
     "AgentAggregatorService",
     "AppDiscoveryService",
-    "AppRegistryService",
     "AppLifecycleManager",
+    "AppRegistryService",
     "AppScaffolderService",
     "AppStatus",
     "CapabilityRegistry",
@@ -75,6 +77,6 @@ __all__ = [
     "SkillCatalogService",
     "StudioService",
     "TenantDashboard",
-    "get_tenant_dashboard",
     "TenantInvitationService",
+    "get_tenant_dashboard",
 ]

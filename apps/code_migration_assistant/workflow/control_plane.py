@@ -5,9 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from shared import AccessContext, build_access_context
-
 from infrastructure.llm.providers.tool_provider import RiskLevel
+from shared import AccessContext, build_access_context
 
 
 if TYPE_CHECKING:
@@ -146,11 +145,7 @@ def build_auth_context(flow_context: Any, tool_name: str, action: str) -> AuthCo
         for key, value in user_context.items():
             subject[key] = value
         if "permissions" in user_context and isinstance(user_context["permissions"], list):
-            custom_permissions = [
-                perm
-                for perm in user_context["permissions"]
-                if isinstance(perm, str) and perm
-            ]
+            custom_permissions = [perm for perm in user_context["permissions"] if isinstance(perm, str) and perm]
             subject["permissions"] = list(dict.fromkeys(default_permissions + custom_permissions))
 
     access_context = build_access_context(

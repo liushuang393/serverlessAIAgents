@@ -20,6 +20,7 @@ from harness.approval.types import (
     InterruptType,
 )
 
+
 __all__ = [
     "ApprovalManager",
     "ApprovalRequest",

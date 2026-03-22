@@ -42,14 +42,14 @@ class Evidence:
     """
 
     id: str
-    source_id: str                           # 情報源ID
-    source_type: SourceType                  # 情報源タイプ
+    source_id: str  # 情報源ID
+    source_type: SourceType  # 情報源タイプ
     url: str
     title: str
-    content_hash: str                        # 重複検出用ハッシュ
+    content_hash: str  # 重複検出用ハッシュ
     extracted_data: dict[str, Any] = field(default_factory=dict)
     collected_at: datetime = field(default_factory=datetime.now)
-    reliability_score: float = 0.5           # 信頼度スコア (0-1)
+    reliability_score: float = 0.5  # 信頼度スコア (0-1)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -76,9 +76,9 @@ class Claim:
     """
 
     id: str
-    statement: str                           # 主張内容
-    level: ClaimLevel = ClaimLevel.LEAD      # 主張レベル
-    confidence: float = 0.0                  # 信頼度 (0-1)
+    statement: str  # 主張内容
+    level: ClaimLevel = ClaimLevel.LEAD  # 主張レベル
+    confidence: float = 0.0  # 信頼度 (0-1)
     evidence_ids: list[str] = field(default_factory=list)
     counter_evidence_ids: list[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.now)
@@ -147,4 +147,3 @@ class ClaimSchema(BaseModel):
     created_at: str
     updated_at: str
     metadata: dict = Field(default_factory=dict)
-

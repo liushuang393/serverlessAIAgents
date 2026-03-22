@@ -9,13 +9,13 @@ import logging
 import subprocess
 from typing import TYPE_CHECKING, Any
 
+from control_plane.deploy.targets.base import BaseDeployTarget
 from kernel.core.interfaces import (
     ConfigField,
     DeployConfig,
     DeployEvent,
     ValidationResult,
 )
-from control_plane.deploy.targets.base import BaseDeployTarget
 
 
 if TYPE_CHECKING:

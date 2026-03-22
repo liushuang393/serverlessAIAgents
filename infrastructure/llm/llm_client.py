@@ -116,14 +116,7 @@ class LLMClient:
 
     @staticmethod
     def _to_message_dicts(messages: list[LLMMessage]) -> list[dict[str, Any]]:
-        return [
-            {
-                key: value
-                for key, value in msg.model_dump().items()
-                if value is not None
-            }
-            for msg in messages
-        ]
+        return [{key: value for key, value in msg.model_dump().items() if value is not None} for msg in messages]
 
     @staticmethod
     def _to_response(payload: Any) -> LLMResponse:
@@ -137,14 +130,22 @@ class LLMClient:
 
         return LLMResponse(
             content=getattr(payload, "content", None) if hasattr(payload, "content") else payload.get("content"),
-            model=getattr(payload, "model", "unknown") if hasattr(payload, "model") else payload.get("model", "unknown"),
+            model=getattr(payload, "model", "unknown")
+            if hasattr(payload, "model")
+            else payload.get("model", "unknown"),
             usage=getattr(payload, "usage", {}) if hasattr(payload, "usage") else payload.get("usage", {}),
             finish_reason=getattr(payload, "finish_reason", None)
             if hasattr(payload, "finish_reason")
             else payload.get("finish_reason"),
             tool_calls=tool_calls,
-            cost_usd=float(getattr(payload, "cost_usd", 0.0) if hasattr(payload, "cost_usd") else payload.get("cost_usd", 0.0)),
-            latency_ms=float(getattr(payload, "latency_ms", 0.0) if hasattr(payload, "latency_ms") else payload.get("latency_ms", 0.0)),
+            cost_usd=float(
+                getattr(payload, "cost_usd", 0.0) if hasattr(payload, "cost_usd") else payload.get("cost_usd", 0.0)
+            ),
+            latency_ms=float(
+                getattr(payload, "latency_ms", 0.0)
+                if hasattr(payload, "latency_ms")
+                else payload.get("latency_ms", 0.0)
+            ),
         )
 
     async def generate(

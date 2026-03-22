@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from kernel.protocols.a2a.types import A2ATaskState
 
+
 if TYPE_CHECKING:
     from kernel.state.task_state import TaskState
 
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 @functools.lru_cache(maxsize=1)
 def _af_to_a2a() -> dict[TaskState, A2ATaskState]:
     """AgentFlow → A2A マッピング（遅延ビルド）."""
-    from kernel.state.task_state import TaskState  # noqa: PLC0415
+    from kernel.state.task_state import TaskState
 
     return {
         TaskState.CREATED: A2ATaskState.SUBMITTED,
@@ -38,7 +39,7 @@ def _af_to_a2a() -> dict[TaskState, A2ATaskState]:
 @functools.lru_cache(maxsize=1)
 def _lossy_states() -> set[TaskState]:
     """1:1 マッピングできない状態（metadata に元状態を保持する必要あり）."""
-    from kernel.state.task_state import TaskState  # noqa: PLC0415
+    from kernel.state.task_state import TaskState
 
     return {
         TaskState.VERIFIED,
@@ -52,7 +53,7 @@ def _lossy_states() -> set[TaskState]:
 @functools.lru_cache(maxsize=1)
 def _a2a_to_af() -> dict[A2ATaskState, TaskState]:
     """A2A → AgentFlow マッピング（デフォルト・遅延ビルド）."""
-    from kernel.state.task_state import TaskState  # noqa: PLC0415
+    from kernel.state.task_state import TaskState
 
     return {
         A2ATaskState.SUBMITTED: TaskState.CREATED,
@@ -108,13 +109,13 @@ def a2a_to_agentflow_state(
     if metadata:
         original = metadata.get("agentflow_state")
         if original:
-            from kernel.state.task_state import TaskState as _TS  # noqa: PLC0415
+            from kernel.state.task_state import TaskState as _TS  # noqa: N814
 
             try:
                 return _TS(original)
             except ValueError:
                 pass
 
-    from kernel.state.task_state import TaskState as _TS2  # noqa: PLC0415
+    from kernel.state.task_state import TaskState as _TS2  # noqa: N814
 
     return _a2a_to_af().get(state, _TS2.CREATED)

@@ -4,6 +4,7 @@
 """
 
 import pytest
+
 from apps.decision_governance_engine.config import (
     DecisionWeightsConfig,
     DimensionConfig,

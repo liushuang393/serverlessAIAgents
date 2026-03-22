@@ -13,7 +13,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreEntry,
     ArtifactMeta,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -40,9 +39,7 @@ class AccountScoreAgent(ResilientAgent[AccountScoreInput, AccountScoreOutput]):
                     52,
                     min(
                         95,
-                        urgency_seed
-                        + len(request.targets.legacy_stacks) * 3
-                        - index * 2,
+                        urgency_seed + len(request.targets.legacy_stacks) * 3 - index * 2,
                     ),
                 ),
                 priority="high" if base_fit - index * 3 >= 80 else "medium",

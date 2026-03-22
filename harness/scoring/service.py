@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -64,7 +65,7 @@ class ExecutionScorer:
         Args:
             weights: 次元別重み
         """
-        self._weights = weights or {dim: 1.0 for dim in ScoreDimension}
+        self._weights = weights or dict.fromkeys(ScoreDimension, 1.0)
 
     def score(self, dimension_scores: list[DimensionScore]) -> ScoringResult:
         """総合スコアを算出.
@@ -78,16 +79,11 @@ class ExecutionScorer:
         if not dimension_scores:
             return ScoringResult()
 
-        total_weight = sum(
-            self._weights.get(ds.dimension, ds.weight) for ds in dimension_scores
-        )
+        total_weight = sum(self._weights.get(ds.dimension, ds.weight) for ds in dimension_scores)
         if total_weight == 0:
             return ScoringResult(dimension_scores=dimension_scores)
 
-        weighted_sum = sum(
-            ds.score * self._weights.get(ds.dimension, ds.weight)
-            for ds in dimension_scores
-        )
+        weighted_sum = sum(ds.score * self._weights.get(ds.dimension, ds.weight) for ds in dimension_scores)
         overall = weighted_sum / total_weight
 
         return ScoringResult(
@@ -102,4 +98,3 @@ __all__ = [
     "ScoreDimension",
     "ScoringResult",
 ]
-

@@ -11,6 +11,7 @@ from kernel.router.service import (
     RouterConfig,
 )
 
+
 __all__ = [
     "Intent",
     "IntentCategory",

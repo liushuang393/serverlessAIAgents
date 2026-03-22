@@ -9,26 +9,25 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
 
 from shared.auth_service.api.dependencies import require_auth_dependency, require_permission
-from shared.auth_service.api.schemas import UserInfo
 from shared.auth_service.api.schemas_authorization import (
     AssignPermissionRequest,
     AssignRoleRequest,
     AuthorizationCheckRequest,
     AuthorizationCheckResponse,
     PermissionResponse,
+    ResolveScopesResponse,
     ResourceCheckRequest,
     ResourceCheckResponse,
     ResourceDefinitionRequest,
     ResourceDefinitionResponse,
     ResourcePermissionRequest,
     ResourcePermissionResponse,
-    ResolveScopesResponse,
     RoleCreateRequest,
     RoleResponse,
     RoleUpdateRequest,
@@ -44,6 +43,10 @@ from shared.auth_service.models.authorization import (
     RolePermission,
     UserRole,
 )
+
+
+if TYPE_CHECKING:
+    from shared.auth_service.api.schemas import UserInfo
 
 
 logger = logging.getLogger(__name__)
@@ -77,14 +80,16 @@ async def list_roles(
                 .where(RolePermission.role_id == role.id)
             )
             perm_names = [row[0] for row in perm_result.all()]
-            responses.append(RoleResponse(
-                name=role.name,
-                display_name=role.display_name,
-                description=role.description,
-                is_system=role.is_system,
-                priority=role.priority,
-                permissions=perm_names,
-            ))
+            responses.append(
+                RoleResponse(
+                    name=role.name,
+                    display_name=role.display_name,
+                    description=role.description,
+                    is_system=role.is_system,
+                    priority=role.priority,
+                    permissions=perm_names,
+                )
+            )
         return responses
 
 
@@ -250,9 +255,7 @@ async def assign_permission_to_role(
         if role is None:
             raise HTTPException(status_code=404, detail="ロールが見つかりません")
 
-        perm = await session.scalar(
-            select(Permission).where(Permission.name == req.permission_name)
-        )
+        perm = await session.scalar(select(Permission).where(Permission.name == req.permission_name))
         if perm is None:
             raise HTTPException(status_code=404, detail="パーミッションが見つかりません")
 
@@ -265,11 +268,13 @@ async def assign_permission_to_role(
         if existing is not None:
             raise HTTPException(status_code=409, detail="既に割り当て済みです")
 
-        session.add(RolePermission(
-            id=_gen_id("rp"),
-            role_id=role.id,
-            permission_id=perm.id,
-        ))
+        session.add(
+            RolePermission(
+                id=_gen_id("rp"),
+                role_id=role.id,
+                permission_id=perm.id,
+            )
+        )
         await session.commit()
 
         # キャッシュ無効化
@@ -289,9 +294,7 @@ async def remove_permission_from_role(
         if role is None:
             raise HTTPException(status_code=404, detail="ロールが見つかりません")
 
-        perm = await session.scalar(
-            select(Permission).where(Permission.name == perm_name)
-        )
+        perm = await session.scalar(select(Permission).where(Permission.name == perm_name))
         if perm is None:
             raise HTTPException(status_code=404, detail="パーミッションが見つかりません")
 
@@ -346,12 +349,14 @@ async def assign_role_to_user(
         if existing is not None:
             raise HTTPException(status_code=409, detail="既に割り当て済みです")
 
-        session.add(UserRole(
-            id=_gen_id("ur"),
-            user_id=user_id,
-            role_id=role.id,
-            assigned_by=current_user.user_id,
-        ))
+        session.add(
+            UserRole(
+                id=_gen_id("ur"),
+                user_id=user_id,
+                role_id=role.id,
+                assigned_by=current_user.user_id,
+            )
+        )
         await session.commit()
 
         get_authorization_service().invalidate_cache(user_id)
@@ -419,10 +424,7 @@ async def check_authorization(
     target_user_id = req.user_id or current_user.user_id
     # 他ユーザーの認可チェックには管理者権限が必要
     if target_user_id != current_user.user_id:
-        if not any(
-            AuthorizationService.match_permission(p, "*")
-            for p in (current_user.permissions or [])
-        ):
+        if not any(AuthorizationService.match_permission(p, "*") for p in (current_user.permissions or [])):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="他のユーザーの認可チェックには管理者権限が必要です",
@@ -445,10 +447,7 @@ async def check_resource_access(
     target_user_id = req.user_id or current_user.user_id
     # 他ユーザーのリソースチェックには管理者権限が必要
     if target_user_id != current_user.user_id:
-        if not any(
-            AuthorizationService.match_permission(p, "*")
-            for p in (current_user.permissions or [])
-        ):
+        if not any(AuthorizationService.match_permission(p, "*") for p in (current_user.permissions or [])):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="他のユーザーのリソースチェックには管理者権限が必要です",
@@ -678,9 +677,5 @@ async def resolve_scopes(
     指定ロールがアクセス可能なスコープ + backend 情報を返す。
     """
     authz = get_authorization_service()
-    scopes = await authz.resolve_scopes(
-        role_name=role, app_name=app_name, resource_type=resource_type
-    )
-    return ResolveScopesResponse(
-        role=role, app_name=app_name, resource_type=resource_type, scopes=scopes
-    )
+    scopes = await authz.resolve_scopes(role_name=role, app_name=app_name, resource_type=resource_type)
+    return ResolveScopesResponse(role=role, app_name=app_name, resource_type=resource_type, scopes=scopes)

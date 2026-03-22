@@ -18,6 +18,10 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.config import KnowledgeBaseType, kb_registry
 from apps.faq_system.backend.rag.parsers import FileParser
@@ -26,10 +30,6 @@ from apps.faq_system.routers.dependencies import (
     get_rag_service,
     is_rag_enabled,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
-
 from shared.rag.rag_access_control import RAGAccessControl
 from shared.services import RAGConfig, RAGService
 

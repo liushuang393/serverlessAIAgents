@@ -17,6 +17,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from apps.code_migration_assistant.cli import (
     _print_progress_cli,
     cmd_list,
@@ -30,6 +31,7 @@ from apps.code_migration_assistant.pipeline.engine import SSEEvent
 # ============================================================
 # cmd_list テスト
 # ============================================================
+
 
 class TestCmdList:
     """cmd_list のユニットテスト."""
@@ -96,6 +98,7 @@ class TestCmdList:
 # ============================================================
 # cmd_show テスト
 # ============================================================
+
 
 class TestCmdShow:
     """cmd_show のユニットテスト."""
@@ -166,9 +169,7 @@ class TestCmdShow:
         (v1 / "01_analysis").mkdir(parents=True)
         # analyzer.json に decision を含む
         artifact_data = {"decision": "PASSED", "programs": [{"program_id": "SAMPLE"}]}
-        (v1 / "01_analysis" / "analyzer.json").write_text(
-            _json.dumps(artifact_data), encoding="utf-8"
-        )
+        (v1 / "01_analysis" / "analyzer.json").write_text(_json.dumps(artifact_data), encoding="utf-8")
 
         args = argparse.Namespace(output=str(tmp_path), program="SAMPLE", verbose=False)
         cmd_show(args)
@@ -179,6 +180,7 @@ class TestCmdShow:
 # ============================================================
 # cmd_retry テスト
 # ============================================================
+
 
 class TestCmdRetry:
     """cmd_retry のユニットテスト."""
@@ -203,8 +205,12 @@ class TestCmdRetry:
     def test_all_valid_stages_pass_validation(self, tmp_path: Path, capsys) -> None:
         """全ての有効なステージ名がバリデーションを通過する（ステージ名エラーを返さない）."""
         valid_stages = [
-            "analyzer", "designer", "transformer",
-            "test_generator", "verifier", "quality_gate",
+            "analyzer",
+            "designer",
+            "transformer",
+            "test_generator",
+            "verifier",
+            "quality_gate",
         ]
         for stage in valid_stages:
             args = argparse.Namespace(
@@ -215,8 +221,10 @@ class TestCmdRetry:
                 model=None,
             )
             # cli.py は関数内で import するため、ソースモジュールをパッチ
-            with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project, \
-                 patch("apps.code_migration_assistant.pipeline.engine.MigrationEngine"):
+            with (
+                patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
+                patch("apps.code_migration_assistant.pipeline.engine.MigrationEngine"),
+            ):
                 mock_project.return_value.setup.return_value = None
                 mock_project.return_value.get_cobol_files.return_value = []
                 result = cmd_retry(args)
@@ -237,8 +245,10 @@ class TestCmdRetry:
             fast=True,
             model=None,
         )
-        with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project, \
-             patch("apps.code_migration_assistant.pipeline.engine.MigrationEngine"):
+        with (
+            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.pipeline.engine.MigrationEngine"),
+        ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
             result = cmd_retry(args)
@@ -251,6 +261,7 @@ class TestCmdRetry:
 # ============================================================
 # cmd_migrate テスト
 # ============================================================
+
 
 class TestCmdMigrate:
     """cmd_migrate のユニットテスト."""
@@ -313,8 +324,10 @@ class TestCmdMigrate:
             fast=True,
             model=None,
         )
-        with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project, \
-             patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", return_value=mock_result):
+        with (
+            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", return_value=mock_result),
+        ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
             result = cmd_migrate(args)
@@ -350,15 +363,17 @@ class TestCmdMigrate:
             fast=False,
             model=None,
         )
-        with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project, \
-             patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", return_value=mock_result):
+        with (
+            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", return_value=mock_result),
+        ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
             result = cmd_migrate(args)
 
         assert result == 1
         out = capsys.readouterr().out
-        assert "--fast" in out   # ENV_ISSUE ヒント
+        assert "--fast" in out  # ENV_ISSUE ヒント
 
     def test_model_from_env_variable(self, tmp_path: Path) -> None:
         """--model 未指定時は MIGRATION_MODEL 環境変数が使われる."""
@@ -390,9 +405,11 @@ class TestCmdMigrate:
             fast=True,
             model=None,
         )
-        with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project, \
-             patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", side_effect=capture), \
-             patch.dict("os.environ", {"MIGRATION_MODEL": "claude-sonnet-4-6"}):
+        with (
+            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", side_effect=capture),
+            patch.dict("os.environ", {"MIGRATION_MODEL": "claude-sonnet-4-6"}),
+        ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
             cmd_migrate(args)
@@ -429,9 +446,11 @@ class TestCmdMigrate:
             fast=True,
             model="claude-opus-4-6",
         )
-        with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project, \
-             patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", side_effect=capture), \
-             patch.dict("os.environ", {"MIGRATION_MODEL": "claude-haiku-4-5"}):
+        with (
+            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", side_effect=capture),
+            patch.dict("os.environ", {"MIGRATION_MODEL": "claude-haiku-4-5"}),
+        ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
             cmd_migrate(args)
@@ -442,6 +461,7 @@ class TestCmdMigrate:
 # ============================================================
 # _print_progress_cli テスト
 # ============================================================
+
 
 class TestPrintProgressCli:
     """_print_progress_cli のユニットテスト."""
@@ -543,6 +563,7 @@ class TestPrintProgressCli:
 # フロントエンド (app.js) が読むキーとエンジンの出力の整合性検証
 # ============================================================
 
+
 def _serialize(event: SSEEvent) -> dict[str, Any]:
     """router.py での変換ロジックを再現する: {type, stage, **data}."""
     return {"type": event.event_type, "stage": event.stage, **event.data}
@@ -560,7 +581,7 @@ class TestSSEEventContract:
         )
         s = _serialize(event)
         assert s["type"] == "stage_start"
-        assert "message" in s       # app.js line 153: event.message || "開始"
+        assert "message" in s  # app.js line 153: event.message || "開始"
 
     def test_stage_complete_provides_decision(self) -> None:
         """stage_complete → app.js: event.decision"""
@@ -571,7 +592,7 @@ class TestSSEEventContract:
         )
         s = _serialize(event)
         assert s["type"] == "stage_complete"
-        assert "decision" in s      # app.js line 162: event.decision
+        assert "decision" in s  # app.js line 162: event.decision
 
     def test_hitl_required_provides_request_id(self) -> None:
         """hitl_required → app.js: event.request_id"""
@@ -588,9 +609,9 @@ class TestSSEEventContract:
             _hitl_event=ev,
         )
         s = _serialize(event)
-        assert "request_id" in s    # app.js line 280: event.request_id
-        assert "question" in s      # app.js line 281: event.question
-        assert "unknowns" in s      # app.js line 283: event.unknowns
+        assert "request_id" in s  # app.js line 280: event.request_id
+        assert "question" in s  # app.js line 281: event.question
+        assert "unknowns" in s  # app.js line 283: event.unknowns
         assert isinstance(s["unknowns"], list)
 
     def test_complete_provides_program_name_and_version(self) -> None:
@@ -607,7 +628,7 @@ class TestSSEEventContract:
         )
         s = _serialize(event)
         assert "program_name" in s  # app.js line 186: event.program_name
-        assert "version" in s       # app.js line 186: event.version
+        assert "version" in s  # app.js line 186: event.version
         assert isinstance(s["version"], int)
 
     def test_error_provides_message(self) -> None:
@@ -618,7 +639,7 @@ class TestSSEEventContract:
             data={"message": "変換に失敗しました"},
         )
         s = _serialize(event)
-        assert "message" in s       # app.js line 194: event.message || "不明なエラー"
+        assert "message" in s  # app.js line 194: event.message || "不明なエラー"
 
     def test_evolution_provides_iteration(self) -> None:
         """evolution → app.js: event.iteration"""
@@ -635,7 +656,7 @@ class TestSSEEventContract:
             data=evolution_data,
         )
         s = _serialize(event)
-        assert "iteration" in s     # app.js line 168: event.iteration || ""
+        assert "iteration" in s  # app.js line 168: event.iteration || ""
         assert s["iteration"] == 2
 
     def test_evolution_provides_problem_alias(self) -> None:
@@ -651,7 +672,7 @@ class TestSSEEventContract:
             "iteration": 1,
             "stage": "designer",
             "decision": "DESIGN_ISSUE",
-            "problem": "DESIGN_ISSUE",   # alias for frontend
+            "problem": "DESIGN_ISSUE",  # alias for frontend
             "fix_summary": "設計問題を修正: フィールド欠落 (フィールドカバレッジ: 3/8)",
             "fix": "設計問題を修正: フィールド欠落 (フィールドカバレッジ: 3/8)",  # alias
             "evolved_at": "2026-01-01T00:00:00+00:00",
@@ -701,6 +722,7 @@ class TestSSEEventContract:
 # ============================================================
 # SSEジェネレーター統合テスト（router._sse_generator）
 # ============================================================
+
 
 class TestSSEGeneratorFormat:
     """_sse_generator のSSEフォーマット検証."""
@@ -780,7 +802,7 @@ class TestSSEGeneratorFormat:
         store = TaskStore()
         task = await store.create()
         for i in range(3):
-            await store.push_event(task.task_id, {"type": f"ev{i+1}"})
+            await store.push_event(task.task_id, {"type": f"ev{i + 1}"})
         await store.close_events(task.task_id)
 
         chunks = []

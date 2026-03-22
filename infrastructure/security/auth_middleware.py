@@ -14,9 +14,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
     from infrastructure.security.api_key import APIKeyManager
 
 logger = logging.getLogger(__name__)
@@ -67,7 +70,7 @@ class AuthMiddleware:
     def __init__(
         self,
         jwt_config: JWTConfig | None = None,
-        api_key_manager: "APIKeyManager | None" = None,
+        api_key_manager: APIKeyManager | None = None,
         external_authenticator: Callable[..., Coroutine[Any, Any, AuthUser | None]] | None = None,
     ) -> None:
         """初期化.
@@ -104,7 +107,7 @@ class AuthMiddleware:
         try:
             import jwt as pyjwt
         except ImportError:
-            logger.error("PyJWT がインストールされていません: pip install PyJWT")
+            logger.exception("PyJWT がインストールされていません: pip install PyJWT")
             return ""
 
         now = datetime.now(tz=UTC)
@@ -181,7 +184,7 @@ class AuthMiddleware:
 
 def create_auth_middleware(
     jwt_config: JWTConfig | None = None,
-    api_key_manager: "APIKeyManager | None" = None,
+    api_key_manager: APIKeyManager | None = None,
     external_authenticator: Callable[..., Coroutine[Any, Any, AuthUser | None]] | None = None,
 ) -> AuthMiddleware:
     """AuthMiddleware のファクトリ関数.
@@ -197,4 +200,3 @@ def create_auth_middleware(
 
 
 __all__ = ["AuthMiddleware", "AuthUser", "JWTConfig", "create_auth_middleware"]
-

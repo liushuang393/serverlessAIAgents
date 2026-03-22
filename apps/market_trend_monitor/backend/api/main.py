@@ -89,6 +89,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     from apps.market_trend_monitor.backend.db import async_session as _session_factory
     from apps.market_trend_monitor.backend.db.models import CollectJobModel
     from sqlalchemy import update as _update
+
     async with _session_factory() as _sess, _sess.begin():
         await _sess.execute(
             _update(CollectJobModel)

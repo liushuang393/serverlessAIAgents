@@ -6,6 +6,7 @@ TTL 付きインメモリキャッシュを提供する。
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import time
 from typing import Any
@@ -38,7 +39,7 @@ PERMISSION_LEVEL_ORDER: dict[str, int] = {
 class _CacheEntry:
     """TTL 付きキャッシュエントリ."""
 
-    __slots__ = ("value", "expires_at")
+    __slots__ = ("expires_at", "value")
 
     def __init__(self, value: Any, ttl: float) -> None:
         self.value = value
@@ -116,9 +117,7 @@ class AuthorizationService:
             権限がある場合 True
         """
         user_permissions = await self.get_user_permissions(user_id)
-        return any(
-            self.match_permission(held, permission) for held in user_permissions
-        )
+        return any(self.match_permission(held, permission) for held in user_permissions)
 
     async def check_resource_access(
         self,
@@ -146,7 +145,8 @@ class AuthorizationService:
 
         # required_level の検証
         if required_level not in PERMISSION_LEVEL_ORDER:
-            raise ValueError(f"不明な required_level: {required_level!r}")
+            msg = f"不明な required_level: {required_level!r}"
+            raise ValueError(msg)
 
         # admin は常に許可
         user_permissions = await self.get_user_permissions(user_id)
@@ -161,9 +161,7 @@ class AuthorizationService:
 
         # ロール ID を取得
         async with get_db_session() as session:
-            result = await session.execute(
-                select(Role.id, Role.name).where(Role.name.in_(user_roles))
-            )
+            result = await session.execute(select(Role.id, Role.name).where(Role.name.in_(user_roles)))
             role_rows = result.all()
             role_ids = [row[0] for row in role_rows]
 
@@ -232,9 +230,7 @@ class AuthorizationService:
 
         async with get_db_session() as session:
             # ロール ID を取得
-            role_id = await session.scalar(
-                select(Role.id).where(Role.name == role_name)
-            )
+            role_id = await session.scalar(select(Role.id).where(Role.name == role_name))
             if role_id is None:
                 return []
 
@@ -270,18 +266,18 @@ class AuthorizationService:
             for rd in definitions:
                 metadata: dict[str, Any] = {}
                 if rd.metadata_json:
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         metadata = _json.loads(rd.metadata_json)
-                    except (ValueError, TypeError):
-                        pass
-                scopes.append({
-                    "scope": rd.scope,
-                    "resource_id": rd.resource_id,
-                    "backend_key": rd.backend_key,
-                    "collection_tpl": metadata.get("collection_tpl", ""),
-                    "permission_level": perm_map.get(rd.resource_id, "read"),
-                    "metadata": metadata,
-                })
+                scopes.append(
+                    {
+                        "scope": rd.scope,
+                        "resource_id": rd.resource_id,
+                        "backend_key": rd.backend_key,
+                        "collection_tpl": metadata.get("collection_tpl", ""),
+                        "permission_level": perm_map.get(rd.resource_id, "read"),
+                        "metadata": metadata,
+                    }
+                )
 
             return scopes
 
@@ -294,10 +290,7 @@ class AuthorizationService:
         if user_id is None:
             self._cache.clear()
             return
-        keys_to_delete = [
-            k for k in self._cache
-            if k == f"perms:{user_id}" or k == f"roles:{user_id}"
-        ]
+        keys_to_delete = [k for k in self._cache if k in (f"perms:{user_id}", f"roles:{user_id}")]
         for key in keys_to_delete:
             del self._cache[key]
 
@@ -336,9 +329,7 @@ class AuthorizationService:
         """ユーザーの全パーミッションを DB から解決."""
         async with get_db_session() as session:
             # user_roles からロール ID を取得
-            result = await session.execute(
-                select(UserRole.role_id).where(UserRole.user_id == user_id)
-            )
+            result = await session.execute(select(UserRole.role_id).where(UserRole.user_id == user_id))
             role_ids = [row[0] for row in result.all()]
 
             # user_roles が空 → UserAccount.role にフォールバック
@@ -346,9 +337,7 @@ class AuthorizationService:
                 account = await session.get(UserAccount, user_id)
                 if account is None:
                     return []
-                fallback_result = await session.execute(
-                    select(Role.id).where(Role.name == account.role)
-                )
+                fallback_result = await session.execute(select(Role.id).where(Role.name == account.role))
                 role_ids = [row[0] for row in fallback_result.all()]
                 if not role_ids:
                     return []
@@ -366,9 +355,7 @@ class AuthorizationService:
         """ユーザーのロール名を DB から解決."""
         async with get_db_session() as session:
             result = await session.execute(
-                select(Role.name)
-                .join(UserRole, UserRole.role_id == Role.id)
-                .where(UserRole.user_id == user_id)
+                select(Role.name).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id)
             )
             role_names = [row[0] for row in result.all()]
 
@@ -377,9 +364,7 @@ class AuthorizationService:
                 account = await session.get(UserAccount, user_id)
                 if account is not None and account.role:
                     # ロールが roles テーブルに存在するか検証
-                    exists = await session.scalar(
-                        select(Role.name).where(Role.name == account.role)
-                    )
+                    exists = await session.scalar(select(Role.name).where(Role.name == account.role))
                     if exists:
                         role_names = [account.role]
 

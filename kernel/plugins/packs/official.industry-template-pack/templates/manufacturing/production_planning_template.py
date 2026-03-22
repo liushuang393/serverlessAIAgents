@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """生産計画Agentテンプレート.
 
 生産計画の最適化を行うAgentテンプレート。
@@ -18,7 +17,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from kernel import ResilientAgent
-from ..base_template import (
+from kernel.plugins.packs.official.templates.base_template import (
     AgentTemplate,
     IndustryType,
     TemplateCategory,
@@ -26,6 +25,7 @@ from ..base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +62,7 @@ class ProductionPlanningOutput(BaseModel):
     recommendations: list[str] = Field(default_factory=list)
 
 
-class ProductionPlanningAgent(
-    ResilientAgent[ProductionPlanningInput, ProductionPlanningOutput]
-):
+class ProductionPlanningAgent(ResilientAgent[ProductionPlanningInput, ProductionPlanningOutput]):
     """生産計画Agent."""
 
     name = "ProductionPlanningAgent"
@@ -93,17 +91,13 @@ JSON形式で以下を出力:
         """入力をパース."""
         return ProductionPlanningInput(**input_data)
 
-    async def process(
-        self, input_data: ProductionPlanningInput
-    ) -> ProductionPlanningOutput:
+    async def process(self, input_data: ProductionPlanningInput) -> ProductionPlanningOutput:
         """生産計画を実行."""
         if self._llm:
             return await self._plan_with_llm(input_data)
         return self._plan_rule_based(input_data)
 
-    async def _plan_with_llm(
-        self, input_data: ProductionPlanningInput
-    ) -> ProductionPlanningOutput:
+    async def _plan_with_llm(self, input_data: ProductionPlanningInput) -> ProductionPlanningOutput:
         """LLMを使用した生産計画."""
         from shared.utils import extract_json
 
@@ -121,22 +115,22 @@ JSON形式で以下を出力:
             return ProductionPlanningOutput(**data)
         return self._plan_rule_based(input_data)
 
-    def _plan_rule_based(
-        self, input_data: ProductionPlanningInput
-    ) -> ProductionPlanningOutput:
+    def _plan_rule_based(self, input_data: ProductionPlanningInput) -> ProductionPlanningOutput:
         """ルールベースの生産計画."""
         schedules: list[ProductionSchedule] = []
 
         # 簡易的なスケジューリング
         for i, order in enumerate(input_data.orders[:10]):
-            schedules.append(ProductionSchedule(
-                order_id=order.get("order_id", f"ORD-{i}"),
-                product_id=order.get("product_id", f"PRD-{i}"),
-                start_time=f"Day {i // 2 + 1} 08:00",
-                end_time=f"Day {i // 2 + 1} 17:00",
-                resource_id="LINE-01",
-                quantity=order.get("quantity", 100),
-            ))
+            schedules.append(
+                ProductionSchedule(
+                    order_id=order.get("order_id", f"ORD-{i}"),
+                    product_id=order.get("product_id", f"PRD-{i}"),
+                    start_time=f"Day {i // 2 + 1} 08:00",
+                    end_time=f"Day {i // 2 + 1} 17:00",
+                    resource_id="LINE-01",
+                    quantity=order.get("quantity", 100),
+                )
+            )
 
         return ProductionPlanningOutput(
             schedules=schedules,

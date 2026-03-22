@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 
 import httpx
 import pytest
+
 from apps.faq_system.main import app
 from apps.faq_system.routers.agents import AgentType, _agent_cache
 

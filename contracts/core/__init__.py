@@ -24,6 +24,7 @@ from contracts.core.types import (
 )
 from contracts.core.workflow_runner import IWorkflowRunner
 
+
 __all__ = [
     "CodeGenOptions",
     "CodeOutputType",
@@ -43,4 +44,3 @@ __all__ = [
     "ValidationResult",
     "WorkflowDefinition",
 ]
-

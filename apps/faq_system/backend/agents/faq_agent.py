@@ -13,9 +13,11 @@ from pydantic import BaseModel, Field
 
 from kernel.agents.specialized.faq_agent import (
     FAQAgent as KernelFAQAgent,
-    FAQAgentConfig,
-    FAQResponse,
 )
+from kernel.agents.specialized.faq_agent import (
+    FAQAgentConfig,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -107,15 +109,17 @@ class FAQAgent(KernelFAQAgent):
         if "chart" in result_dict and isinstance(result_dict["chart"], dict):
             output.chart = ChartSchema(**result_dict["chart"])
         if "suggestions" in result_dict:
-            output.suggestions = [
-                SuggestionSchema(**s) for s in result_dict["suggestions"] if isinstance(s, dict)
-            ]
+            output.suggestions = [SuggestionSchema(**s) for s in result_dict["suggestions"] if isinstance(s, dict)]
         if "citations" in result_dict:
             output.documents = [
                 DocumentSchema(
-                    id=c.get("id", ""), content=c.get("snippet", ""),
-                    source=c.get("title", ""), score=c.get("score", 0.0),
-                ) for c in result_dict["citations"] if isinstance(c, dict)
+                    id=c.get("id", ""),
+                    content=c.get("snippet", ""),
+                    source=c.get("title", ""),
+                    score=c.get("score", 0.0),
+                )
+                for c in result_dict["citations"]
+                if isinstance(c, dict)
             ]
         return output
 
@@ -134,11 +138,13 @@ class FAQAgent(KernelFAQAgent):
     async def _classify_query(self, question: str) -> str:
         """テスト互換用のクエリ分類."""
         from shared.services.query_classifier import classify_query
+
         return classify_query(question).value
 
     def _classify_query_heuristic(self, question: str) -> str:
         """テスト互換用のヒューリスティック分類."""
         from shared.services.query_classifier import QueryClassifier
+
         return QueryClassifier().classify(question).value
 
     async def _handle_chat_query(self, question: str, query_type: str) -> FAQOutput:
@@ -154,7 +160,9 @@ class FAQAgent(KernelFAQAgent):
     async def _handle_weather_query(self, question: str, query_type: str) -> FAQOutput:
         return await self.process(FAQInput(question=question))
 
-    async def _handle_external_query(self, question: str, query_type: str, context: dict[str, Any] | None = None) -> FAQOutput:
+    async def _handle_external_query(
+        self, question: str, query_type: str, context: dict[str, Any] | None = None
+    ) -> FAQOutput:
         return await self.process(FAQInput(question=question, context=context or {}))
 
     async def _handle_hybrid_query(self, question: str, query_type: str) -> FAQOutput:

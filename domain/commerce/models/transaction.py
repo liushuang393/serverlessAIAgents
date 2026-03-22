@@ -16,12 +16,12 @@ from pydantic import BaseModel, Field
 class TransactionStatus(str, Enum):
     """取引ステータス."""
 
-    PENDING = "pending"           # 保留中
-    PROCESSING = "processing"     # 処理中
-    COMPLETED = "completed"       # 完了
-    FAILED = "failed"             # 失敗
-    CANCELLED = "cancelled"       # キャンセル
-    REFUNDED = "refunded"         # 返金済み
+    PENDING = "pending"  # 保留中
+    PROCESSING = "processing"  # 処理中
+    COMPLETED = "completed"  # 完了
+    FAILED = "failed"  # 失敗
+    CANCELLED = "cancelled"  # キャンセル
+    REFUNDED = "refunded"  # 返金済み
     PARTIALLY_REFUNDED = "partially_refunded"  # 一部返金
 
 
@@ -57,9 +57,7 @@ class Transaction(BaseModel):
     user_id: str | None = Field(default=None, description="ユーザーID")
 
     # ステータス
-    status: TransactionStatus = Field(
-        default=TransactionStatus.PENDING, description="取引ステータス"
-    )
+    status: TransactionStatus = Field(default=TransactionStatus.PENDING, description="取引ステータス")
 
     # 金額
     subtotal: float = Field(..., ge=0, description="商品小計")
@@ -70,24 +68,16 @@ class Transaction(BaseModel):
     currency: str = Field(default="JPY", description="通貨コード")
 
     # 支払い
-    payment_method: PaymentMethod | None = Field(
-        default=None, description="支払い方法"
-    )
+    payment_method: PaymentMethod | None = Field(default=None, description="支払い方法")
     payment_id: str | None = Field(default=None, description="決済ID")
     payment_provider: str | None = Field(default=None, description="決済プロバイダー")
 
     # 配送
-    shipping_address: dict[str, Any] = Field(
-        default_factory=dict, description="配送先住所"
-    )
-    billing_address: dict[str, Any] = Field(
-        default_factory=dict, description="請求先住所"
-    )
+    shipping_address: dict[str, Any] = Field(default_factory=dict, description="配送先住所")
+    billing_address: dict[str, Any] = Field(default_factory=dict, description="請求先住所")
 
     # 適用オファー
-    applied_offers: list[str] = Field(
-        default_factory=list, description="適用オファーID一覧"
-    )
+    applied_offers: list[str] = Field(default_factory=list, description="適用オファーID一覧")
 
     # タイムスタンプ
     created_at: datetime = Field(default_factory=datetime.now, description="作成日時")
@@ -97,14 +87,10 @@ class Transaction(BaseModel):
     # AI属性
     ai_assisted: bool = Field(default=False, description="AI支援フラグ")
     intent_id: str | None = Field(default=None, description="関連意図ID")
-    recommendation_source: str | None = Field(
-        default=None, description="推薦ソース"
-    )
+    recommendation_source: str | None = Field(default=None, description="推薦ソース")
 
     # UCP互換
-    ucp_metadata: dict[str, Any] = Field(
-        default_factory=dict, description="UCP標準メタデータ"
-    )
+    ucp_metadata: dict[str, Any] = Field(default_factory=dict, description="UCP標準メタデータ")
 
     model_config = {"frozen": False, "extra": "allow"}
 
@@ -161,4 +147,3 @@ class Transaction(BaseModel):
             },
             "metadata": self.ucp_metadata,
         }
-

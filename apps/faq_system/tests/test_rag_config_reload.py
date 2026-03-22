@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from apps.faq_system.routers.collections import UpdateCollectionRequest, update_collection
 
 

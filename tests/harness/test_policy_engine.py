@@ -139,15 +139,17 @@ class TestPolicyEnginePBAC:
     async def test_matching_policy_applied(self) -> None:
         """マッチするポリシーが適用される."""
         engine = PolicyEngine()
-        engine.add_policy(Policy(
-            policy_id="p1",
-            name="Allow analysts to read reports",
-            subject_conditions={"role": "analyst"},
-            resource_conditions={"type": "report"},
-            action_conditions=["read"],
-            effect=AuthDecision.ALLOW,
-            priority=10,
-        ))
+        engine.add_policy(
+            Policy(
+                policy_id="p1",
+                name="Allow analysts to read reports",
+                subject_conditions={"role": "analyst"},
+                resource_conditions={"type": "report"},
+                action_conditions=["read"],
+                effect=AuthDecision.ALLOW,
+                priority=10,
+            )
+        )
 
         ctx = AuthContext(
             subject={"role": "analyst"},
@@ -171,18 +173,22 @@ class TestPolicyEnginePBAC:
     async def test_higher_priority_wins(self) -> None:
         """優先度の高いポリシーが適用される."""
         engine = PolicyEngine()
-        engine.add_policy(Policy(
-            policy_id="deny",
-            name="Deny all",
-            effect=AuthDecision.DENY,
-            priority=1,
-        ))
-        engine.add_policy(Policy(
-            policy_id="allow",
-            name="Allow all",
-            effect=AuthDecision.ALLOW,
-            priority=10,
-        ))
+        engine.add_policy(
+            Policy(
+                policy_id="deny",
+                name="Deny all",
+                effect=AuthDecision.DENY,
+                priority=1,
+            )
+        )
+        engine.add_policy(
+            Policy(
+                policy_id="allow",
+                name="Allow all",
+                effect=AuthDecision.ALLOW,
+                priority=10,
+            )
+        )
 
         ctx = AuthContext(action="anything")
         result = await engine.authorize(ctx, mode=AuthMode.PBAC)

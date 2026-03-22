@@ -10,12 +10,13 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from sqlalchemy import select
+
 from shared.auth_service.core.mfa import MFAManager
 from shared.auth_service.core.password import PasswordManager
 from shared.auth_service.db.session import get_db_session
 from shared.auth_service.models.user import UserAccount
 from shared.auth_service.providers.base import AuthProvider, AuthResult, ExternalIdentity
-from sqlalchemy import select
 
 
 if TYPE_CHECKING:

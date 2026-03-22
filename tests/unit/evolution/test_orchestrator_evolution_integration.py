@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from kernel.executor.orchestrator import Orchestrator
+from kernel.planner.planner import ExecutionPlan, PlanStep, StepType
 from shared.evolution.recorder import InMemoryExecutionRecorder
 from shared.evolution.types import (
     RetrievalMode,
@@ -11,8 +13,6 @@ from shared.evolution.types import (
     StrategyDecision,
     StrategyScope,
 )
-from kernel.executor.orchestrator import Orchestrator
-from kernel.planner.planner import ExecutionPlan, PlanStep, StepType
 
 
 class _DummyLLM:

@@ -11,15 +11,18 @@ CollectionManager / DocumentManager を使用した
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
-from shared.rag.collection_manager import CollectionManager
-from shared.rag.document_manager import DocumentManager
+from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from shared.rag.rag_access_control import RAGAccessControl
+
+
+if TYPE_CHECKING:
+    from shared.rag.collection_manager import CollectionManager
+    from shared.rag.document_manager import DocumentManager
 
 
 logger = logging.getLogger("decision_api.knowledge_collections")
@@ -37,6 +40,7 @@ _DEMO_USER_ROLES: dict[str, str] = {
 def _get_user_role(user: UserInfo) -> str:
     """デモユーザーのロールを解決."""
     return _DEMO_USER_ROLES.get(user.username, "employee")
+
 
 router = APIRouter(tags=["知識ベース・コレクション管理"])
 
@@ -249,7 +253,7 @@ async def get_collection_stats(
 async def test_query(
     name: str,
     request: TestQueryRequest,
-    user: UserInfo = Depends(require_auth),
+    user: UserInfo = Depends(require_auth),  # noqa: PT028
 ) -> dict[str, Any]:
     """テスト検索クエリ（認証必須・ロールベースアクセス制御）.
 
@@ -439,5 +443,4 @@ async def reindex_collection(
 ) -> dict[str, Any]:
     """コレクション全体の再インデックス（認証必須）."""
     doc_mgr = _get_doc_mgr()
-    result = await doc_mgr.reindex_collection(name)
-    return result
+    return await doc_mgr.reindex_collection(name)

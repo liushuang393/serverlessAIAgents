@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 import pytest
+
 from control_plane.services.tenant_invitation import (
     InviteServiceError,
     TenantInvitationService,

@@ -5,9 +5,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from control_plane.db.session import _ensure_sqlite_parent_dir
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestEnsureSqliteParentDir:

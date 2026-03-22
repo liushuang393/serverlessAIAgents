@@ -14,6 +14,9 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
+
 from apps.faq_system.backend.auth.dependencies import (
     get_current_user,
     require_auth,
@@ -32,8 +35,6 @@ from apps.faq_system.backend.auth.models import (
     UserInfo,
 )
 from apps.faq_system.backend.auth.service import get_auth_service
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
-from fastapi.responses import RedirectResponse
 
 
 logger = logging.getLogger(__name__)

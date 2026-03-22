@@ -35,9 +35,10 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
+from pydantic import BaseModel, Field
+
 from contracts.tool import ToolCallStatus as CanonicalToolCallStatus
 from contracts.tool import ToolResult as CanonicalToolResult
-from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:

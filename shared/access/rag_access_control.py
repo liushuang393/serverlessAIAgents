@@ -6,6 +6,7 @@ ScopeResolver で許可された collection のみ検索し、
 CollectionManager と連携し、DB 管理されたコレクションに対する
 ロールベースアクセス制御も提供する。
 """
+
 from __future__ import annotations
 
 import logging

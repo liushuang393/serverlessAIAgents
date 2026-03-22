@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 # CollectorAgent スキーマ
 # ============================================================
 
+
 class DateRange(BaseModel):
     """日付範囲."""
 
@@ -54,6 +55,7 @@ class CollectorOutput(BaseModel):
 # AnalyzerAgent スキーマ
 # ============================================================
 
+
 class AnalyzerInput(BaseModel):
     """AnalyzerAgent 入力スキーマ."""
 
@@ -89,6 +91,7 @@ class AnalyzerOutput(BaseModel):
 # ============================================================
 # ReporterAgent スキーマ
 # ============================================================
+
 
 class ReporterInput(BaseModel):
     """ReporterAgent 入力スキーマ."""
@@ -128,6 +131,7 @@ class ReporterOutput(BaseModel):
 # ============================================================
 # NotifierAgent スキーマ
 # ============================================================
+
 
 class NotifierInput(BaseModel):
     """NotifierAgent 入力スキーマ."""

@@ -12,6 +12,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from infrastructure.sandbox.os.command import CommandSkill
+from infrastructure.sandbox.os.config import ExecutionMode, OSSkillConfig
+from infrastructure.sandbox.os.filesystem import FileSystemSkill
 from kernel.skills.gateway import (
     GatewayConfig,
     HumanConfirmationRequired,
@@ -26,9 +29,6 @@ from kernel.skills.mode_switcher import (
     ModeSwitchDenied,
     ModeSwitcher,
 )
-from infrastructure.sandbox.os.command import CommandSkill
-from infrastructure.sandbox.os.config import ExecutionMode, OSSkillConfig
-from infrastructure.sandbox.os.filesystem import FileSystemSkill
 
 
 # ========== OSSkillConfig テスト ==========

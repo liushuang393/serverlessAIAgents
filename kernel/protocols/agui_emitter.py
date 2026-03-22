@@ -9,12 +9,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from kernel.core.engine import AgentFlowEngine
-    from kernel.core.hooks import HookEvent, HookType
+    from kernel.core.hooks import HookEvent
 from kernel.protocols.agui_events import (
     AGUIEvent,
     FlowCancelEvent,
@@ -76,7 +78,7 @@ class AGUIEventEmitter:
         self._completed_nodes = 0
 
         # 全てのフックタイプにハンドラーを登録
-        from kernel.core.hooks import HookType  # noqa: PLC0415 — 遅延インポート
+        from kernel.core.hooks import HookType
 
         self._engine.register_hook(HookType.ON_START, self._on_flow_start)
         self._engine.register_hook(HookType.ON_COMPLETE, self._on_flow_complete)
@@ -90,7 +92,7 @@ class AGUIEventEmitter:
     async def detach_from_flow(self) -> None:
         """フローからデタッチしてイベント収集を停止."""
         # 全てのフックハンドラーを解除
-        from kernel.core.hooks import HookType  # noqa: PLC0415 — 遅延インポート
+        from kernel.core.hooks import HookType
 
         self._engine.unregister_hook(HookType.ON_START, self._on_flow_start)
         self._engine.unregister_hook(HookType.ON_COMPLETE, self._on_flow_complete)

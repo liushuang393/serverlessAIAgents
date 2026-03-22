@@ -65,10 +65,7 @@ class RAGDataSourceInput(BaseModel):
         options = dict(self.options)
         inferred = _infer_db_kind(self.uri)
         database_type = (
-            _clean_text(options.get("database_type"))
-            or _clean_text(options.get("dialect"))
-            or inferred
-            or "postgresql"
+            _clean_text(options.get("database_type")) or _clean_text(options.get("dialect")) or inferred or "postgresql"
         ).lower()
         dialect = (_clean_text(options.get("dialect")) or database_type).lower()
 

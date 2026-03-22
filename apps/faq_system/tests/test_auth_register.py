@@ -1,6 +1,7 @@
 import pytest
-from apps.faq_system.backend.auth.service import AuthProvider, get_auth_service
 from httpx import AsyncClient
+
+from apps.faq_system.backend.auth.service import AuthProvider, get_auth_service
 
 
 @pytest.mark.asyncio

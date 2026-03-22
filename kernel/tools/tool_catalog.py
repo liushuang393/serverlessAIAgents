@@ -61,10 +61,12 @@ class CatalogEntry:
     category: str = ""
     tags: list[str] = field(default_factory=list)
     available: bool = True
-    input_schema: dict[str, Any] = field(default_factory=lambda: {
-        "type": "object",
-        "properties": {},
-    })
+    input_schema: dict[str, Any] = field(
+        default_factory=lambda: {
+            "type": "object",
+            "properties": {},
+        }
+    )
 
     def matches(self, query: str) -> float:
         """クエリとのマッチスコアを計算.
@@ -152,6 +154,7 @@ class ToolCatalogManager:
 
             loader = SkillLoader()
             import kernel as _af
+
             builtin_dir = Path(_af.__file__).parent / "skills" / "builtin"
             if not builtin_dir.exists():
                 self._logger.warning("ToolCatalog: ビルトインSkillディレクトリ未検出")
@@ -228,53 +231,78 @@ class ToolCatalogManager:
             ("read_file", "ファイルを読み込む", "os_read", _path_schema),
             ("write_file", "ファイルを書き込む", "os_write", _write_schema),
             ("list_files", "ファイル一覧を取得", "os_read", _path_schema),
-            ("search_files", "ファイルを検索", "os_read", {
-                "type": "object",
-                "properties": {
-                    "pattern": {"type": "string", "description": "検索パターン"},
-                    "path": {"type": "string", "description": "検索ディレクトリ"},
+            (
+                "search_files",
+                "ファイルを検索",
+                "os_read",
+                {
+                    "type": "object",
+                    "properties": {
+                        "pattern": {"type": "string", "description": "検索パターン"},
+                        "path": {"type": "string", "description": "検索ディレクトリ"},
+                    },
+                    "required": ["pattern"],
                 },
-                "required": ["pattern"],
-            }),
+            ),
             ("delete_file", "ファイルを削除", "os_write", _path_schema),
             ("run_command", "コマンドを実行", "os_command", _cmd_schema),
             ("run_background", "バックグラウンド実行", "os_command", _cmd_schema),
-            ("kill_process", "プロセスを終了", "os_process", {
-                "type": "object",
-                "properties": {"pid": {"type": "integer", "description": "プロセスID"}},
-                "required": ["pid"],
-            }),
+            (
+                "kill_process",
+                "プロセスを終了",
+                "os_process",
+                {
+                    "type": "object",
+                    "properties": {"pid": {"type": "integer", "description": "プロセスID"}},
+                    "required": ["pid"],
+                },
+            ),
             ("get_process_list", "プロセス一覧を取得", "os_process", _empty_schema),
-            ("http_request", "HTTPリクエスト送信", "os_network", {
-                "type": "object",
-                "properties": {
-                    "url": {"type": "string", "description": "リクエストURL"},
-                    "method": {"type": "string", "description": "HTTPメソッド"},
+            (
+                "http_request",
+                "HTTPリクエスト送信",
+                "os_network",
+                {
+                    "type": "object",
+                    "properties": {
+                        "url": {"type": "string", "description": "リクエストURL"},
+                        "method": {"type": "string", "description": "HTTPメソッド"},
+                    },
+                    "required": ["url"],
                 },
-                "required": ["url"],
-            }),
-            ("socket_connect", "ソケット接続", "os_network", {
-                "type": "object",
-                "properties": {
-                    "host": {"type": "string", "description": "ホスト"},
-                    "port": {"type": "integer", "description": "ポート"},
+            ),
+            (
+                "socket_connect",
+                "ソケット接続",
+                "os_network",
+                {
+                    "type": "object",
+                    "properties": {
+                        "host": {"type": "string", "description": "ホスト"},
+                        "port": {"type": "integer", "description": "ポート"},
+                    },
+                    "required": ["host", "port"],
                 },
-                "required": ["host", "port"],
-            }),
+            ),
             ("get_system_info", "システム情報を取得", "os_system", _empty_schema),
             ("get_cpu_info", "CPU情報を取得", "os_system", _empty_schema),
             ("get_memory_info", "メモリ情報を取得", "os_system", _empty_schema),
             ("get_disk_info", "ディスク情報を取得", "os_system", _empty_schema),
             ("browser_navigate", "ブラウザでURLを開く", "browser", _url_schema),
             ("browser_click", "要素をクリック", "browser", _selector_schema),
-            ("browser_type", "テキストを入力", "browser", {
-                "type": "object",
-                "properties": {
-                    "selector": {"type": "string", "description": "要素セレクタ"},
-                    "text": {"type": "string", "description": "入力テキスト"},
+            (
+                "browser_type",
+                "テキストを入力",
+                "browser",
+                {
+                    "type": "object",
+                    "properties": {
+                        "selector": {"type": "string", "description": "要素セレクタ"},
+                        "text": {"type": "string", "description": "入力テキスト"},
+                    },
+                    "required": ["selector", "text"],
                 },
-                "required": ["selector", "text"],
-            }),
+            ),
             ("browser_get_text", "要素のテキストを取得", "browser", _selector_schema),
             ("browser_screenshot", "スクリーンショットを取得", "browser", _empty_schema),
         ]
@@ -301,25 +329,41 @@ class ToolCatalogManager:
         """フレームワーク内蔵ツール(calculator, file_reader 等)を登録."""
         # Each tuple: (name, description, input_schema)
         builtins: list[tuple[str, str, dict[str, Any]]] = [
-            ("file_reader", "ファイルの内容を読み取る", {
-                "type": "object",
-                "properties": {"path": {"type": "string", "description": "ファイルパス"}},
-                "required": ["path"],
-            }),
-            ("json_parser", "JSON文字列を解析する", {
-                "type": "object",
-                "properties": {"json_string": {"type": "string", "description": "JSON文字列"}},
-                "required": ["json_string"],
-            }),
-            ("calculator", "数式を計算する", {
-                "type": "object",
-                "properties": {"expression": {"type": "string", "description": "数式"}},
-                "required": ["expression"],
-            }),
-            ("datetime", "現在日時を取得する", {
-                "type": "object",
-                "properties": {"format": {"type": "string", "description": "日時フォーマット"}},
-            }),
+            (
+                "file_reader",
+                "ファイルの内容を読み取る",
+                {
+                    "type": "object",
+                    "properties": {"path": {"type": "string", "description": "ファイルパス"}},
+                    "required": ["path"],
+                },
+            ),
+            (
+                "json_parser",
+                "JSON文字列を解析する",
+                {
+                    "type": "object",
+                    "properties": {"json_string": {"type": "string", "description": "JSON文字列"}},
+                    "required": ["json_string"],
+                },
+            ),
+            (
+                "calculator",
+                "数式を計算する",
+                {
+                    "type": "object",
+                    "properties": {"expression": {"type": "string", "description": "数式"}},
+                    "required": ["expression"],
+                },
+            ),
+            (
+                "datetime",
+                "現在日時を取得する",
+                {
+                    "type": "object",
+                    "properties": {"format": {"type": "string", "description": "日時フォーマット"}},
+                },
+            ),
         ]
 
         for name, desc, schema in builtins:
@@ -348,10 +392,14 @@ class ToolCatalogManager:
                     desc = registered.func.__doc__.strip().split("\n")[0]
 
                 # RegisteredTool.parameters からスキーマを取得
-                schema = registered.parameters if registered.parameters else {
-                    "type": "object",
-                    "properties": {},
-                }
+                schema = (
+                    registered.parameters
+                    if registered.parameters
+                    else {
+                        "type": "object",
+                        "properties": {},
+                    }
+                )
                 entry = CatalogEntry(
                     uri=f"tool://decorator/{name}",
                     name=name,
@@ -396,10 +444,13 @@ class ToolCatalogManager:
                 t_server = str(tool_entry.get("server", "unknown"))
                 t_desc = str(tool_entry.get("description", ""))
                 # MCP ツールの inputSchema を取得
-                t_schema = tool_entry.get("inputSchema", {
-                    "type": "object",
-                    "properties": {},
-                })
+                t_schema = tool_entry.get(
+                    "inputSchema",
+                    {
+                        "type": "object",
+                        "properties": {},
+                    },
+                )
                 entry = CatalogEntry(
                     uri=f"tool://mcp/{t_server}/{t_name}",
                     name=t_name,

@@ -27,8 +27,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
-from kernel.agents.resilient_agent import ResilientAgent
 from infrastructure.llm.providers import get_llm
+from kernel.agents.resilient_agent import ResilientAgent
 from kernel.router import (
     ExecutiveSummaryBuilder,
     Intent,
@@ -44,7 +44,6 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
     from apps.messaging_hub.lazy_tool_loader import LazyToolLoader
-
     from kernel.skills.gateway import SkillGateway, SkillResult
 
 _logger = logging.getLogger(__name__)

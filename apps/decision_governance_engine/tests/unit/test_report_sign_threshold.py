@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """report ルーターの署名閾値テスト."""
 
 import pytest

@@ -45,10 +45,7 @@ from apps.code_migration_assistant.workflow.models import (
     TransformationIterationRecord,
     build_meta,
 )
-
-from kernel.agents.agent_factory import AgentFactorySpec
-from kernel.agents.agent_factory import create as create_agent
-from kernel.engines.base import BaseEngine, EngineConfig
+from harness.approval.approval_flow import ApprovalFlow
 from harness.governance.engine import GovernanceEngine, ToolExecutionContext
 from harness.governance.enterprise_audit import (
     AuditEventType,
@@ -56,16 +53,18 @@ from harness.governance.enterprise_audit import (
     EnterpriseAuditEvent,
     EnterpriseAuditLogger,
 )
-from harness.approval.approval_flow import ApprovalFlow
-from shared.integrations.context_bridge import get_current_context
+from harness.guardrails.safety_mixin import SafetyMixin
+from harness.policies.policy_engine import AuthContext
 from infrastructure.llm.providers.tool_provider import (
     OperationType,
     RegisteredTool,
     RiskLevel,
 )
+from kernel.agents.agent_factory import AgentFactorySpec
+from kernel.agents.agent_factory import create as create_agent
+from kernel.engines.base import BaseEngine, EngineConfig
 from kernel.runtime import LightningTrainingRequest, TrajectoryAdapter
-from harness.guardrails.safety_mixin import SafetyMixin
-from harness.policies.policy_engine import AuthContext
+from shared.integrations.context_bridge import get_current_context
 
 
 # =============================================================================
@@ -266,12 +265,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                 agent_type="reviewer",
             )
         )
-        self._quality_gate_agent = create_agent(
-            AgentFactorySpec(agent_class=QualityGateAgent, agent_type="gatekeeper")
-        )
-        self._limited_fixer_agent = create_agent(
-            AgentFactorySpec(agent_class=LimitedFixerAgent, agent_type="executor")
-        )
+        self._quality_gate_agent = create_agent(AgentFactorySpec(agent_class=QualityGateAgent, agent_type="gatekeeper"))
+        self._limited_fixer_agent = create_agent(AgentFactorySpec(agent_class=LimitedFixerAgent, agent_type="executor"))
         self._compliance_reporter_agent = create_agent(
             AgentFactorySpec(agent_class=ComplianceReporterAgent, agent_type="reporter")
         )
@@ -406,12 +401,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         if force_auth in {"1", "true", "yes"}:
             return False
 
-        env_name = (
-            os.getenv("CODE_MIGRATION_ENV")
-            or os.getenv("APP_ENV")
-            or os.getenv("ENV")
-            or ""
-        ).lower()
+        env_name = (os.getenv("CODE_MIGRATION_ENV") or os.getenv("APP_ENV") or os.getenv("ENV") or "").lower()
         if env_name in {"prod", "production"}:
             return False
 
@@ -424,6 +414,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         tool: RegisteredTool,
     ) -> AuthContext | None:
         """Governance 用認証コンテキストを構築する."""
+
         def _normalize_permissions(raw: Any) -> list[str]:
             """既存権限セットを plugin manifest 互換権限へ拡張する."""
             permissions: list[str] = []

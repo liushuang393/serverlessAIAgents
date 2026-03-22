@@ -42,7 +42,7 @@ class ExternalIdentity:
     raw: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_google(cls, token_info: dict[str, Any]) -> "ExternalIdentity":
+    def from_google(cls, token_info: dict[str, Any]) -> ExternalIdentity:
         """Google OAuth2 トークン情報から ExternalIdentity を生成する.
 
         Args:
@@ -62,7 +62,7 @@ class ExternalIdentity:
         )
 
     @classmethod
-    def from_azure_ad(cls, token_info: dict[str, Any]) -> "ExternalIdentity":
+    def from_azure_ad(cls, token_info: dict[str, Any]) -> ExternalIdentity:
         """Azure AD トークン情報から ExternalIdentity を生成する.
 
         Args:
@@ -84,7 +84,7 @@ class ExternalIdentity:
         )
 
     @classmethod
-    def from_saml(cls, attributes: dict[str, Any]) -> "ExternalIdentity":
+    def from_saml(cls, attributes: dict[str, Any]) -> ExternalIdentity:
         """SAML アサーションから ExternalIdentity を生成する.
 
         Args:
@@ -112,4 +112,3 @@ class ExternalIdentity:
 
 
 __all__ = ["ExternalIdentity"]
-

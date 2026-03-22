@@ -14,10 +14,10 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-
 def _resolve_app_runtime_lazy(*args: object, **kwargs: object) -> object:
     """遅延インポート: kernel.runtime.resolve_app_runtime（L2→L3 違反回避）."""
     from kernel.runtime import resolve_app_runtime as _resolve
+
     return _resolve(*args, **kwargs)
 
 

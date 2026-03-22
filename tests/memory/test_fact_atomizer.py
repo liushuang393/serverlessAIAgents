@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-import pytest
-
 from shared.memory.fact_atomizer import AtomicFact, FactAtomizer, IngestionResult
 
 

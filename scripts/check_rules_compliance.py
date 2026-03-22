@@ -9,6 +9,7 @@ Usage:
   python scripts/check_rules_compliance.py --json
   python scripts/check_rules_compliance.py --strict
 """
+
 from __future__ import annotations
 
 import argparse
@@ -39,13 +40,13 @@ SCAN_DIRS = [
 # 段階的削減を目標として設定。新規違反の追加を防止しつつ、
 # 既存違反は計画的に削減する。
 THRESHOLDS = {
-    "layer_boundary_violations": 25,      # 現行 0 → 維持
-    "provider_direct_imports": 0,         # 即時ゼロ
-    "file_size_violations": 30,           # 現行 25 → 段階的に 10 へ
-    "excessive_imports": 10,              # 現行 8 → 維持
-    "type_ignore_without_reason": 150,    # 現行 128 → 段階的に 50 へ
-    "bare_any_usage": 7000,               # 現行 6691 → 段階的に 3000 へ
-    "cast_usage": 80,                     # 現行 68 → 段階的に 30 へ
+    "layer_boundary_violations": 25,  # 現行 0 → 維持
+    "provider_direct_imports": 0,  # 即時ゼロ
+    "file_size_violations": 30,  # 現行 25 → 段階的に 10 へ
+    "excessive_imports": 10,  # 現行 8 → 維持
+    "type_ignore_without_reason": 150,  # 現行 128 → 段階的に 50 へ
+    "bare_any_usage": 7000,  # 現行 6691 → 段階的に 3000 へ
+    "cast_usage": 80,  # 現行 68 → 段階的に 30 へ
 }
 
 
@@ -70,10 +71,12 @@ def check_file_sizes(files: list[Path]) -> list[dict]:
     for f in files:
         lines = count_lines(f)
         if lines > 1000:
-            violations.append({
-                "file": str(f.relative_to(ROOT)),
-                "lines": lines,
-            })
+            violations.append(
+                {
+                    "file": str(f.relative_to(ROOT)),
+                    "lines": lines,
+                }
+            )
     return violations
 
 
@@ -85,16 +88,14 @@ def check_excessive_imports(files: list[Path]) -> list[dict]:
             tree = ast.parse(f.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
-        import_count = sum(
-            1
-            for node in ast.iter_child_nodes(tree)
-            if isinstance(node, (ast.Import, ast.ImportFrom))
-        )
+        import_count = sum(1 for node in ast.iter_child_nodes(tree) if isinstance(node, (ast.Import, ast.ImportFrom)))
         if import_count > 20:
-            violations.append({
-                "file": str(f.relative_to(ROOT)),
-                "import_count": import_count,
-            })
+            violations.append(
+                {
+                    "file": str(f.relative_to(ROOT)),
+                    "import_count": import_count,
+                }
+            )
     return violations
 
 
@@ -115,11 +116,13 @@ def check_type_ignore(files: list[Path]) -> list[dict]:
             if bare_pattern.search(line) or code_only_pattern.search(
                 line,
             ):
-                violations.append({
-                    "file": str(f.relative_to(ROOT)),
-                    "line": i,
-                    "content": line.strip(),
-                })
+                violations.append(
+                    {
+                        "file": str(f.relative_to(ROOT)),
+                        "line": i,
+                        "content": line.strip(),
+                    }
+                )
     return violations
 
 
@@ -140,9 +143,7 @@ def check_bare_any(files: list[Path]) -> list[dict]:
         for node in ast.walk(tree):
             if isinstance(node, ast.Name) and node.id == "Any":
                 lineno = node.lineno
-                line_text = (
-                    lines[lineno - 1] if lineno <= len(lines) else ""
-                )
+                line_text = lines[lineno - 1] if lineno <= len(lines) else ""
                 # コメント部分を抽出
                 if "#" in line_text:
                     comment = line_text.split("#", 1)[1].strip()
@@ -150,10 +151,12 @@ def check_bare_any(files: list[Path]) -> list[dict]:
                     if len(comment) >= 5:
                         continue
                 # コメントなし or 理由不足 → 違反
-                violations.append({
-                    "file": str(f.relative_to(ROOT)),
-                    "line": lineno,
-                })
+                violations.append(
+                    {
+                        "file": str(f.relative_to(ROOT)),
+                        "line": lineno,
+                    }
+                )
     return violations
 
 
@@ -166,15 +169,13 @@ def check_cast_usage(files: list[Path]) -> list[dict]:
         except SyntaxError:
             continue
         for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id == "cast"
-            ):
-                violations.append({
-                    "file": str(f.relative_to(ROOT)),
-                    "line": node.lineno,
-                })
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "cast":
+                violations.append(
+                    {
+                        "file": str(f.relative_to(ROOT)),
+                        "line": node.lineno,
+                    }
+                )
     return violations
 
 
@@ -246,9 +247,7 @@ def main() -> int:
     report["over_threshold"] = over_threshold
 
     if args.json:
-        summary = {
-            k: v for k, v in report.items() if not k.endswith("_details")
-        }
+        summary = {k: v for k, v in report.items() if not k.endswith("_details")}
         print(json.dumps(summary, indent=2, ensure_ascii=False))
     else:
         print("=" * 60)

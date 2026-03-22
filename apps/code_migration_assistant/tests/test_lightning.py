@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from apps.code_migration_assistant.engine import CodeMigrationEngine
 from apps.code_migration_assistant.lightning import (
     create_lightning_engine_config,

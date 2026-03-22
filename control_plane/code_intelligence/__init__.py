@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import importlib
-from types import ModuleType
-
 import warnings as _warnings
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
 
 _warnings.warn(
     "control_plane.code_intelligence は apps.dev_studio.code_intelligence に移動しました。"

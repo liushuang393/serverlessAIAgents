@@ -41,7 +41,6 @@ from control_plane.services.llm_management_setup_manager import LLMSetupManager
 from control_plane.services.llm_management_switch_service import LLMSwitchService
 from control_plane.services.llm_management_validator import LLMConfigValidator
 from control_plane.services.llm_runtime_status import resolve_provider_runtime_statuses
-
 from infrastructure.llm.gateway import (
     InferenceEngineConfig,
     LiteLLMGateway,
@@ -308,7 +307,9 @@ class LLMManagementService:
             extra_env=dict(engine.extra_env),
             status="running" if success else "failed",
             last_error=(
-                None if success else self._summarize_deployment_error(command_result.error or command_result.stderr or None)
+                None
+                if success
+                else self._summarize_deployment_error(command_result.error or command_result.stderr or None)
             ),
             deployed_at=datetime.now(UTC).isoformat() if success else None,
             stopped_at=None,
@@ -356,7 +357,9 @@ class LLMManagementService:
             extra_env=dict(engine.extra_env),
             status="stopped" if success else "stop_failed",
             last_error=(
-                None if success else self._summarize_deployment_error(command_result.error or command_result.stderr or None)
+                None
+                if success
+                else self._summarize_deployment_error(command_result.error or command_result.stderr or None)
             ),
             deployed_at=None,
             stopped_at=datetime.now(UTC).isoformat(),

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse, urlunparse
 
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -66,7 +67,8 @@ def resolve_app_runtime(
     """Resolve manifest runtime networking with optional env overrides."""
     resolved_env = env if env is not None else {}
     manifest_path = Path(config_path).resolve()
-    from shared.config.manifest import load_app_manifest  # noqa: E402 — lazy to avoid circular import
+    from shared.config.manifest import load_app_manifest
+
     manifest = load_app_manifest(manifest_path)
 
     api_port = _resolve_port(manifest.ports.api, env=resolved_env, env_key=backend_port_env)
@@ -134,6 +136,7 @@ def resolve_app_runtime(
         ),
     )
 
+
 def _resolve_host(
     value: object,
     *,
@@ -192,6 +195,8 @@ def _replace_url_port(url: str, port: int) -> str:
             userinfo = f"{userinfo}:{parsed.password}"
         netloc = f"{userinfo}@{netloc}"
     return urlunparse(parsed._replace(netloc=netloc))
+
+
 def _clean_text(value: object) -> str | None:
     if not isinstance(value, str):
         return None

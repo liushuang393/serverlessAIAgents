@@ -3,7 +3,7 @@
 各Agentの基本機能とWorkflowの動作を検証する。
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from apps.decision_governance_engine.agents.dao_agent import DaoAgent
@@ -334,9 +334,12 @@ class TestDecisionEngine:
         eng = DecisionEngine()
         # ResilientAgent のタイムアウト/リトライを最小にして高速フェイルさせる
         from kernel.agents.resilient_agent import ResilientAgent
-        with patch.object(ResilientAgent, "timeout_seconds", 5), \
-             patch.object(ResilientAgent, "max_retries", 0), \
-             patch.object(ResilientAgent, "retry_delay", 0.0):
+
+        with (
+            patch.object(ResilientAgent, "timeout_seconds", 5),
+            patch.object(ResilientAgent, "max_retries", 0),
+            patch.object(ResilientAgent, "retry_delay", 0.0),
+        ):
             yield eng
 
     @pytest.mark.asyncio

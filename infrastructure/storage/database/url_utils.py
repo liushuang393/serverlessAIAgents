@@ -100,4 +100,3 @@ def is_async_url(url: str) -> bool:
     """
     scheme = url.split("://", maxsplit=1)[0] if "://" in url else ""
     return scheme in _SYNC_DRIVER_MAP
-

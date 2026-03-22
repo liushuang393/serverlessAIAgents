@@ -40,22 +40,16 @@ class SignalScore:
     各軸は0-1の範囲で評価されます。
     """
 
-    reliability: float = 0.0      # 信頼性：情報源の信頼度
-    leading: float = 0.0          # 先行性：市場先行度
-    relevance: float = 0.0        # 関連性：ドメイン関連度
-    actionability: float = 0.0    # 実行可能性：行動可能性
-    convergence: float = 0.0      # 収束性：多ソース一致度
+    reliability: float = 0.0  # 信頼性：情報源の信頼度
+    leading: float = 0.0  # 先行性：市場先行度
+    relevance: float = 0.0  # 関連性：ドメイン関連度
+    actionability: float = 0.0  # 実行可能性：行動可能性
+    convergence: float = 0.0  # 収束性：多ソース一致度
 
     @property
     def total(self) -> float:
         """合計スコア (0-5)."""
-        return (
-            self.reliability
-            + self.leading
-            + self.relevance
-            + self.actionability
-            + self.convergence
-        )
+        return self.reliability + self.leading + self.relevance + self.actionability + self.convergence
 
     @property
     def grade(self) -> SignalGrade:
@@ -138,4 +132,3 @@ class SignalSchema(BaseModel):
     grade: str
     evaluated_at: str
     metadata: dict = Field(default_factory=dict)
-

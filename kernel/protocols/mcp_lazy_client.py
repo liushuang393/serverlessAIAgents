@@ -24,16 +24,18 @@ Claude Code の MCP Tool Search 機能を参考に、ツール定義を必要時
 
 from __future__ import annotations
 
-import logging
 import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from kernel.protocols.mcp_client import MCPClient
-from kernel.protocols.mcp_config import MCPConfig
+
 
 if TYPE_CHECKING:
+    import logging
+
     from kernel.core.security import AuditLogger, ParameterValidator, ToolWhitelist
+    from kernel.protocols.mcp_config import MCPConfig
 
 
 @dataclass

@@ -17,7 +17,7 @@ from shared.auth_service.models.user import UserAccount
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.fixture()
+@pytest.fixture
 async def authz() -> AuthorizationService:
     """AuthorizationService インスタンスを提供."""
     await ensure_database_ready()
@@ -29,9 +29,7 @@ async def authz() -> AuthorizationService:
 async def _get_user_id(username: str) -> str:
     """ユーザー名から ID を取得."""
     async with get_db_session() as session:
-        account = await session.scalar(
-            select(UserAccount).where(UserAccount.username == username)
-        )
+        account = await session.scalar(select(UserAccount).where(UserAccount.username == username))
         assert account is not None, f"ユーザー '{username}' が存在しません"
         return account.id
 

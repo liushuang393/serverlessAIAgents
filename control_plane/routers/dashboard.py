@@ -11,8 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from control_plane.engine import PlatformEngine
 from fastapi import APIRouter, Depends, Query
+
+from control_plane.engine import PlatformEngine
 
 
 router = APIRouter(prefix="/api/studios/framework/dashboard", tags=["dashboard"])

@@ -9,8 +9,6 @@ from datetime import datetime
 from functools import wraps
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from plugins.infrastructure_skills.stripe_payment.exceptions import (
     CustomerError,
     PaymentError,
@@ -19,6 +17,7 @@ from plugins.infrastructure_skills.stripe_payment.exceptions import (
     SubscriptionError,
     WebhookError,
 )
+from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger(__name__)

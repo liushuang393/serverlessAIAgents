@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
-from kernel.core.exceptions import AgentBlockNotFoundError, AgentBlockValidationError
 from kernel.agents.loader import AgentLoader
-from kernel.core.metadata import AgentMetadata
 from kernel.agents.validator import AgentValidator, ValidationResult
+from kernel.core.exceptions import AgentBlockNotFoundError, AgentBlockValidationError
+from kernel.core.metadata import AgentMetadata
 
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"

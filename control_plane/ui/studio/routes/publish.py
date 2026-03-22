@@ -36,8 +36,8 @@ def create_publish_router() -> APIRouter:
 
         ZIP ファイルとしてダウンロードできます。
         """
-        from kernel.core.interfaces import CodeGenOptions, CodeOutputType
         from control_plane.publish.service import PublishService
+        from kernel.core.interfaces import CodeGenOptions, CodeOutputType
 
         try:
             service = PublishService()
@@ -82,8 +82,8 @@ def create_publish_router() -> APIRouter:
     @router.post("/preview")
     async def publish_preview(request: PublishExportRequest) -> dict[str, Any]:
         """生成されるコードをプレビュー."""
-        from kernel.core.interfaces import CodeOutputType
         from control_plane.publish.service import PublishService
+        from kernel.core.interfaces import CodeOutputType
 
         try:
             service = PublishService()
@@ -119,8 +119,8 @@ def create_publish_router() -> APIRouter:
     @router.post("/deploy")
     async def publish_deploy(request: PublishDeployRequest) -> PublishDeployResponse:
         """ワークフローをデプロイ."""
-        from kernel.core.interfaces import CodeOutputType, DeployTarget
         from control_plane.publish.service import PublishService
+        from kernel.core.interfaces import CodeOutputType, DeployTarget
 
         logs: list[str] = []
 
@@ -191,8 +191,8 @@ def create_publish_router() -> APIRouter:
         request: PublishDeployRequest,
     ) -> StreamingResponse:
         """ワークフローをストリームデプロイ."""
-        from kernel.core.interfaces import CodeOutputType, DeployTarget
         from control_plane.publish.service import PublishService
+        from kernel.core.interfaces import CodeOutputType, DeployTarget
 
         async def event_generator() -> AsyncIterator[str]:
             try:
@@ -244,8 +244,8 @@ def create_publish_router() -> APIRouter:
     @router.get("/config-fields/{target}")
     async def get_config_fields(target: str) -> list[dict[str, Any]]:
         """ターゲットに必要な設定フィールドを取得."""
-        from kernel.core.interfaces import DeployTarget
         from control_plane.publish.service import PublishService
+        from kernel.core.interfaces import DeployTarget
 
         service = PublishService()
 

@@ -34,7 +34,6 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import select
 
 from shared.rag.models import (
-    CollectionConfigModel,
     DocumentRecordModel,
     DocumentStatus,
 )
@@ -177,13 +176,9 @@ class DocumentManager:
 
         # コレクション設定を取得
         collection = await self._col_mgr.get_collection(doc.collection_name)
-        effective_strategy = chunk_strategy or (
-            collection.chunk_strategy if collection else "recursive"
-        )
+        effective_strategy = chunk_strategy or (collection.chunk_strategy if collection else "recursive")
         effective_size = chunk_size or (collection.chunk_size if collection else 1000)
-        effective_overlap = chunk_overlap or (
-            collection.chunk_overlap if collection else 200
-        )
+        effective_overlap = chunk_overlap or (collection.chunk_overlap if collection else 200)
 
         # ファイルストレージからコンテンツを読み込む
         content = self._read_document_content(doc)
@@ -260,9 +255,7 @@ class DocumentManager:
             # インデックス失敗 → エラーステータスに更新
             async with self._session_factory() as session:
                 db_result = await session.execute(
-                    select(DocumentRecordModel).where(
-                        DocumentRecordModel.document_id == document_id
-                    )
+                    select(DocumentRecordModel).where(DocumentRecordModel.document_id == document_id)
                 )
                 db_doc = db_result.scalar_one_or_none()
                 if db_doc:
@@ -278,9 +271,7 @@ class DocumentManager:
 
         async with self._session_factory() as session:
             db_result = await session.execute(
-                select(DocumentRecordModel).where(
-                    DocumentRecordModel.document_id == document_id
-                )
+                select(DocumentRecordModel).where(DocumentRecordModel.document_id == document_id)
             )
             db_doc = db_result.scalar_one_or_none()
             if db_doc is None:
@@ -314,9 +305,7 @@ class DocumentManager:
         # まずステータスをリセット
         async with self._session_factory() as session:
             result = await session.execute(
-                select(DocumentRecordModel).where(
-                    DocumentRecordModel.document_id == document_id
-                )
+                select(DocumentRecordModel).where(DocumentRecordModel.document_id == document_id)
             )
             doc = result.scalar_one_or_none()
             if doc is None:
@@ -378,9 +367,7 @@ class DocumentManager:
         """
         async with self._session_factory() as session:
             result = await session.execute(
-                select(DocumentRecordModel).where(
-                    DocumentRecordModel.document_id == document_id
-                )
+                select(DocumentRecordModel).where(DocumentRecordModel.document_id == document_id)
             )
             return result.scalar_one_or_none()
 
@@ -397,9 +384,7 @@ class DocumentManager:
         """
         async with self._session_factory() as session:
             result = await session.execute(
-                select(DocumentRecordModel).where(
-                    DocumentRecordModel.document_id == document_id
-                )
+                select(DocumentRecordModel).where(DocumentRecordModel.document_id == document_id)
             )
             doc = result.scalar_one_or_none()
             if doc is None:

@@ -9,8 +9,6 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import Any, TypeVar
 
-from pydantic import BaseModel, Field
-
 from plugins.infrastructure_skills.database_manager.exceptions import (
     ConnectionError,
     MigrationError,
@@ -18,6 +16,7 @@ from plugins.infrastructure_skills.database_manager.exceptions import (
     RLSError,
     TransactionError,
 )
+from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger(__name__)

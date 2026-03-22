@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サプライチェーン最適化Agentテンプレート.
 
 サプライチェーンの最適化を行うAgentテンプレート。
@@ -18,7 +17,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from kernel import ResilientAgent
-from ..base_template import (
+from kernel.plugins.packs.official.templates.base_template import (
     AgentTemplate,
     IndustryType,
     TemplateCategory,
@@ -26,6 +25,7 @@ from ..base_template import (
     TemplateMetadata,
     TemplateParameter,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +96,7 @@ JSON形式で以下を出力:
             return await self._analyze_with_llm(input_data)
         return self._analyze_rule_based(input_data)
 
-    async def _analyze_with_llm(
-        self, input_data: SupplyChainInput
-    ) -> SupplyChainOutput:
+    async def _analyze_with_llm(self, input_data: SupplyChainInput) -> SupplyChainOutput:
         """LLMを使用したサプライチェーン分析."""
         from shared.utils import extract_json
 
@@ -122,13 +120,15 @@ JSON形式で以下を出力:
 
         # 簡易的な在庫推奨
         for product_id in input_data.product_ids[:5]:
-            recommendations.append(InventoryRecommendation(
-                product_id=product_id,
-                current_level=100,
-                recommended_level=120,
-                reorder_point=80,
-                safety_stock=40,
-            ))
+            recommendations.append(
+                InventoryRecommendation(
+                    product_id=product_id,
+                    current_level=100,
+                    recommended_level=120,
+                    reorder_point=80,
+                    safety_stock=40,
+                )
+            )
 
         return SupplyChainOutput(
             analysis_type=input_data.analysis_type,

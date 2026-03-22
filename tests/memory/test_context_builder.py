@@ -4,13 +4,13 @@ import datetime
 
 import pytest
 
+from infrastructure.memory.types import MemoryEntry, MemorySemanticLevel, MemoryStability, MemoryType
 from shared.memory.context_builder import (
     ContextBuilder,
     MemoryBudget,
     MemoryNeedLevel,
 )
 from shared.memory.memory_manager import MemoryManager
-from infrastructure.memory.types import MemoryEntry, MemorySemanticLevel, MemoryStability, MemoryType
 
 
 def _make_entry(
@@ -125,9 +125,7 @@ class TestContextBuilder:
 
         # 10件の記憶を直接書き込む
         for i in range(10):
-            await manager._long_term.store(
-                _make_entry(f"e{i}", f"記憶 {i}", topic="test", importance=0.5 + i * 0.04)
-            )
+            await manager._long_term.store(_make_entry(f"e{i}", f"記憶 {i}", topic="test", importance=0.5 + i * 0.04))
 
         cb = ContextBuilder()
         # LOWレベルは最大2件
@@ -145,12 +143,8 @@ class TestContextBuilder:
         manager = MemoryManager(token_threshold=1000)
         await manager.start()
 
-        await manager._long_term.store(
-            _make_entry("low", "低重要度記憶", topic="prio", importance=0.1)
-        )
-        await manager._long_term.store(
-            _make_entry("high", "高重要度記憶", topic="prio", importance=0.9)
-        )
+        await manager._long_term.store(_make_entry("low", "低重要度記憶", topic="prio", importance=0.1))
+        await manager._long_term.store(_make_entry("high", "高重要度記憶", topic="prio", importance=0.9))
 
         cb = ContextBuilder()
         blocks = await cb.build(
@@ -204,9 +198,7 @@ class TestContextBuilder:
         """ContextBlockにはsource_label（追跡情報）が付く."""
         manager = MemoryManager(token_threshold=1000)
         await manager.start()
-        await manager._long_term.store(
-            _make_entry("track1", "追跡テスト記憶", topic="track")
-        )
+        await manager._long_term.store(_make_entry("track1", "追跡テスト記憶", topic="track"))
 
         cb = ContextBuilder()
         blocks = await cb.build(
@@ -224,9 +216,7 @@ class TestContextBuilder:
         """to_prompt_text() がsource_labelとcontentを含むことを確認."""
         manager = MemoryManager(token_threshold=1000)
         await manager.start()
-        await manager._long_term.store(
-            _make_entry("pt1", "プロンプトテスト内容", topic="pt")
-        )
+        await manager._long_term.store(_make_entry("pt1", "プロンプトテスト内容", topic="pt"))
 
         cb = ContextBuilder()
         blocks = await cb.build(

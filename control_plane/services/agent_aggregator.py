@@ -187,7 +187,7 @@ class AgentAggregatorService:
             for cap in agent.capabilities:
                 cap_id = cap.get("id", "").lower()
                 cap_label = cap.get("label", "").lower()
-                if query_lower == cap_id or query_lower == cap_label:
+                if query_lower in (cap_id, cap_label):
                     results.append(agent)
                     break
         return results

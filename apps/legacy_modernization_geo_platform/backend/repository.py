@@ -6,9 +6,8 @@ import json
 import sqlite3
 import threading
 from contextlib import closing
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     ApprovalRecord,
@@ -23,8 +22,12 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
 )
 
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class GeoRepository:
@@ -299,7 +302,8 @@ class GeoRepository:
                 (request_id,),
             ).fetchone()
         if row is None:
-            raise KeyError(f"Approval not found: {request_id}")
+            msg = f"Approval not found: {request_id}"
+            raise KeyError(msg)
         return ApprovalRecord(
             request_id=str(row["request_id"]),
             task_id=str(row["task_id"]),
@@ -310,9 +314,7 @@ class GeoRepository:
             status=ApprovalStatus(str(row["status"])),
             actions=list(json.loads(str(row["actions_json"]))),
             comment=row["comment"] if row["comment"] is None else str(row["comment"]),
-            reviewer_name=(
-                row["reviewer_name"] if row["reviewer_name"] is None else str(row["reviewer_name"])
-            ),
+            reviewer_name=(row["reviewer_name"] if row["reviewer_name"] is None else str(row["reviewer_name"])),
             created_at=datetime.fromisoformat(str(row["created_at"])),
             updated_at=datetime.fromisoformat(str(row["updated_at"])),
         )

@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+
 from control_plane.services.skill_catalog import (
     SKILL_CATEGORIES,
     SkillCatalogService,
@@ -297,9 +298,14 @@ class TestSkillCategories:
     def test_required_category_ids(self) -> None:
         """必須カテゴリ ID が全て存在する."""
         expected = {
-            "common", "code_development", "web_search",
-            "enterprise_office", "ad_marketing", "enterprise_workflow",
-            "ai_assistant", "media_creative",
+            "common",
+            "code_development",
+            "web_search",
+            "enterprise_office",
+            "ad_marketing",
+            "enterprise_workflow",
+            "ai_assistant",
+            "media_creative",
         }
         assert set(SKILL_CATEGORIES.keys()) == expected
 

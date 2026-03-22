@@ -3,7 +3,7 @@
 本体: harness.budget.service
 """
 
-from harness.budget.service import (  # noqa: F401
+from harness.budget.service import (
     BudgetAllocation,
     BudgetCategory,
     BudgetConfig,
@@ -12,6 +12,7 @@ from harness.budget.service import (  # noqa: F401
     TokenBudgetManager,
     TokenCounter,
 )
+
 
 __all__ = [
     "BudgetAllocation",

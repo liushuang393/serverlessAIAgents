@@ -6,19 +6,20 @@ CollectionManager / DocumentManager を使用した
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING, Any
 
-from apps.faq_system.backend.auth.dependencies import require_auth, require_role
-from apps.faq_system.routers.dependencies import invalidate_service_cache, is_rag_enabled
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
-from shared.rag.collection_manager import CollectionManager
-from shared.rag.document_manager import DocumentManager
+from apps.faq_system.backend.auth.dependencies import require_auth, require_role
+from apps.faq_system.routers.dependencies import invalidate_service_cache, is_rag_enabled
 
 
 if TYPE_CHECKING:
     from apps.faq_system.backend.auth.models import UserInfo
+    from shared.rag.collection_manager import CollectionManager
+    from shared.rag.document_manager import DocumentManager
 else:
     UserInfo = Any
 
@@ -249,7 +250,7 @@ async def get_collection_stats(
 async def test_query(
     name: str,
     request: TestQueryRequest,
-    _user: UserInfo = Depends(require_auth),
+    _user: UserInfo = Depends(require_auth),  # noqa: PT019,PT028
 ) -> dict[str, Any]:
     """テスト検索クエリ（認証必須）."""
     _require_rag()
@@ -304,10 +305,8 @@ async def upload_document(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     if auto_index:
-        try:
+        with contextlib.suppress(ValueError):
             record = await doc_mgr.index_document(record.document_id)
-        except ValueError:
-            pass
 
     return {"document": record.to_dict()}
 
@@ -437,5 +436,4 @@ async def reindex_collection(
     """コレクション全体の再インデックス（admin / manager のみ）."""
     _require_rag()
     doc_mgr = _get_doc_mgr()
-    result = await doc_mgr.reindex_collection(name)
-    return result
+    return await doc_mgr.reindex_collection(name)

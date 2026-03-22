@@ -10,13 +10,14 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import Depends, Header, HTTPException, status
 
-from shared.auth_service.api.schemas import UserInfo
 from shared.auth_service.core.authorization import AuthorizationService
 from shared.auth_service.service import get_auth_service
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from shared.auth_service.api.schemas import UserInfo
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +67,7 @@ def require_permission(*permissions: str) -> Callable[..., Any]:
     async def _check(user: UserInfo = Depends(require_auth_dependency)) -> UserInfo:
         user_permissions = user.permissions or []
         for required in permissions:
-            if any(
-                AuthorizationService.match_permission(held, required)
-                for held in user_permissions
-            ):
+            if any(AuthorizationService.match_permission(held, required) for held in user_permissions):
                 return user
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

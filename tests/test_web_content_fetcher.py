@@ -13,18 +13,23 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 import pytest
 
-from kernel.skills.core.base import Skill
 from kernel.skills.core.loader import SkillLoader, SkillRegistry
 from kernel.skills.core.matcher import SkillMatcher
 from kernel.skills.core.runtime import SkillRuntime
 
 
+if TYPE_CHECKING:
+    from kernel.skills.core.base import Skill
+
+
 # ---------------------------------------------------------------------------
 # fixture — パス指定なし、フレームワークのデフォルト機構のみ使用
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module")
 def loaded_skills() -> list[Skill]:
@@ -142,9 +147,7 @@ class TestEndToEnd:
     """ユーザーが自然言語で依頼 → フレームワークが全自動で Markdown を返す."""
 
     @pytest.mark.network
-    async def test_wechat_full_pipeline(
-        self, loaded_skills: list[Skill], matcher: SkillMatcher, runtime: SkillRuntime
-    ):
+    async def test_wechat_full_pipeline(self, loaded_skills: list[Skill], matcher: SkillMatcher, runtime: SkillRuntime):
         """微信記事: 自然言語 → 自動マッチ → 自動実行 → Markdown品質検証."""
         # Step 1: ユーザーの自然言語入力
         user_query = "この記事の内容を日本語で整理して https://mp.weixin.qq.com/s/ljMffydOigAl1muyLFhQhw"
@@ -181,9 +184,7 @@ class TestEndToEnd:
         assert "#" in md or "](http" in md or "![" in md, "Markdown構造なし"
 
     @pytest.mark.network
-    async def test_github_full_pipeline(
-        self, loaded_skills: list[Skill], matcher: SkillMatcher, runtime: SkillRuntime
-    ):
+    async def test_github_full_pipeline(self, loaded_skills: list[Skill], matcher: SkillMatcher, runtime: SkillRuntime):
         """GitHub: 自然言語 → 自動マッチ → 自動実行 → 品質検証."""
         best = matcher.find_best("このページの内容を読み取って https://github.com/anthropics/claude-code")
         assert best is not None

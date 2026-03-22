@@ -13,6 +13,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from control_plane.engine import PlatformEngine
 from control_plane.schemas.component_schemas import (
     ComponentCreateRequest,
@@ -25,7 +27,6 @@ from control_plane.services.component_library import (
     ComponentEntry,
     ComponentType,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query
 
 
 router = APIRouter(prefix="/api/studios/framework/components", tags=["components"])

@@ -1,4 +1,5 @@
 """Messaging Hub が Agent を A2AHub に登録することを検証."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

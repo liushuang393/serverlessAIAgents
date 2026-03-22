@@ -2,6 +2,7 @@
 
 qdrant_client 未インストール / サーバー未起動の両ケースを対象とする。
 """
+
 from __future__ import annotations
 
 import pytest

@@ -46,7 +46,6 @@ from apps.faq_system.backend.services.glossary_service import (
     TermEntry,
     TermType,
 )
-
 from kernel.agents import FAQAgent as FAQService
 from kernel.agents import FAQAgentConfig as FAQConfig
 

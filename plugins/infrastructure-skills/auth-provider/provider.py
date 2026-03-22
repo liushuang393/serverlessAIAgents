@@ -182,10 +182,10 @@ class SupabaseAuthProvider(AuthProviderBase):
     def _initialize(self) -> None:
         """初始化客户端."""
         try:
-            from supabase import create_client
+            from supabase import create_client  # noqa: PLC0415
         except ImportError:
             msg = "supabase 库未安装，请运行: pip install supabase"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
         self._client = create_client(self._config.url, self._config.anon_key)
         logger.info("Supabase Auth 已初始化")
@@ -195,7 +195,7 @@ class SupabaseAuthProvider(AuthProviderBase):
         email: str,
         password: str,
         metadata: dict[str, Any] | None = None,
-        email_confirm: bool = True,
+        email_confirm: bool = True,  # noqa: ARG002
         **kwargs: Any,
     ) -> User:
         """用户注册."""
@@ -220,9 +220,9 @@ class SupabaseAuthProvider(AuthProviderBase):
             error_msg = str(e)
             if "User already registered" in error_msg:
                 msg = "用户已存在"
-                raise AuthError(msg, code="user_exists")
+                raise AuthError(msg, code="user_exists")  # noqa: B904
             msg = f"注册失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def sign_in(
         self,
@@ -245,12 +245,12 @@ class SupabaseAuthProvider(AuthProviderBase):
             error_msg = str(e).lower()
             if "invalid" in error_msg or "credentials" in error_msg:
                 msg = "邮箱或密码错误"
-                raise InvalidCredentialsError(msg)
+                raise InvalidCredentialsError(msg)  # noqa: B904
             if "email not confirmed" in error_msg:
                 msg = "请先确认邮箱"
-                raise EmailNotConfirmedError(msg)
+                raise EmailNotConfirmedError(msg)  # noqa: B904
             msg = f"登录失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def sign_in_with_magic_link(
         self,
@@ -268,7 +268,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             logger.info(f"Magic Link 已发送到: {email}")
         except Exception as e:
             msg = f"发送 Magic Link 失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def sign_in_with_otp(
         self,
@@ -286,7 +286,7 @@ class SupabaseAuthProvider(AuthProviderBase):
                 raise AuthError(msg)
         except Exception as e:
             msg = f"发送 OTP 失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def verify_otp(
         self,
@@ -315,7 +315,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             raise AuthError(msg)
         except Exception as e:
             msg = f"OTP 验证失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def sign_in_with_oauth(
         self,
@@ -338,12 +338,12 @@ class SupabaseAuthProvider(AuthProviderBase):
             return OAuthResponse(url=response.url, provider=provider)
         except Exception as e:
             msg = f"OAuth 登录失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def handle_oauth_callback(
         self,
         code: str,
-        state: str | None = None,
+        state: str | None = None,  # noqa: ARG002
     ) -> Session:
         """处理 OAuth 回调."""
         try:
@@ -358,7 +358,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             raise AuthError(msg)
         except Exception as e:
             msg = f"OAuth 回调处理失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def sign_out(self, scope: str = "local") -> None:
         """登出."""
@@ -372,7 +372,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             logger.info("已登出")
         except Exception as e:
             msg = f"登出失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def get_session(self) -> Session | None:
         """获取当前会话."""
@@ -398,15 +398,15 @@ class SupabaseAuthProvider(AuthProviderBase):
             raise TokenExpiredError(msg)
         except Exception as e:
             msg = f"刷新会话失败: {e}"
-            raise TokenExpiredError(msg)
+            raise TokenExpiredError(msg)  # noqa: B904
 
     async def verify_jwt(self, token: str) -> dict[str, Any]:
         """验证 JWT."""
         try:
-            import jwt
+            import jwt  # noqa: PLC0415
         except ImportError:
             msg = "pyjwt 库未安装，请运行: pip install pyjwt"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
         try:
             # 如果没有 JWT 密钥，使用 Supabase 的验证
@@ -432,10 +432,10 @@ class SupabaseAuthProvider(AuthProviderBase):
 
         except jwt.ExpiredSignatureError:
             msg = "令牌已过期"
-            raise TokenExpiredError(msg)
+            raise TokenExpiredError(msg)  # noqa: B904
         except jwt.InvalidTokenError as e:
             msg = f"无效的令牌: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def get_user(self, user_id: str) -> User:
         """获取用户信息."""
@@ -449,9 +449,9 @@ class SupabaseAuthProvider(AuthProviderBase):
         except Exception as e:
             if "not found" in str(e).lower():
                 msg = f"用户不存在: {user_id}"
-                raise UserNotFoundError(msg)
+                raise UserNotFoundError(msg)  # noqa: B904
             msg = f"获取用户失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def get_current_user(self) -> User | None:
         """获取当前用户."""
@@ -465,7 +465,7 @@ class SupabaseAuthProvider(AuthProviderBase):
 
     async def update_user(
         self,
-        user_id: str | None = None,
+        user_id: str | None = None,  # noqa: ARG002
         data: dict[str, Any] | None = None,
     ) -> User:
         """更新用户信息."""
@@ -477,12 +477,12 @@ class SupabaseAuthProvider(AuthProviderBase):
             raise AuthError(msg)
         except Exception as e:
             msg = f"更新用户失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def update_password(
         self,
         new_password: str,
-        current_password: str | None = None,
+        current_password: str | None = None,  # noqa: ARG002
     ) -> None:
         """更新密码."""
         try:
@@ -490,7 +490,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             logger.info("密码已更新")
         except Exception as e:
             msg = f"更新密码失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def reset_password_for_email(
         self,
@@ -506,7 +506,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             logger.info(f"密码重置邮件已发送到: {email}")
         except Exception as e:
             msg = f"发送重置邮件失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     # MFA 方法
     async def enroll_mfa(
@@ -531,7 +531,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             )
         except Exception as e:
             msg = f"注册 MFA 失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     async def verify_mfa(
         self,
@@ -549,7 +549,7 @@ class SupabaseAuthProvider(AuthProviderBase):
             logger.info("MFA 已激活")
         except Exception as e:
             msg = f"MFA 验证失败: {e}"
-            raise AuthError(msg)
+            raise AuthError(msg)  # noqa: B904
 
     def _parse_user(self, user: Any) -> User:
         """解析用户数据."""

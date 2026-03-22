@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from control_plane.schemas.llm_management_schemas import (
     LLMBackendKind,
@@ -10,10 +10,14 @@ from control_plane.schemas.llm_management_schemas import (
     LLMSwitchRequest,
     LLMSwitchRuntimeCheck,
 )
-from infrastructure.llm.gateway import ProviderRuntimeStatus
 from control_plane.services.llm_management_config_store import LLMConfigStore
 from control_plane.services.llm_management_switch_service import LLMSwitchService
 from control_plane.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
+from infrastructure.llm.gateway import ProviderRuntimeStatus
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _build_service(config_path: Path) -> tuple[LLMSwitchService, LLMConfigStore, LLMConfigValidator]:
@@ -94,7 +98,8 @@ async def test_switch_validation_failure_does_not_persist(tmp_path: Path) -> Non
 
     def _raise_validation(*args, **kwargs):
         del args, kwargs
-        raise LLMConfigValidationError("forced validation error")
+        msg = "forced validation error"
+        raise LLMConfigValidationError(msg)
 
     validator.prepare_config = _raise_validation  # type: ignore[method-assign]
 

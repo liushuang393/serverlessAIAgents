@@ -1,1 +1,1 @@
-"""ecommerce スキル."""
+"""ecommerce スキル."""  # noqa: N999

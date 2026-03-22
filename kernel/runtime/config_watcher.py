@@ -5,10 +5,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from kernel.runtime.capability_bundle import CapabilityBundle
 from kernel.runtime.rag_builder import build_rag_engine
+
+
+if TYPE_CHECKING:
+    from kernel.runtime.capability_bundle import CapabilityBundle
 
 
 logger = logging.getLogger(__name__)

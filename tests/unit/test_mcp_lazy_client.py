@@ -15,6 +15,7 @@ from kernel.protocols.mcp_lazy_client import (
     ToolSearchResult,
 )
 
+
 # テスト環境で mcp パッケージの遅延インポートを事前に完了させる。
 # @patch でモジュール変数を差し替えた後の上書きを防止する。
 _mcp_mod._ensure_mcp_imports()

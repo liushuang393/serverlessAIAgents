@@ -15,7 +15,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     ContentBlueprintPage,
     normalize_content_language,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -61,9 +60,7 @@ class ContentBlueprintAgent(
     max_retries = 1
     enable_code_execution = False
 
-    async def process(
-        self, input_data: ContentBlueprintInput
-    ) -> ContentBlueprintOutput:
+    async def process(self, input_data: ContentBlueprintInput) -> ContentBlueprintOutput:
         request = input_data.request
         task_id = input_data.task_id
         question_graph = input_data.question_graph
@@ -77,11 +74,7 @@ class ContentBlueprintAgent(
             industry=industry_label,
             stack=stack_label,
         )
-        if (
-            target_language == "ja"
-            and question_graph.personas
-            and question_graph.personas[0].high_intent_questions
-        ):
+        if target_language == "ja" and question_graph.personas and question_graph.personas[0].high_intent_questions:
             primary_question = question_graph.personas[0].high_intent_questions[0]
         page = ContentBlueprintPage(
             slug=f"{industry}-{stack}-modernization-guide",

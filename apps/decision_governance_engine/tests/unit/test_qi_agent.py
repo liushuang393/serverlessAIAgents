@@ -1,6 +1,7 @@
 """Unit tests for QiAgent."""
 
 import pytest
+
 from apps.decision_governance_engine.agents.qi_agent import QiAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ActionPhase,

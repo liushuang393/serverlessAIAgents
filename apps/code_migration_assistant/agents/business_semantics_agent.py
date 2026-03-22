@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """Business Semantics Agent - 業務語義抽出."""
 
 from __future__ import annotations
 
 from typing import Any
-
-from kernel import agent
 
 from apps.code_migration_assistant.agents.prompts import BUSINESS_SEMANTICS_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -13,6 +10,7 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+from kernel import agent
 
 
 @agent
@@ -90,8 +88,7 @@ class BusinessSemanticsAgent:
             return []
 
         call_steps = [
-            str(call.get("operation") or call.get("target") or call.get("type", "external"))
-            for call in external_calls
+            str(call.get("operation") or call.get("target") or call.get("type", "external")) for call in external_calls
         ]
         if not call_steps:
             call_steps = ["入力処理", "計算処理", "出力処理"]

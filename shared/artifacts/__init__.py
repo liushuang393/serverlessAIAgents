@@ -4,4 +4,3 @@ from shared.artifacts.service import ArtifactStore
 
 
 __all__ = ["ArtifactStore"]
-

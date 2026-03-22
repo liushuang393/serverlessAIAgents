@@ -6,9 +6,6 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.llm.providers import get_llm
-from kernel.engines.base import EngineConfig
-from kernel.engines.simple_engine import SimpleEngine
 from control_plane.dashboards.runtime import TenantDashboard
 from control_plane.publish.contracts import PublishResponse
 from control_plane.publish.runtime import (
@@ -19,19 +16,21 @@ from control_plane.publish.runtime import (
     PublishOrchestrator,
     get_component_library,
 )
+from infrastructure.llm.providers import get_llm
+from kernel.engines.base import EngineConfig
+from kernel.engines.simple_engine import SimpleEngine
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from control_plane.publish.contracts import PublishEvent, PublishRequest
     from control_plane.schemas.gallery_schemas import (
         FeaturedResponse,
         GalleryItem,
         GallerySearchRequest,
         GallerySearchResponse,
     )
-
-    from control_plane.publish.contracts import PublishEvent, PublishRequest
 
 
 class PlatformEngine(SimpleEngine):

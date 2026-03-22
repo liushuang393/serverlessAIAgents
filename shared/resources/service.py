@@ -109,9 +109,4 @@ class ResourceManager:
 
     def list_quotas(self, scope_id: str) -> list[ResourceQuota]:
         """指定スコープの全クォータを返す."""
-        return [
-            quota
-            for (sid, _), quota in self._quotas.items()
-            if sid == scope_id
-        ]
-
+        return [quota for (sid, _), quota in self._quotas.items() if sid == scope_id]

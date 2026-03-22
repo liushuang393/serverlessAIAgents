@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 import pytest
+
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.db import close_db, ensure_database_ready

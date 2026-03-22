@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from apps.code_migration_assistant.agents import (
     LegacyAnalysisAgent,
     QualityGateAgent,

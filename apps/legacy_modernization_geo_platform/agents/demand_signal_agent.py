@@ -14,7 +14,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     SignalEntry,
     normalize_content_language,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -52,9 +51,7 @@ class DemandSignalAgent(ResilientAgent[DemandSignalInput, DemandSignalOutput]):
             )
             for source in intelligence_snapshot.sources[:5]
         ]
-        fit_score = min(
-            96, 58 + len(signals) * 7 + len(request.targets.legacy_stacks) * 4
-        )
+        fit_score = min(96, 58 + len(signals) * 7 + len(request.targets.legacy_stacks) * 4)
         artifact = AccountSignalArtifact(
             meta=ArtifactMeta(
                 task_id=task_id,
@@ -65,10 +62,7 @@ class DemandSignalAgent(ResilientAgent[DemandSignalInput, DemandSignalOutput]):
             signals=signals,
             urgency_hypothesis=_URGENCY_HYPOTHESIS[language],
             modernization_fit_score=fit_score,
-            evidence=[
-                item.to_evidence_dict()
-                for item in intelligence_snapshot.sources[:5]
-            ],
+            evidence=[item.to_evidence_dict() for item in intelligence_snapshot.sources[:5]],
             unknowns=list(dict.fromkeys(intelligence_snapshot.warnings)),
             extensions={
                 "primary_provider": intelligence_snapshot.primary_provider,

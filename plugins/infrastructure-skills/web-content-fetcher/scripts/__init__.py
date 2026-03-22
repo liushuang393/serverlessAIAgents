@@ -1,1 +1,1 @@
-"""scripts パッケージ."""
+"""scripts パッケージ."""  # noqa: N999

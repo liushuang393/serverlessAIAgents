@@ -6,7 +6,6 @@ from typing import Any
 
 from apps.legacy_modernization_geo_platform.agents._models import GeoQAInput, GeoQAOutput
 from apps.legacy_modernization_geo_platform.backend.qa import GeoQualityGate
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 

@@ -7,9 +7,10 @@ Layer 0 (contracts) に配置し、上位層が境界違反なくインポート
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from contracts.base import ComponentSpec, ComponentToggle
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,14 +20,14 @@ T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
-class RegisteredComponent(Generic[T]):
+class RegisteredComponent[T]:
     """登録済みコンポーネント。"""
 
     spec: ComponentSpec
     factory: Callable[[], T]
 
 
-class ToggleableFactoryRegistry(Generic[T]):
+class ToggleableFactoryRegistry[T]:
     """Feature Toggle を考慮して実装を解決する共通レジストリ。"""
 
     def __init__(self, *, component_name: str) -> None:
@@ -63,4 +64,3 @@ class ToggleableFactoryRegistry(Generic[T]):
 
         msg = f"{self._component_name} の実装を解決できません: {toggle.implementation}"
         raise LookupError(msg)
-

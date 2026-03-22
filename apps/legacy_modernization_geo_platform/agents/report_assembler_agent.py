@@ -9,13 +9,10 @@ from apps.legacy_modernization_geo_platform.agents._models import (
     ReportAssemblerOutput,
 )
 from apps.legacy_modernization_geo_platform.backend.reporting import build_campaign_report
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 
-class ReportAssemblerAgent(
-    ResilientAgent[ReportAssemblerInput, ReportAssemblerOutput]
-):
+class ReportAssemblerAgent(ResilientAgent[ReportAssemblerInput, ReportAssemblerOutput]):
     """レポート組み立てを executable agent として公開する."""
 
     name = "ReportAssembler"

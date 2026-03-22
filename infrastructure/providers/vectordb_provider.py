@@ -74,10 +74,6 @@ class VectorDBProvider(Protocol):
         """全ドキュメントをクリア."""
         ...
 
-    def get_provider_name(self) -> str:
-        """プロバイダー名."""
-        ...
-
 
 class MockVectorDBProvider:
     """Mock Vector DB Provider（開発・テスト用）.
@@ -323,8 +319,7 @@ class QdrantProvider:
             return True
         except Exception as exc:
             logger.warning(
-                "Qdrant 接続失敗（RAG 機能は無効化されます）: %s  "
-                "Qdrant を起動するか QDRANT_URL を設定してください。",
+                "Qdrant 接続失敗（RAG 機能は無効化されます）: %s  Qdrant を起動するか QDRANT_URL を設定してください。",
                 exc,
             )
             return False
@@ -351,6 +346,7 @@ class QdrantProvider:
 
         if ids is None:
             import uuid
+
             ids = [str(uuid.uuid4()) for _ in documents]
 
         points = []
@@ -384,6 +380,7 @@ class QdrantProvider:
 
         if filter:
             from qdrant_client.models import FieldCondition, Filter, MatchValue
+
             conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filter.items()]
             search_params["query_filter"] = Filter(must=conditions)
 
@@ -641,6 +638,7 @@ class WeaviateProvider:
 
         if ids is None:
             import uuid
+
             ids = [str(uuid.uuid4()) for _ in documents]
 
         with self._client.batch as batch:
@@ -702,7 +700,9 @@ class WeaviateProvider:
                         "id": item.get("doc_id", ""),
                         "document": item.get("content", ""),
                         "score": item.get("_additional", {}).get("certainty", 0),
-                        "metadata": {key: val for key, val in item.items() if key not in ["content", "doc_id", "_additional"]},
+                        "metadata": {
+                            key: val for key, val in item.items() if key not in ["content", "doc_id", "_additional"]
+                        },
                     }
                 )
         return results
@@ -799,6 +799,7 @@ class SupabaseVectorProvider:
         ids = kwargs.get("ids")
         if ids is None:
             import uuid
+
             ids = [str(uuid.uuid4()) for _ in documents]
 
         embeddings = kwargs.get("embeddings")

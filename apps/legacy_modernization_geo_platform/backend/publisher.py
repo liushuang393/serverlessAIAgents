@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import html
 import json
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     ArtifactMeta,
     ContentDraftArtifact,
-    PublishManifest,
     PublishedPageRecord,
+    PublishManifest,
     html_language_code,
     normalize_content_language,
 )
-from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
+
+
+if TYPE_CHECKING:
+    from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
 
 
 _PUBLIC_COPY: dict[str, dict[str, str]] = {
@@ -90,18 +93,16 @@ class GeoPublisher:
         """Render a public GEO page with JSON-LD embedded."""
         normalized_language = normalize_content_language(language)
         copy = _PUBLIC_COPY[normalized_language]
-        title = html.escape(getattr(page, "title"))
-        summary = html.escape(getattr(page, "summary"))
-        cta = html.escape(getattr(page, "cta"))
-        body_markdown = getattr(page, "body_markdown")
-        faq_entries = list(getattr(page, "faq_entries"))
-        json_ld = json.dumps(getattr(page, "json_ld"), ensure_ascii=False, indent=2)
-        body_html = "".join(
-            f"<p>{html.escape(line)}</p>" for line in str(body_markdown).splitlines() if line.strip()
-        )
+        title = html.escape(page.title)
+        summary = html.escape(page.summary)
+        cta = html.escape(page.cta)
+        body_markdown = page.body_markdown
+        faq_entries = list(page.faq_entries)
+        json_ld = json.dumps(page.json_ld, ensure_ascii=False, indent=2)
+        body_html = "".join(f"<p>{html.escape(line)}</p>" for line in str(body_markdown).splitlines() if line.strip())
         faq_html = "".join(
             (
-                "<details class=\"faq-item\">"
+                '<details class="faq-item">'
                 f"<summary>{html.escape(entry.question)}</summary>"
                 f"<p>{html.escape(entry.answer)}</p>"
                 "</details>"
@@ -208,14 +209,13 @@ class GeoPublisher:
 
     def _render_sitemap(self, records: list[PublishedPageRecord]) -> str:
         """Build a minimal sitemap.xml document."""
-        now = datetime.now(timezone.utc).date().isoformat()
+        now = datetime.now(UTC).date().isoformat()
         url_entries = "".join(
-            f"<url><loc>{html.escape(record.page_url)}</loc><lastmod>{now}</lastmod></url>"
-            for record in records
+            f"<url><loc>{html.escape(record.page_url)}</loc><lastmod>{now}</lastmod></url>" for record in records
         )
         return (
-            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-            "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">"
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
             f"{url_entries}"
             "</urlset>"
         )
@@ -243,7 +243,7 @@ class GeoPublisher:
             )
         return json.dumps(
             {
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "items": items,
             },
             ensure_ascii=False,

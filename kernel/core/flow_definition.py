@@ -31,10 +31,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from contracts.flow import AgentRoleSpec
-from contracts.flow import FlowDefinition as ContractFlowDefinition
 from pydantic import BaseModel, Field
 
+from contracts.flow import AgentRoleSpec
+from contracts.flow import FlowDefinition as ContractFlowDefinition
 from kernel.agents.agent_factory import AgentFactorySpec
 from kernel.agents.agent_factory import create as create_agent
 

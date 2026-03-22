@@ -500,6 +500,15 @@ exclude = [
     "kernel/skills/builtin/app-builder/",
     "kernel/skills/builtin/app-development-flow/",
     "kernel/skills/builtin/stripe-payment/",
+    "kernel/skills/builtin/web-content-fetcher/",
+    # plugins/ および kernel/plugins/ 以下のハイフン入りディレクトリ
+    "plugins/",
+    "kernel/plugins/",
+    # apps/ 内のハイフン入りスキルディレクトリ
+    "apps/code_migration_assistant/skills/",
+    "apps/messaging_hub/docs/",
+    # .claude/ スキルディレクトリ
+    ".claude/",
 ]
 show_error_codes = true
 show_column_numbers = true

@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from kernel.tools.tool_binding import BoundTools, ToolExecutor

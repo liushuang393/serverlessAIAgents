@@ -8,6 +8,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from apps.faq_system.backend.auth.dependencies import resolve_user
 from apps.faq_system.routers.dependencies import (
     build_agent_conversation_history,
@@ -17,7 +19,6 @@ from apps.faq_system.routers.dependencies import (
     register_artifacts,
     resolve_session_id,
 )
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 
 logger = logging.getLogger(__name__)

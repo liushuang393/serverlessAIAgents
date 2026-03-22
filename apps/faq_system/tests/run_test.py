@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FAQ APIテスト（直接実行用）."""
+
 import json
-import sys
 import urllib.error
 import urllib.request
 
@@ -58,9 +58,8 @@ def main() -> None:
         if r.get("data"):
             print(f"  data rows: {len(r['data'])}")
         if r.get("suggestions"):
-            print(f"  suggestions: {[s.get('text','')[:30] for s in r['suggestions']]}")
+            print(f"  suggestions: {[s.get('text', '')[:30] for s in r['suggestions']]}")
 
 
 if __name__ == "__main__":
     main()
-

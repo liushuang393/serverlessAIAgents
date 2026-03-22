@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """FAQ システム API ライブテストスクリプト（起動済みサーバー向け）."""
+
 import json
-import urllib.request
 import urllib.error
+import urllib.request
+
 
 BASE = "http://localhost:8005"
 
@@ -44,11 +46,13 @@ def stream_test(message: str, token: str) -> None:
                     events.append(ev_type)
                     if ev_type == "result":
                         d = ev.get("data", {})
-                        print(f"  [result] query_type={d.get('query_type')}, "
-                              f"chart={'yes' if d.get('chart') else 'no'}, "
-                              f"suggestions={len(d.get('suggestions', []))}, "
-                              f"data_rows={len(d.get('data', []))}")
-                        print(f"  answer[:150]: {str(d.get('answer',''))[:150]}")
+                        print(
+                            f"  [result] query_type={d.get('query_type')}, "
+                            f"chart={'yes' if d.get('chart') else 'no'}, "
+                            f"suggestions={len(d.get('suggestions', []))}, "
+                            f"data_rows={len(d.get('data', []))}"
+                        )
+                        print(f"  answer[:150]: {str(d.get('answer', ''))[:150]}")
                         break
                 except Exception:
                     pass
@@ -73,7 +77,7 @@ def main() -> None:
     print("\n=== 2. Greeting ===")
     r = req("POST", "/api/chat", {"message": "こんにちは"}, token)
     print(f"query_type: {r.get('query_type')}")
-    print(f"answer: {str(r.get('answer',''))[:150]}")
+    print(f"answer: {str(r.get('answer', ''))[:150]}")
     print(f"chart: {r.get('chart')}")
     print(f"suggestions: {r.get('suggestions')}")
 
@@ -81,7 +85,7 @@ def main() -> None:
     print("\n=== 3. FAQ (有給休暇) ===")
     r = req("POST", "/api/chat", {"message": "有給休暇の取得方法を教えてください"}, token)
     print(f"query_type: {r.get('query_type')}")
-    print(f"answer: {str(r.get('answer',''))[:200]}")
+    print(f"answer: {str(r.get('answer', ''))[:200]}")
     print(f"chart: {r.get('chart')}")
     print(f"docs: {len(r.get('documents', []))}")
     print(f"verification: {r.get('verification')}")
@@ -90,9 +94,9 @@ def main() -> None:
     print("\n=== 4. SQL (売上) ===")
     r = req("POST", "/api/chat", {"message": "月別売上データを表示してください"}, token)
     print(f"query_type: {r.get('query_type')}")
-    print(f"answer: {str(r.get('answer',''))[:200]}")
+    print(f"answer: {str(r.get('answer', ''))[:200]}")
     print(f"chart type: {r.get('chart', {}).get('chart_type') if r.get('chart') else 'none'}")
-    print(f"sql: {r.get('sql','')[:100]}")
+    print(f"sql: {r.get('sql', '')[:100]}")
     print(f"data rows: {len(r.get('data', []))}")
     print(f"columns: {r.get('columns')}")
 
@@ -104,11 +108,10 @@ def main() -> None:
     print("\n=== 6. Markdown/chart test ===")
     r = req("POST", "/api/chat", {"message": "顧客満足度データをグラフで見せてください"}, token)
     print(f"query_type: {r.get('query_type')}")
-    print(f"answer: {str(r.get('answer',''))[:200]}")
+    print(f"answer: {str(r.get('answer', ''))[:200]}")
     print(f"chart: {r.get('chart')}")
     print(f"rich_response keys: {list((r.get('rich_response') or {}).keys())}")
 
 
 if __name__ == "__main__":
     main()
-

@@ -316,18 +316,16 @@ def test_runtime_checks_detect_vite_and_compose_port_drift(tmp_path: Path) -> No
     frontend_dir = app_dir / "frontend"
     frontend_dir.mkdir(parents=True, exist_ok=True)
     (frontend_dir / "vite.config.ts").write_text(
-        (
-            "export default { server: { port: 3010, proxy: { '/api': 'http://localhost:8010' } } };\n"
-        ),
+        ("export default { server: { port: 3010, proxy: { '/api': 'http://localhost:8010' } } };\n"),
         encoding="utf-8",
     )
     (app_dir / "docker-compose.yml").write_text(
         (
-            'services:\n'
-            '  sample:\n'
-            '    ports:\n'
+            "services:\n"
+            "  sample:\n"
+            "    ports:\n"
             '      - "${SAMPLE_APP_PORT:-8100}:8010"\n'
-            '    healthcheck:\n'
+            "    healthcheck:\n"
             '      test: ["CMD", "curl", "http://localhost:8010/health"]\n'
         ),
         encoding="utf-8",

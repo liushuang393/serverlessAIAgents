@@ -10,15 +10,14 @@ import time
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
-if TYPE_CHECKING:
-    from kernel.protocols.agui_events import (
-        AGUIEvent,
-        FlowCompleteEvent,
-        FlowErrorEvent,
-        FlowStartEvent,
-    )
+from kernel.protocols.agui_events import (
+    AGUIEvent,
+    FlowCompleteEvent,
+    FlowErrorEvent,
+    FlowStartEvent,
+)
 
 
 def _agui_events() -> tuple[type, type, type, type]:
@@ -151,13 +150,13 @@ class SSEFlowRunner:
             msg = "Flow is not set. Use set_flow() or pass flow to constructor."
             raise ValueError(msg)
 
-        _AGUIEvent, _FlowComplete, _FlowError, _FlowStart = _agui_events()
+        _agui_event_cls, _flow_complete_cls, _flow_error_cls, _flow_start_cls = _agui_events()
 
         flow_id = self.flow_id
         now = time.time()
 
         # Flow開始イベント
-        yield _FlowStart(
+        yield _flow_start_cls(
             timestamp=now,
             flow_id=flow_id,
             data={"input_keys": list(input_data.keys())},
@@ -170,7 +169,7 @@ class SSEFlowRunner:
             async for result, event in self._flow.run_with_events(input_data):
                 if event is not None:
                     # FlowStartEvent は既に発射済みなのでスキップ
-                    if not isinstance(event, _FlowStart):
+                    if not isinstance(event, _flow_start_cls):
                         yield event
                 if result is not None:
                     final_result = result
@@ -178,7 +177,7 @@ class SSEFlowRunner:
             # Flow完了イベント（FlowCompleteEvent がまだ発射されていない場合）
             if final_result is not None:
                 # 結果付きで完了イベントを発射
-                yield _FlowComplete(
+                yield _flow_complete_cls(
                     timestamp=time.time(),
                     flow_id=flow_id,
                     data={},
@@ -188,7 +187,7 @@ class SSEFlowRunner:
 
         except Exception as e:
             self._logger.exception(f"Flow execution error: {e}")
-            yield _FlowError(
+            yield _flow_error_cls(
                 timestamp=time.time(),
                 flow_id=flow_id,
                 data={},

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from apps.faq_system.backend.services import rag_ingestion
 from apps.faq_system.backend.services.rag_ingestion import (
     RAGIngestionOrchestrator,

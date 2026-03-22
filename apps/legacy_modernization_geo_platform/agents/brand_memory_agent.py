@@ -12,7 +12,6 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     ArtifactMeta,
     BrandMemoryArtifact,
 )
-
 from kernel.agents.resilient_agent import ResilientAgent
 
 

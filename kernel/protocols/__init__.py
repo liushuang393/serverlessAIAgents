@@ -8,6 +8,7 @@ from kernel.protocols.a2a_card import AgentCard, AgentSkill
 from kernel.protocols.a2a_client import A2AClient
 from kernel.protocols.a2a_server import A2AServer
 
+
 # A2UI Protocol — 遅延インポート（kernel.core.registry 循環回避）
 _A2UI_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "A2UIComponent": ("kernel.protocols.a2ui.components", "A2UIComponent"),
@@ -54,6 +55,7 @@ from kernel.protocols.mcp_tool import (
     MCPToolRequest,
     MCPToolResponse,
 )
+
 
 # MCP Client / LazyMCPClient の遅延マッピング
 _MCP_LAZY_IMPORTS: dict[str, tuple[str, str]] = {

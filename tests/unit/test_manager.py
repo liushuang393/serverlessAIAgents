@@ -6,8 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from kernel.agents.agent_block import AgentBlock
-from kernel.core.exceptions import AgentBlockNotFoundError, AgentBlockValidationError
 from kernel.agents.manager import AgentBlockManager, AgentInfo
+from kernel.agents.validator import ValidationResult
+from kernel.core.exceptions import AgentBlockNotFoundError, AgentBlockValidationError
 from kernel.core.metadata import (
     AgentMetadata,
     DependencySpec,
@@ -20,7 +21,6 @@ from kernel.core.metadata import (
     ProtocolConfig,
     VisualConfig,
 )
-from kernel.agents.validator import ValidationResult
 
 
 class TestAgentInfo:

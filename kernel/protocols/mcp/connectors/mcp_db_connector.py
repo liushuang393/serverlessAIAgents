@@ -7,12 +7,7 @@ following the Model Context Protocol (MCP).
 import logging
 from typing import Any
 
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from shared.services.schema_linker import SchemaLinker, SchemaLinkerConfig
-
+from shared.services.schema_linker import SchemaLinker, SchemaLinkerConfig
 
 
 logger = logging.getLogger(__name__)

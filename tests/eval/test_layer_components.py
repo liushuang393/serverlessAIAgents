@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import pytest
+
+from contracts import ToolRequest
 from harness import ApprovalService, HarnessedToolRuntime, ToolGate
 from infrastructure import EmbeddingBackendRegistry, LLMBackendRegistry, TraceExporterRegistry
+from infrastructure.llm.providers.tool_provider import RegisteredTool, ToolProvider
 from infrastructure.rerank import RerankBackendRegistry
 from shared import SharedEmbeddingGateway, SharedLLMGateway, SharedRAGService, SharedRerankGateway
 from shared.registry import ComponentToggle
-
-from infrastructure.llm.providers.tool_provider import RegisteredTool, ToolProvider
-from contracts import ToolRequest
 
 
 @pytest.mark.asyncio

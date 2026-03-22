@@ -120,4 +120,3 @@ class AgentMetadata(BaseModel):
     dependencies: DependencySpec = Field(..., description="依存関係仕様")
     pocketflow: PocketFlowConfig = Field(..., description="PocketFlow 設定")
     visual: VisualConfig = Field(..., description="ビジュアル設定")
-

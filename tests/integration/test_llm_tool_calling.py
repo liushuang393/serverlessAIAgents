@@ -104,7 +104,7 @@ _GATEWAY_AVAILABLE: bool | None = None
 
 def has_gateway() -> bool:
     """Gateway が利用可能かキャッシュ付きチェック."""
-    global _GATEWAY_AVAILABLE  # noqa: PLW0603
+    global _GATEWAY_AVAILABLE
     if _GATEWAY_AVAILABLE is None:
         _GATEWAY_AVAILABLE = _gateway_is_reachable()
     return _GATEWAY_AVAILABLE

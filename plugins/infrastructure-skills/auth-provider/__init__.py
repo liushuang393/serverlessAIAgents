@@ -1,1 +1,1 @@
-"""auth-provider スキル."""
+"""auth-provider スキル."""  # noqa: N999

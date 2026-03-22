@@ -19,6 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from control_plane.publish.service import PublishService
 from control_plane.schemas.publish_schemas import (
     PublishEvent,
     PublishPhase,
@@ -34,13 +35,11 @@ from control_plane.services.component_library import (
     ComponentVisibility,
     get_component_library,
 )
-
 from kernel.core.interfaces import (
     CodeOutputType,
     DeployTarget,
     GeneratedCode,
 )
-from control_plane.publish.service import PublishService
 
 
 if TYPE_CHECKING:

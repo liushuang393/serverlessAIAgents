@@ -25,7 +25,4 @@ def test_request_tenant_fallbacks_to_default_tenant_id(monkeypatch: pytest.Monke
     monkeypatch.setenv("FAQ_DEFAULT_TENANT_ID", "default-tenant")
 
     assert auth_dependencies._resolve_request_tenant({}, "/api/auth/me") == "default-tenant"
-    assert (
-        auth_dependencies._resolve_request_tenant({"host": "localhost:8005"}, "/api/auth/me")
-        == "default-tenant"
-    )
+    assert auth_dependencies._resolve_request_tenant({"host": "localhost:8005"}, "/api/auth/me") == "default-tenant"

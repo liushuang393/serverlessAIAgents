@@ -3,12 +3,12 @@
 from datetime import datetime, timedelta
 
 import pytest
+
 from apps.messaging_hub.agents.meeting_agent import (
     MeetingAgent,
     MeetingBrief,
     MeetingNotes,
 )
-
 from kernel.skills.calendar import CalendarSkill
 
 

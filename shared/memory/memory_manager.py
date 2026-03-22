@@ -20,17 +20,17 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
 
+from infrastructure.memory.vector_search import VectorSearch
 from shared.memory.importance_adjuster import ImportanceAdjuster
 from shared.memory.long_term_memory import LongTermMemory
 from shared.memory.memory_distiller import MemoryDistiller
 from shared.memory.sensory_memory import SensoryMemory
 from shared.memory.short_term_memory import ShortTermMemory
-from infrastructure.memory.vector_search import VectorSearch
 
 
 if TYPE_CHECKING:
-    from shared.memory.fact_atomizer import FactAtomizer
     from infrastructure.memory.types import CompressionConfig, MemoryEntry
+    from shared.memory.fact_atomizer import FactAtomizer
 
 
 class MemoryManager:

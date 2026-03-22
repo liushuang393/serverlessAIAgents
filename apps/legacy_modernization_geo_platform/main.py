@@ -5,9 +5,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-from collections.abc import AsyncIterator, Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 
 try:
@@ -16,26 +15,10 @@ except ImportError:  # pragma: no cover - optional dependency
     load_dotenv = None
 
 import uvicorn
-from kernel.agents.app_agent_runtime import bootstrap_app_agents
-from shared.integrations.fastapi_integration import AgentContractRouter, create_sse_response
-from kernel.protocols.a2ui.components import CardComponent, TextComponent
-from kernel.protocols.agui_events import (
-    A2UIClearEvent,
-    A2UIComponentEvent,
-    A2UIUpdateEvent,
-    AGUIEvent,
-    ApprovalRequiredEvent,
-    ApprovalSubmittedEvent,
-    FlowCompleteEvent,
-    FlowErrorEvent,
-    FlowStartEvent,
-    LogEvent,
-    NodeCompleteEvent,
-    NodeErrorEvent,
-    NodeStartEvent,
-)
-from infrastructure.security.auth_client import AuthClient
-from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+
 from apps.legacy_modernization_geo_platform.backend.orchestrator import GeoOrchestrator
 from apps.legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.legacy_modernization_geo_platform.backend.qa import GeoQualityGate
@@ -49,9 +32,30 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     TaskEvent,
 )
 from apps.legacy_modernization_geo_platform.backend.settings import APP_ROOT, GeoPlatformSettings
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from kernel.agents.app_agent_runtime import bootstrap_app_agents
+from kernel.protocols.a2ui.components import CardComponent, TextComponent
+from kernel.protocols.agui_events import (
+    A2UIClearEvent,
+    A2UIComponentEvent,
+    A2UIUpdateEvent,
+    AGUIEvent,
+    ApprovalRequiredEvent,
+    ApprovalSubmittedEvent,
+    FlowCompleteEvent,
+    FlowErrorEvent,
+    FlowStartEvent,
+    LogEvent,
+    NodeCompleteEvent,
+    NodeStartEvent,
+)
+from shared.integrations.fastapi_integration import AgentContractRouter, create_sse_response
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
+
+    from infrastructure.security.auth_client import AuthClient
 
 
 _APP_ENV_PATH = APP_ROOT / ".env"
@@ -482,7 +486,9 @@ def _build_artifact_component(
     title = artifact_name.replace("_", " ").title()
     children = [TextComponent(line) for line in _artifact_summary_lines(artifact_name, payload)]
     if not children:
-        preview = json.dumps(payload, ensure_ascii=False, indent=2) if isinstance(payload, (dict, list)) else str(payload)
+        preview = (
+            json.dumps(payload, ensure_ascii=False, indent=2) if isinstance(payload, (dict, list)) else str(payload)
+        )
         children.append(TextComponent(preview[:1200]))
     card = CardComponent(title=title, children=children, artifact_name=artifact_name)
     card.id = f"{task_id}:{artifact_name}"
@@ -518,11 +524,17 @@ def _artifact_summary_lines(artifact_name: str, payload: Any) -> list[str]:
     if artifact_name == "evidence_matrix":
         entries = payload.get("entries")
         if isinstance(entries, list):
-            return [f"Evidence rows: {len(entries)}", *[f"- {item.get('title', '-')}" for item in entries[:3] if isinstance(item, dict)]]
+            return [
+                f"Evidence rows: {len(entries)}",
+                *[f"- {item.get('title', '-')}" for item in entries[:3] if isinstance(item, dict)],
+            ]
     if artifact_name == "content_draft_artifact":
         pages = payload.get("pages")
         if isinstance(pages, list):
-            return [f"Pages: {len(pages)}", *[f"- {item.get('title', '-')}" for item in pages[:3] if isinstance(item, dict)]]
+            return [
+                f"Pages: {len(pages)}",
+                *[f"- {item.get('title', '-')}" for item in pages[:3] if isinstance(item, dict)],
+            ]
     if artifact_name == "geo_qa_report":
         return [
             f"Risk: {payload.get('risk_level', '-')}",
@@ -532,11 +544,17 @@ def _artifact_summary_lines(artifact_name: str, payload: Any) -> list[str]:
     if artifact_name == "publish_manifest":
         pages = payload.get("pages")
         if isinstance(pages, list):
-            return [f"Published pages: {len(pages)}", *[f"- {item.get('page_url', '-')}" for item in pages[:3] if isinstance(item, dict)]]
+            return [
+                f"Published pages: {len(pages)}",
+                *[f"- {item.get('page_url', '-')}" for item in pages[:3] if isinstance(item, dict)],
+            ]
     if artifact_name == "campaign_report":
         highlights = payload.get("highlights")
         if isinstance(highlights, list):
-            return [f"Highlights: {len(highlights)}", *[f"- {item}" for item in highlights[:3] if isinstance(item, str)]]
+            return [
+                f"Highlights: {len(highlights)}",
+                *[f"- {item}" for item in highlights[:3] if isinstance(item, str)],
+            ]
 
     preview = json.dumps(payload, ensure_ascii=False, indent=2)
     return [preview[:1200]]

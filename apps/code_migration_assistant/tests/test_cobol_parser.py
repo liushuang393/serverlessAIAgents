@@ -1,8 +1,8 @@
 """Tests for COBOLParser MCP Tool."""
 
 import pytest
-from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 
+from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 from kernel import MCPToolRequest
 
 

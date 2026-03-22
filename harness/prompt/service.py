@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -113,4 +113,3 @@ __all__ = [
     "PromptTemplate",
     "PromptVariable",
 ]
-

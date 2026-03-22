@@ -154,12 +154,12 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         # DGE は長文の意思決定分析を行うため、RAG/History予算を多めに設定
         self._enable_context_engineer = enable_context_engineer
         _budget = budget_config or BudgetConfig(
-            system_prompt_budget=600,   # 意思決定専用プロンプト用に拡張
-            tools_budget=200,           # DGEはツール数が少ないため縮小
-            rag_context_budget=3000,    # RAGコンテキストを多めに確保
-            history_budget=6000,        # 多段階分析履歴のため拡張
-            key_notes_budget=600,       # 重要判断メモを多めに確保
-            total_budget=12000,         # DGE は大きなコンテキストウィンドウを使用
+            system_prompt_budget=600,  # 意思決定専用プロンプト用に拡張
+            tools_budget=200,  # DGEはツール数が少ないため縮小
+            rag_context_budget=3000,  # RAGコンテキストを多めに確保
+            history_budget=6000,  # 多段階分析履歴のため拡張
+            key_notes_budget=600,  # 重要判断メモを多めに確保
+            total_budget=12000,  # DGE は大きなコンテキストウィンドウを使用
         )
         if enable_context_engineer:
             self._context_engineer: ContextEngineer | None = ContextEngineer(

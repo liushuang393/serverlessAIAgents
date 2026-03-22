@@ -10,9 +10,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
-from control_plane.services.studio_service import StudioService
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from control_plane.services.studio_service import StudioService
 
 
 # TYPE_CHECKING removed as StudioService is already imported

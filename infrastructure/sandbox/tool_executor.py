@@ -111,7 +111,6 @@ class ToolResult(ContractToolResult):
     """
 
 
-
 class BatchResult(BaseModel):
     """バッチ実行結果."""
 

@@ -25,9 +25,10 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from pydantic import Field, model_validator
+
 from contracts.policy import ApprovalRequest as ContractApprovalRequest
 from kernel.skills.gateway import RiskLevel
-from pydantic import Field, model_validator
 
 
 if TYPE_CHECKING:

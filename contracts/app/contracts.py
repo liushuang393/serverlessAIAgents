@@ -8,7 +8,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from contracts.base import ContractModel
-from contracts.plugin import PluginBinding
+
+# PluginBinding はランタイムでも必要（Pydantic model_rebuild() の型解決のため）
+# ruff TC001 を意図的に無効化（model_rebuild() が TYPE_CHECKING ブロック内の型を解決できないため）
+from contracts.plugin import PluginBinding  # noqa: TC001
 
 
 _APP_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -464,3 +467,8 @@ class DeploymentSpec(ContractModel):
     target: str = Field(..., description="配備先")
     version: str = Field(..., description="配備バージョン")
     config: dict[str, Any] = Field(default_factory=dict, description="配備設定")
+
+
+# PluginBinding がランタイムで定義済みになった後にモデルを再構築する
+AppManifest.model_rebuild()
+DeploymentSpec.model_rebuild()

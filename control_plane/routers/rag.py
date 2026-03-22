@@ -20,14 +20,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
-from control_plane.schemas.rag_schemas import RAGConfigPatchRequest  # noqa: TC002
-from control_plane.services.rag_config_store import RagConfigStore, get_rag_config_store
-from control_plane.services.rag_overview import RAGOverviewService  # noqa: TC002
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
+
+from control_plane.services.rag_config_store import RagConfigStore, get_rag_config_store
+
+
+if TYPE_CHECKING:
+    from control_plane.schemas.rag_schemas import RAGConfigPatchRequest
+    from control_plane.services.rag_overview import RAGOverviewService
 
 
 router = APIRouter(prefix="/api/studios/framework/rag", tags=["rag"])
@@ -213,9 +217,7 @@ async def patch_rag_app_config(
     for field_name, value in patch.model_dump(exclude_none=True).items():
         if field_name == "data_sources" and isinstance(value, list):
             # RAGDataSourceInput objects → plain dicts
-            patch_dict[field_name] = [
-                src if isinstance(src, dict) else dict(src) for src in value
-            ]
+            patch_dict[field_name] = [src if isinstance(src, dict) else dict(src) for src in value]
         else:
             patch_dict[field_name] = value
 

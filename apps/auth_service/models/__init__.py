@@ -11,6 +11,7 @@ from apps.auth_service.models.authorization import (
 from apps.auth_service.models.token import PasswordResetToken, RefreshToken, TokenBlacklist
 from apps.auth_service.models.user import AuthSession, ProxyAuthNonce, UserAccount
 
+
 __all__ = [
     "AuthSession",
     "PasswordResetToken",

@@ -57,7 +57,7 @@ _auth_guard = ContractAuthGuard(
 _scorer = ExecutionScorer(
     weights={
         ScoreDimension.ACCURACY: 1.0,
-        ScoreDimension.SAFETY: 2.0,   # セキュリティ関連を重視
+        ScoreDimension.SAFETY: 2.0,  # セキュリティ関連を重視
         ScoreDimension.COMPLETENESS: 1.0,
     }
 )
@@ -267,8 +267,7 @@ def _build_verify_result(app_name: str, checks: dict[str, bool]) -> dict[str, An
             "is_acceptable": risk_assessment.is_acceptable,
             "mitigations": risk_assessment.mitigations,
             "factors": [
-                {"name": f.name, "level": f.level.value, "description": f.description}
-                for f in risk_assessment.factors
+                {"name": f.name, "level": f.level.value, "description": f.description} for f in risk_assessment.factors
             ],
         },
         "harness_score": {

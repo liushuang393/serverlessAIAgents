@@ -13,10 +13,11 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from sqlalchemy import delete, select
+
 from shared.auth_service.db.session import get_db_session
 from shared.auth_service.models.user import ProxyAuthNonce
 from shared.auth_service.providers.base import AuthProvider, AuthResult, ExternalIdentity
-from sqlalchemy import delete, select
 
 
 if TYPE_CHECKING:

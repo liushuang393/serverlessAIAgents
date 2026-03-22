@@ -15,6 +15,7 @@ import pytest
 from control_plane.marketplace import AgentRegistryEntry, LocalRegistry, MarketplaceClient
 from control_plane.marketplace.client import MarketplaceAgent
 
+
 # テスト用サンプルエージェント
 _SAMPLE_AGENTS = [
     MarketplaceAgent(
@@ -45,10 +46,8 @@ _SAMPLE_AGENTS = [
 def _make_agent_zip(agent_id: str) -> bytes:
     """テスト用 agent.yaml を含む ZIP を生成."""
     agent = next((a for a in _SAMPLE_AGENTS if a.id == agent_id), _SAMPLE_AGENTS[0])
-    yaml_content = (
-        f"id: {agent.id}\nname: {agent.name}\nversion: {agent.version}\n"
-        f"protocols:\n"
-        + "".join(f"  {p}:\n    enabled: true\n" for p in agent.protocols)
+    yaml_content = f"id: {agent.id}\nname: {agent.name}\nversion: {agent.version}\nprotocols:\n" + "".join(
+        f"  {p}:\n    enabled: true\n" for p in agent.protocols
     )
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:

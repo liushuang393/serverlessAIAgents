@@ -26,7 +26,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ScoreImprovement,
     ShuOutput,
 )
-
 from kernel import ResilientAgent
 from kernel.core.type_safe import safe_enum, safe_float
 

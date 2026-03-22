@@ -100,7 +100,9 @@ class EvolutionManager:
         if not self.can_evolve(program_name, decision):
             logger.warning(
                 "最大反復数に達しました: program=%s decision=%s max=%d",
-                program_name, decision, self.max_iterations,
+                program_name,
+                decision,
+                self.max_iterations,
             )
             return None
 
@@ -113,7 +115,10 @@ class EvolutionManager:
 
         logger.info(
             "Evolution: program=%s stage=%s iteration=%d/%d",
-            program_name, stage, iteration, self.max_iterations,
+            program_name,
+            stage,
+            iteration,
+            self.max_iterations,
         )
         logger.info("修正内容: %s", fix_summary)
 
@@ -208,10 +213,7 @@ class EvolutionManager:
 
         if decision == "DESIGN_ISSUE":
             field_coverage = evidence.get("field_coverage", "不明")
-            return (
-                f"設計問題を修正: {reason} "
-                f"(フィールドカバレッジ: {field_coverage})"
-            )
+            return f"設計問題を修正: {reason} (フィールドカバレッジ: {field_coverage})"
 
         if decision == "TRANSFORM_ISSUE":
             return f"変換問題を修正: {reason} (Java文法エラーまたはビジネスロジック欠落)"

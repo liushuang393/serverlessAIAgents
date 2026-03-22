@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from contracts.app import AppManifest
 from control_plane.services.app_discovery import AppDiscoveryService
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class DiscoveryService:
@@ -19,7 +22,4 @@ class DiscoveryService:
     def scan(self) -> list[AppManifest]:
         """Return normalized manifests for the current apps directory."""
         asyncio.run(self._service.scan())
-        return [
-            AppManifest.model_validate(config.model_dump(mode="python"))
-            for config in self._service.list_apps()
-        ]
+        return [AppManifest.model_validate(config.model_dump(mode="python")) for config in self._service.list_apps()]

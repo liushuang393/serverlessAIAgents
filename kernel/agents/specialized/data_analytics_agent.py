@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import importlib
-from types import ModuleType
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 
 _TARGET_MODULE = "apps.market_trend_monitor.agents.data_analytics_agent"
