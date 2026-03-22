@@ -1,0 +1,35 @@
+{
+  "login": {
+    "status": "ok"
+  },
+  "chat_general": {
+    "status": null,
+    "query_type": "faq",
+    "answer": "質問「こんにちは」に対する回答: コンテキストに基づく情報です。",
+    "data_rows": 0,
+    "has_chart": false,
+    "suggestions": 3,
+    "error": ""
+  },
+  "faq_rag": {
+    "error": "timed out"
+  },
+  "sql_analytics": {
+    "status": null,
+    "query_type": "faq",
+    "answer": "質問「売上トップ5の商品を教えて」に対する回答: コンテキストに基づく情報です。",
+    "data_rows": 0,
+    "has_chart": false,
+    "suggestions": 3,
+    "error": ""
+  },
+  "hybrid": {
+    "status": null,
+    "query_type": "faq",
+    "answer": "質問「先月の売上が低い理由と改善策を教えて」に対する回答: コンテキストに基づく情報です。",
+    "data_rows": 0,
+    "has_chart": false,
+    "suggestions": 3,
+    "error": ""
+  }
+}

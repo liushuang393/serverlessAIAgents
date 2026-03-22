@@ -244,10 +244,13 @@ def get_suggestion_service() -> SuggestionService:
 
 def get_faq_agent() -> FAQAgent:
     """FAQAgent取得（遅延初期化 + A2AHub 登録）."""
+    from infrastructure.llm.providers import get_llm
     from kernel.protocols.a2a_hub import get_hub
 
     if "faq_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()
+        # LLM クライアントを生成（テンプレート回答フォールバック防止）
+        llm_client = get_llm(temperature=0.3)
         agent = create_faq_app_agent(
             FAQAgent,
             agent_type="specialist",
@@ -262,7 +265,8 @@ def get_faq_agent() -> FAQAgent:
                     enable_rag=runtime_cfg.rag_enabled,
                     enable_sql=runtime_cfg.sql_enabled,
                     enable_hybrid=runtime_cfg.hybrid_enabled,
-                )
+                ),
+                "llm_client": llm_client,
             },
         )
         _services["faq_agent"] = agent
