@@ -114,3 +114,9 @@ platform/data/*.db-journal
 apps/legacy_modernization_geo_platform/data/*
 data/rag/*
 nohup.out
+pytest_failure.txt
+layer_test_output_after.txt
+layer_test_output.txt
+.gitignore
+.gitignore
+pytest_output.txt

@@ -70,6 +70,7 @@
 |---|---|---|
 | [`code-rules/tools/testing.md`](code-rules/tools/testing.md) | pytest 方針・カバレッジ・モック・非同期テストの規約と手順 | テストを書く・修正するとき |
 | [`code-rules/tools/lint-format.md`](code-rules/tools/lint-format.md) | Ruff・ESLint・Prettier の設定方法と利用ルール | リント・フォーマット設定を変更するとき |
+| [`code-rules/tools/architecture-validation.md`](code-rules/tools/architecture-validation.md) | レイヤー境界・プロバイダ隔離・App コンプライアンス・ルール遵守の自動検証ツール | アーキテクチャ違反の確認・CI/CD 検証ツールを使うとき |
 | [`code-rules/tools/check-errors-analysis.md`](code-rules/tools/check-errors-analysis.md) | `./check.sh` の出力エラーを種別に分類し対処する手順ガイド | `check.sh` でエラーが出たとき |
 | [`code-rules/project/ci-cd-guidelines.md`](code-rules/project/ci-cd-guidelines.md) | GitHub Actions・pre-commit フックの設定規約と変更手順 | CI/CD・pre-commit を変更するとき |
 

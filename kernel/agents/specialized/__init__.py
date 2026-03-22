@@ -12,10 +12,9 @@ import importlib
 from typing import Any
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
-    "FAQAgent": ("apps.faq_system.backend.agents.faq_agent", "FAQAgent"),
-    "FAQAgentConfig": ("apps.faq_system.backend.agents.faq_agent", "FAQAgentConfig"),
-    "FAQInput": ("apps.faq_system.backend.agents.faq_agent", "FAQInput"),
-    "FAQOutput": ("apps.faq_system.backend.agents.faq_agent", "FAQOutput"),
+    "FAQAgent": ("kernel.agents.specialized.faq_agent", "FAQAgent"),
+    "FAQAgentConfig": ("kernel.agents.specialized.faq_agent", "FAQAgentConfig"),
+    "FAQResponse": ("kernel.agents.specialized.faq_agent", "FAQResponse"),
     "DataAnalyticsAgent": (
         "apps.market_trend_monitor.agents.data_analytics_agent",
         "DataAnalyticsAgent",

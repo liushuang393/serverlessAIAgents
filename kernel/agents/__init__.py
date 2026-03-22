@@ -30,8 +30,8 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "OutputT": ("kernel.agents.resilient_agent", "OutputT"),
     "ResilientAgent": ("kernel.agents.resilient_agent", "ResilientAgent"),
     "ToolCapableAgent": ("kernel.agents.tool_agent", "ToolCapableAgent"),
-    "FAQAgent": ("apps.faq_system.backend.agents.faq_agent", "FAQAgent"),
-    "FAQAgentConfig": ("apps.faq_system.backend.agents.faq_agent", "FAQAgentConfig"),
+    "FAQAgent": ("kernel.agents.specialized.faq_agent", "FAQAgent"),
+    "FAQAgentConfig": ("kernel.agents.specialized.faq_agent", "FAQAgentConfig"),
     "SalesAgent": ("shared.agents.sales_agent", "SalesAgent"),
     "SalesAgentConfig": ("shared.agents.sales_agent", "SalesAgentConfig"),
 }
