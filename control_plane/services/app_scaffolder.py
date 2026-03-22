@@ -611,6 +611,8 @@ class AppScaffolderService:
         app_dir.mkdir(parents=True, exist_ok=False)
         (app_dir / "agents").mkdir(parents=True, exist_ok=False)
         (app_dir / "prompts").mkdir(parents=True, exist_ok=False)
+        (app_dir / "data").mkdir(parents=True, exist_ok=True)
+
 
         self._write_file(app_dir / "__init__.py", "", created)
         self._write_file(

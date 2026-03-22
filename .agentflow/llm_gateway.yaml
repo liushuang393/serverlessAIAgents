@@ -222,7 +222,7 @@ models:
   api_base: http://127.0.0.1:11434/v1
   api_key_env: null
   engine: ''
-  enabled: true
+  enabled: false  # Ollama 未起動時のタイムアウト防止
   modalities:
   - text
   - tool_call
@@ -242,14 +242,11 @@ routing_policy:
     reasoning:
     - coding_openai
     - cheap_gemini
-    - local_vllm_default
     coding:
     - reasoning_claude
     - cheap_gemini
-    - local_vllm_default
     cheap:
     - coding_openai
-    - local_vllm_default
     local:
     - cheap_gemini
   load_balance_strategy: round_robin

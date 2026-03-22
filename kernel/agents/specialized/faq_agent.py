@@ -163,6 +163,8 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
 
             if query_type == "sql":
                 response = await self._handle_sql_query(question, agent_trace)
+            elif query_type == "hybrid":
+                response = await self._handle_hybrid_query(question, agent_trace)
             else:
                 response = await self._handle_faq_query(question, agent_trace)
 
@@ -199,6 +201,9 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
         if query_type == "sql":
             yield {"type": "progress", "progress": 40, "message": "SQL を生成中..."}
             response = await self._handle_sql_query(question, [])
+        elif query_type == "hybrid":
+            yield {"type": "progress", "progress": 40, "message": "ハイブリッド検索中..."}
+            response = await self._handle_hybrid_query(question, [])
         else:
             yield {"type": "progress", "progress": 40, "message": "ナレッジベースを検索中..."}
             response = await self._handle_faq_query(question, [])
@@ -287,6 +292,81 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
             agent_trace=agent_trace,
         )
 
+    async def _handle_hybrid_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
+        """ハイブリッドクエリを処理（RAG + SQL 両方を試行）."""
+        agent_trace.append("Executing hybrid query (RAG + SQL)")
+
+        # まず SQL を試行
+        sql_response: FAQResponse | None = None
+        if self._text2sql_service is not None:
+            try:
+                sql_result = await self._text2sql_service.execute(
+                    action="query", question=question,
+                )
+                if sql_result.success and sql_result.data.get("data"):
+                    sql_response = FAQResponse(
+                        question=question,
+                        query_type="hybrid",
+                        sql=str(sql_result.data.get("sql", "")),
+                        data=sql_result.data.get("data", []),
+                        columns=sql_result.data.get("columns", []),
+                        chart=sql_result.data.get("chart"),
+                    )
+                    agent_trace.append("SQL query succeeded")
+            except Exception as e:
+                agent_trace.append(f"SQL query failed: {e}")
+
+        # RAG で回答生成
+        retrieval_result = await self._retriever.run(
+            {"query": question, "top_k": self._config.rag_top_k},
+        )
+        chunks = retrieval_result.get("chunks", [])
+        answer_result = await self._answer_generator.run(
+            {"question": question, "context": chunks},
+        )
+        answer = answer_result.get("answer", "")
+        confidence = answer_result.get("confidence", 0.8)
+        citations = answer_result.get("citations", [])
+
+        # SQL 結果があればマージ
+        response = FAQResponse(
+            question=question,
+            answer=answer,
+            query_type="hybrid",
+            confidence=confidence,
+            citations=[
+                {
+                    "id": c.get("doc_id", ""),
+                    "title": c.get("title", ""),
+                    "snippet": c.get("snippet", ""),
+                    "score": c.get("relevance_score", 0),
+                }
+                for c in citations
+            ],
+            suggestions=await self._generate_suggestions(question, "hybrid"),
+            agent_trace=agent_trace,
+        )
+
+        if sql_response is not None:
+            response.sql = sql_response.sql
+            response.data = sql_response.data
+            response.columns = sql_response.columns
+            response.chart = sql_response.chart
+
+        if self._config.enable_rich_response:
+            rich = self._build_rich_response(
+                answer=answer,
+                citations=citations,
+                sql=response.sql or None,
+                data=response.data or None,
+                columns=response.columns or None,
+                query_type="hybrid",
+            )
+            response.rich_response = rich.to_dict()
+
+        return response
+
+
     def _build_rich_response(
         self,
         answer: str,
@@ -347,7 +427,7 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
         self._retriever = Retriever()
         self._answer_generator = AnswerGenerator(llm_client=self._llm_client)
         self._gap_analyzer = GapAnalyzer() if self._config.enable_gap_analysis else None
-        
+
         try:
             dialect = SQLDialect(self._config.sql_dialect)
         except:

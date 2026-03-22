@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _default_llm: LLMProvider | None = None
+# パラメータ付きインスタンスのキャッシュ（role, temperature, max_tokens をキーにする）
+_parameterized_cache: dict[tuple[str | None, float | None, int | None], LLMProvider] = {}
 
 
 class LLMProviderConfig(BaseModel):
@@ -299,10 +301,17 @@ def get_llm(
     context: RuntimeContext | None = None,
     _new_instance: bool = False,
 ) -> LLMProvider:
-    """Get default LLM provider instance."""
+    """Get default LLM provider instance.
+
+    パラメータなし → グローバルシングルトン (_default_llm) を返す。
+    パラメータ付き → (role, temperature, max_tokens) をキーにキャッシュし、
+    同一パラメータの場合は既存インスタンスを再利用する。
+    _new_instance=True または context 指定時はキャッシュせず新規生成する。
+    """
     global _default_llm
 
-    if context is not None or role is not None or temperature is not None or max_tokens is not None or _new_instance:
+    # context 付き or 強制新規 → キャッシュしない
+    if context is not None or _new_instance:
         from infrastructure.config import resolve_settings
 
         return LLMProvider(
@@ -313,6 +322,22 @@ def get_llm(
             context=context,
         )
 
+    # パラメータ付き → キャッシュから取得 or 新規生成してキャッシュ
+    if role is not None or temperature is not None or max_tokens is not None:
+        cache_key = (role, temperature, max_tokens)
+        cached = _parameterized_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        instance = LLMProvider(
+            role=role,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        _parameterized_cache[cache_key] = instance
+        return instance
+
+    # パラメータなし → デフォルトシングルトン
     if _default_llm is None:
         _default_llm = LLMProvider()
 
@@ -320,6 +345,7 @@ def get_llm(
 
 
 def reset_llm() -> None:
-    """Reset global singleton instance (tests)."""
+    """Reset global singleton instance and parameterized cache (tests)."""
     global _default_llm
     _default_llm = None
+    _parameterized_cache.clear()

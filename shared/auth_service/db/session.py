@@ -24,7 +24,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_AUTH_DEFAULT_URL = "sqlite+aiosqlite:///./auth_service.db"
+import os
+_AUTH_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_AUTH_DATA_DIR = os.path.join(_AUTH_BASE_DIR, "data")
+_AUTH_DB_PATH = os.path.join(_AUTH_DATA_DIR, "auth_service.db")
+_AUTH_DEFAULT_URL = f"sqlite+aiosqlite:///{_AUTH_DB_PATH}"
+
 
 _db = DatabaseManager(
     config=DatabaseConfig(

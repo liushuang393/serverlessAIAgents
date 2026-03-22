@@ -132,7 +132,7 @@
       "data_sources": [
         {
           "type": "database",
-          "uri": "sqlite+aiosqlite:///./app.db",
+          "uri": "sqlite+aiosqlite:///./data/app.db",
           "label": "faq_system SQL source",
           "enabled": true,
           "options": {
@@ -252,7 +252,7 @@
       "data_sources": [
         {
           "type": "database",
-          "uri": "sqlite+aiosqlite:///./app.db",
+          "uri": "sqlite+aiosqlite:///./data/app.db",
           "label": "faq_system SQL source",
           "enabled": true,
           "options": {

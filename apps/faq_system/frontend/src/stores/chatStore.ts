@@ -299,10 +299,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const last = msgs.at(-1);
         const queryType = typeof data.query_type === 'string' ? data.query_type : null;
         if (last && last.role === 'assistant') {
+            // rich_response / chart / data / sql / suggestions をメッセージに保存
+            const richResponse = (data.rich_response && typeof data.rich_response === 'object')
+                ? data.rich_response as ChatMessage['rich_response']
+                : undefined;
+            const suggestions = Array.isArray(data.suggestions)
+                ? data.suggestions.map((s) =>
+                    typeof s === 'string' ? { text: s } : (s as ChatMessage['suggestions'] extends (infer T)[] ? T : never),
+                )
+                : undefined;
             msgs[msgs.length - 1] = {
                 ...last,
                 query_type: queryType ?? undefined,
                 verification: data.verification ?? undefined,
+                rich_response: richResponse,
+                chart: data.chart ?? undefined,
+                data: data.data ?? undefined,
+                columns: data.columns ?? undefined,
+                sql: data.sql ?? undefined,
+                suggestions: suggestions as ChatMessage['suggestions'],
             };
         }
         return { messages: msgs, lastQueryType: queryType };

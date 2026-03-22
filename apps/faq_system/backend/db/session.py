@@ -28,7 +28,11 @@ if TYPE_CHECKING:
 # 環境変数ヘルパー
 # ---------------------------------------------------------------------------
 
-_FAQ_DEFAULT_URL = "sqlite+aiosqlite:///./faq_system.db"
+_FAQ_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_FAQ_DATA_DIR = os.path.join(_FAQ_BASE_DIR, "data")
+_FAQ_DB_PATH = os.path.join(_FAQ_DATA_DIR, "faq_system.db")
+_FAQ_DEFAULT_URL = f"sqlite+aiosqlite:///{_FAQ_DB_PATH}"
+
 
 
 def _sqlite_sync_mode_enabled() -> bool:

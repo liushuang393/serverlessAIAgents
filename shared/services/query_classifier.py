@@ -30,7 +30,6 @@ class QueryClassifier:
             "数量",
             "統計",
             "レポート",
-            "top",
             "ランキング",
             "トレンド",
             "比較",
@@ -43,6 +42,14 @@ class QueryClassifier:
             "月別",
             "年別",
             "日別",
+            "トップ",
+            "前月",
+            "先月",
+            "昨年",
+            "前年",
+            "推移",
+            "集計",
+            "分析",
             # 中国語（既存互換）
             "销售",
             "收入",
@@ -69,6 +76,7 @@ class QueryClassifier:
             "average",
             "monthly",
             "yearly",
+            "top",
         ]
     )
 

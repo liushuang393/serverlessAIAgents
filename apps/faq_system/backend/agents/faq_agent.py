@@ -125,11 +125,11 @@ class FAQAgent(KernelFAQAgent):
 
     @property
     def _llm(self) -> Any:
-        return self.llm_client
+        return self._llm_client
 
     @_llm.setter
     def _llm(self, value: Any) -> None:
-        self.llm_client = value
+        self._llm_client = value
 
     async def _classify_query(self, question: str) -> str:
         """テスト互換用のクエリ分類."""

@@ -37,6 +37,27 @@ export interface SessionListResponse {
     sessions: SessionSummary[];
 }
 
+/** rich_response 内の個別コンポーネント */
+export interface RichComponent {
+    type: 'markdown' | 'code_block' | 'data_table' | 'chart' | 'citation' | 'alert';
+    id?: string | null;
+    props: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+}
+
+/** バックエンドが返す rich_response 構造 */
+export interface RichResponsePayload {
+    components: RichComponent[];
+}
+
+/** フォローアップ提案 */
+export interface Suggestion {
+    text: string;
+    type?: string;
+    confidence?: number;
+    priority?: string;
+}
+
 export interface ChatMessage {
     id?: string;
     role: 'user' | 'assistant' | 'system';
@@ -44,6 +65,18 @@ export interface ChatMessage {
     created_at?: string;
     query_type?: string;
     verification?: Record<string, unknown>;
+    /** 富文本コンポーネント */
+    rich_response?: RichResponsePayload | null;
+    /** チャートデータ（ECharts 形式） */
+    chart?: Record<string, unknown> | null;
+    /** SQL 結果データ行 */
+    data?: Array<Record<string, unknown>>;
+    /** SQL 結果カラム名 */
+    columns?: string[];
+    /** 生成された SQL */
+    sql?: string;
+    /** フォローアップ提案 */
+    suggestions?: Suggestion[];
 }
 
 export interface ChatResponse {

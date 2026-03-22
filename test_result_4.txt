@@ -1,4 +1,0 @@
-Login OK
-Starting chat test...
-CHAT OK: status=None type=faq answer_len=32
-DONE

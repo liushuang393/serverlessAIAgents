@@ -60,9 +60,14 @@ DEFAULT_FRONTEND_PORT = _parse_port(
     _ports.get("frontend"),
     _parse_port(APP_CONFIG.get("frontend_port"), 3002),
 )
+_MONITOR_BASE_DIR = Path(__file__).resolve().parents[1]
+_MONITOR_DATA_DIR = _MONITOR_BASE_DIR / "data"
+_MONITOR_DB_PATH = _MONITOR_DATA_DIR / "market_trend.db"
+
 DEFAULT_DATABASE_URL = str(
-    _runtime_database.get("url") or _runtime_urls.get("database") or "sqlite:///./market_trend.db"
+    _runtime_database.get("url") or _runtime_urls.get("database") or f"sqlite:///{_MONITOR_DB_PATH}"
 )
+
 
 
 def _default_cors_origins() -> list[str]:
