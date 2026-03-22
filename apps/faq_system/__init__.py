@@ -17,7 +17,7 @@ Usage:
 """
 
 # App 層の Agent を再エクスポート
-from apps.faq_system.backend.agents.faq_agent import FAQAgent, FAQAgentConfig
+from .backend.agents.faq_agent import FAQAgent, FAQAgentConfig
 
 
 __all__ = ["FAQAgent", "FAQAgentConfig"]
