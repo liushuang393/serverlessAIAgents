@@ -377,5 +377,5 @@ def _stable_source_id(
     fallback_index: int,
 ) -> str:
     raw = f"{source_type}|{uri}|{label}|{schedule or ''}|{fallback_index}"
-    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+    digest = hashlib.sha1(raw.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
     return f"source-{digest}"

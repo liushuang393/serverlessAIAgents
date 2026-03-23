@@ -255,7 +255,7 @@ class MarketplaceClient:
                     if not str(target).startswith(str(install_path.resolve())):
                         msg = f"Unsafe zip member path: {member.filename}"
                         raise ValueError(msg)
-                archive.extractall(install_path)
+                archive.extractall(install_path)  # nosec B202 - パスバリデーション済み
             return
 
         if suffixes.endswith((".tar.gz", ".tgz", ".tar")):
@@ -265,7 +265,7 @@ class MarketplaceClient:
                     if not str(target).startswith(str(install_path.resolve())):
                         msg = f"Unsafe tar member path: {member.name}"
                         raise ValueError(msg)
-                archive.extractall(install_path)
+                archive.extractall(install_path, filter="data")  # nosec B202 - パスバリデーション済み+filter="data"
             return
 
         # 単一ファイルをそのまま配置

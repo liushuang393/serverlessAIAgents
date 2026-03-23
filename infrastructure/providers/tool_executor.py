@@ -35,19 +35,25 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 from contracts.tool import ToolResult as ContractToolResult
-from harness.approval import interrupt
-from harness.approval.types import ApprovalRequest
-from harness.governance import (
-    GovernanceDecision,
-    GovernanceEngine,
-)
 from infrastructure.providers.tool_provider import RegisteredTool, ToolProvider
+
+
+def _lazy_harness() -> tuple[Any, Any, Any, Any]:
+    """harness パッケージの lazy import（レイヤ境界違反回避）."""
+    from harness.approval import interrupt
+    from harness.approval.types import ApprovalRequest
+    from harness.governance import GovernanceDecision, GovernanceEngine
+
+    return interrupt, ApprovalRequest, GovernanceDecision, GovernanceEngine
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from harness.approval.types import ApprovalRequest
     from harness.governance import (
+        GovernanceDecision,
+        GovernanceEngine,
         GovernanceResult,
         ToolExecutionContext,
     )

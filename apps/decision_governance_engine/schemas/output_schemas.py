@@ -235,7 +235,7 @@ def generate_proposal_title(
 
     # 案件ID生成（質問のハッシュから）
     hash_input = question + now.strftime("%Y%m%d")
-    hash_value = hashlib.md5(hash_input.encode()).hexdigest()[:6].upper()
+    hash_value = hashlib.md5(hash_input.encode(), usedforsecurity=False).hexdigest()[:6].upper()
     case_id = f"PROP-{now.strftime('%Y%m')}-{hash_value}"
 
     # サブタイトル（問題タイプから）
