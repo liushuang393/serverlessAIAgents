@@ -15,43 +15,81 @@ BizCore AI はこの哲学を実現する **全スタック企業開発基盤** 
 
 ---
 
-## 7コア層 + Apps外層
+## アーキテクチャ
 
-BizCore AI は 7 つのコア層と、その外側にある `apps/` 製品層で構成されます。
+BizCore AI のアーキテクチャは **3 つの視点** で理解する。混ぜて 1 枚図にしないこと。
+
+### A. 静的アーキテクチャ — 7層構成
+
+| Layer | ディレクトリ | 名称 | 役割 |
+|-------|-------------|------|------|
+| 1 | Web UI / REST API / SDK / CLI | Experience / Entry | ユーザー・外部システムからの入口。業務ロジックを持たない |
+| 2 | `contracts/` | Contracts | 唯一の canonical 契約層。全層が参照可能、二重 schema 禁止 |
+| 3 | `kernel/` | Kernel | 実行中核。planner / router / flow runtime / state / tool executor 抽象 |
+| 4 | `harness/` | Harness | 横断ガバナンス・品質・安全・検証の専用層 |
+| 5 | `kernel/protocols/` + 外部 adapter | Integration | MCP / A2A / OpenAPI — 接続・変換・認証・伝達に専念 |
+| 6 | `infrastructure/` + `shared/gateway/` | Infrastructure / Gateway | LLM Gateway・外部技術基盤。LLM 呼び出しは Gateway のみ |
+| 7 | `control_plane/` + `apps/` | Platform / Apps | アプリ提供・運用・開発支援 |
+
+**依存方向ルール:**
+- Experience → Contracts → Kernel → Integration / Infrastructure
+- Harness は Kernel の上で横断制御する
+- Platform / Apps は Kernel / Harness / Integration を使う側
+- Integration は接続のみ、Infrastructure は最下層
+- **禁止**: provider SDK の直叩き / platform→apps 知識逆流 / shared に publish・deploy・codegen / domain に executable agent / harness が kernel 具体実装へ密結合 / MCP に主編排
+
+### B. 実行時フロー
 
 ```
-┌─────────────────────────────────────────────┐
-│  BizCore Studios (Apps)                     │  ← 製品装配・交付層（コア外）
-│  Migration / FAQ / Assistant / Custom Apps  │
-├─────────────────────────────────────────────┤
-│  BizCore Control Plane                      │  ← 管理・観測・配信
-├─────────────────────────────────────────────┤
-│  BizCore Domain                             │  ← 業務ドメイン・業界テンプレート
-├─────────────────────────────────────────────┤
-│  BizCore Harness (Governance)               │  ← ガバナンス・信頼性・評価
-├─────────────────────────────────────────────┤
-│  BizCore Kernel (Runtime)                   │  ← 実行エンジン・Agent・フロー
-├─────────────────────────────────────────────┤
-│  Shared Services                            │  ← 共通機能（Gateway/RAG/Access）
-├─────────────────────────────────────────────┤
-│  Infrastructure                             │  ← 低レベル基盤（LLM/Storage/Cache）
-├─────────────────────────────────────────────┤
-│  Contracts                                  │  ← プロトコル・インターフェース定義
-└─────────────────────────────────────────────┘
+Request → CLI / API / MCP Entry (Layer 1)
+  → Contract Validation (Layer 2)
+  → Harness Pre-Check: Policy / Budget / Risk (Layer 4)
+  → Kernel Plan / Route / Execute (Layer 3)
+    → Integration: MCP / A2A 外部接続 (Layer 5)
+    → Infrastructure: LLM Gateway 呼出 (Layer 6)
+  → Harness Post-Check: Score / Validate / Trace (Layer 4)
+  → Response Return (Layer 1)
 ```
 
-| 層 | ディレクトリ | 役割 |
-|---|---|---|
-| **Contracts** | `contracts/` | 全層共通のプロトコル・型・インターフェース定義（Versioned） |
-| **Infrastructure** | `infrastructure/` | LLM Provider、Storage、Cache、Queue、Sandbox 等の低レベル基盤 |
-| **Shared** | `shared/` | LLM Gateway、RAG、Access Control、Trace、Audit 等の共通サービス |
-| **BizCore Kernel** | `kernel/` | Agent Runtime、Flow Engine、Orchestration、Protocol 実装 |
-| **BizCore Harness** | `harness/` | Governance、Policy、Approval、Budget、Evaluation、Guardrails |
-| **BizCore Domain** | `domain/` | 業界/業務ドメインのモデル、インターフェース、テンプレート、ルール |
-| **BizCore Control Plane** | `control_plane/` | Platform Control Plane — 発見、ライフサイクル、配信、運用 UI/API |
-| **BizCore Studios** | `apps/*/` | 製品層。3 Studios と custom apps を装配する外側レイヤー |
+Harness は実行の前後で介入し、Policy・Budget・Risk を事前検査、Score・Validate・Trace を事後検査する。
 
-> **設計原則**: `contracts / infrastructure / shared / kernel / harness / domain` は `apps/` に依存しない。`domain` は `control_plane` に依存しない。`control_plane` は下位層を統合するが、下位層の正本入口にはならない。
+### C. 横断ガバナンスサブシステム（Harness）
+
+| サブシステム | 責務 | 主要コンポーネント |
+|------------|------|-------------------|
+| Replay | 実行再現 | ReplayRecorder, ReplayRunner |
+| Score | 品質評価 | ExecutionScorer |
+| Risk | リスク評価 | RiskAssessor |
+| Approval | 承認ワークフロー | ApprovalManager, Checkpoint |
+| Audit | 監査記録 | AuditTrail |
+| Trace | 実行追跡 | TraceContract（contracts/ 定義） |
+| Validation | 入出力検証 | InputValidator, OutputValidator |
+| Budget | トークン予算 | TokenBudgetManager |
+| Context Engineering | コンテキスト最適化 | ContextEngineer, RetrievalGate |
+
+### CLI-First 実行モデル
+
+CLI は **Entry（Layer 1 の入口）** と **Runtime（Layer 3 の実行手段）** の二面性を持つ。
+
+- すべての CLI は `--json` を持つ
+- exit code を安定化、stdout / stderr / event / artifact を分離
+- dry-run / trace_id 返却対応
+- help を LLM に読ませやすい構造にする
+
+### MCP-Based Integration モデル
+
+MCP は **Layer 5 Integration に限定** する。
+
+- **許可**: 外部ツール公開・接続・認証・伝達
+- **禁止**: 主編排・内部契約の中心化・kernel の代替・harness の代替
+
+### Gateway-First LLM Access
+
+LLM 呼び出しは **Infrastructure / Gateway 経由のみ** とする。
+
+- App / Kernel / Harness が provider SDK を直叩きしない
+- 認証・予算・fallback・監視を中央集約
+- embeddings / rerank / model selection も統一窓口
 
 ---
 
