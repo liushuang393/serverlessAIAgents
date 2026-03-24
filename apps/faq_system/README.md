@@ -19,14 +19,17 @@ BizCore 共通基盤の Agent/サービスを使用した FAQ システムです
 ## 技術アーキテクチャ
 
 - Backend: FastAPI + AgentFlow FAQAgent/SalesAgent。
-- RAG: Qdrant ベクトル DB + sentence チャンキング + hybrid 検索。
+- RAG: **Agent → MCP → Pipeline → Backend** の統一アーキテクチャ。Agent は MCP ツール呼び出しのみ行い、検索の内部実装を直接参照しない。
+- 検索バックエンド: VectorStore（Qdrant）/ FileSystem / Database のプラガブル構成。
 - データソース: PostgreSQL（本番）/ SQLite（開発）+ 外部コネクタ。
 
 ## アプリケーション階層
 
 - Interface Layer: HTTP API（認証付き）。
-- Agent Layer: FAQAgent（知識系）/ SalesAgent（営業系）。
-- Knowledge Layer: RAG 検索・SQL 実行・サジェスト生成。
+- Agent Layer: FAQAgent（MCP 経由で検索ツールを呼び出し）/ SalesAgent（営業系）。
+- MCP Layer: FAQMCPServer（ツール登録・権限分離・ディスパッチ）。
+- Pipeline Layer: RetrievalPipeline（Sequential 処理、ミドルウェア追加可能）。
+- Backend Layer: VectorStoreBackend / FileSystemBackend / DatabaseBackend（プラガブル）。
 - Output Layer: チャート・画像・テキスト応答。
 <!-- README_REQUIRED_SECTIONS_END -->
 
@@ -999,28 +1002,51 @@ FAQ の `.env` で `AUTH_SERVICE_URL=http://localhost:8010` と `AUTH_SERVICE_JW
 
 ### Agent/サービスの場所
 
-| コンポーネント      | 場所                            | 説明                                  |
-| ------------------- | ------------------------------- | ------------------------------------- |
-| **FAQAgent**        | `apps/faq_system/backend/agents/faq_agent.py` | FAQ 専門 Agent（ResilientAgent 継承） |
-| **FAQInput/Output** | `apps/faq_system/backend/agents/faq_agent.py` | 型安全な入出力スキーマ                |
-| **RAGService**      | `shared/services/rag_service.py`              | RAG 検索サービス                      |
-| **Text2SQLService** | `shared/services/text2sql_service.py`         | SQL 生成サービス                      |
+| コンポーネント              | 場所                                              | 説明                                       |
+| --------------------------- | ------------------------------------------------- | ------------------------------------------ |
+| **FAQAgent**                | `backend/agents/faq_agent.py`                     | FAQ 専門 Agent（MCP 統合版）               |
+| **FAQMCPServer**            | `backend/mcp/server.py`                           | MCP Server（ツール登録・権限分離）         |
+| **KnowledgeSearchTool**     | `backend/mcp/tools/knowledge_search.py`           | 伝統的RAG検索 MCP ツール                   |
+| **FileSearchTool**          | `backend/mcp/tools/file_search.py`                | ファイルシステム検索 MCP ツール            |
+| **HybridSearchTool**        | `backend/mcp/tools/hybrid_search.py`              | ハイブリッド検索 MCP ツール                |
+| **RetrievalPipeline**       | `backend/mcp/pipeline.py`                         | Sequential 処理パイプライン                |
+| **RetrievalBackend (基底)** | `backend/mcp/backends/base.py`                    | 統一バックエンドインターフェース           |
+| **VectorStoreBackend**      | `backend/mcp/backends/vector_store.py`            | 既存 RAGService ラッパー                   |
+| **FileSystemBackend**       | `backend/mcp/backends/file_system.py`             | ファイル全文検索                           |
+| **DatabaseBackend**         | `backend/mcp/backends/database.py`                | SQL/NoSQL 検索（拡張枠）                   |
+| **ThirdPartyAdapter**       | `backend/mcp/adapters/base.py`                    | LlamaIndex/LangChain 等アダプター基底      |
+| **RAGService**              | `shared/services/rag_service.py`                  | RAG 検索サービス（VectorStoreBackend 経由）|
+| **Text2SQLService**         | `shared/services/text2sql_service.py`             | SQL 生成サービス                           |
 
 ```
-apps/faq_system/          ← App層（薄い：APIルーティングのみ）
-    └── main.py           ← FAQAgentを呼び出すのみ
+apps/faq_system/              ← App 層（薄い：API ルーティングのみ）
+    └── main.py               ← FAQAgent を呼び出すのみ
         │
         ▼
-apps/faq_system/backend/agents/  ← App 専用 Agent 層
-    └── faq_agent.py             ← FAQAgent（ResilientAgent継承）
+backend/agents/faq_agent.py   ← FAQAgent（MCP 統合版）
+        │  tool_call のみ
+        ▼
+backend/mcp/server.py         ← FAQMCPServer（ツール登録・権限分離）
+    ├── tools/knowledge_search.py  ← 伝統的 RAG 検索
+    ├── tools/file_search.py       ← ファイル検索
+    └── tools/hybrid_search.py     ← ハイブリッド検索
         │
         ▼
-shared/services/          ← 共通サービス層
-    ├── rag_service.py
+backend/mcp/pipeline.py       ← RetrievalPipeline（Sequential 処理）
+        │
+        ▼
+backend/mcp/backends/         ← プラガブルバックエンド
+    ├── vector_store.py        ← VectorStoreBackend（RAGService 統合）
+    ├── file_system.py         ← FileSystemBackend（ディレクトリ検索）
+    ├── database.py            ← DatabaseBackend（SQL/NoSQL）
+    └── adapters/base.py       ← 第三者フレームワーク予約
+        │
+        ▼
+shared/services/               ← 共通サービス層
+    ├── rag_service.py         ← VectorStoreBackend が内部利用
     ├── text2sql_service.py
     ├── chart_service.py
     └── suggestion_service.py
-kernel/skills/builtin/design_skills/    ← 営業資料画像生成
 ```
 
 ### Agent 実装パターン（必読）
@@ -1268,29 +1294,50 @@ GET /api/nodes/service
                       │
                       ▼
 ┌─────────────────────────────────────────────────┐
-│               Agent Layer (NEW)                  │
-│  apps/faq_system/backend/agents/faq_agent.py    │
-│  - FAQAgent (ResilientAgent 継承)               │
-│  - FAQInput/FAQOutput (Pydantic)                │
-│  - 自動リトライ・タイムアウト制御               │
+│               Agent Layer (MCP 統合)             │
+│  backend/agents/faq_agent.py                    │
+│  - FAQAgent（MCP tool_call のみ発行）           │
+│  - 検索の内部実装を直接参照しない               │
+└─────────────────────────────────────────────────┘
+                      │ tool_call
+                      ▼
+┌─────────────────────────────────────────────────┐
+│               MCP Server Layer                   │
+│  backend/mcp/server.py                          │
+│  - FAQMCPServer（ツール登録・権限分離）         │
+│  ├── knowledge_search（伝統的RAG）              │
+│  ├── file_search（ファイル検索）                │
+│  └── hybrid_search（ハイブリッド）              │
 └─────────────────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────┐
-│               Service Layer                      │
+│               Pipeline Layer                     │
+│  backend/mcp/pipeline.py                        │
+│  - RetrievalPipeline（Sequential 処理）         │
+│  - ミドルウェア追加可能（重複排除・正規化等）   │
+└─────────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────┐
+│           Backend Layer（プラガブル）             │
+│  backend/mcp/backends/                          │
+│  ├── VectorStoreBackend（RAGService 統合）      │
+│  ├── FileSystemBackend（ディレクトリ検索）      │
+│  ├── DatabaseBackend（SQL/NoSQL）               │
+│  └── ThirdPartyAdapter（LlamaIndex 等 予約）    │
+└─────────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────┐
+│               Service / Core Layer               │
 │  shared/services/                               │
-│  ├── rag_service.py      ← RAG 検索            │
+│  ├── rag_service.py      ← VectorStoreBackend   │
 │  ├── text2sql_service.py ← SQL 生成・実行      │
 │  ├── chart_service.py    ← チャート生成        │
 │  └── suggestion_service.py ← 提案生成          │
-└─────────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────┐
-│                 Core Layer                       │
 │  - LLM Provider（松耦合・環境変数から自動取得） │
-│  - Vector DB Provider                           │
-│  - Database Provider                            │
+│  - Vector DB Provider / Database Provider       │
 └─────────────────────────────────────────────────┘
 ```
 

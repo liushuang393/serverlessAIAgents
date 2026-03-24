@@ -30,9 +30,8 @@ from apps.faq_system.backend.services.rag_runtime_config import (
     RAGRuntimeConfig,
     load_rag_runtime_config,
 )
+from apps.faq_system.backend.agents.faq_agent import FAQAgent, FAQAgentConfig
 from kernel.agents import (
-    FAQAgent,
-    FAQAgentConfig,
     SalesAgent,
     SalesAgentConfig,
 )
