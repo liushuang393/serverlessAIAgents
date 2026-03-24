@@ -47,17 +47,9 @@ v0.3.1: Pydantic 入出力スキーマ対応
 import logging
 from collections.abc import AsyncIterator, Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel
-
-from infrastructure.llm_provider import LLMProvider
-from infrastructure.tool_provider import ToolProvider
-
-
-if TYPE_CHECKING:
-    from infrastructure.llm_provider import LLMProvider
-
 
 # グローバルロガー
 _logger = logging.getLogger(__name__)
@@ -67,6 +59,27 @@ _agent_registry: dict[str, "RegisteredAgent"] = {}
 
 # Skillsレジストリ（グローバル・遅延初期化）
 _skills_registry: dict[str, Any] | None = None
+
+# --- DI 設定（デフォルトは None = 遅延 infrastructure フォールバック） ---
+_llm_factory: Callable[..., Any] | None = None
+_tool_discover: Callable[[], dict[str, Any]] | None = None
+
+
+def configure_agent_providers(
+    llm_factory: Callable[..., Any] | None = None,
+    tool_discover: Callable[[], dict[str, Any]] | None = None,
+) -> None:
+    """Agent デコレータが使用する Provider を設定.
+
+    設定されていない場合、後方互換のため infrastructure から遅延ロードする。
+
+    Args:
+        llm_factory: LLM 生成ファクトリ（temperature, max_tokens を受け取る）
+        tool_discover: ツール検出関数（ToolProvider.discover() 相当）
+    """
+    global _llm_factory, _tool_discover
+    _llm_factory = llm_factory
+    _tool_discover = tool_discover
 
 
 def _get_skills_registry() -> dict[str, Any]:
@@ -181,7 +194,7 @@ class RegisteredAgent:
         self.input_schema = input_schema or getattr(cls, "input_schema", None)
         self.output_schema = output_schema or getattr(cls, "output_schema", None)
         self._instance: Any = None
-        self._llm_provider: LLMProvider | None = None
+        self._llm_provider: Any = None
         self._loaded_skills: dict[str, Any] = {}
         self._logger = logging.getLogger(__name__)
 
@@ -189,21 +202,37 @@ class RegisteredAgent:
         """インスタンスを取得（遅延初期化）."""
         if self._instance is None:
             self._instance = self.cls()
-            # LLMProviderを注入（get_llm() 松耦合API を使用）
+            # LLMProvider を注入（DI 優先、フォールバックは infrastructure 遅延ロード）
             try:
-                from infrastructure.llm.providers import get_llm
+                if _llm_factory is not None:
+                    self._llm_provider = _llm_factory(
+                        temperature=self.temperature,
+                        max_tokens=self.max_tokens,
+                    )
+                else:
+                    # 後方互換: infrastructure から遅延ロード
+                    from infrastructure.llm.providers import get_llm
 
-                self._llm_provider = get_llm(
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                )
+                    self._llm_provider = get_llm(
+                        temperature=self.temperature,
+                        max_tokens=self.max_tokens,
+                    )
             except Exception as e:
                 self._logger.warning(f"LLMProvider initialization failed: {e}")
                 self._llm_provider = None
             self._instance._llm = self._llm_provider
-            # ToolProviderを注入
-            self._instance._tools = ToolProvider.discover()
-            # Skillsを注入
+            # ToolProvider を注入（DI 優先、フォールバックは infrastructure 遅延ロード）
+            if _tool_discover is not None:
+                self._instance._tools = _tool_discover()
+            else:
+                try:
+                    from infrastructure.tool_provider import ToolProvider
+
+                    self._instance._tools = ToolProvider.discover()
+                except Exception as e:
+                    self._logger.warning(f"ToolProvider initialization failed: {e}")
+                    self._instance._tools = {}
+            # Skills を注入
             self._load_skills()
             self._instance._skills = self._loaded_skills
         return self._instance
