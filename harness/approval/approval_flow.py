@@ -19,12 +19,6 @@ from harness.approval.types import (
     ApprovalStatus,
     HITLConfig,
 )
-from kernel.protocols.agui_events import (
-    AGUIEventType,
-    ApprovalRequiredEvent,
-    ApprovalSubmittedEvent,
-    ApprovalTimeoutEvent,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -263,8 +257,11 @@ class ApprovalFlow:
         request: ApprovalRequest,
         risk_level: str,
         options: list[dict[str, Any]] | None,
-    ) -> ApprovalRequiredEvent:
+    ) -> Any:
         """承認要求イベントを作成."""
+        # 遅延 import: kernel 層への直接依存を回避
+        from kernel.protocols.agui_events import AGUIEventType, ApprovalRequiredEvent
+
         return ApprovalRequiredEvent(
             event_type=AGUIEventType.APPROVAL_REQUIRED,
             timestamp=time.time(),
@@ -283,8 +280,11 @@ class ApprovalFlow:
         self,
         response: ApprovalResponse,
         action: str,
-    ) -> ApprovalSubmittedEvent:
+    ) -> Any:
         """承認送信イベントを作成."""
+        # 遅延 import: kernel 層への直接依存を回避
+        from kernel.protocols.agui_events import AGUIEventType, ApprovalSubmittedEvent
+
         return ApprovalSubmittedEvent(
             event_type=AGUIEventType.APPROVAL_SUBMITTED,
             timestamp=time.time(),
@@ -296,8 +296,11 @@ class ApprovalFlow:
             modifications=response.modifications,
         )
 
-    def _create_timeout_event(self, request: ApprovalRequest) -> ApprovalTimeoutEvent:
+    def _create_timeout_event(self, request: ApprovalRequest) -> Any:
         """タイムアウトイベントを作成."""
+        # 遅延 import: kernel 層への直接依存を回避
+        from kernel.protocols.agui_events import AGUIEventType, ApprovalTimeoutEvent
+
         return ApprovalTimeoutEvent(
             event_type=AGUIEventType.APPROVAL_TIMEOUT,
             timestamp=time.time(),

@@ -6,13 +6,12 @@ gating / approval / evaluation を KernelToolExecutor に外付けする。
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from contracts.policy import ApprovalRequest
 from harness.approval.service import ApprovalService
 from harness.evaluation.service import EvaluationService
 from harness.gating.tool_gate import ToolGate
-from kernel.tools import KernelToolExecutor
 
 
 if TYPE_CHECKING:
@@ -28,11 +27,14 @@ class HarnessedToolRuntime:
     def __init__(
         self,
         *,
-        tool_provider: ToolProvider,
+        tool_provider: Any,
         tool_gate: ToolGate | None = None,
         approval_service: ApprovalService | None = None,
         evaluation_service: EvaluationService | None = None,
     ) -> None:
+        # 遅延 import: kernel 層への直接依存を回避
+        from kernel.tools import KernelToolExecutor
+
         self._executor = KernelToolExecutor(tool_provider)
         self._tool_gate = tool_gate or ToolGate()
         self._approval_service = approval_service or ApprovalService()

@@ -11,14 +11,11 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from fastapi import HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse
 
-from infrastructure.security.auth_client import AuthClient
 from shared.config.manifest import load_app_manifest_dict
 
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from infrastructure.security.auth_client.client import RemoteUser
 
 
 _T = TypeVar("_T")
@@ -96,12 +93,17 @@ class ContractAuthGuard:
         *,
         http_backend: HTTPAuthBackend[Any] | None = None,
         ws_backend: WSAuthBackend[Any] | None = None,
-        auth_client_factory: Callable[..., AuthClient] | None = None,
+        auth_client_factory: Callable[..., Any] | None = None,
     ) -> None:
         self._config = config
         self._http_backend = http_backend
         self._ws_backend = ws_backend
-        self._auth_client_factory = auth_client_factory or AuthClient
+        if auth_client_factory is not None:
+            self._auth_client_factory = auth_client_factory
+        else:
+            # 遅延 import: infrastructure 層への直接依存を回避
+            from infrastructure.security.auth_client import AuthClient
+            self._auth_client_factory = AuthClient
         self._cached_app_config: dict[str, Any] | None = None
 
     def load_app_config(self) -> dict[str, Any]:
@@ -301,7 +303,7 @@ class ContractAuthGuard:
         )
         return principal
 
-    def _build_auth_client(self, auth: Mapping[str, Any]) -> AuthClient:
+    def _build_auth_client(self, auth: Mapping[str, Any]) -> Any:
         token_policy = _mapping_or_empty(auth.get("token_policy"))
         base_url = (
             _clean_text(token_policy.get("auth_service_url")) or os.getenv(_DEFAULT_AUTH_SERVICE_URL_ENV, "").strip()
@@ -330,7 +332,7 @@ class ContractAuthGuard:
             jwt_audience=jwt_audience,
         )
 
-    def _build_principal(self, remote_user: RemoteUser) -> AuthPrincipal:
+    def _build_principal(self, remote_user: Any) -> AuthPrincipal:
         roles = list(remote_user.roles or [remote_user.role])
         claims = dict(remote_user.extra)
         return AuthPrincipal(
