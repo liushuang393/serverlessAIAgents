@@ -4,20 +4,18 @@ This module separates Engine/Flow execution from SSE delivery to keep the
 runtime reusable and easier to test.
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
 import uuid
-from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-from kernel.protocols.agui_events import (
-    AGUIEvent,
-    FlowCompleteEvent,
-    FlowErrorEvent,
-    FlowStartEvent,
-)
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 def _agui_events() -> tuple[type, type, type, type]:
@@ -42,7 +40,7 @@ class FlowProtocol(Protocol):
 
     def run_with_events(
         self, input_data: dict[str, Any]
-    ) -> AsyncIterator[tuple[dict[str, Any] | None, AGUIEvent | None]]:
+    ) -> AsyncIterator[tuple[dict[str, Any] | None, Any | None]]:
         """イベント付きでFlowを実行.
 
         Yields:
@@ -120,7 +118,7 @@ class SSEFlowRunner:
         self._flow = flow
         self._config = config or SSEConfig()
         self._flow_id = flow_id or getattr(flow, "flow_id", None)
-        self._event_queue: asyncio.Queue[AGUIEvent] = asyncio.Queue(
+        self._event_queue: asyncio.Queue[Any] = asyncio.Queue(
             maxsize=self._config.max_event_queue_size,
         )
 
@@ -135,7 +133,7 @@ class SSEFlowRunner:
         """フローIDを設定."""
         self._flow_id = flow_id
 
-    async def run_with_events(self, input_data: dict[str, Any]) -> AsyncIterator[AGUIEvent]:
+    async def run_with_events(self, input_data: dict[str, Any]) -> AsyncIterator[Any]:
         """SSEイベントストリームを生成.
 
         内部のFlowを実行し、AG-UI準拠イベントをyield。
@@ -216,7 +214,7 @@ class SSEFlowRunner:
             sse_line = self._format_sse_event(event, event_format)
             yield sse_line
 
-    def _format_sse_event(self, event: AGUIEvent, event_format: str) -> str:
+    def _format_sse_event(self, event: Any, event_format: str) -> str:
         """AGUIEvent を SSE文字列に変換.
 
         Args:
@@ -248,7 +246,7 @@ class SSEFlowRunner:
         cls,
         process_func: Any,
         flow_id: str | None = None,
-    ) -> "SSEFlowRunner":
+    ) -> SSEFlowRunner:
         """シンプルな処理関数をSSEFlowRunnerでラップ.
 
         run_with_events を持たないシンプルな関数をラップする
@@ -281,12 +279,14 @@ class _SimpleFlowWrapper:
 
     async def run_with_events(
         self, input_data: dict[str, Any]
-    ) -> AsyncIterator[tuple[dict[str, Any] | None, AGUIEvent | None]]:
+    ) -> AsyncIterator[tuple[dict[str, Any] | None, Any | None]]:
         """シンプル関数を実行してイベントを生成."""
+        _, flow_complete_cls, flow_error_cls, flow_start_cls = _agui_events()
+
         # 開始イベント
         yield (
             None,
-            FlowStartEvent(
+            flow_start_cls(
                 timestamp=time.time(),
                 flow_id=self.flow_id,
                 data={},
@@ -300,7 +300,7 @@ class _SimpleFlowWrapper:
             # 完了イベント
             yield (
                 None,
-                FlowCompleteEvent(
+                flow_complete_cls(
                     timestamp=time.time(),
                     flow_id=self.flow_id,
                     data={},
@@ -315,7 +315,7 @@ class _SimpleFlowWrapper:
         except Exception as e:
             yield (
                 None,
-                FlowErrorEvent(
+                flow_error_cls(
                     timestamp=time.time(),
                     flow_id=self.flow_id,
                     data={},

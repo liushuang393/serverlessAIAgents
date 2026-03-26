@@ -31,11 +31,16 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
-from kernel.state.store import GlobalStateStore
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def _global_state_store_cls() -> type[Any]:
+    """GlobalStateStore を遅延取得する."""
+    from kernel.state.store import GlobalStateStore
+
+    return GlobalStateStore
 
 
 class SyncEventType(str, Enum):
@@ -145,7 +150,7 @@ class RealtimeStateSync:
 
     def __init__(
         self,
-        state_store: GlobalStateStore | None = None,
+        state_store: Any | None = None,
         heartbeat_interval: float = 30.0,
         max_clients: int = 100,
     ) -> None:
@@ -156,7 +161,8 @@ class RealtimeStateSync:
             heartbeat_interval: ハートビート間隔（秒）
             max_clients: 最大クライアント数
         """
-        self._store = state_store or GlobalStateStore()
+        store_cls = _global_state_store_cls()
+        self._store = state_store if state_store is not None else store_cls()
         self._heartbeat_interval = heartbeat_interval
         self._max_clients = max_clients
         self._clients: dict[str, ClientConnection] = {}
