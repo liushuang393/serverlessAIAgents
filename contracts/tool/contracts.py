@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from pydantic import Field
 
@@ -45,3 +45,16 @@ class ToolResult(ContractModel):
     trace_id: str | None = Field(default=None, description="トレース識別子")
     artifact_ids: list[str] = Field(default_factory=list, description="生成成果物")
     metadata: dict[str, Any] = Field(default_factory=dict, description="拡張メタデータ")
+
+
+@runtime_checkable
+class ToolExecutorService(Protocol):
+    """ツール実行器の契約 Protocol.
+
+    kernel.tools.KernelToolExecutor など具体実装はこの Protocol を満たす。
+    harness 層はこの Protocol のみに依存し、kernel 具体型を import しない。
+    """
+
+    async def execute(self, request: ToolRequest) -> ToolResult:
+        """ツール呼び出しを実行して結果を返す."""
+        ...

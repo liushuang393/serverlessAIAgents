@@ -108,8 +108,12 @@ async def test_harness_runtime_runs_kernel_executor_when_gate_disabled() -> None
     tool = provider.get_tool(tool_name)
     assert tool is not None
 
+    # kernel 層の具体 executor を DI で注入
+    from kernel.tools import KernelToolExecutor
+
+    executor = KernelToolExecutor(provider)
     runtime = HarnessedToolRuntime(
-        tool_provider=provider,
+        executor=executor,
         tool_gate=ToolGate(toggle=ComponentToggle(enabled=False)),
         approval_service=ApprovalService(),
     )

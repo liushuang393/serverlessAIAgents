@@ -1,14 +1,16 @@
-"""Harness と Kernel を接続する runtime パイプライン。
+"""Harness runtime パイプライン。
 
 旧 ``harness.hooks.runtime`` から移動。
-gating / approval / evaluation を KernelToolExecutor に外付けする。
+gating / approval / evaluation を ToolExecutorService Protocol に外付けする。
+kernel/infrastructure 具体型にはトップレベル依存しない。
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from contracts.policy import ApprovalRequest
+from contracts.tool import ToolExecutorService
 from harness.approval.service import ApprovalService
 from harness.evaluation.service import EvaluationService
 from harness.gating.tool_gate import ToolGate
@@ -18,24 +20,24 @@ if TYPE_CHECKING:
     from contracts.policy import EvalResult
     from contracts.tool import ToolRequest, ToolResult
     from harness.governance import ToolExecutionContext
-    from infrastructure.sandbox.tool_provider import RegisteredTool, ToolProvider
+    from infrastructure.sandbox.tool_provider import RegisteredTool
 
 
 class HarnessedToolRuntime:
-    """KernelToolExecutor に gating/eval/approval を外付けする."""
+    """ToolExecutorService Protocol に gating/eval/approval を外付けする.
+
+    kernel 具体型には依存せず、DI で executor を受け取る。
+    """
 
     def __init__(
         self,
         *,
-        tool_provider: Any,
+        executor: ToolExecutorService,
         tool_gate: ToolGate | None = None,
         approval_service: ApprovalService | None = None,
         evaluation_service: EvaluationService | None = None,
     ) -> None:
-        # 遅延 import: kernel 層への直接依存を回避
-        from kernel.tools import KernelToolExecutor
-
-        self._executor = KernelToolExecutor(tool_provider)
+        self._executor = executor
         self._tool_gate = tool_gate or ToolGate()
         self._approval_service = approval_service or ApprovalService()
         self._evaluation_service = evaluation_service or EvaluationService()
