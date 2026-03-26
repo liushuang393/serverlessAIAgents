@@ -44,16 +44,6 @@ export const DecisionInputPage: React.FC = () => {
     { regex: /(コード.*書いて|プログラム.*作)/i, message: t('input.reject_code'), category: t('input.reject_cat_code') },
   ];
 
-  /** 入力補足提案チェック（非阻断） */
-  const checkInstantReject = (text: string) => {
-    for (const p of rejectPatterns) {
-      if (p.regex.test(text)) {
-        return { category: p.category, message: p.message };
-      }
-    }
-    return null;
-  };
-
   /** ログアウト */
   const handleLogout = useCallback(async () => {
     await performLogout();
@@ -79,20 +69,27 @@ export const DecisionInputPage: React.FC = () => {
   }, [constraints, setConstraints]);
 
   /** SSE モードで送信 */
-  const handleSubmitWithStream = useCallback(() => {
+  const handleSubmitWithStream = () => {
     if (question.length < MIN_QUESTION_LENGTH || isSubmitting) {
       return;
     }
 
     // 補足提案を表示（送信は継続）
-    const rejectResult = checkInstantReject(question);
+    const rejectResult = (() => {
+      for (const pattern of rejectPatterns) {
+        if (pattern.regex.test(question)) {
+          return { category: pattern.category, message: pattern.message };
+        }
+      }
+      return null;
+    })();
     setRejection(rejectResult);
     setApiError(null);
     setIsSubmitting(true);
 
     // 進捗画面へ遷移（SSE接続は進捗画面で開始）
     setPage('processing');
-  }, [question, isSubmitting, setPage]);
+  };
 
   const isValid = question.length >= MIN_QUESTION_LENGTH;
 

@@ -26,6 +26,7 @@ from apps.decision_governance_engine.repositories import DecisionRepository
 from apps.decision_governance_engine.routers.report import _get_report_from_db, cache_report
 from apps.decision_governance_engine.schemas.agent_schemas import (
     CheckpointItem,
+    ConfidenceBreakdown,
     FindingCategory,
     FindingSeverity,
     ReviewFinding,
@@ -336,12 +337,16 @@ def _parse_review_output(raw_review: Any) -> ReviewOutput:
         confidence = 0.0
     raw_checkpoint_items = enriched_review.get("checkpoint_items", [])
     checkpoint_items = (
-        [item for item in raw_checkpoint_items if isinstance(item, dict)]
+        [CheckpointItem.model_validate(item) for item in raw_checkpoint_items if isinstance(item, dict)]
         if isinstance(raw_checkpoint_items, list)
         else []
     )
     raw_confidence_breakdown = enriched_review.get("confidence_breakdown")
-    confidence_breakdown = raw_confidence_breakdown if isinstance(raw_confidence_breakdown, dict) else None
+    confidence_breakdown = (
+        ConfidenceBreakdown.model_validate(raw_confidence_breakdown)
+        if isinstance(raw_confidence_breakdown, dict)
+        else None
+    )
 
     return ReviewOutput(
         overall_verdict=enriched_review.get("overall_verdict", "REVISE"),

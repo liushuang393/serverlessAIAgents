@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import uuid
 from pathlib import Path
-from typing import Any
 
 from apps.faq_system.backend.mcp.backends.base import (
     BackendType,
@@ -27,10 +26,22 @@ from apps.faq_system.backend.mcp.backends.base import (
 logger = logging.getLogger(__name__)
 
 # サポートするファイル拡張子
-_SUPPORTED_EXTENSIONS: frozenset[str] = frozenset({
-    ".txt", ".md", ".csv", ".json", ".yaml", ".yml",
-    ".html", ".xml", ".log", ".rst", ".toml", ".ini",
-})
+_SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".txt",
+        ".md",
+        ".csv",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".html",
+        ".xml",
+        ".log",
+        ".rst",
+        ".toml",
+        ".ini",
+    }
+)
 
 
 class FileSystemBackend(RetrievalBackend):
@@ -172,4 +183,3 @@ class FileSystemBackend(RetrievalBackend):
         if end < len(content):
             snippet = snippet + "..."
         return snippet
-

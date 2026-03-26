@@ -70,6 +70,8 @@ export default defineConfig({
           });
           // エラーハンドリング
           proxy.on('error', (err, req, res) => {
+            void req;
+            void res;
             console.error('[Vite Proxy Error]', err.message);
           });
         },

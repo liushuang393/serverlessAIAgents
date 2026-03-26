@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -21,12 +20,9 @@ from apps.faq_system.backend.mcp.backends.base import (
     RetrievedDocument,
 )
 from apps.faq_system.backend.mcp.backends.file_system import FileSystemBackend
-from apps.faq_system.backend.mcp.backends.vector_store import VectorStoreBackend
 from apps.faq_system.backend.mcp.pipeline import RetrievalPipeline
 from apps.faq_system.backend.mcp.server import FAQMCPServer
 from apps.faq_system.backend.mcp.tools.file_search import FileSearchTool
-from apps.faq_system.backend.mcp.tools.hybrid_search import HybridSearchTool
-from apps.faq_system.backend.mcp.tools.knowledge_search import KnowledgeSearchTool
 from kernel.protocols.mcp_tool import MCPToolRequest
 
 
@@ -241,4 +237,3 @@ class TestFileSearchTool:
             assert response.success
             assert response.output is not None
             assert response.output["total_found"] > 0
-

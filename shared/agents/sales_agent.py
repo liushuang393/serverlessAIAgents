@@ -27,13 +27,6 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, Field
 
 
-def _get_resilient_agent_base() -> type:
-    """遅延インポート: kernel.agents.ResilientAgent（L2→L3 違反回避）."""
-    from kernel.agents import ResilientAgent as _RA  # noqa: N814
-
-    return _RA
-
-
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -97,8 +90,8 @@ class SalesOutput(BaseModel):
 # =============================================================================
 
 
-class SalesAgent(_get_resilient_agent_base()[SalesInput, SalesOutput]):
-    """売上分析専門Agent（ResilientAgent 準拠）.
+class SalesAgent:
+    """売上分析専門Agent.
 
     入力:
         - question: 質問文（必須）
@@ -122,7 +115,7 @@ class SalesAgent(_get_resilient_agent_base()[SalesInput, SalesOutput]):
         llm_client: Any = None,
     ) -> None:
         """初期化."""
-        super().__init__(llm_client)
+        self._llm_client = llm_client
         self._config = config or SalesAgentConfig()
         self._services_initialized = False
 
@@ -133,6 +126,11 @@ class SalesAgent(_get_resilient_agent_base()[SalesInput, SalesOutput]):
     def _parse_input(self, input_data: dict[str, Any]) -> SalesInput:
         """入力データをパース."""
         return SalesInput(**input_data)
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """互換 run API."""
+        parsed_input = self._parse_input(input_data)
+        return (await self.process(parsed_input)).model_dump()
 
     async def __ensure_services(self) -> None:
         """サービスの遅延初期化（私有）."""

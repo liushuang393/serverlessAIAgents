@@ -26,7 +26,7 @@ depends_on = None
 def upgrade() -> None:
     """テーブルを作成."""
     import sqlalchemy as sa
-    from alembic import op  # type: ignore[import-not-found]
+    from alembic import op
 
     op.create_table(
         "user_accounts",
@@ -106,7 +106,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """テーブルを削除."""
-    from alembic import op  # type: ignore[import-not-found]
+    from alembic import op
 
     op.drop_table("proxy_auth_nonces")
     op.drop_table("token_blacklist")

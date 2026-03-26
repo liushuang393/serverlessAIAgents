@@ -11,7 +11,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.database import DatabaseConfig, DatabaseManager
+from infrastructure.storage.database.config import DatabaseConfig
+from infrastructure.storage.database.session import DatabaseManager
 from shared.auth_service.models.user import Base
 
 
@@ -47,7 +48,7 @@ _ready_lock_loop_id: int | None = None
 
 def get_database_url() -> str:
     """DB URL を取得."""
-    return _db.resolved_url
+    return str(_db.resolved_url)
 
 
 async def init_db() -> None:
@@ -68,7 +69,7 @@ async def ensure_database_ready() -> None:
         return
 
     async with _get_ready_lock():
-        if _is_ready:
+        if _database_is_ready():
             return
         await init_db()
         from shared.auth_service.config import get_settings
@@ -93,6 +94,11 @@ async def ensure_database_ready() -> None:
         except Exception:
             _is_ready = False
             raise
+
+
+def _database_is_ready() -> bool:
+    """初期化済みフラグを返す."""
+    return _is_ready
 
 
 def _get_ready_lock() -> asyncio.Lock:
@@ -146,7 +152,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession | _SyncSessionAdapter]
         sync_session = _db.session_sync()
         adapter = _SyncSessionAdapter(sync_session)
         try:
-            yield adapter  # type: ignore[misc]
+            yield adapter
             sync_session.commit()
         except Exception:
             sync_session.rollback()

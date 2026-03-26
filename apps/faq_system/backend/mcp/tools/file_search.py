@@ -11,13 +11,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
-
-from kernel.protocols.mcp_tool import MCPTool, MCPToolRequest, MCPToolResponse
 
 from apps.faq_system.backend.mcp.backends.base import RetrievalQuery
 from apps.faq_system.backend.mcp.backends.file_system import FileSystemBackend
 from apps.faq_system.backend.mcp.pipeline import RetrievalPipeline
+from kernel.protocols.mcp_tool import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 logger = logging.getLogger(__name__)
@@ -123,4 +121,3 @@ class FileSearchTool(MCPTool):
         """クリーンアップ."""
         if self._pipeline is not None:
             await self._pipeline.cleanup_all()
-

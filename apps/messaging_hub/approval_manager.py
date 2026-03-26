@@ -325,6 +325,8 @@ class ApprovalManager:
                 )
                 request = ApprovalRequest(
                     id=request_id,
+                    action=skill_name,
+                    reason=f"Approval required for skill '{skill_name}' with risk '{risk_level.value}'",
                     skill_name=skill_name,
                     risk_level=risk_level,
                     params=params,
@@ -349,6 +351,8 @@ class ApprovalManager:
         # 承認リクエストを作成
         request = ApprovalRequest(
             id=request_id,
+            action=skill_name,
+            reason=f"Approval required for skill '{skill_name}' with risk '{risk_level.value}'",
             skill_name=skill_name,
             risk_level=risk_level,
             params=params,

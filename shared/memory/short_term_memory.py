@@ -89,7 +89,8 @@ class ShortTermMemory:
         if topic not in self._buffers:
             return False
 
-        return self._buffers[topic].should_summarize(self._token_threshold)
+        should_run = self._buffers[topic].should_summarize(self._token_threshold)
+        return bool(should_run)
 
     async def summarize_topic(
         self,
@@ -178,7 +179,8 @@ class ShortTermMemory:
             return 0.5
 
         total_importance = sum(entry.importance_score for entry in buffer.entries)
-        return total_importance / len(buffer.entries)
+        average_importance = total_importance / len(buffer.entries)
+        return float(average_importance)
 
     def get_buffer_status(self) -> dict[str, dict[str, Any]]:
         """全バッファの状態を取得.

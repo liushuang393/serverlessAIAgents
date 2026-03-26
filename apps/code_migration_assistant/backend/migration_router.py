@@ -19,7 +19,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
@@ -38,6 +38,10 @@ from apps.code_migration_assistant.backend.migration_task_store import (
     get_task_store,
 )
 from apps.code_migration_assistant.cobol_project import COBOLFile, COBOLProject
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 logger = logging.getLogger(__name__)
@@ -132,7 +136,8 @@ async def _run_legacy_pipeline(
                 current_stage=event.stage,
             )
 
-            if event.event_type == "hitl_required" and getattr(event, "_hitl_event", None) is not None:
+            hitl_event = getattr(event, "_hitl_event", None)
+            if event.event_type == "hitl_required" and isinstance(hitl_event, asyncio.Event):
                 task_obj = await store.get(task_id)
                 if task_obj is not None:
                     task_obj.pending_hitl = PendingHITLRequest(
@@ -141,7 +146,7 @@ async def _run_legacy_pipeline(
                         artifact=event.data.get("artifact", {}),
                         unknowns=event.data.get("unknowns", []),
                         question=event.data.get("question", ""),
-                        response_event=event._hitl_event,  # type: ignore[attr-defined]
+                        response_event=hitl_event,
                     )
 
             if event.event_type == "complete":
@@ -276,7 +281,11 @@ async def _run_pipeline_background(
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-async def _sse_generator(task_id: str, store: TaskStore, last_event_id: int = 0):
+async def _sse_generator(
+    task_id: str,
+    store: TaskStore,
+    last_event_id: int = 0,
+) -> AsyncIterator[str]:
     """SSEイベントを生成するジェネレータ.
 
     再接続時は last_event_id より後のイベントをリプレイしてから

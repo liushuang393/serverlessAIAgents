@@ -173,7 +173,11 @@ class AppDiscoveryService:
             return None
 
         try:
-            return json.loads(config_path.read_text("utf-8"))
+            decoded = json.loads(config_path.read_text("utf-8"))
+            if isinstance(decoded, dict):
+                return decoded
+            _logger.warning("JSON ルートが辞書ではありません (%s)", config_path)
+            return None
         except json.JSONDecodeError as exc:
             _logger.warning("JSON パースエラー (%s): %s", config_path, exc)
             return None

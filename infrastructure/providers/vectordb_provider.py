@@ -804,9 +804,10 @@ class SupabaseVectorProvider:
 
         embeddings = kwargs.get("embeddings")
         metadatas = kwargs.get("metadatas")
+        embedding_values = embeddings if isinstance(embeddings, list) else [None] * len(documents)
 
         rows = []
-        for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
+        for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embedding_values, strict=False)):
             row: dict[str, Any] = {
                 "id": doc_id,
                 "content": doc if isinstance(doc, str) else getattr(doc, "page_content", str(doc)),

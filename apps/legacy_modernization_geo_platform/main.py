@@ -9,10 +9,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+load_dotenv: Callable[..., bool] | None
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv as _load_dotenv
 except ImportError:  # pragma: no cover - optional dependency
     load_dotenv = None
+else:
+    load_dotenv = _load_dotenv
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -34,7 +41,7 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
 from apps.legacy_modernization_geo_platform.backend.settings import APP_ROOT, GeoPlatformSettings
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from kernel.agents.app_agent_runtime import bootstrap_app_agents
-from kernel.protocols.a2ui.components import CardComponent, TextComponent
+from kernel.protocols.a2ui.components import A2UIComponent, CardComponent, TextComponent
 from kernel.protocols.agui_events import (
     A2UIClearEvent,
     A2UIComponentEvent,
@@ -484,7 +491,7 @@ def _build_artifact_component(
         return None
     payload = _load_artifact_payload(artifact_path)
     title = artifact_name.replace("_", " ").title()
-    children = [TextComponent(line) for line in _artifact_summary_lines(artifact_name, payload)]
+    children: list[A2UIComponent] = [TextComponent(line) for line in _artifact_summary_lines(artifact_name, payload)]
     if not children:
         preview = (
             json.dumps(payload, ensure_ascii=False, indent=2) if isinstance(payload, (dict, list)) else str(payload)

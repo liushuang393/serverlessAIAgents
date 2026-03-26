@@ -25,16 +25,20 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from infrastructure.browser.browser_skill import BrowserSkill
 from infrastructure.browser.config import BrowserSkillConfig
 
 
+if TYPE_CHECKING:
+    from kernel.skills.gateway import SkillDefinition
+
+
 _skill_gateway_module = importlib.import_module("kernel.skills.gateway")
-RiskLevel = _skill_gateway_module.RiskLevel
-SkillCategory = _skill_gateway_module.SkillCategory
-SkillDefinition = _skill_gateway_module.SkillDefinition
+GatewayRiskLevel = _skill_gateway_module.RiskLevel
+GatewaySkillCategory = _skill_gateway_module.SkillCategory
+GatewaySkillDefinition = _skill_gateway_module.SkillDefinition
 
 
 def _get_or_create_browser(
@@ -122,67 +126,67 @@ def create_browser_skill_definitions(
         pdf_base64 = await browser.generate_pdf()
         return {"pdf_base64": pdf_base64}
 
-    return [
-        SkillDefinition(
+    definitions: list[SkillDefinition] = [
+        GatewaySkillDefinition(
             name="browser_navigate",
             description="指定URLに移動してページ情報を返す",
-            category=SkillCategory.BROWSER,
-            risk_level=RiskLevel.MEDIUM,
+            category=GatewaySkillCategory.BROWSER,
+            risk_level=GatewayRiskLevel.MEDIUM,
             handler=navigate_handler,
             parameters={"url": "string"},
             requires_confirmation=False,
             allowed_in_isolated=False,
             allowed_in_real_machine=True,
         ),
-        SkillDefinition(
+        GatewaySkillDefinition(
             name="browser_screenshot",
             description="現在のページのスクリーンショットを取得",
-            category=SkillCategory.BROWSER,
-            risk_level=RiskLevel.LOW,
+            category=GatewaySkillCategory.BROWSER,
+            risk_level=GatewayRiskLevel.LOW,
             handler=screenshot_handler,
             parameters={"full_page": "boolean"},
             requires_confirmation=False,
             allowed_in_isolated=False,
             allowed_in_real_machine=True,
         ),
-        SkillDefinition(
+        GatewaySkillDefinition(
             name="browser_get_text",
             description="指定セレクタの要素テキストを取得",
-            category=SkillCategory.BROWSER,
-            risk_level=RiskLevel.LOW,
+            category=GatewaySkillCategory.BROWSER,
+            risk_level=GatewayRiskLevel.LOW,
             handler=get_text_handler,
             parameters={"selector": "string"},
             requires_confirmation=False,
             allowed_in_isolated=False,
             allowed_in_real_machine=True,
         ),
-        SkillDefinition(
+        GatewaySkillDefinition(
             name="browser_fill_form",
             description="フォームフィールドを一括入力",
-            category=SkillCategory.BROWSER,
-            risk_level=RiskLevel.HIGH,
+            category=GatewaySkillCategory.BROWSER,
+            risk_level=GatewayRiskLevel.HIGH,
             handler=fill_form_handler,
             parameters={"fields": "object"},
             requires_confirmation=True,
             allowed_in_isolated=False,
             allowed_in_real_machine=True,
         ),
-        SkillDefinition(
+        GatewaySkillDefinition(
             name="browser_click",
             description="指定セレクタの要素をクリック",
-            category=SkillCategory.BROWSER,
-            risk_level=RiskLevel.MEDIUM,
+            category=GatewaySkillCategory.BROWSER,
+            risk_level=GatewayRiskLevel.MEDIUM,
             handler=click_handler,
             parameters={"selector": "string"},
             requires_confirmation=False,
             allowed_in_isolated=False,
             allowed_in_real_machine=True,
         ),
-        SkillDefinition(
+        GatewaySkillDefinition(
             name="browser_generate_pdf",
             description="現在のページを PDF に変換して base64 を返す",
-            category=SkillCategory.BROWSER,
-            risk_level=RiskLevel.LOW,
+            category=GatewaySkillCategory.BROWSER,
+            risk_level=GatewayRiskLevel.LOW,
             handler=generate_pdf_handler,
             parameters={},
             requires_confirmation=False,
@@ -190,3 +194,4 @@ def create_browser_skill_definitions(
             allowed_in_real_machine=True,
         ),
     ]
+    return definitions

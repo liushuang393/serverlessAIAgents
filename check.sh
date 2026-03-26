@@ -24,6 +24,7 @@ declare -a JS_PROJECTS=()
 CONDA_ENV_NAME="${CHECK_CONDA_ENV:-agentflow}"
 PYTHON_CHECK_TARGETS="${CHECK_PY_TARGETS:-contracts infrastructure shared kernel harness control_plane domain apps}"
 CHECK_INCLUDE_TESTS="${CHECK_INCLUDE_TESTS:-0}"
+CHECK_RUN_TESTS="${CHECK_RUN_TESTS:-1}"
 MYPY_EXCLUDE_REGEX_DEFAULT='(^|/)(tests|test)(/|$)|(^|/)test_.*\.py$|(^|/).*_test\.py$'
 MYPY_EXCLUDE_REGEX="${MYPY_EXCLUDE_REGEX:-$MYPY_EXCLUDE_REGEX_DEFAULT}"
 BANDIT_EXCLUDE_PATHS="${BANDIT_EXCLUDE_PATHS:-tests/*,*/tests/*}"
@@ -155,7 +156,8 @@ show_help() {
     echo "環境変数:"
     echo "  MYPY_TARGETS             - type-check 時の mypy 対象 (デフォルト: CHECK_PY_TARGETS と同じ)"
     echo "  CHECK_PY_TARGETS         - Python 静的チェック対象 (デフォルト: contracts infrastructure shared kernel harness control_plane domain apps)"
-    echo "  CHECK_INCLUDE_TESTS      - all/report でテスト実行するか (1=実行, 0=スキップ, デフォルト: 0)"
+    echo "  CHECK_INCLUDE_TESTS      - Ruff/MyPy/bandit に tests を含めるか (1=含む, 0=除外, デフォルト: 0)"
+    echo "  CHECK_RUN_TESTS          - all/report で pytest を実行するか (1=実行, 0=スキップ, デフォルト: 1)"
     echo "  MYPY_EXCLUDE_REGEX       - mypy 除外パス正規表現 (デフォルト: tests ディレクトリ + test ファイル)"
     echo "  BANDIT_EXCLUDE_PATHS     - bandit 除外パス (デフォルト: tests/*,*/tests/*)"
     echo "  JS_PROJECT_DIRS          - JS/TS 対象ディレクトリを空白区切りで指定"
@@ -702,11 +704,11 @@ do_report() {
     security_output=$(run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps "${bandit_exclude_args[@]}" -lll -iii --format txt 2>&1)
     [ $? -ne 0 ] && security_status="❌"
 
-    if [ "$CHECK_INCLUDE_TESTS" = "1" ]; then
+    if [ "$CHECK_RUN_TESTS" = "1" ]; then
         test_output=$(run_py_tool pytest -v --tb=short 2>&1)
         [ $? -ne 0 ] && test_status="❌"
     else
-        test_output="skipped (CHECK_INCLUDE_TESTS=0)"
+        test_output="skipped (CHECK_RUN_TESTS=0)"
         test_status="⏭️"
     fi
 
@@ -792,12 +794,12 @@ do_all() {
     fi
     echo ""
 
-    if [ "$CHECK_INCLUDE_TESTS" = "1" ]; then
+    if [ "$CHECK_RUN_TESTS" = "1" ]; then
         if ! do_test; then
             failed_steps+=("test")
         fi
     else
-        echo "[スキップ] CHECK_INCLUDE_TESTS=0 のため test ステップをスキップします"
+        echo "[スキップ] CHECK_RUN_TESTS=0 のため test ステップをスキップします"
     fi
     echo ""
 

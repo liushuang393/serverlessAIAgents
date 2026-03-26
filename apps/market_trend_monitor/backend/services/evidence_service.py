@@ -519,7 +519,8 @@ class EvidenceService:
         Phase 12: 動的追跡サービスが利用可能な場合はそちらを優先。
         """
         if self._reliability_tracker:
-            return self._reliability_tracker.get_reliability(source_type.value)
+            reliability = self._reliability_tracker.get_reliability(source_type.value)
+            return float(reliability)
         return self._source_reliability.get(source_type, 0.5)
 
     def _apply_time_decay(self, reliability: float, collected_at: datetime) -> float:

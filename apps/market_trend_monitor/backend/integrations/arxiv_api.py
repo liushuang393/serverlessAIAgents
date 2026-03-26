@@ -26,7 +26,7 @@ class ArxivAPIClient:
 
     async def search(self, query: str, max_results: int = 5) -> list[dict[str, Any]]:
         """論文検索."""
-        params = {
+        params: dict[str, str | int] = {
             "search_query": f"all:{query}",
             "start": 0,
             "max_results": max_results,

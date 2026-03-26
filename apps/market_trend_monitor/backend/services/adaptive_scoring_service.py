@@ -25,7 +25,7 @@ class ScoringWeights:
     updated_at: datetime = field(default_factory=datetime.now)
     update_count: int = 0
 
-    def to_dict(self) -> dict[str, float]:
+    def to_dict(self) -> dict[str, float | str | int]:
         """辞書形式に変換."""
         return {
             "reliability": self.reliability,
@@ -97,7 +97,17 @@ class AdaptiveScoringService:
         weights = self._clip_weights(weights)
         weights = self._normalize_weights(weights)
 
-        self._history.append(ScoringWeights(**self._current_weights.as_weight_dict()))
+        self._history.append(
+            ScoringWeights(
+                reliability=self._current_weights.reliability,
+                leading=self._current_weights.leading,
+                relevance=self._current_weights.relevance,
+                actionability=self._current_weights.actionability,
+                convergence=self._current_weights.convergence,
+                updated_at=self._current_weights.updated_at,
+                update_count=self._current_weights.update_count,
+            )
+        )
 
         self._current_weights = ScoringWeights(
             **weights,

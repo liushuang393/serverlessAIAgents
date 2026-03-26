@@ -173,7 +173,7 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         return max(1, min(self._config.max_days, parsed))
 
     async def _geocode_city(self, city: str) -> dict[str, Any] | None:
-        params = {
+        params: dict[str, str | int] = {
             "name": city,
             "count": 1,
             "language": self._config.language,
@@ -183,6 +183,9 @@ class WeatherService(ServiceBase[dict[str, Any]]):
             response = await client.get(_GEOCODING_URL, params=params)
             response.raise_for_status()
             payload = response.json()
+        if not isinstance(payload, dict):
+            msg = "invalid geocoding payload"
+            raise ValueError(msg)
 
         results = payload.get("results")
         if not isinstance(results, list) or not results:
@@ -207,7 +210,7 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         longitude: float,
         days: int,
     ) -> dict[str, Any]:
-        params = {
+        params: dict[str, str | int | float] = {
             "latitude": latitude,
             "longitude": longitude,
             "current": "temperature_2m,weather_code,wind_speed_10m",
@@ -218,7 +221,10 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         async with httpx.AsyncClient(timeout=self._config.timeout_seconds) as client:
             response = await client.get(_FORECAST_URL, params=params)
             response.raise_for_status()
-            payload: dict[str, Any] = response.json()
+            payload = response.json()
+        if not isinstance(payload, dict):
+            msg = "invalid forecast payload"
+            raise ValueError(msg)
         return payload
 
     def _build_payload(
@@ -272,7 +278,13 @@ class WeatherService(ServiceBase[dict[str, Any]]):
         temp_min = daily.get("temperature_2m_min")
         rain_prob = daily.get("precipitation_probability_max")
 
-        if not all(isinstance(item, list) for item in [times, codes, temp_max, temp_min, rain_prob]):
+        if (
+            not isinstance(times, list)
+            or not isinstance(codes, list)
+            or not isinstance(temp_max, list)
+            or not isinstance(temp_min, list)
+            or not isinstance(rain_prob, list)
+        ):
             msg = "invalid daily payload"
             raise ValueError(msg)
 

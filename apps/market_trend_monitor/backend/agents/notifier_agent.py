@@ -10,6 +10,7 @@ import smtplib
 import uuid
 from datetime import datetime
 from email.message import EmailMessage
+from types import ModuleType
 from typing import Any
 
 from apps.market_trend_monitor.backend.models import Notification, NotificationPriority, Trend
@@ -17,10 +18,14 @@ from apps.market_trend_monitor.backend.models import Notification, NotificationP
 from kernel.agents.agent_block import AgentBlock
 
 
+httpx: ModuleType | None
+
 try:
-    import httpx
+    import httpx as _httpx
 except ImportError:  # pragma: no cover - optional dependency
     httpx = None
+else:
+    httpx = _httpx
 
 
 class _NotificationChannel:
@@ -47,7 +52,7 @@ class _WebhookNotificationChannel(_NotificationChannel):
         payload = notification.to_dict()
         async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
             response = await client.post(self._webhook_url, json=payload)
-            return response.status_code < 400
+            return int(response.status_code) < 400
 
 
 class _EmailNotificationChannel(_NotificationChannel):

@@ -801,7 +801,7 @@ class FrameworkAuditService:
         """監査プロファイルを解決."""
         if override in {"business", "developer"}:
             return override
-        configured = str(app_config.audit_profile or "").strip().lower()
+        configured = app_config.audit_profile.strip().lower()
         return configured if configured in {"business", "developer"} else "developer"
 
     def _check_security_baseline(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:

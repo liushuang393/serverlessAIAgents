@@ -14,6 +14,7 @@ import contextlib
 import logging
 import os
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -153,8 +154,10 @@ def _extract_confidence_for_history(result_data: dict[str, Any]) -> float | None
         return float(raw_confidence)
 
     review = result_data.get("review")
-    if hasattr(review, "model_dump"):
-        review = review.model_dump()
+    if review is not None and hasattr(review, "model_dump"):
+        review_dump = review.model_dump()
+        if isinstance(review_dump, dict):
+            review = review_dump
     if isinstance(review, dict):
         review_confidence = review.get("confidence_score")
         if isinstance(review_confidence, (int, float)):
@@ -198,7 +201,7 @@ def build_input_dict(
     question: str,
     constraints: ConstraintSet,
     stakeholders: StakeholderInfo | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """Agent用入力辞書を構築.
 
     Args:
@@ -230,7 +233,7 @@ def build_input_dict(
     if constraints.timeline:
         time_horizon = f"{constraints.timeline.months}ヶ月"
 
-    result: dict = {
+    result: dict[str, Any] = {
         "raw_question": question,
         "question": question,  # 後方互換のために残す
         "constraints": constraint_list,
@@ -340,21 +343,7 @@ async def process_decision(
     report_case_id: str | None = None
     results_dict: dict[str, Any] = {}
 
-    if isinstance(result, DecisionReport):
-        report_data = result.model_dump()
-        decision_role = _infer_decision_role(report_data)
-        confidence = _extract_confidence_for_history(report_data)
-        report_case_id = result.report_id
-        results_dict = {
-            "cognitive_gate": None,
-            "gatekeeper": None,
-            "dao": report_data.get("dao"),
-            "fa": report_data.get("fa"),
-            "shu": report_data.get("shu"),
-            "qi": report_data.get("qi"),
-            "review": report_data.get("review"),
-        }
-    elif isinstance(result, dict):
+    if isinstance(result, dict):
         decision_role = _infer_decision_role(result)
         confidence = _extract_confidence_for_history(result)
         report_case_id = str(result.get("report_id", "")) or None
@@ -401,24 +390,6 @@ async def process_decision(
             )
 
     # レスポンス生成 + キャッシュ保存
-    if isinstance(result, DecisionReport):
-        cache_report(result.report_id, result)
-        cache_report(str(request_id), result)
-        if format == "v1":
-            contract = DecisionGovContractBuilder.build_from_report(result)
-            return DecisionAPIResponse(
-                status="success",
-                request_id=str(request_id),
-                report_id=result.report_id,
-                data=contract.model_dump(),
-            )
-        return DecisionAPIResponse(
-            status="success",
-            request_id=str(request_id),
-            report_id=result.report_id,
-            data=result.model_dump(),
-        )
-
     report_id = result.get("report_id", "") if isinstance(result, dict) else ""
     if report_id:
         _cache_report_from_result(result if isinstance(result, dict) else {}, request_id=str(request_id))
@@ -474,12 +445,14 @@ def _infer_decision_role(data: dict[str, Any]) -> str:
     """
     # 明示的な decision_role があればそれを使用
     if "decision_role" in data:
-        return data["decision_role"]
+        return str(data["decision_role"])
 
     # scoring.verdict があれば最優先
     scoring = data.get("scoring")
-    if hasattr(scoring, "model_dump"):
-        scoring = scoring.model_dump()
+    if scoring is not None and hasattr(scoring, "model_dump"):
+        scoring_dump = scoring.model_dump()
+        if isinstance(scoring_dump, dict):
+            scoring = scoring_dump
     if isinstance(scoring, dict):
         verdict = str(scoring.get("verdict", "")).upper()
         if verdict in {"GO", "NO_GO", "DELAY", "PILOT"}:
@@ -758,7 +731,7 @@ async def process_decision_stream(
     # ステージ単位DB保存用に request_id を入力に渡す
     inputs["_request_id"] = request_uuid
 
-    def serialize_event(event: dict) -> str:
+    def serialize_event(event: dict[str, Any]) -> str:
         """イベントをJSON文字列に変換（enum対応）."""
         # event_type が Enum の場合は .value を使用
         if "event_type" in event:
@@ -816,7 +789,7 @@ async def process_decision_stream(
                 report_case_id=report_case_id,
             )
 
-    async def generate_events():
+    async def generate_events() -> AsyncIterator[str]:
         """SSEイベントを生成."""
         import asyncio
         import time as time_module
@@ -988,7 +961,7 @@ class ConnectionManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
-    async def broadcast(self, message: dict) -> None:
+    async def broadcast(self, message: dict[str, Any]) -> None:
         for connection in self.active_connections:
             with contextlib.suppress(Exception):
                 await connection.send_json(message)
@@ -1040,11 +1013,12 @@ async def websocket_decision(websocket: WebSocket) -> None:
             final_result: dict[str, Any] = {}
 
             async for event in engine.run_stream(inputs):
-                event_data = {
+                event_type_attr = getattr(getattr(event, "event_type", None), "value", None)
+                event_type = str(event_type_attr) if event_type_attr is not None else str(event.get("event_type", ""))
+
+                event_data: dict[str, Any] = {
                     "type": "agent_event",
-                    "event_type": getattr(event, "event_type", {}).value
-                    if hasattr(getattr(event, "event_type", None), "value")
-                    else str(event.get("event_type", "")),
+                    "event_type": event_type,
                     "timestamp": getattr(event, "timestamp", 0),
                     "flow_id": getattr(event, "flow_id", ""),
                     "data": getattr(event, "data", {}),

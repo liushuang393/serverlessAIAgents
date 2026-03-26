@@ -12,6 +12,11 @@ from pydantic import BaseModel, Field
 router = APIRouter(tags=["予測復盤"])
 
 
+def _as_dict(value: object) -> dict[str, Any]:
+    """辞書戻り値を正規化."""
+    return value if isinstance(value, dict) else {}
+
+
 class PredictionCreateRequest(BaseModel):
     """予測作成リクエスト."""
 
@@ -38,26 +43,26 @@ class PredictionBootstrapRequest(BaseModel):
 
 
 @router.get("/api/predictions")
-async def list_predictions(reviewed: bool | None = None) -> dict:
+async def list_predictions(reviewed: bool | None = None) -> dict[str, Any]:
     """予測一覧を取得."""
     predictions = prediction_service.list_predictions(reviewed=reviewed)
     return {"predictions": [p.to_dict() for p in predictions], "total": len(predictions)}
 
 
 @router.get("/api/predictions/accuracy")
-async def get_prediction_accuracy() -> dict:
+async def get_prediction_accuracy() -> dict[str, Any]:
     """精度統計を取得."""
-    return prediction_service.get_accuracy_stats()
+    return _as_dict(prediction_service.get_accuracy_stats())
 
 
 @router.get("/api/predictions/calibration")
-async def get_calibration_metrics() -> dict:
+async def get_calibration_metrics() -> dict[str, Any]:
     """Phase 12: 予測キャリブレーション（Brier Score）を取得."""
-    return prediction_service.get_calibration_metrics()
+    return _as_dict(prediction_service.get_calibration_metrics())
 
 
 @router.get("/api/predictions/{prediction_id}")
-async def get_prediction(prediction_id: str) -> dict:
+async def get_prediction(prediction_id: str) -> dict[str, Any]:
     """予測詳細を取得."""
     prediction = prediction_service.get_prediction(prediction_id)
     if not prediction:
@@ -70,7 +75,7 @@ async def get_prediction(prediction_id: str) -> dict:
 
 
 @router.post("/api/predictions")
-async def create_prediction(request: PredictionCreateRequest) -> dict:
+async def create_prediction(request: PredictionCreateRequest) -> dict[str, Any]:
     """予測を作成."""
     target = date.fromisoformat(request.target_date)
     prediction = prediction_service.create_prediction(
@@ -81,11 +86,11 @@ async def create_prediction(request: PredictionCreateRequest) -> dict:
         metadata=request.metadata,
     )
     await prediction_service.persist_prediction(prediction)
-    return prediction.to_dict()
+    return _as_dict(prediction.to_dict())
 
 
 @router.post("/api/predictions/bootstrap")
-async def bootstrap_predictions(request: PredictionBootstrapRequest) -> dict:
+async def bootstrap_predictions(request: PredictionBootstrapRequest) -> dict[str, Any]:
     """最新トレンドから予測を一括生成."""
     trends = await store.list_trends(limit=max(request.limit * 3, request.limit))
     if not trends:
@@ -127,7 +132,7 @@ async def bootstrap_predictions(request: PredictionBootstrapRequest) -> dict:
 async def review_prediction(
     prediction_id: str,
     request: PredictionReviewRequest,
-) -> dict:
+) -> dict[str, Any]:
     """予測を復盤."""
     try:
         outcome = PredictionOutcome(request.outcome)
@@ -145,4 +150,4 @@ async def review_prediction(
     if prediction:
         await prediction_service.persist_prediction(prediction)
     await prediction_service.persist_review(review)
-    return review.to_dict()
+    return _as_dict(review.to_dict())

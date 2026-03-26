@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-def ensure_env_file(app_dir: Path):
+def ensure_env_file(app_dir: Path) -> None:
     """
     Check if .env exists. If not, try to copy from .env.example or similar.
     """
@@ -28,7 +28,7 @@ def ensure_env_file(app_dir: Path):
     print("Warning: No .env or .env.example found. Application might fail if it requires environment variables.")
 
 
-def start_docker_dependencies(app_dir: Path):
+def start_docker_dependencies(app_dir: Path) -> None:
     """
     Check for docker-compose.yml and start infrastructure services (DB, Redis, etc.).
     Excludes the main app service (backend/frontend) if possible.
@@ -63,7 +63,7 @@ def start_docker_dependencies(app_dir: Path):
         print("Warning: 'docker' command not found. Skipping docker startup.")
 
 
-def main():
+def main() -> None:
     script_dir = Path(__file__).resolve().parent
     app_dir = script_dir.parent
 
@@ -75,7 +75,7 @@ def main():
 
     # 2. Run the Application
     target_module = "apps.faq_system.main"
-    cmd = [sys.executable, "-m", target_module]
+    cmd: list[str] = [sys.executable, "-m", target_module]
 
     if len(sys.argv) > 1:
         cmd.extend(sys.argv[1:])

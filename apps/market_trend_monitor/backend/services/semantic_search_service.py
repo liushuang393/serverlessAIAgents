@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Any
 
 from apps.market_trend_monitor.backend.config import config
 
-from kernel import get_embedding, get_vectordb
+from infrastructure.providers.embedding_provider import EmbeddingProvider, get_embedding
+from infrastructure.providers.vectordb_provider import VectorDBProvider, get_vectordb
 
 
 if TYPE_CHECKING:
@@ -29,8 +30,8 @@ class SemanticSearchService:
     def __init__(
         self,
         *,
-        embedding: Any | None = None,
-        vectordb: Any | None = None,
+        embedding: EmbeddingProvider | None = None,
+        vectordb: VectorDBProvider | None = None,
     ) -> None:
         """初期化."""
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -49,8 +50,22 @@ class SemanticSearchService:
         if self._vectordb is None:
             collection = config.vectordb.collection_name
             self._vectordb = get_vectordb(collection=collection)
-        await self._vectordb.connect()
+        await self._require_vectordb().connect()
         self._initialized = True
+
+    def _require_embedding(self) -> EmbeddingProvider:
+        """Embedding インスタンスを返す."""
+        if self._embedding is None:
+            msg = "Embedding provider is not initialized"
+            raise RuntimeError(msg)
+        return self._embedding
+
+    def _require_vectordb(self) -> VectorDBProvider:
+        """Vector DB インスタンスを返す."""
+        if self._vectordb is None:
+            msg = "Vector database provider is not initialized"
+            raise RuntimeError(msg)
+        return self._vectordb
 
     async def index_article(self, article: Article) -> str:
         """記事をベクトルインデックスに登録.
@@ -63,10 +78,12 @@ class SemanticSearchService:
         """
         await self._ensure_initialized()
         text = f"{article.title}\n{article.content}"
-        embedding = await self._embedding.embed_text(text)
+        embedding_provider = self._require_embedding()
+        vectordb = self._require_vectordb()
+        embedding = await embedding_provider.embed_query(text)
         doc_id = article.id
 
-        await self._vectordb.add(
+        await vectordb.add_documents(
             documents=[text],
             ids=[doc_id],
             embeddings=[embedding],
@@ -97,12 +114,14 @@ class SemanticSearchService:
 
         await self._ensure_initialized()
         batch_size = config.embedding.batch_size
+        embedding_provider = self._require_embedding()
+        vectordb = self._require_vectordb()
 
         all_ids: list[str] = []
         for i in range(0, len(articles), batch_size):
             batch = articles[i : i + batch_size]
             texts = [f"{a.title}\n{a.content}" for a in batch]
-            embeddings = await self._embedding.embed_batch(texts)
+            embeddings = await embedding_provider.embed_documents(texts)
             ids = [a.id for a in batch]
             metadatas = [
                 {
@@ -114,7 +133,7 @@ class SemanticSearchService:
                 for a in batch
             ]
 
-            await self._vectordb.add(
+            await vectordb.add_documents(
                 documents=texts,
                 ids=ids,
                 embeddings=embeddings,
@@ -142,17 +161,20 @@ class SemanticSearchService:
             検索結果のリスト
         """
         await self._ensure_initialized()
-        query_embedding = await self._embedding.embed_text(query)
+        embedding_provider = self._require_embedding()
+        vectordb = self._require_vectordb()
+        query_embedding = await embedding_provider.embed_query(query)
 
-        results = await self._vectordb.search(
+        results = await vectordb.similarity_search(
             query=query,
+            k=top_k,
+            filter=filter_metadata,
             query_embedding=query_embedding,
-            top_k=top_k,
-            filter_metadata=filter_metadata,
         )
 
-        self._logger.debug("セマンティック検索: query=%s, results=%d", query[:50], len(results))
-        return results
+        normalized_results = [item for item in results if isinstance(item, dict)]
+        self._logger.debug("セマンティック検索: query=%s, results=%d", query[:50], len(normalized_results))
+        return normalized_results
 
     async def find_similar(
         self,
@@ -173,12 +195,14 @@ class SemanticSearchService:
         await self._ensure_initialized()
         threshold = threshold if threshold is not None else self._similarity_threshold
         text = f"{article.title}\n{article.content}"
-        query_embedding = await self._embedding.embed_text(text)
+        embedding_provider = self._require_embedding()
+        vectordb = self._require_vectordb()
+        query_embedding = await embedding_provider.embed_query(text)
 
-        results = await self._vectordb.search(
+        results = await vectordb.similarity_search(
             query=text,
+            k=top_k + 1,
             query_embedding=query_embedding,
-            top_k=top_k + 1,
         )
 
         similar = []
@@ -211,9 +235,10 @@ class SemanticSearchService:
 
         threshold = threshold if threshold is not None else self._similarity_threshold
         await self._ensure_initialized()
+        embedding_provider = self._require_embedding()
 
         texts = [f"{a.title}\n{a.content}" for a in articles]
-        embeddings = await self._embedding.embed_batch(texts)
+        embeddings = await embedding_provider.embed_documents(texts)
 
         unique: list[Article] = []
         unique_embeddings: list[list[float]] = []
@@ -257,12 +282,14 @@ class SemanticSearchService:
         """
         await self._ensure_initialized()
         lambda_param = lambda_param if lambda_param is not None else self._mmr_lambda
-        query_embedding = await self._embedding.embed_text(query)
+        embedding_provider = self._require_embedding()
+        vectordb = self._require_vectordb()
+        query_embedding = await embedding_provider.embed_query(query)
 
-        candidates = await self._vectordb.search(
+        candidates = await vectordb.similarity_search(
             query=query,
+            k=candidates_k,
             query_embedding=query_embedding,
-            top_k=candidates_k,
         )
 
         if not candidates:
@@ -313,4 +340,4 @@ class SemanticSearchService:
         norm_b = sum(x * x for x in b) ** 0.5
         if norm_a == 0 or norm_b == 0:
             return 0.0
-        return dot / (norm_a * norm_b)
+        return float(dot / (norm_a * norm_b))

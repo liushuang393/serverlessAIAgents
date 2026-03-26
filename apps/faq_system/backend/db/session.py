@@ -81,7 +81,7 @@ _ready_lock_loop_id: int | None = None
 
 def get_database_url() -> str:
     """DB URL を取得."""
-    return _db.resolved_url
+    return str(_db.resolved_url)
 
 
 async def init_db() -> None:
@@ -103,7 +103,7 @@ async def _is_fresh_database() -> bool:
     """
     from sqlalchemy import inspect as sa_inspect
 
-    url = _db.resolved_url
+    url = str(_db.resolved_url)
     if "sqlite" in url:
         # 同期エンジンで確認（SQLite は同期モードで動作）
         from sqlalchemy import create_engine, pool
@@ -112,8 +112,8 @@ async def _is_fresh_database() -> bool:
 
         engine = create_engine(to_sync_url(url), poolclass=pool.NullPool)
         try:
-            with engine.connect() as conn:
-                inspector = sa_inspect(conn)
+            with engine.connect() as sync_conn:
+                inspector = sa_inspect(sync_conn)
                 tables = inspector.get_table_names()
                 return len(tables) == 0
         finally:
@@ -125,12 +125,12 @@ async def _is_fresh_database() -> bool:
 
         async_engine = create_async_engine(url, poolclass=sa_pool.NullPool)
         try:
-            async with async_engine.connect() as conn:
+            async with async_engine.connect() as async_conn:
 
-                def _get_tables(sync_conn: Any) -> list[str]:
-                    return sa_inspect(sync_conn).get_table_names()
+                def _get_tables(sync_connection: Any) -> list[str]:
+                    return list(sa_inspect(sync_connection).get_table_names())
 
-                tables = await conn.run_sync(_get_tables)
+                tables = await async_conn.run_sync(_get_tables)
                 return len(tables) == 0
         finally:
             await async_engine.dispose()
@@ -149,12 +149,11 @@ async def ensure_database_ready() -> None:
         return
 
     async with _get_ready_lock():
-        if _is_ready:
-            return
-        await init_db()
-        if _db_auto_create_enabled() and await _is_fresh_database():
-            await create_all_tables()
-        _is_ready = True
+        if not _is_ready:
+            await init_db()
+            if _db_auto_create_enabled() and await _is_fresh_database():
+                await create_all_tables()
+            _is_ready = True
 
 
 def _get_ready_lock() -> asyncio.Lock:

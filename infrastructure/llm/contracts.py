@@ -67,7 +67,15 @@ class LLMContractBinding(BaseModel):
 
     def get(self, modality: LLMContractModality) -> LLMContractModelRef | None:
         """指定 modality の参照を返す."""
-        return getattr(self, modality)
+        if modality == "text":
+            return self.text
+        if modality == "embedding":
+            return self.embedding
+        if modality == "image":
+            return self.image
+        if modality == "speech_to_text":
+            return self.speech_to_text
+        return self.text_to_speech
 
     def defined_modalities(self) -> list[LLMContractModality]:
         """定義済み modality 一覧."""
@@ -280,7 +288,7 @@ def resolve_known_model_ids(gateway_config_path: Path | None = None) -> set[str]
     """gateway config に登録された model_id 一覧を返す."""
     config = load_gateway_config(gateway_config_path)
     ids = {model.alias for model in config.models}
-    ids.update(model.model_id for model in config.models)
+    ids.update(model.model_id for model in config.models if model.model_id is not None)
     return ids
 
 

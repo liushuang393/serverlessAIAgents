@@ -103,6 +103,7 @@ class ContractAuthGuard:
         else:
             # 遅延 import: infrastructure 層への直接依存を回避
             from infrastructure.security.auth_client import AuthClient
+
             self._auth_client_factory = AuthClient
         self._cached_app_config: dict[str, Any] | None = None
 

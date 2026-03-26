@@ -17,6 +17,8 @@ import sys
 
 import html2text
 
+from shared.web.markdown_pipeline import finalize_markdown
+
 
 # --- scrapling の遅延インポート（依存不足時にフォールバック可能にする）---
 _HAS_SCRAPLING = False
@@ -55,7 +57,7 @@ def _make_converter() -> "html2text.HTML2Text":
 def _clean(md: str, max_chars: int) -> str:
     """Markdown をクリーンアップ."""
     md = re.sub(r"\n{3,}", "\n\n", md).strip()
-    return md[:max_chars]
+    return finalize_markdown(md, max_chars=max_chars)
 
 
 # ---------------------------------------------------------------------------

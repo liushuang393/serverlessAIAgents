@@ -27,6 +27,7 @@ import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -84,15 +85,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
         # CollectionManager / DocumentManager の初期化
         try:
-            from apps.decision_governance_engine.repositories.database import get_db_session
+            from apps.decision_governance_engine.repositories.database import get_db_session_factory
             from apps.decision_governance_engine.routers.knowledge_collections import (
                 init_managers as init_collection_managers,
             )
             from shared.rag.collection_manager import CollectionManager
             from shared.rag.document_manager import DocumentManager
 
-            col_mgr = CollectionManager(session_factory=get_db_session)
-            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_db_session)
+            session_factory = await get_db_session_factory()
+            col_mgr = CollectionManager(session_factory=session_factory)
+            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=session_factory)
             init_collection_managers(col_mgr, doc_mgr)
             logger.info("Knowledge CollectionManager / DocumentManager initialized")
         except Exception as mgr_err:
@@ -156,7 +158,7 @@ from fastapi.responses import JSONResponse
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.error(f"Global error caught: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
@@ -197,10 +199,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     config_path = Path(__file__).resolve().parent / "app_config.json"
-    config_raw: dict = {}
+    config_raw: dict[str, Any] = {}
     if config_path.is_file():
         try:
-            config_raw = json.loads(config_path.read_text("utf-8"))
+            loaded_config = json.loads(config_path.read_text("utf-8"))
+            if isinstance(loaded_config, dict):
+                config_raw = loaded_config
         except json.JSONDecodeError:
             config_raw = {}
 

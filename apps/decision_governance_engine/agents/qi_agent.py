@@ -242,7 +242,7 @@ JSON形式で出力してください。"""
 
     def _safe_build_implementations(
         self,
-        raw_list: list,
+        raw_list: object,
     ) -> list[Implementation]:
         """Implementation リストを安全に構築.
 
@@ -278,7 +278,7 @@ JSON形式で出力してください。"""
                 self._logger.warning(f"implementations[{idx}] 構築失敗（スキップ）: {e}")
         return results
 
-    def _normalize_domain_technology(self, dt: dict) -> dict:
+    def _normalize_domain_technology(self, dt: object) -> dict[str, Any]:
         """DomainSpecificTechnologyの文字列長を正規化.
 
         Args:
@@ -288,7 +288,7 @@ JSON形式で出力してください。"""
             正規化されたデータ
         """
         if not isinstance(dt, dict):
-            return dt
+            return {}
         return {
             "technology_name": str(dt.get("technology_name", ""))[:80],
             "category": str(dt.get("category", ""))[:30],
@@ -296,7 +296,7 @@ JSON形式で出力してください。"""
             "alternatives": dt.get("alternatives", [])[:3],
         }
 
-    def _normalize_regulatory_consideration(self, rc: dict) -> dict:
+    def _normalize_regulatory_consideration(self, rc: object) -> dict[str, Any]:
         """RegulatoryConsiderationの文字列長を正規化.
 
         Args:
@@ -306,7 +306,7 @@ JSON形式で出力してください。"""
             正規化されたデータ
         """
         if not isinstance(rc, dict):
-            return rc
+            return {}
         return {
             "region": str(rc.get("region", ""))[:20],
             "regulation": str(rc.get("regulation", ""))[:30],
@@ -314,7 +314,7 @@ JSON形式で出力してください。"""
             "implementation_impact": str(rc.get("implementation_impact", ""))[:50],
         }
 
-    def _normalize_geographic_consideration(self, gc: dict) -> dict:
+    def _normalize_geographic_consideration(self, gc: object) -> dict[str, Any]:
         """GeographicConsiderationの文字列長を正規化.
 
         Args:
@@ -324,14 +324,14 @@ JSON形式で出力してください。"""
             正規化されたデータ
         """
         if not isinstance(gc, dict):
-            return gc
+            return {}
         return {
             "region": str(gc.get("region", ""))[:20],
             "latency_requirement": str(gc.get("latency_requirement", ""))[:30],
             "infrastructure_need": str(gc.get("infrastructure_need", ""))[:50],
         }
 
-    def _normalize_list_lengths(self, data: dict) -> None:
+    def _normalize_list_lengths(self, data: dict[str, Any]) -> None:
         """リスト長を正規化（max_length制約を遵守）.
 
         Args:
@@ -431,7 +431,7 @@ JSON形式で出力してください。"""
 
     # --- v3.1 ヘルパーメソッド ---
 
-    def _parse_poc_minimal_architecture(self, data: dict | None) -> PoCMinimalArchitecture | None:
+    def _parse_poc_minimal_architecture(self, data: dict[str, Any] | None) -> PoCMinimalArchitecture | None:
         """LLM出力からPoC最小アーキテクチャをパースする."""
         if not data or not isinstance(data, dict):
             return None
@@ -470,11 +470,11 @@ JSON形式で出力してください。"""
             self._logger.warning(f"PoC architecture parse failed: {e}")
             return None
 
-    def _parse_expansion_stages(self, raw_stages: list) -> list[ExpansionStage]:
+    def _parse_expansion_stages(self, raw_stages: object) -> list[ExpansionStage]:
         """LLM出力から拡張アーキテクチャ段階をパースする."""
         if not raw_stages or not isinstance(raw_stages, list):
             return []
-        stages = []
+        stages: list[ExpansionStage] = []
         for s in raw_stages[:5]:
             if not isinstance(s, dict):
                 continue
@@ -494,11 +494,11 @@ JSON形式で出力してください。"""
                 self._logger.warning(f"ExpansionStage parse failed: {e}")
         return stages
 
-    def _parse_implementation_steps(self, raw_steps: list) -> list[ImplementationStep]:
+    def _parse_implementation_steps(self, raw_steps: object) -> list[ImplementationStep]:
         """LLM出力から実装手順をパースする."""
         if not raw_steps or not isinstance(raw_steps, list):
             return []
-        steps = []
+        steps: list[ImplementationStep] = []
         for s in raw_steps[:10]:
             if not isinstance(s, dict):
                 continue

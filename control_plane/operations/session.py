@@ -84,8 +84,6 @@ async def ensure_platform_db_ready() -> None:
         return
 
     async with _get_ready_lock():
-        if _is_ready:
-            return
         _ensure_sqlite_parent_dir(_db.resolved_url)
         await _db.init()
         if _db_auto_create_enabled():

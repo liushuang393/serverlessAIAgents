@@ -31,7 +31,8 @@ class MFAManager:
         try:
             import pyotp
 
-            return pyotp.random_base32()
+            generated = pyotp.random_base32()
+            return str(generated)
         except ImportError as e:
             msg = "pyotp をインストールしてください: pip install pyotp"
             raise ImportError(msg) from e
@@ -49,10 +50,11 @@ class MFAManager:
         try:
             import pyotp
 
-            return pyotp.TOTP(secret).provisioning_uri(
+            provisioning_uri = pyotp.TOTP(secret).provisioning_uri(
                 name=username,
                 issuer_name=self._issuer_name,
             )
+            return str(provisioning_uri)
         except ImportError as e:
             msg = "pyotp をインストールしてください: pip install pyotp"
             raise ImportError(msg) from e
@@ -75,7 +77,8 @@ class MFAManager:
 
             totp = pyotp.TOTP(secret)
             # valid_window=1 で前後 30 秒の時刻ずれを許容
-            return totp.verify(code, valid_window=1)
+            verified = totp.verify(code, valid_window=1)
+            return bool(verified)
         except ImportError:
             logger.exception("pyotp がインストールされていません")
             return False

@@ -529,7 +529,7 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                     "migration_design": design_for_next,
                 }
             )
-            fix_artifact = engine._validate_or_fail(LimitedFixArtifact, fix, "fix")  # type: ignore[assignment]
+            fix_artifact = engine._validate_or_fail(LimitedFixArtifact, fix, "fix")
         else:
             fix_artifact = LimitedFixArtifact(
                 meta=build_meta(
@@ -547,15 +547,6 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 unknowns=[],
                 extensions={},
             )
-
-        if fix_artifact is None:
-            await artifact_store.append_failure(
-                task_id=task_id,
-                stage="fix",
-                responsible_stage="fix",
-                reason="schema validation failed",
-            )
-            return {"success": False, "stage": "fix", "error": "invalid fix artifact"}
 
         fix_path = await artifact_store.write_json(
             stage="fix",

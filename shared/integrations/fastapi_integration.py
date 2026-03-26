@@ -178,7 +178,10 @@ def AgentContractRouter(runtime: Any, prefix: str = "") -> Any:
         card = runtime.get_card(agent_id)
         if card is None:
             raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
-        return card.to_a2a_format()
+        card_payload = card.to_a2a_format()
+        if not isinstance(card_payload, dict):
+            raise HTTPException(status_code=500, detail="Invalid agent card payload")
+        return card_payload
 
     @router.get("/agents/{agent_id}/schema")
     async def get_agent_schema(agent_id: str) -> dict[str, Any]:

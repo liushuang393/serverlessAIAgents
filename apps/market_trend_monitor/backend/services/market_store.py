@@ -19,7 +19,11 @@ class MarketStore:
 
     _MAX_REPORT_HISTORY = 50
 
-    def __init__(self, evidence_service=None, session_factory=None) -> None:
+    def __init__(
+        self,
+        evidence_service: Any | None = None,
+        session_factory: Any | None = None,
+    ) -> None:
         """初期化."""
         self._logger = logging.getLogger(self.__class__.__name__)
         self._lock = asyncio.Lock()

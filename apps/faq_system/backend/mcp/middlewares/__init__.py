@@ -5,4 +5,3 @@ RetrievalPipeline に追加可能なミドルウェア:
 - dedup: 重複排除
 - score_normalize: スコア正規化
 """
-

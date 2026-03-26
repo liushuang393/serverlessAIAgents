@@ -7,6 +7,14 @@ import httpx
 logger = logging.getLogger("decision_api.auth_client")
 
 
+def _response_json_dict(response: httpx.Response) -> dict[str, Any]:
+    """HTTP レスポンス JSON を辞書へ正規化."""
+    payload = response.json()
+    if isinstance(payload, dict):
+        return payload
+    return {"success": False, "message": "認証サービスのレスポンス形式が不正です"}
+
+
 class AuthClient:
     """Auth Service と通信するためのクライアント."""
 
@@ -23,7 +31,7 @@ class AuthClient:
                 # Auth Service は AuthResponse (success, message, user, access_token...) を返す
                 # セッション管理のためにクッキーから auth_session を抽出する必要があるかもしれないが、
                 # AuthClient の呼び出し元 (routers/auth.py) で response.cookies を扱う
-                data = response.json()
+                data = _response_json_dict(response)
                 if response.cookies.get("auth_session"):
                     data["session_token"] = response.cookies.get("auth_session")
                 return data
@@ -36,7 +44,7 @@ class AuthClient:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(f"{self.base_url}/auth/me", cookies={"auth_session": token}, timeout=5.0)
-                return response.json()
+                return _response_json_dict(response)
             except Exception as e:
                 logger.exception(f"Auth verify error: {e}")
                 return {"success": False, "message": "セッションの検証に失敗しました"}
@@ -48,7 +56,7 @@ class AuthClient:
                 response = await client.post(
                     f"{self.base_url}/auth/logout", cookies={"auth_session": token}, timeout=5.0
                 )
-                return response.json()
+                return _response_json_dict(response)
             except Exception as e:
                 logger.exception(f"Auth logout error: {e}")
                 return {"success": True, "message": "ログアウト通知に失敗しましたが、ローカルセッションは破棄されます"}

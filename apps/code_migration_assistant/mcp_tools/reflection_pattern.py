@@ -167,6 +167,9 @@ class ReflectionPattern(MCPTool):
                 raise RuntimeError(msg)
 
             current_output = generate_response.output
+            if current_output is None:
+                msg = "Generation failed: output is empty"
+                raise RuntimeError(msg)
 
             # Step 2: Evaluate
             evaluate_input = {
@@ -183,6 +186,9 @@ class ReflectionPattern(MCPTool):
                 raise RuntimeError(msg)
 
             evaluation_result = evaluate_response.output
+            if evaluation_result is None:
+                msg = "Evaluation failed: output is empty"
+                raise RuntimeError(msg)
             current_score = evaluation_result.get("score", 0.0)
             is_acceptable = evaluation_result.get("is_acceptable", False)
 
@@ -240,6 +246,9 @@ class ReflectionPattern(MCPTool):
         # ツールを直接呼び出す（簡易実装）
         # 実際の実装では、MCPClientを使用してリモートツールを呼び出す
         if self.mcp_client:
-            return await self.mcp_client.call_tool(request)
+            response = await self.mcp_client.call_tool(request)
+            if isinstance(response, MCPToolResponse):
+                return response
+            return MCPToolResponse(success=False, errors=["invalid MCP client response"])
         msg = "MCP Client is not configured"
         raise RuntimeError(msg)

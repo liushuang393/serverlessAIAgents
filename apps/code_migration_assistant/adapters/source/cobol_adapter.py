@@ -190,7 +190,7 @@ class CobolAdapter(SourceLanguageAdapter):
             return "string"
         return "unknown"
 
-    def _extract_procedures(self, ast: dict) -> list[dict[str, Any]]:
+    def _extract_procedures(self, ast: dict[str, Any]) -> list[dict[str, Any]]:
         """PROCEDUREを抽出する."""
         procedures: list[dict[str, Any]] = []
         proc_lines = ast.get("divisions", {}).get("PROCEDURE DIVISION", [])

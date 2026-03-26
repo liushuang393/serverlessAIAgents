@@ -451,6 +451,7 @@ class ToolCatalogManager:
                         "properties": {},
                     },
                 )
+                input_schema = t_schema if isinstance(t_schema, dict) else {"type": "object", "properties": {}}
                 entry = CatalogEntry(
                     uri=f"tool://mcp/{t_server}/{t_name}",
                     name=t_name,
@@ -459,7 +460,7 @@ class ToolCatalogManager:
                     category="mcp",
                     tags=["mcp", t_server],
                     available=True,
-                    input_schema=t_schema,
+                    input_schema=input_schema,
                 )
                 self._register(entry)
                 count += 1

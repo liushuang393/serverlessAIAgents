@@ -69,7 +69,7 @@ class ExternalKBResponse(BaseModel):
     error: str = ""
 
 
-class ExternalKBAgent(ResilientAgent):
+class ExternalKBAgent(ResilientAgent[Any, Any]):
     """対客KB Agent（公開情報専用）.
 
     対客向け知識ベース専用のAgent。

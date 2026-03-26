@@ -260,10 +260,10 @@ class MarketplaceClient:
 
         if suffixes.endswith((".tar.gz", ".tgz", ".tar")):
             with tarfile.open(artifact_path, "r:*") as archive:
-                for member in archive.getmembers():
-                    target = (install_path / member.name).resolve()
+                for tar_member in archive.getmembers():
+                    target = (install_path / tar_member.name).resolve()
                     if not str(target).startswith(str(install_path.resolve())):
-                        msg = f"Unsafe tar member path: {member.name}"
+                        msg = f"Unsafe tar member path: {tar_member.name}"
                         raise ValueError(msg)
                 archive.extractall(install_path, filter="data")  # nosec B202 - パスバリデーション済み+filter="data"
             return

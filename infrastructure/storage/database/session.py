@@ -235,3 +235,17 @@ class DatabaseManager:
             return self._async_engine
         msg = "非同期エンジンが未初期化"
         raise RuntimeError(msg)
+
+    def get_async_session_factory(self) -> async_sessionmaker[AsyncSession]:
+        """非同期セッションファクトリを取得.
+
+        Returns:
+            非同期 async_sessionmaker
+
+        Raises:
+            RuntimeError: 非同期セッションファクトリが未初期化の場合
+        """
+        if self._async_session_factory is not None:
+            return self._async_session_factory
+        msg = "非同期セッションファクトリが未初期化"
+        raise RuntimeError(msg)

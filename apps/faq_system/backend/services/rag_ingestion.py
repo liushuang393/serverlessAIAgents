@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import importlib
 import json
 import logging
 import re
@@ -39,27 +40,26 @@ try:
 except ImportError:  # pragma: no cover - optional dependency
     trafilatura = None
 
+_httpx_module: Any | None
 try:
-    import httpx
+    _httpx_module = importlib.import_module("httpx")
 except ImportError:  # pragma: no cover - optional dependency
-    httpx = None
+    _httpx_module = None
 
 try:
     import boto3
 except ImportError:  # pragma: no cover - optional dependency
     boto3 = None
 
+_tenacity_module: Any | None
 try:
-    from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt, wait_exponential
+    _tenacity_module = importlib.import_module("tenacity")
 except ImportError:  # pragma: no cover - optional dependency
-    AsyncRetrying = None
-    retry_if_exception_type = None
-    stop_after_attempt = None
-    wait_exponential = None
+    _tenacity_module = None
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Awaitable, Callable
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 
     from sqlalchemy.sql.elements import ClauseElement
 
@@ -483,7 +483,7 @@ class WebSourceAdapter(SourceAdapter):
                 "provider": "httpx",
             }
 
-        if httpx is None:
+        if _httpx_module is None:
             return _failed_source_result(
                 source=source,
                 message="httpx is required for web ingestion",
@@ -507,7 +507,7 @@ class WebSourceAdapter(SourceAdapter):
         checkpoint = await self._orchestrator._load_checkpoint(source.source_id)
         next_cursor_time = checkpoint.cursor_time if checkpoint else None
 
-        async with httpx.AsyncClient(
+        async with _httpx_module.AsyncClient(
             timeout=timeout_seconds,
             follow_redirects=True,
             headers={"User-Agent": user_agent},
@@ -628,7 +628,7 @@ class ApiSourceAdapter(SourceAdapter):
                 provider="httpx",
             )
 
-        if httpx is None:
+        if _httpx_module is None:
             return _failed_source_result(
                 source=source,
                 message="httpx is required for api ingestion",
@@ -675,7 +675,7 @@ class ApiSourceAdapter(SourceAdapter):
         fallback_used = False
         provider = "httpx"
 
-        async with httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True, headers=headers) as client:
+        async with _httpx_module.AsyncClient(timeout=timeout_seconds, follow_redirects=True, headers=headers) as client:
             try:
                 if method == "POST":
                     response = await _retry_async(
@@ -1040,14 +1040,14 @@ class RAGIngestionOrchestrator:
                 "notes": [],
             },
             "web": {
-                "status": "enabled" if httpx is not None else "limited",
-                "reason_code": "ok" if httpx is not None else "dependency_missing",
+                "status": "enabled" if _httpx_module is not None else "limited",
+                "reason_code": "ok" if _httpx_module is not None else "dependency_missing",
                 "provider": "httpx",
                 "notes": ([] if trafilatura is not None else ["trafilatura is missing, html text fallback is used"]),
             },
             "api": {
-                "status": "enabled" if httpx is not None else "limited",
-                "reason_code": "ok" if httpx is not None else "dependency_missing",
+                "status": "enabled" if _httpx_module is not None else "limited",
+                "reason_code": "ok" if _httpx_module is not None else "dependency_missing",
                 "provider": "httpx",
                 "notes": [],
             },
@@ -1388,7 +1388,7 @@ class RAGIngestionOrchestrator:
                 if run is None:
                     return self._run_store.get(run_id)
                 items = (await session.execute(item_stmt)).scalars().all()
-            return self._serialize_run_model(run, items=items)
+            return self._serialize_run_model(run, items=list(items))
         except Exception as exc:  # pragma: no cover - defensive
             self._mark_db_unavailable(exc)
             return self._run_store.get(run_id)
@@ -1648,13 +1648,14 @@ class RAGIngestionOrchestrator:
                 raise RuntimeError(msg)
             return result.data if isinstance(result.data, dict) else {}
 
-        return await _retry_async(_execute)
+        retry_result = await _retry_async(_execute)
+        return retry_result if isinstance(retry_result, dict) else {}
 
     def _serialize_run_model(
         self,
         run: IngestionRun,
         *,
-        items: list[IngestionRunItem] | None = None,
+        items: Sequence[IngestionRunItem] | None = None,
     ) -> dict[str, Any]:
         duration_ms = _duration_ms(run.started_at, run.finished_at)
         payload = {
@@ -1932,6 +1933,8 @@ def _api_item_to_text(*, item: Any, content_field: str | None) -> tuple[str, boo
 
 
 def _parse_s3_location(uri: str | None, options: dict[str, Any]) -> tuple[str | None, str | None]:
+    bucket: str | None = None
+    prefix: str | None = None
     if uri:
         parsed = urlparse(uri)
         if parsed.scheme == "s3" and parsed.netloc:
@@ -1964,7 +1967,14 @@ def _get_s3_object_bytes(client: Any, bucket: str, key: str) -> bytes:
     body = response.get("Body")
     if body is None:
         return b""
-    return body.read()
+    raw_body = body.read()
+    if isinstance(raw_body, bytes):
+        return raw_body
+    if isinstance(raw_body, bytearray):
+        return bytes(raw_body)
+    if isinstance(raw_body, memoryview):
+        return raw_body.tobytes()
+    return b""
 
 
 def _decode_bytes(raw: bytes, *, encoding: str) -> tuple[str, bool]:
@@ -2104,15 +2114,15 @@ def _apply_incremental_filters(
 
 
 async def _retry_async(func: Callable[..., Awaitable[Any]], *args: Any, **kwargs: Any) -> Any:
-    if (
-        AsyncRetrying is None
-        or stop_after_attempt is None
-        or wait_exponential is None
-        or retry_if_exception_type is None
-    ):
+    if _tenacity_module is None:
         return await func(*args, **kwargs)
 
-    async for attempt in AsyncRetrying(
+    async_retrying = _tenacity_module.AsyncRetrying
+    stop_after_attempt = _tenacity_module.stop_after_attempt
+    wait_exponential = _tenacity_module.wait_exponential
+    retry_if_exception_type = _tenacity_module.retry_if_exception_type
+
+    async for attempt in async_retrying(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=0.2, min=0.2, max=3),
         retry=retry_if_exception_type(Exception),
@@ -2120,7 +2130,8 @@ async def _retry_async(func: Callable[..., Awaitable[Any]], *args: Any, **kwargs
     ):
         with attempt:
             return await func(*args, **kwargs)
-    return await func(*args, **kwargs)
+    msg = "retry flow exited without executing target function"
+    raise RuntimeError(msg)
 
 
 def _is_select_only_sql(sql: str) -> bool:

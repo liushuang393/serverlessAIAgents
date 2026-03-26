@@ -44,7 +44,7 @@ class PredictionReviewOutput(BaseModel):
 
     reviews: list[PredictionReviewSchema] = Field(default_factory=list)
     total_reviewed: int = 0
-    accuracy_stats: dict = Field(default_factory=dict)
+    accuracy_stats: dict[str, Any] = Field(default_factory=dict)
 
 
 # ============================================================

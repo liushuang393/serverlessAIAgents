@@ -12,3 +12,8 @@
 ## Architecture Review
 
 - [Architecture Review Pack](architecture_review/README.md)
+
+## Web Intelligence
+
+- [Web Intelligence Architecture](web_intelligence_architecture.md)
+- [Web Intelligence Setup](web_intelligence_setup.md)

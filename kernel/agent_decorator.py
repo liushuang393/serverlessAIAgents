@@ -51,6 +51,7 @@ from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel
 
+
 # グローバルロガー
 _logger = logging.getLogger(__name__)
 

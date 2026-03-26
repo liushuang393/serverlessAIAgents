@@ -11,6 +11,8 @@ CapabilitySpec を使うと app_config.json で能力を 3 層構造で宣言で
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -59,7 +61,7 @@ class CapabilitySpec(BaseModel):
 
     @field_validator("actions", "artifacts", mode="before")
     @classmethod
-    def normalize_string_list(cls, v: list[str]) -> list[str]:
+    def normalize_string_list(cls, v: Any) -> Any:
         """文字列リストを小文字・trim 正規化し、空要素を除去する."""
         if not isinstance(v, list):
             return v  # Pydantic のデフォルトバリデーションに委譲

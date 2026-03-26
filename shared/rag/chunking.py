@@ -255,10 +255,10 @@ class SemanticChunker(BaseChunker):
 
         try:
             # 埋め込みを取得
-            from infrastructure.llm.providers import get_embedding
+            from infrastructure.embeddings.provider import get_embedding
 
             embedding_provider = get_embedding()
-            embeddings = await embedding_provider.embed_batch(sentences)
+            embeddings = await embedding_provider.embed_documents(sentences)
 
             # 類似度に基づいてグループ化
             groups = self._group_by_similarity(sentences, embeddings)

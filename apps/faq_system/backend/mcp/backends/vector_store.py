@@ -152,4 +152,3 @@ class VectorStoreBackend(RetrievalBackend):
                 )
             )
         return documents
-

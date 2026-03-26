@@ -29,11 +29,11 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from contracts.tool import ToolCallStatus
 from contracts.tool import ToolResult as ContractToolResult
 from infrastructure.providers.tool_provider import RegisteredTool, ToolProvider
 
@@ -50,10 +50,7 @@ def _lazy_harness() -> tuple[Any, Any, Any, Any]:
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from harness.approval.types import ApprovalRequest
     from harness.governance import (
-        GovernanceDecision,
-        GovernanceEngine,
         GovernanceResult,
         ToolExecutionContext,
     )
@@ -62,17 +59,6 @@ if TYPE_CHECKING:
 # =============================================================================
 # 標準化データモデル（OpenAI Function Calling 互換）
 # =============================================================================
-
-
-class ToolCallStatus(str, Enum):
-    """ツール呼び出しステータス."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCESS = "success"
-    FAILED = "failed"
-    TIMEOUT = "timeout"
-    FALLBACK = "fallback"  # フォールバックツールで成功
 
 
 class ToolCall(BaseModel):
@@ -103,17 +89,8 @@ class FunctionCall(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict, description="引数")
 
 
-class ToolResult(ContractToolResult):
-    """ツール実行結果（OpenAI互換）.
-
-    OpenAI tool message 形式と互換。
-
-    Attributes:
-        tool_call_id: 対応する ToolCall.id
-        role: 常に "tool"
-        content: 実行結果（文字列またはJSON）
-        name: ツール名
-    """
+# 後方互換エイリアス: ContractToolResult をそのまま使用
+ToolResult = ContractToolResult
 
 
 class BatchResult(BaseModel):
@@ -340,7 +317,7 @@ class ToolExecutor:
         default_timeout: float = 30.0,
         on_tool_start: Callable[[ToolCall], None] | None = None,
         on_tool_complete: Callable[[ToolResult], None] | None = None,
-        governance_engine: GovernanceEngine | None = None,
+        governance_engine: Any | None = None,
     ) -> None:
         """初期化.
 
@@ -360,7 +337,11 @@ class ToolExecutor:
         self._default_timeout = default_timeout
         self._on_start = on_tool_start
         self._on_complete = on_tool_complete
-        self._governance = governance_engine or GovernanceEngine()
+        if governance_engine is None:
+            _, _, _, governance_engine_cls = _lazy_harness()
+            self._governance = governance_engine_cls()
+        else:
+            self._governance = governance_engine
         self._logger = logging.getLogger(__name__)
 
         # 実行統計
@@ -538,8 +519,9 @@ class ToolExecutor:
             dict(arguments),
             execution_context,
         )
+        _, _, governance_decision_cls, _ = _lazy_harness()
 
-        if governance_result.decision == GovernanceDecision.DENY:
+        if governance_result.decision == governance_decision_cls.DENY:
             execution_time = (time.time() - start_time) * 1000
             self._stats["failed_calls"] += 1
             self._stats["total_time_ms"] += execution_time
@@ -561,7 +543,7 @@ class ToolExecutor:
                 self._on_complete(result)
             return result
 
-        if governance_result.decision == GovernanceDecision.APPROVAL_REQUIRED:
+        if governance_result.decision == governance_decision_cls.APPROVAL_REQUIRED:
             await self._interrupt_for_approval(
                 tool_info,
                 tool_call,
@@ -659,7 +641,8 @@ class ToolExecutor:
         """承認が必要な場合に割り込みを発火."""
 
         priority = self._approval_priority(tool_info.risk_level.value)
-        request = ApprovalRequest(
+        interrupt, approval_request_cls, _, _ = _lazy_harness()
+        request = approval_request_cls(
             action=tool_info.name,
             resource_id=None,
             resource_type=None,

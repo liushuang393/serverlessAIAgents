@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from kernel import get_llm
+from infrastructure.providers.llm_provider import LLMProvider, get_llm
 from kernel.agents.resilient_agent import ResilientAgent
 
 
@@ -136,7 +136,7 @@ DEFAULT_COMPETITOR_ALIASES: dict[str, list[str]] = {
 }
 
 
-class CompetitorTrackingAgent(ResilientAgent):
+class CompetitorTrackingAgent(ResilientAgent[Any, Any]):
     """競合追跡エージェント.
 
     - 競合企業の動向追跡
@@ -149,14 +149,14 @@ class CompetitorTrackingAgent(ResilientAgent):
     def __init__(
         self,
         *,
-        llm: Any | None = None,
+        llm: LLMProvider | None = None,
         competitors: list[str] | None = None,
         competitor_aliases: dict[str, list[str]] | None = None,
     ) -> None:
         """初期化."""
         super().__init__()
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._llm = llm
+        self._llm: LLMProvider | None = llm
         self._competitors = competitors or DEFAULT_COMPETITORS
         self._competitor_aliases = self._build_default_aliases(self._competitors)
         if competitor_aliases:
@@ -175,7 +175,7 @@ class CompetitorTrackingAgent(ResilientAgent):
         """入力をそのまま返す."""
         return input_data
 
-    def _get_llm(self) -> Any:
+    def _get_llm(self) -> LLMProvider:
         """LLMインスタンスを取得."""
         if self._llm is None:
             self._llm = get_llm(temperature=0.3)
@@ -295,7 +295,7 @@ class CompetitorTrackingAgent(ResilientAgent):
         Returns:
             ポジショニング比較結果
         """
-        positioning = {
+        positioning: dict[str, Any] = {
             "our_strengths": our_strengths,
             "competitors": {},
             "opportunities": [],
@@ -488,9 +488,9 @@ class CompetitorTrackingAgent(ResilientAgent):
                 mentions[competitor].add(alias)
 
         for candidate in self._extract_entity_candidates(article):
-            competitor = self._resolve_competitor(candidate)
-            if competitor:
-                mentions[competitor].add(candidate)
+            resolved_competitor = self._resolve_competitor(candidate)
+            if resolved_competitor:
+                mentions[resolved_competitor].add(candidate)
 
         return mentions
 
@@ -501,7 +501,9 @@ class CompetitorTrackingAgent(ResilientAgent):
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start : end + 1])
+                parsed = json.loads(raw[start : end + 1])
+                if isinstance(parsed, dict):
+                    return parsed
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

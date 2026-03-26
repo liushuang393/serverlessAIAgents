@@ -201,7 +201,7 @@ class AnalyticsResponse(BaseModel):
 # =============================================================================
 
 
-class AnalyticsAgent(ResilientAgent):
+class AnalyticsAgent(ResilientAgent[Any, Any]):
     """分析Agent（語義層 + SQL護欄 + 証拠チェーン + NL2SQL増強）.
 
     特徴:
@@ -798,7 +798,7 @@ SQLクエリのみを出力してください（説明不要）:
     ) -> dict[str, Any]:
         """チャート生成."""
         if not data or len(columns) < 2:
-            return None
+            return {}
 
         # X軸・Y軸を決定
         x_key = columns[0]

@@ -1,4 +1,5 @@
 """kernel/interfaces/tool_provider.py — ツールプロバイダの抽象."""
+
 from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable

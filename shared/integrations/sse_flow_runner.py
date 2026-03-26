@@ -38,9 +38,7 @@ class FlowProtocol(Protocol):
 
     flow_id: str
 
-    def run_with_events(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[tuple[dict[str, Any] | None, Any | None]]:
+    def run_with_events(self, input_data: dict[str, Any]) -> AsyncIterator[tuple[dict[str, Any] | None, Any | None]]:
         """イベント付きでFlowを実行.
 
         Yields:

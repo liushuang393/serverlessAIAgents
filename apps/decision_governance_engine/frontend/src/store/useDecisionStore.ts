@@ -232,7 +232,8 @@ export const useDecisionStore = create<DecisionState>()(
             currentPage: 'report',
           });
         } catch (err) {
-          console.error('Failed to load history report:', err);
+          const message = err instanceof Error ? err.message : '履歴レポートの読み込みに失敗しました';
+          set({ error: message });
         }
       },
 

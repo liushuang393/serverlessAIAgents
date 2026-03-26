@@ -66,7 +66,7 @@ class UnifiedRAGService:
             response = await self.llm.chat(messages=[{"role": "user", "content": prompt}])
             rewritten = response.get("content", query)
             logger.debug("Query rewritten: %s -> %s", query, rewritten)
-            return rewritten.strip()
+            return str(rewritten).strip()
         except Exception as e:
             logger.warning("Query rewriting failed, using original query: %s", e)
             return query
@@ -145,7 +145,7 @@ class UnifiedRAGService:
         response = await self.llm.chat(
             messages=[{"role": "system", "content": final_system_prompt}, {"role": "user", "content": query}]
         )
-        return response.get("content", str(response))
+        return str(response.get("content", str(response)))
 
     async def close(self) -> None:
         """リソースを解放."""

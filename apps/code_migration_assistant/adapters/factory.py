@@ -208,8 +208,10 @@ class AdapterFactory:
             プロンプトテキスト
         """
         config = self.get_migration_config(migration_type)
-        prompts_config = config.get("prompts", {})
-        prompt_file = prompts_config.get(prompt_type, "")
+        prompts_config_raw = config.get("prompts", {})
+        prompts_config = prompts_config_raw if isinstance(prompts_config_raw, dict) else {}
+        prompt_file_value = prompts_config.get(prompt_type, "")
+        prompt_file = str(prompt_file_value) if isinstance(prompt_file_value, str) else ""
 
         if not prompt_file:
             return ""
@@ -217,7 +219,7 @@ class AdapterFactory:
         prompt_path = Path(__file__).parent.parent / "config" / "prompts" / prompt_file
 
         if prompt_path.exists():
-            return prompt_path.read_text(encoding="utf-8")
+            return str(prompt_path.read_text(encoding="utf-8"))
 
         return ""
 

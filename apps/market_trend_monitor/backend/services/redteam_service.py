@@ -216,7 +216,7 @@ class RedTeamService:
 
         valid_count = sum(1 for r in results if r.is_valid)
 
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for c in challenges:
             t = c.challenge_type.value
             type_counts[t] = type_counts.get(t, 0) + 1

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from threading import Lock
 from typing import TYPE_CHECKING, Any
 
+from kernel.agents.agent_block import AgentBlock
 from kernel.agents.resilient_agent import ResilientAgent
 from kernel.protocols.a2a_hub import LocalA2AHub, get_hub
 
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_TYPE = "specialist"
+AgentInstance = ResilientAgent[Any, Any] | AgentBlock
 
 
 @dataclass(slots=True)
@@ -241,7 +243,7 @@ class AgentFactory:
         llm_client: Any = None,
         init_kwargs: dict[str, Any] | None = None,
         hub: LocalA2AHub | None = None,
-    ) -> ResilientAgent[Any, Any]:
+    ) -> AgentInstance:
         """モジュールパスから Agent を検出・インスタンス化.
 
         検出優先順位:
@@ -265,8 +267,6 @@ class AgentFactory:
         Raises:
             AgentInstantiationError: インスタンス化に失敗した場合
         """
-        from kernel.agents.agent_block import AgentBlock
-
         target_hub = hub or get_hub()
 
         try:
@@ -309,7 +309,12 @@ class AgentFactory:
 
         # @agent デコレータ経由の場合: RegisteredAgent から直接インスタンスを取得
         if agent_cls is None and decorated_cls is not None:
-            registered: RegisteredAgent = decorated_cls._agent_registered  # type: ignore[union-attr]
+            registered_obj = getattr(decorated_cls, "_agent_registered", None)
+            if registered_obj is None:
+                msg = f"Decorator registration metadata is missing for {module_path}"
+                msg = "(decorated)"
+                raise AgentInstantiationError(msg, module_path, ValueError(msg))
+            registered: RegisteredAgent = registered_obj
             try:
                 instance = registered.get_instance()
             except Exception as e:
@@ -317,6 +322,9 @@ class AgentFactory:
             if instance is None:
                 msg = f"RegisteredAgent.get_instance() returned None for {registered.name}"
                 raise AgentInstantiationError(registered.name, module_path, ValueError(msg))
+            if not isinstance(instance, (ResilientAgent, AgentBlock)):
+                msg = f"RegisteredAgent.get_instance() returned unsupported type: {type(instance).__name__}"
+                raise AgentInstantiationError(registered.name, module_path, TypeError(msg))
 
             # Hub に登録（既に登録済みの場合はスキップ）
             agent_name = registered.name
@@ -357,6 +365,9 @@ class AgentFactory:
             target_hub.register(instance)
             _logger.info("Agent auto-registered: %s from %s", agent_name, module_path)
 
+        if not isinstance(instance, (ResilientAgent, AgentBlock)):
+            msg = f"Instantiated object is not an agent: {type(instance).__name__}"
+            raise AgentInstantiationError(cls_name, module_path, TypeError(msg))
         return instance
 
     @staticmethod
@@ -366,7 +377,7 @@ class AgentFactory:
         llm_client: Any = None,
         hub: LocalA2AHub | None = None,
         agent_init_overrides: dict[str, dict[str, Any]] | None = None,
-    ) -> dict[str, ResilientAgent[Any, Any]]:
+    ) -> dict[str, AgentInstance]:
         """app_config.json の agents[] から全 Agent をインスタンス化.
 
         Args:
@@ -387,7 +398,7 @@ class AgentFactory:
         raw = json.loads(config_path.read_text("utf-8"))
         agents_config: list[dict[str, Any]] = raw.get("agents", [])
 
-        result: dict[str, ResilientAgent[Any, Any]] = {}
+        result: dict[str, AgentInstance] = {}
         errors: list[str] = []
 
         for agent_entry in agents_config:

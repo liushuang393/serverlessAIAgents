@@ -31,43 +31,70 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
 
+from contracts.tool import ToolCallStatus
 from contracts.tool import ToolResult as ContractToolResult
 from infrastructure.sandbox.tool_provider import RegisteredTool, ToolProvider
-
-
-_governance_module = importlib.import_module("harness.governance")
-GovernanceDecision = _governance_module.GovernanceDecision
-GovernanceEngine = _governance_module.GovernanceEngine
-GovernanceResult = _governance_module.GovernanceResult
-ToolExecutionContext = _governance_module.ToolExecutionContext
-
-_hitl_module = importlib.import_module("harness.approval.interrupt")
-interrupt = _hitl_module.interrupt
-ApprovalRequest = importlib.import_module("harness.approval.types").ApprovalRequest
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+_governance_module = importlib.import_module("harness.governance")
+_approval_interrupt_module = importlib.import_module("harness.approval.interrupt")
+_approval_types_module = importlib.import_module("harness.approval.types")
+
+
+class _GovernanceDecisionValue(str, Enum):
+    """ガバナンス判定値."""
+
+    ALLOW = "allow"
+    DENY = "deny"
+    APPROVAL_REQUIRED = "approval_required"
+
+
+class _ToolExecutionContextLike(Protocol):
+    """実行コンテキストの最小契約."""
+
+    flow_id: str | None
+
+
+class _GovernanceResultLike(Protocol):
+    """ガバナンス結果の最小契約."""
+
+    decision: Any
+    reason: str
+    warnings: list[str]
+    plugin_id: str | None
+    plugin_version: str | None
+    plugin_risk_tier: str | None
+
+
+class _GovernanceEngineLike(Protocol):
+    """ガバナンスエンジンの最小契約."""
+
+    async def evaluate_tool(
+        self,
+        tool: RegisteredTool,
+        tool_call_id: str | None,
+        arguments: dict[str, Any],
+        context: _ToolExecutionContextLike | None = None,
+    ) -> _GovernanceResultLike: ...
+
+
+def _decision_value(decision: Any) -> str:
+    """ガバナンス判定値を文字列化する."""
+    value = getattr(decision, "value", decision)
+    return str(value)
+
+
 # =============================================================================
 # 標準化データモデル（OpenAI Function Calling 互換）
 # =============================================================================
-
-
-class ToolCallStatus(str, Enum):
-    """ツール呼び出しステータス."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    SUCCESS = "success"
-    FAILED = "failed"
-    TIMEOUT = "timeout"
-    FALLBACK = "fallback"  # フォールバックツールで成功
 
 
 class ToolCall(BaseModel):
@@ -98,17 +125,8 @@ class FunctionCall(BaseModel):
     arguments: dict[str, Any] = Field(default_factory=dict, description="引数")
 
 
-class ToolResult(ContractToolResult):
-    """ツール実行結果（OpenAI互換）.
-
-    OpenAI tool message 形式と互換。
-
-    Attributes:
-        tool_call_id: 対応する ToolCall.id
-        role: 常に "tool"
-        content: 実行結果（文字列またはJSON）
-        name: ツール名
-    """
+# 後方互換エイリアス: ContractToolResult をそのまま使用
+ToolResult = ContractToolResult
 
 
 class BatchResult(BaseModel):
@@ -335,7 +353,7 @@ class ToolExecutor:
         default_timeout: float = 30.0,
         on_tool_start: Callable[[ToolCall], None] | None = None,
         on_tool_complete: Callable[[ToolResult], None] | None = None,
-        governance_engine: GovernanceEngine | None = None,
+        governance_engine: _GovernanceEngineLike | None = None,
     ) -> None:
         """初期化.
 
@@ -355,7 +373,7 @@ class ToolExecutor:
         self._default_timeout = default_timeout
         self._on_start = on_tool_start
         self._on_complete = on_tool_complete
-        self._governance = governance_engine or GovernanceEngine()
+        self._governance = governance_engine or _governance_module.GovernanceEngine()
         self._logger = logging.getLogger(__name__)
 
         # 実行統計
@@ -371,7 +389,7 @@ class ToolExecutor:
         self,
         tool_call: ToolCall,
         timeout: float | None = None,
-        execution_context: ToolExecutionContext | None = None,
+        execution_context: _ToolExecutionContextLike | None = None,
     ) -> ToolResult:
         """単一ツールを実行."""
         return await self._execute_single(
@@ -385,7 +403,7 @@ class ToolExecutor:
         self,
         tool_call: ToolCall,
         timeout: float | None = None,
-        execution_context: ToolExecutionContext | None = None,
+        execution_context: _ToolExecutionContextLike | None = None,
     ) -> ToolResult:
         """フォールバック付きで単一ツールを実行."""
         return await self._execute_single(
@@ -400,7 +418,7 @@ class ToolExecutor:
         tool_calls: list[ToolCall],
         timeout: float | None = None,
         enable_fallback: bool = True,
-        execution_context: ToolExecutionContext | None = None,
+        execution_context: _ToolExecutionContextLike | None = None,
     ) -> BatchResult:
         """複数ツールを並行実行（OpenAI parallel function calling 互換）."""
         if not tool_calls:
@@ -469,7 +487,7 @@ class ToolExecutor:
         tool_call: ToolCall,
         timeout: float,
         enable_fallback: bool,
-        execution_context: ToolExecutionContext | None = None,
+        execution_context: _ToolExecutionContextLike | None = None,
     ) -> ToolResult:
         """単一ツールを実行（内部）."""
         start_time = time.time()
@@ -506,7 +524,9 @@ class ToolExecutor:
             execution_context,
         )
 
-        if governance_result.decision == GovernanceDecision.DENY:
+        decision_value = _decision_value(governance_result.decision)
+
+        if decision_value == _GovernanceDecisionValue.DENY.value:
             execution_time = (time.time() - start_time) * 1000
             self._stats["failed_calls"] += 1
             self._stats["total_time_ms"] += execution_time
@@ -528,7 +548,7 @@ class ToolExecutor:
                 self._on_complete(result)
             return result
 
-        if governance_result.decision == GovernanceDecision.APPROVAL_REQUIRED:
+        if decision_value == _GovernanceDecisionValue.APPROVAL_REQUIRED.value:
             await self._interrupt_for_approval(
                 tool_info,
                 tool_call,
@@ -620,13 +640,13 @@ class ToolExecutor:
         self,
         tool_info: RegisteredTool,
         tool_call: ToolCall,
-        execution_context: ToolExecutionContext | None,
-        governance_result: GovernanceResult | None = None,
+        execution_context: _ToolExecutionContextLike | None,
+        governance_result: _GovernanceResultLike | None = None,
     ) -> None:
         """承認が必要な場合に割り込みを発火."""
 
         priority = self._approval_priority(tool_info.risk_level.value)
-        request = ApprovalRequest(
+        request = _approval_types_module.ApprovalRequest(
             action=tool_info.name,
             resource_id=None,
             resource_type=None,
@@ -651,7 +671,7 @@ class ToolExecutor:
         )
 
         flow_id = execution_context.flow_id if execution_context else None
-        _ = await interrupt(
+        _ = await _approval_interrupt_module.interrupt(
             request,
             flow_id=flow_id,
             state={

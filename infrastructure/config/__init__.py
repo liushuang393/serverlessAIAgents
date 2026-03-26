@@ -21,8 +21,8 @@ def resolve_settings(context: RuntimeContext | None = None) -> AgentFlowSettings
     This is the infrastructure-layer equivalent of kernel.runtime.resolve_settings,
     safe for use within infrastructure/ without crossing the layer boundary.
     """
-    if context is not None and context.settings is not None:
-        return context.settings  # type: ignore[return-value]
+    if context is not None and isinstance(context.settings, AgentFlowSettings):
+        return context.settings
     return get_settings()
 
 

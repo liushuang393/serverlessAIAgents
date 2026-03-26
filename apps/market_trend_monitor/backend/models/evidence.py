@@ -129,10 +129,10 @@ class EvidenceSchema(BaseModel):
     url: str
     title: str
     content_hash: str
-    extracted_data: dict = Field(default_factory=dict)
+    extracted_data: dict[str, object] = Field(default_factory=dict)
     collected_at: str
     reliability_score: float = 0.5
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class ClaimSchema(BaseModel):
@@ -146,4 +146,4 @@ class ClaimSchema(BaseModel):
     counter_evidence_ids: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)

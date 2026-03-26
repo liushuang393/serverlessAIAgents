@@ -127,6 +127,15 @@ class AgentRegistry:
             msg = "AgentRegistry not initialized. Call initialize() first."
             raise RuntimeError(msg)
 
+    def _get_flow_definition(self) -> FlowDefinition:
+        """初期化済みの FlowDefinition を返す."""
+        self._ensure_initialized()
+        flow_definition = self._flow_definition
+        if flow_definition is None:
+            msg = "FlowDefinition is not initialized."
+            raise RuntimeError(msg)
+        return flow_definition
+
     def _create_agent(self, agent_def: AgentDefinition) -> Any:
         """Agentインスタンスを生成.
 
@@ -172,13 +181,13 @@ class AgentRegistry:
         Raises:
             ValueError: Agent IDが見つからない場合
         """
-        self._ensure_initialized()
+        flow_definition = self._get_flow_definition()
 
         if agent_id in self._agents:
             return self._agents[agent_id]
 
         # 定義から検索
-        agent_def = self._flow_definition.get_agent(agent_id)
+        agent_def = flow_definition.get_agent(agent_id)
         if not agent_def:
             msg = f"Agent not found: {agent_id}"
             raise ValueError(msg)
@@ -203,9 +212,9 @@ class AgentRegistry:
         Returns:
             Agent ID -> インスタンス の辞書
         """
-        self._ensure_initialized()
+        flow_definition = self._get_flow_definition()
 
-        for agent_def in self._flow_definition.agents:
+        for agent_def in flow_definition.agents:
             if agent_def.id not in self._agents:
                 self._agents[agent_def.id] = self._create_agent(agent_def)
 
@@ -217,10 +226,10 @@ class AgentRegistry:
         Returns:
             Agent インスタンスリスト（順序付き）
         """
-        self._ensure_initialized()
+        flow_definition = self._get_flow_definition()
 
         agents = []
-        for agent_def in self._flow_definition.agents:
+        for agent_def in flow_definition.agents:
             agents.append(self.get_agent(agent_def.id))
         return agents
 
@@ -230,8 +239,8 @@ class AgentRegistry:
         Returns:
             Agent ID リスト
         """
-        self._ensure_initialized()
-        return self._flow_definition.get_agent_ids()
+        agent_ids = self._get_flow_definition().get_agent_ids()
+        return [str(agent_id) for agent_id in agent_ids]
 
     def get_agent_definition(self, agent_id: str) -> AgentDefinition | None:
         """Agent定義を取得.
@@ -242,8 +251,7 @@ class AgentRegistry:
         Returns:
             AgentDefinition または None
         """
-        self._ensure_initialized()
-        return self._flow_definition.get_agent(agent_id)
+        return self._get_flow_definition().get_agent(agent_id)
 
     def get_agent_definitions(self) -> list[AgentDefinition]:
         """全Agent定義リストを取得.
@@ -251,8 +259,7 @@ class AgentRegistry:
         Returns:
             AgentDefinition リスト
         """
-        self._ensure_initialized()
-        return list(self._flow_definition.agents)
+        return list(self._get_flow_definition().agents)
 
     def get_agent_metas(self) -> list[AgentMeta]:
         """ProgressEmitter用のAgentMetaリストを取得.
@@ -260,7 +267,7 @@ class AgentRegistry:
         Returns:
             AgentMeta リスト（順序付き）
         """
-        self._ensure_initialized()
+        flow_definition = self._get_flow_definition()
         return [
             AgentMeta(
                 id=agent_def.id,
@@ -268,7 +275,7 @@ class AgentRegistry:
                 label=agent_def.label,
                 icon=agent_def.icon,
             )
-            for agent_def in self._flow_definition.agents
+            for agent_def in flow_definition.agents
         ]
 
     def get_frontend_definitions(self) -> dict[str, Any]:
@@ -279,8 +286,7 @@ class AgentRegistry:
         Returns:
             フロントエンド用辞書
         """
-        self._ensure_initialized()
-        return self._flow_definition.to_frontend_dict()
+        return self._get_flow_definition().to_frontend_dict()
 
     def get_flow_definition(self) -> FlowDefinition:
         """FlowDefinition を取得.
@@ -288,20 +294,17 @@ class AgentRegistry:
         Returns:
             FlowDefinition インスタンス
         """
-        self._ensure_initialized()
-        return self._flow_definition
+        return self._get_flow_definition()
 
     @property
     def flow_id(self) -> str:
         """Flow IDを取得."""
-        self._ensure_initialized()
-        return self._flow_definition.flow_id
+        return str(self._get_flow_definition().flow_id)
 
     @property
     def total_agents(self) -> int:
         """Agent総数を取得."""
-        self._ensure_initialized()
-        return len(self._flow_definition.agents)
+        return len(self._get_flow_definition().agents)
 
     def get_gate_agents(self) -> list[AgentDefinition]:
         """ゲートAgent（is_gate=True）のリストを取得.
@@ -309,8 +312,7 @@ class AgentRegistry:
         Returns:
             ゲートAgent定義リスト
         """
-        self._ensure_initialized()
-        return [a for a in self._flow_definition.agents if a.is_gate]
+        return [a for a in self._get_flow_definition().agents if a.is_gate]
 
     def get_rag_agents(self) -> list[AgentDefinition]:
         """RAG使用Agent（uses_rag=True）のリストを取得.
@@ -318,8 +320,7 @@ class AgentRegistry:
         Returns:
             RAG使用Agent定義リスト
         """
-        self._ensure_initialized()
-        return [a for a in self._flow_definition.agents if a.uses_rag]
+        return [a for a in self._get_flow_definition().agents if a.uses_rag]
 
     async def initialize_rag_agents(self) -> None:
         """RAG使用Agentを初期化.
@@ -354,10 +355,8 @@ class AgentRegistry:
         Returns:
             Agent名マッピング
         """
-        self._ensure_initialized()
-        return {
-            agent_def.class_name: agent_def.id for agent_def in self._flow_definition.agents if agent_def.class_name
-        }
+        flow_definition = self._get_flow_definition()
+        return {agent_def.class_name: agent_def.id for agent_def in flow_definition.agents if agent_def.class_name}
 
     @staticmethod
     def load_definitions_static() -> dict[str, Any]:

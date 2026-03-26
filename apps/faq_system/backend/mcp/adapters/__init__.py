@@ -10,5 +10,5 @@ RetrievalBackend として統合するためのアダプターを提供。
 
 from apps.faq_system.backend.mcp.adapters.base import ThirdPartyAdapter
 
-__all__ = ["ThirdPartyAdapter"]
 
+__all__ = ["ThirdPartyAdapter"]

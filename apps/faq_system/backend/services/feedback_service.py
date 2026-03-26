@@ -31,6 +31,14 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _feedback_sort_key(item: dict[str, Any]) -> float:
+    """有用率ソート用のキーを返す."""
+    helpful_rate = item.get("helpful_rate")
+    if isinstance(helpful_rate, int | float):
+        return float(helpful_rate)
+    return 0.0
+
+
 class FeedbackType(str, Enum):
     """フィードバックタイプ."""
 
@@ -508,7 +516,7 @@ class FeedbackService:
                 )
 
         # 有用率昇順
-        results.sort(key=lambda x: x["helpful_rate"])
+        results.sort(key=_feedback_sort_key)
 
         return results
 

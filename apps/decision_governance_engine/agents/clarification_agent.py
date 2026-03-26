@@ -6,7 +6,7 @@
 
 import json
 import logging
-from typing import Any
+from typing import Any, TypedDict
 
 from apps.decision_governance_engine.schemas.agent_schemas import (
     Ambiguity,
@@ -16,6 +16,14 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     HiddenAssumption,
 )
 from kernel import ResilientAgent
+
+
+class CognitiveBiasPattern(TypedDict):
+    """認知バイアス辞書の型."""
+
+    keywords: list[str]
+    name: str
+    description: str
 
 
 class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]):
@@ -48,42 +56,42 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         self._logger = logging.getLogger(self.name)
 
     # 認知バイアスパターン
-    COGNITIVE_BIAS_PATTERNS: dict[str, dict[str, str]] = {
-        "sunk_cost": {
-            "keywords": ["既に", "投資した", "使った", "続けてきた"],
-            "name": "サンクコスト（埋没費用）",
-            "description": "過去の投資にこだわり、将来の判断を歪める傾向",
-        },
-        "confirmation": {
-            "keywords": ["思う", "信じる", "確信", "きっと"],
-            "name": "確証バイアス",
-            "description": "自分の信念を裏付ける情報だけを集める傾向",
-        },
-        "anchoring": {
-            "keywords": ["最初に", "当初", "元々", "基準"],
-            "name": "アンカリング",
-            "description": "最初に得た情報に過度に依存する傾向",
-        },
-        "availability": {
-            "keywords": ["最近", "先日", "この前", "よく聞く"],
-            "name": "可用性ヒューリスティック",
-            "description": "思い出しやすい事例を過大評価する傾向",
-        },
-        "optimism": {
-            "keywords": ["うまくいく", "成功する", "問題ない", "大丈夫"],
-            "name": "楽観バイアス",
-            "description": "リスクを過小評価し、成功を過大評価する傾向",
-        },
-        "status_quo": {
-            "keywords": ["今のまま", "変えたくない", "現状", "維持"],
-            "name": "現状維持バイアス",
-            "description": "変化を避け、現状を維持しようとする傾向",
-        },
-        "dichotomy": {
-            "keywords": ["AかBか", "どちらか", "二択", "しかない"],
-            "name": "二分法的思考",
-            "description": "複雑な問題を二者択一に単純化する傾向",
-        },
+    COGNITIVE_BIAS_PATTERNS: dict[str, CognitiveBiasPattern] = {
+        "sunk_cost": CognitiveBiasPattern(
+            keywords=["既に", "投資した", "使った", "続けてきた"],
+            name="サンクコスト（埋没費用）",
+            description="過去の投資にこだわり、将来の判断を歪める傾向",
+        ),
+        "confirmation": CognitiveBiasPattern(
+            keywords=["思う", "信じる", "確信", "きっと"],
+            name="確証バイアス",
+            description="自分の信念を裏付ける情報だけを集める傾向",
+        ),
+        "anchoring": CognitiveBiasPattern(
+            keywords=["最初に", "当初", "元々", "基準"],
+            name="アンカリング",
+            description="最初に得た情報に過度に依存する傾向",
+        ),
+        "availability": CognitiveBiasPattern(
+            keywords=["最近", "先日", "この前", "よく聞く"],
+            name="可用性ヒューリスティック",
+            description="思い出しやすい事例を過大評価する傾向",
+        ),
+        "optimism": CognitiveBiasPattern(
+            keywords=["うまくいく", "成功する", "問題ない", "大丈夫"],
+            name="楽観バイアス",
+            description="リスクを過小評価し、成功を過大評価する傾向",
+        ),
+        "status_quo": CognitiveBiasPattern(
+            keywords=["今のまま", "変えたくない", "現状", "維持"],
+            name="現状維持バイアス",
+            description="変化を避け、現状を維持しようとする傾向",
+        ),
+        "dichotomy": CognitiveBiasPattern(
+            keywords=["AかBか", "どちらか", "二択", "しかない"],
+            name="二分法的思考",
+            description="複雑な問題を二者択一に単純化する傾向",
+        ),
     }
 
     # 曖昧さパターン

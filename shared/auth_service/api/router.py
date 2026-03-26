@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode, urlparse
 
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
@@ -48,6 +48,10 @@ from shared.auth_service.config import get_settings
 from shared.auth_service.service import AuthService, get_auth_service
 
 
+if TYPE_CHECKING:
+    from shared.auth_service.providers.base import ExternalIdentity
+
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["認証"])
@@ -60,7 +64,7 @@ def _service() -> AuthService:
 
 
 def _session_ttl() -> int:
-    return get_settings().SESSION_TTL_SECONDS
+    return int(get_settings().SESSION_TTL_SECONDS)
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +131,15 @@ async def register(req: RegisterRequest, response: Response) -> AuthResponse:
 
     if not success or user is None or token_pair is None:
         logger.warning("登録失敗: username=%s, reason=%s", req.username, message)
-        return AuthResponse(success=False, message=message)
+        return AuthResponse(
+            success=False,
+            message=message,
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
 
     session_token = await svc.create_session(user)
     _set_session_cookie(response, session_token)
@@ -160,10 +172,26 @@ async def login(req: LoginRequest, response: Response) -> AuthResponse:
     if not success or user is None or token_pair is None:
         if message == "MFA_REQUIRED":
             logger.info("MFA 必須: username=%s", req.username)
-            return AuthResponse(success=False, message="MFA_REQUIRED")
+            return AuthResponse(
+                success=False,
+                message="MFA_REQUIRED",
+                user=None,
+                access_token=None,
+                refresh_token=None,
+                token_type="bearer",
+                expires_in=None,
+            )
 
         logger.warning("ログイン失敗: username=%s, reason=%s", req.username, message)
-        return AuthResponse(success=False, message=message)
+        return AuthResponse(
+            success=False,
+            message=message,
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
 
     session_token = await svc.create_session(user)
     _set_session_cookie(response, session_token)
@@ -328,8 +356,24 @@ async def logout(
 async def get_me(user: UserInfo | None = Depends(get_current_user)) -> AuthResponse:
     """現在のユーザー情報を取得."""
     if user is None:
-        return AuthResponse(success=False, message="未認証")
-    return AuthResponse(success=True, message="認証済み", user=user)
+        return AuthResponse(
+            success=False,
+            message="未認証",
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
+    return AuthResponse(
+        success=True,
+        message="認証済み",
+        user=user,
+        access_token=None,
+        refresh_token=None,
+        token_type="bearer",
+        expires_in=None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -404,7 +448,15 @@ async def update_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="ユーザーが見つかりません",
         )
-    return AuthResponse(success=True, message="プロフィールを更新しました", user=updated)
+    return AuthResponse(
+        success=True,
+        message="プロフィールを更新しました",
+        user=updated,
+        access_token=None,
+        refresh_token=None,
+        token_type="bearer",
+        expires_in=None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -455,13 +507,13 @@ async def oauth2_authorize(provider: str) -> dict[str, str]:
     if provider == "google":
         from shared.auth_service.providers.google import GoogleOAuth2Provider
 
-        p = GoogleOAuth2Provider(settings=settings)
-        url = p.get_authorization_url(state)
+        google_provider = GoogleOAuth2Provider(settings=settings)
+        url = google_provider.get_authorization_url(state)
     elif provider in {"azure_ad", "microsoft"}:
         from shared.auth_service.providers.azure_ad import AzureADProvider
 
-        p = AzureADProvider(settings=settings)
-        url = p.get_authorization_url(state)
+        azure_provider = AzureADProvider(settings=settings)
+        url = azure_provider.get_authorization_url(state)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -490,27 +542,30 @@ async def oauth2_callback(
     code: str,
     state: str | None = None,
     redirect_uri: str | None = None,
-    response: Response = Response(),  # type: ignore[assignment]
+    response: Response | None = None,
 ) -> AuthResponse | Response:
     """OAuth2 コールバック処理.
 
     redirect_uri が指定されている場合、認証成功後にそのURLへ
     トークンを付与してリダイレクトする（SSO フロー）。
     """
+    if response is None:
+        response = Response()
+
     settings = get_settings()
-    identity = None
+    identity: ExternalIdentity | None = None
 
     if provider == "google":
         from shared.auth_service.providers.google import GoogleOAuth2Provider
 
-        p = GoogleOAuth2Provider(settings=settings)
-        identity = await p.exchange_code(code)
+        google_provider = GoogleOAuth2Provider(settings=settings)
+        identity = await google_provider.exchange_code(code)
     elif provider in {"azure_ad", "microsoft"}:
         from shared.auth_service.providers.azure_ad import AzureADProvider
 
-        p = AzureADProvider(settings=settings)
+        azure_provider = AzureADProvider(settings=settings)
         callback_uri = f"http://localhost:{settings.AUTH_SERVICE_PORT}/auth/oauth2/{provider}/callback"
-        identity = await p.exchange_code(code, callback_uri)
+        identity = await azure_provider.exchange_code(code, callback_uri)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -521,7 +576,15 @@ async def oauth2_callback(
         if redirect_uri and _validate_redirect_uri(redirect_uri):
             error_params = urlencode({"error": "oauth_failed", "message": "OAuth2 認証に失敗しました"})
             return RedirectResponse(url=f"{redirect_uri}?{error_params}", status_code=302)
-        return AuthResponse(success=False, message="OAuth2 認証に失敗しました")
+        return AuthResponse(
+            success=False,
+            message="OAuth2 認証に失敗しました",
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
 
     svc = _service()
     user, token_pair = await svc.login_with_external_identity(
@@ -560,6 +623,7 @@ async def oauth2_callback(
         user=user,
         access_token=token_pair.access_token,
         refresh_token=token_pair.refresh_token,
+        token_type=token_pair.token_type,
         expires_in=token_pair.expires_in,
     )
 
@@ -576,7 +640,8 @@ async def get_jwks() -> dict[str, Any]:
     クライアントがオフラインでトークンを検証するための公開鍵情報を返す。
     HS256 の場合は共有シークレット方式のため鍵メタデータのみを返す。
     """
-    return _service().get_jwks()
+    jwks = _service().get_jwks()
+    return {str(key): value for key, value in jwks.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -597,7 +662,7 @@ async def auth_health() -> dict[str, str]:
 
 def _set_session_cookie(response: Response, session_token: str) -> None:
     """セッション Cookie を設定."""
-    ttl = get_settings().SESSION_TTL_SECONDS
+    ttl = int(get_settings().SESSION_TTL_SECONDS)
     response.set_cookie(
         key=_SESSION_COOKIE_KEY,
         value=session_token,

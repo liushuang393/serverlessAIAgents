@@ -9,20 +9,8 @@ Tests for:
 """
 
 import asyncio
-import importlib.util
 import tempfile
 import unittest
-
-
-def _has_module(name: str) -> bool:
-    """モジュールが存在するか確認するヘルパー."""
-    return importlib.util.find_spec(name) is not None
-
-
-# 未実装モジュールの存在チェック
-_HAS_API_KEY = _has_module("infrastructure.security.api_key")
-_HAS_RATE_LIMITER = _has_module("infrastructure.security.rate_limiter")
-_HAS_RBAC = _has_module("infrastructure.security.rbac")
 
 
 class TestDocumentLoader(unittest.TestCase):
@@ -183,113 +171,6 @@ class TestTracing(unittest.TestCase):
 
         self.assertEqual(span.status, "ok")
         self.assertIsNotNone(span.end_time)
-
-
-@unittest.skipUnless(_HAS_API_KEY, "infrastructure.security.api_key が未実装")
-class TestAPIKeyManager(unittest.TestCase):
-    """API Key マネージャーのテスト."""
-
-    def test_generate_api_key(self):
-        """API Key 生成テスト."""
-        from infrastructure.security.api_key import generate_api_key
-
-        key = generate_api_key()
-        self.assertTrue(key.startswith("sk-"))
-        self.assertGreater(len(key), 10)
-
-    def test_api_key_manager_create_validate(self):
-        """API Key の作成と検証テスト."""
-        from infrastructure.security.api_key import APIKeyManager
-
-        manager = APIKeyManager()
-        raw_key, _api_key = manager.create_key("test-key", scopes=["read", "write"])
-
-        # 検証
-        validated = manager.validate(raw_key)
-        self.assertIsNotNone(validated)
-        self.assertEqual(validated.name, "test-key")
-        self.assertIn("read", validated.scopes)
-
-    def test_api_key_manager_revoke(self):
-        """API Key の無効化テスト."""
-        from infrastructure.security.api_key import APIKeyManager
-
-        manager = APIKeyManager()
-        raw_key, api_key = manager.create_key("test-key")
-
-        # 無効化
-        manager.revoke(api_key.id)
-
-        # 検証失敗
-        validated = manager.validate(raw_key)
-        self.assertIsNone(validated)
-
-
-@unittest.skipUnless(_HAS_RATE_LIMITER, "infrastructure.security.rate_limiter が未実装")
-class TestRateLimiter(unittest.TestCase):
-    """レート制限のテスト."""
-
-    def test_rate_limiter_allow(self):
-        """レート制限（許可）テスト."""
-        from infrastructure.security.rate_limiter import RateLimiter
-
-        limiter = RateLimiter(requests_per_minute=10)
-
-        # 非同期関数を同期的に実行
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(limiter.check("user-1"))
-            self.assertTrue(result)
-        finally:
-            loop.close()
-
-    def test_rate_limiter_deny(self):
-        """レート制限（拒否）テスト."""
-        from infrastructure.security.rate_limiter import RateLimiter
-
-        limiter = RateLimiter(requests_per_minute=2)
-
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            # 2回は許可
-            loop.run_until_complete(limiter.check("user-1"))
-            loop.run_until_complete(limiter.check("user-1"))
-            # 3回目は拒否
-            result = loop.run_until_complete(limiter.check("user-1"))
-            self.assertFalse(result)
-        finally:
-            loop.close()
-
-
-@unittest.skipUnless(_HAS_RBAC, "infrastructure.security.rbac が未実装")
-class TestRBAC(unittest.TestCase):
-    """RBAC のテスト."""
-
-    def test_rbac_default_roles(self):
-        """デフォルトロールテスト."""
-        from infrastructure.security.rbac import RBACManager
-
-        rbac = RBACManager()
-        roles = rbac.list_roles()
-        role_names = [r.name for r in roles]
-
-        self.assertIn("admin", role_names)
-        self.assertIn("user", role_names)
-        self.assertIn("readonly", role_names)
-
-    def test_rbac_permission_check(self):
-        """パーミッションチェックテスト."""
-        from infrastructure.security.rbac import RBACManager
-
-        rbac = RBACManager()
-        rbac.assign_role("user-1", "admin")
-
-        # admin は全権限
-        self.assertTrue(rbac.has_permission("user-1", "anything"))
-        self.assertTrue(rbac.has_permission("user-1", "read"))
-        self.assertTrue(rbac.has_permission("user-1", "write"))
 
 
 class TestMockLLM(unittest.TestCase):

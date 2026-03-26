@@ -206,9 +206,9 @@ class PlanToFlowAdapter:
             for gid in list(remaining):
                 deps = has_internal_dep.get(gid, [])
                 if all(d in resolved for d in deps):
-                    goal = goal_map.get(gid)
-                    if goal is not None:
-                        ready.append(goal)
+                    ready_goal = goal_map.get(gid)
+                    if ready_goal is not None:
+                        ready.append(ready_goal)
 
             if not ready:
                 # 循環依存の検出 - 残りを全て1グループにして続行

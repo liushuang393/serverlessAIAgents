@@ -32,7 +32,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any, Protocol, assert_never, overload
 
 from kernel.agents.registry import Registry
 from kernel.runtime.multi_tenant.manager import get_current_tenant
@@ -225,16 +225,34 @@ class ComponentLibrary(Registry[ComponentEntry]):
         self._logger = logging.getLogger(__name__)
         self._initialized = True
 
-    def register(self, entry: ComponentEntry, *, overwrite: bool = False) -> None:
+    @overload
+    def register(self, name: str, item: ComponentEntry, /) -> None: ...
+
+    @overload
+    def register(self, entry: ComponentEntry, /, *, overwrite: bool = False) -> None: ...
+
+    def register(
+        self,
+        name_or_entry: str | ComponentEntry,
+        item: ComponentEntry | None = None,
+        /,
+        *,
+        overwrite: bool = False,
+    ) -> None:
         """コンポーネントを登録.
 
         Args:
-            entry: コンポーネントエントリ
+            name_or_entry: コンポーネント名またはエントリ
+            item: コンポーネントエントリ
             overwrite: 上書き許可
 
         Raises:
             ValueError: 既に存在し overwrite=False の場合
         """
+        entry = item if isinstance(name_or_entry, str) else name_or_entry
+        if entry is None:
+            msg = "Component entry is required"
+            raise TypeError(msg)
         if entry.id in self and not overwrite:
             msg = f"Component already exists: {entry.id}"
             raise ValueError(msg)
@@ -311,7 +329,7 @@ class ComponentLibrary(Registry[ComponentEntry]):
                 return entry.tenant_id == tenant.tenant_id
             return entry.tenant_id is None
 
-        return False
+        assert_never(entry.visibility)
 
     @staticmethod
     def _matches_query(entry: ComponentEntry, query: str) -> bool:

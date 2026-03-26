@@ -598,7 +598,8 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         """
         ctx = self._a2a_context
         if ctx is not None and hasattr(ctx, "is_cancelled"):
-            return ctx.is_cancelled
+            is_cancelled = ctx.is_cancelled
+            return is_cancelled if isinstance(is_cancelled, bool) else False
         return False
 
     @property
@@ -609,7 +610,8 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         """
         ctx = self._a2a_context
         if ctx is not None and hasattr(ctx, "task_id"):
-            return ctx.task_id
+            task_id = ctx.task_id
+            return task_id if isinstance(task_id, str) else None
         return None
 
     # ========================================

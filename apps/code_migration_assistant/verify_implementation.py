@@ -66,16 +66,11 @@ async def verify_orchestrator() -> bool:
 
     try:
         from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
-        from kernel import MCPToolClient as MCPClient
-
-        # MCPClientテスト
-        client = MCPClient()
-        assert len(client.list_tools()) == 0
-        print("  ✅ MCPClient初期化成功")
 
         # Orchestratorテスト
-        orchestrator = CodeMigrationOrchestrator(client)
-        assert orchestrator.mcp == client
+        orchestrator = CodeMigrationOrchestrator()
+        engine = orchestrator._get_engine()
+        assert engine is not None
         print("  ✅ CodeMigrationOrchestrator初期化成功")
 
         return True
@@ -123,8 +118,9 @@ async def verify_basic_workflow() -> bool:
 
         if response.success:
             print("  ✅ COBOL解析成功")
-            ast = response.output.get("ast")
-            if ast and ast.get("program_id") == "TEST":
+            output = response.output
+            ast = output.get("ast") if isinstance(output, dict) else None
+            if isinstance(ast, dict) and ast.get("program_id") == "TEST":
                 print("  ✅ PROGRAM-ID抽出成功")
             else:
                 print("  ⚠️  PROGRAM-ID抽出に問題あり")

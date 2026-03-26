@@ -49,12 +49,6 @@ class StorageRegistry:
             scheme: URL scheme 名（例: "memory", "redis"）
             backend_cls: BaseStorageBackend のサブクラス
         """
-        if not isinstance(backend_cls, type) or not issubclass(
-            backend_cls,
-            BaseStorageBackend,
-        ):
-            msg = f"backend_cls は BaseStorageBackend のサブクラスである必要があります: {backend_cls}"
-            raise TypeError(msg)
         cls._backends[scheme.lower()] = backend_cls
         logger.info("ストレージバックエンド登録: scheme=%s, cls=%s", scheme, backend_cls.__name__)
 

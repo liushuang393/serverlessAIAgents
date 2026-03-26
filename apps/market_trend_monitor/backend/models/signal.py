@@ -131,4 +131,4 @@ class SignalSchema(BaseModel):
     score: SignalScoreSchema
     grade: str
     evaluated_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)

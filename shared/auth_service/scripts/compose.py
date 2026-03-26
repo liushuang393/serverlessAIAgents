@@ -7,13 +7,52 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Protocol
 
 
-def _resolve_app_runtime_lazy(*args: object, **kwargs: object) -> object:
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+
+class _RuntimeHostsLike(Protocol):
+    @property
+    def backend(self) -> str | None: ...
+
+
+class _RuntimePortsLike(Protocol):
+    @property
+    def api(self) -> int | None: ...
+
+    @property
+    def frontend(self) -> int | None: ...
+
+
+class _ResolvedRuntimeLike(Protocol):
+    @property
+    def hosts(self) -> _RuntimeHostsLike: ...
+
+    @property
+    def ports(self) -> _RuntimePortsLike: ...
+
+
+def _resolve_app_runtime_lazy(
+    config_path: str | Path,
+    *,
+    env: Mapping[str, str] | None = None,
+    backend_host_env: str | None = None,
+    backend_port_env: str | None = None,
+    frontend_port_env: str | None = None,
+) -> _ResolvedRuntimeLike:
     """遅延インポート: kernel.runtime.resolve_app_runtime（L2→L3 違反回避）."""
     from kernel.runtime import resolve_app_runtime as _resolve
 
-    return _resolve(*args, **kwargs)
+    return _resolve(
+        config_path,
+        env=env,
+        backend_host_env=backend_host_env,
+        backend_port_env=backend_port_env,
+        frontend_port_env=frontend_port_env,
+    )
 
 
 APP_DIR = Path(__file__).resolve().parents[1]

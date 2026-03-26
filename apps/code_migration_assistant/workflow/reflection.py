@@ -48,7 +48,7 @@ async def run_reflection_loop(
         if accepted:
             break
 
-        next_feedback = []
+        next_feedback: list[str] = []
         for key in ("feedback", "suggestions"):
             values = evaluation.get(key, [])
             if isinstance(values, list):

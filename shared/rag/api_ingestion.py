@@ -89,11 +89,12 @@ class APIIngestor:
     def _extract_items(self, payload: Any) -> list[dict[str, Any]]:
         """JSON ペイロードからアイテムリストを抽出."""
         if isinstance(payload, list):
-            return payload
+            return [item for item in payload if isinstance(item, dict)]
         if isinstance(payload, dict):
             for key in ("data", "items", "results", "records", "documents"):
-                if isinstance(payload.get(key), list):
-                    return payload[key]
+                maybe_items = payload.get(key)
+                if isinstance(maybe_items, list):
+                    return [item for item in maybe_items if isinstance(item, dict)]
             return [payload]
         return []
 

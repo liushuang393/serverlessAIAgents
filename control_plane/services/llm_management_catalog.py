@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, get_args
+from typing import Any, Literal, get_args
 
 from control_plane.schemas.llm_management_schemas import (
     LLMBackendKind,
@@ -163,7 +163,9 @@ class LLMCatalogService:
         return sorted(models, key=lambda item: (item.provider, item.model))
 
     @staticmethod
-    def _infer_model_type(capabilities: list[str]) -> str:
+    def _infer_model_type(
+        capabilities: list[str],
+    ) -> Literal["text", "embedding", "image", "speech_to_text", "text_to_speech"]:
         if "embedding" in capabilities:
             return "embedding"
         if "image" in capabilities:

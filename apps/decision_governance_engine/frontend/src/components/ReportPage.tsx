@@ -9,6 +9,7 @@
  * - 提案書タイトル（日本語/英語/案件ID）
  * - 署名欄の自動出力
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useCallback, useState, useEffect } from 'react';
 import { useDecisionStore } from '../store/useDecisionStore';
@@ -601,7 +602,7 @@ export const ReportPage: React.FC = () => {
   const canSign = effectiveConfidencePct >= signThresholdPct;
 
   /** チェックポイント項目を反映してスコア自動再計算 */
-  const handleApplyCheckpoints = useCallback(async () => {
+  const handleApplyCheckpoints = async (): Promise<void> => {
     if (!reportId) return;
     const checkpointItems = safeReview.checkpoint_items ?? [];
     const findingItems = safeReview.findings ?? [];
@@ -658,19 +659,7 @@ export const ReportPage: React.FC = () => {
       const message = err instanceof Error ? err.message : 'チェック項目の反映に失敗しました';
       setNotification({ type: 'error', message });
     }
-  }, [
-    checkpointAnnotations,
-    checkpointChecks,
-    humanReviewChecks,
-    humanReviewNotes,
-    report,
-    reportId,
-    requestId,
-    safeReview.checkpoint_items,
-    safeReview.findings,
-    setReportInStore,
-    user?.display_name,
-  ]);
+  };
 
   // レビューが未生成の古いデータでは「未検証」を表示
   const reviewVerdict = review?.overall_verdict;

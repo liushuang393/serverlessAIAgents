@@ -8,17 +8,17 @@ GET /api/studios/framework/publish/stream/{publish_id} - SSE ストリーム
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 from control_plane.engine import PlatformEngine
-from control_plane.schemas.publish_schemas import (
-    PublishRequest,
-    PublishResponse,
-    PublishStatus,
-)
+from control_plane.schemas.publish_schemas import PublishRequest, PublishResponse, PublishStatus
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 router = APIRouter(prefix="/api/studios/framework/publish", tags=["publish"])
@@ -85,7 +85,8 @@ async def deploy_sync(
     Returns:
         発布レスポンス
     """
-    return await engine.publish_sync(request)
+    response = await engine.publish_sync(request)
+    return PublishResponse.model_validate(response)
 
 
 @router.get("/{publish_id}", response_model=PublishResponse)
@@ -108,7 +109,7 @@ async def get_publish_status(
     response = engine.get_publish_status(publish_id)
     if response is None:
         raise HTTPException(status_code=404, detail=f"Publish not found: {publish_id}")
-    return response
+    return PublishResponse.model_validate(response)
 
 
 @router.post("/{publish_id}/cancel")
@@ -152,7 +153,7 @@ async def stream_publish(
     if current is None:
         raise HTTPException(status_code=404, detail=f"Publish not found: {publish_id}")
 
-    async def event_generator():
+    async def event_generator() -> AsyncIterator[str]:
         """SSE イベントジェネレーター."""
         async for event in engine.stream_publish_events(publish_id):
             yield f"event: {event.event_type}\ndata: {event.model_dump_json()}\n\n"

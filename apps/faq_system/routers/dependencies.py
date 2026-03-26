@@ -20,8 +20,9 @@ try:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
 except ImportError:  # pragma: no cover - optional dependency fallback
-    AsyncIOScheduler = Any  # type: ignore[assignment,misc]
+    AsyncIOScheduler = Any
     CronTrigger = None
+from apps.faq_system.backend.agents.faq_agent import FAQAgent, FAQAgentConfig
 from apps.faq_system.backend.config import kb_registry
 from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 from apps.faq_system.backend.services.feedback_service import FeedbackService
@@ -30,7 +31,6 @@ from apps.faq_system.backend.services.rag_runtime_config import (
     RAGRuntimeConfig,
     load_rag_runtime_config,
 )
-from apps.faq_system.backend.agents.faq_agent import FAQAgent, FAQAgentConfig
 from kernel.agents import (
     SalesAgent,
     SalesAgentConfig,
@@ -199,7 +199,11 @@ def get_rag_service(collection: str | None = None) -> RAGService:
                 top_k=runtime_cfg.rag_top_k,
             )
         )
-    return _services[service_key]
+    service = _services.get(service_key)
+    if isinstance(service, RAGService):
+        return service
+    msg = f"RAGService の初期化に失敗しました: {service_key}"
+    raise RuntimeError(msg)
 
 
 def get_sql_service() -> Text2SQLService:
@@ -218,14 +222,22 @@ def get_sql_service() -> Text2SQLService:
                 auto_chart=True,
             )
         )
-    return _services["sql"]
+    service = _services.get("sql")
+    if isinstance(service, Text2SQLService):
+        return service
+    msg = "Text2SQLService の初期化に失敗しました"
+    raise RuntimeError(msg)
 
 
 def get_feedback_service() -> FeedbackService:
     """フィードバックサービス取得（遅延初期化）."""
     if "feedback" not in _services:
         _services["feedback"] = FeedbackService()
-    return _services["feedback"]
+    service = _services.get("feedback")
+    if isinstance(service, FeedbackService):
+        return service
+    msg = "FeedbackService の初期化に失敗しました"
+    raise RuntimeError(msg)
 
 
 def get_suggestion_service() -> SuggestionService:
@@ -237,7 +249,11 @@ def get_suggestion_service() -> SuggestionService:
                 language="ja",
             )
         )
-    return _services["suggestion"]
+    service = _services.get("suggestion")
+    if isinstance(service, SuggestionService):
+        return service
+    msg = "SuggestionService の初期化に失敗しました"
+    raise RuntimeError(msg)
 
 
 def get_faq_agent() -> FAQAgent:
@@ -271,7 +287,11 @@ def get_faq_agent() -> FAQAgent:
         hub = get_hub()
         if hub.discover(agent.name) is None:
             hub.register(agent)
-    return _services["faq_agent"]
+    service = _services.get("faq_agent")
+    if isinstance(service, FAQAgent):
+        return service
+    msg = "FAQAgent の初期化に失敗しました"
+    raise RuntimeError(msg)
 
 
 def get_sales_agent() -> SalesAgent:
@@ -293,7 +313,11 @@ def get_sales_agent() -> SalesAgent:
         hub = get_hub()
         if hub.discover(agent.name) is None:
             hub.register(agent)
-    return _services["sales_agent"]
+    service = _services.get("sales_agent")
+    if isinstance(service, SalesAgent):
+        return service
+    msg = "SalesAgent の初期化に失敗しました"
+    raise RuntimeError(msg)
 
 
 def get_rag_ingestion_orchestrator() -> RAGIngestionOrchestrator:
@@ -303,7 +327,11 @@ def get_rag_ingestion_orchestrator() -> RAGIngestionOrchestrator:
             config_loader=get_runtime_rag_config,
             rag_service_getter=get_rag_service,
         )
-    return _services["rag_ingestion_orchestrator"]
+    service = _services.get("rag_ingestion_orchestrator")
+    if isinstance(service, RAGIngestionOrchestrator):
+        return service
+    msg = "RAGIngestionOrchestrator の初期化に失敗しました"
+    raise RuntimeError(msg)
 
 
 async def _run_scheduled_ingest_job(source_id: str) -> None:

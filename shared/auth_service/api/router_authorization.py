@@ -84,7 +84,7 @@ async def list_roles(
                 RoleResponse(
                     name=role.name,
                     display_name=role.display_name,
-                    description=role.description,
+                    description=role.description or "",
                     is_system=role.is_system,
                     priority=role.priority,
                     permissions=perm_names,
@@ -113,7 +113,7 @@ async def get_role(
         return RoleResponse(
             name=role.name,
             display_name=role.display_name,
-            description=role.description,
+            description=role.description or "",
             is_system=role.is_system,
             priority=role.priority,
             permissions=perm_names,
@@ -145,7 +145,7 @@ async def create_role(
         return RoleResponse(
             name=role.name,
             display_name=role.display_name,
-            description=role.description,
+            description=role.description or "",
             is_system=role.is_system,
             priority=role.priority,
             permissions=[],
@@ -187,7 +187,7 @@ async def update_role(
         return RoleResponse(
             name=role.name,
             display_name=role.display_name,
-            description=role.description,
+            description=role.description or "",
             is_system=role.is_system,
             priority=role.priority,
             permissions=perm_names,
@@ -229,9 +229,9 @@ async def list_permissions(
             PermissionResponse(
                 name=p.name,
                 display_name=p.display_name,
-                description=p.description,
-                resource_type=p.resource_type,
-                action=p.action,
+                description=p.description or "",
+                resource_type=p.resource_type or "",
+                action=p.action or "",
                 is_system=p.is_system,
             )
             for p in permissions
@@ -580,9 +580,9 @@ def _rd_to_response(rd: ResourceDefinition) -> ResourceDefinitionResponse:
         resource_type=rd.resource_type,
         resource_id=rd.resource_id,
         display_name=rd.display_name,
-        app_name=rd.app_name,
-        scope=rd.scope,
-        backend_key=rd.backend_key,
+        app_name=rd.app_name or "",
+        scope=rd.scope or "",
+        backend_key=rd.backend_key or "",
         metadata=metadata,
         is_active=rd.is_active,
     )

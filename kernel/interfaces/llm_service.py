@@ -1,7 +1,12 @@
 """kernel/interfaces/llm_service.py — Kernel が LLM にアクセスするための抽象."""
+
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @runtime_checkable

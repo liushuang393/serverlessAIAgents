@@ -88,8 +88,8 @@ def _init_default_configs() -> None:
             agent_name="術（実行計画）",
             use_rag=True,
             rag_sources=[
-                RAGSourceConfig(name="industry_practices", enabled=True),
-                RAGSourceConfig(name="case_studies", enabled=True),
+                RAGSourceConfig(name="industry_practices", enabled=True, directory=None, url=None),
+                RAGSourceConfig(name="case_studies", enabled=True, directory=None, url=None),
             ],
             top_k=3,
             min_similarity=0.4,
@@ -99,8 +99,8 @@ def _init_default_configs() -> None:
             agent_name="器（技術実装）",
             use_rag=True,
             rag_sources=[
-                RAGSourceConfig(name="technical_docs", enabled=True),
-                RAGSourceConfig(name="compliance", enabled=True),
+                RAGSourceConfig(name="technical_docs", enabled=True, directory=None, url=None),
+                RAGSourceConfig(name="compliance", enabled=True, directory=None, url=None),
             ],
             top_k=3,
             min_similarity=0.4,
@@ -110,18 +110,24 @@ def _init_default_configs() -> None:
             agent_name="道（問題本質）",
             use_rag=False,
             rag_sources=[],
+            top_k=5,
+            min_similarity=0.3,
         ),
         AgentRAGConfig(
             agent_id="fa",
             agent_name="法（選択肢分析）",
             use_rag=False,
             rag_sources=[],
+            top_k=5,
+            min_similarity=0.3,
         ),
         AgentRAGConfig(
             agent_id="review",
             agent_name="検証",
             use_rag=False,
             rag_sources=[],
+            top_k=5,
+            min_similarity=0.3,
         ),
     ]
 
@@ -192,9 +198,9 @@ async def test_agent_rag(agent_id: str) -> RAGTestResult:
 
         agent = None
         if agent_id == "shu":
-            agent = engine._shu
+            agent = engine._registry.get_agent("shu")
         elif agent_id == "qi":
-            agent = engine._qi
+            agent = engine._registry.get_agent("qi")
 
         if agent and hasattr(agent, "_rag") and agent._rag:
             status = agent._rag.get_status()

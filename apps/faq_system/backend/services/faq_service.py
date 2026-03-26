@@ -33,6 +33,11 @@ from shared.services.base import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from infrastructure.llm.providers import LLMProvider
+    from infrastructure.providers.db_provider import DBProvider
+    from shared.services.base import ServiceResult
+    from shared.services.rag_service import RAGService
+
 
 logger = logging.getLogger(__name__)
 
@@ -132,9 +137,9 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
         """
         super().__init__()
         self._config = config or FAQConfig()
-        self._llm = None
-        self._db = None
-        self._rag_service = None
+        self._llm: LLMProvider | None = None
+        self._db: DBProvider | None = None
+        self._rag_service: RAGService | None = None
         self._started = False
 
         # AI安全防護初期化（v1.1）
@@ -146,14 +151,14 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
             return
 
         from infrastructure.llm.providers import get_llm
-        from shared.services.rag_service import RAGConfig, RAGService
+        from shared.services.rag_service import ChunkStrategy, RAGConfig, RAGService, RerankerType
 
         # RAG サービス初期化
         rag_config = RAGConfig(
             collection=self._config.collection,
-            chunk_strategy=self._config.chunk_strategy,  # type: ignore
+            chunk_strategy=ChunkStrategy(self._config.chunk_strategy),
             chunk_size=self._config.chunk_size,
-            reranker=self._config.reranker_type,  # type: ignore
+            reranker=RerankerType(self._config.reranker_type),
             top_k=self._config.top_k,
         )
         self._rag_service = RAGService(rag_config)
@@ -240,10 +245,15 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
         start_time: float,
     ) -> AsyncIterator[ServiceEvent]:
         """FAQ クエリ処理."""
+        rag_service = self._rag_service
+        if rag_service is None:
+            yield self._emit_error(execution_id, "rag_not_started", "RAG service is not started")
+            return
+
         yield self._emit_progress(execution_id, 20, "Searching knowledge base...", phase="search")
 
         # RAG サービスを使用
-        result = await self._rag_service.execute(action="query", question=question)
+        result = await rag_service.execute(action="query", question=question)
 
         if not result.success:
             yield self._emit_error(execution_id, "rag_error", result.error_message or "RAG failed")
@@ -313,24 +323,35 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
         """ハイブリッドクエリ処理."""
         import asyncio
 
+        rag_service = self._rag_service
+        if rag_service is None:
+            yield self._emit_error(execution_id, "rag_not_started", "RAG service is not started")
+            return
+
         yield self._emit_progress(execution_id, 10, "Running parallel queries...", phase="parallel")
 
         # 並列実行
-        faq_task = self._rag_service.execute(action="query", question=question)
-        sql_task = self._execute_sql_safe(question) if self._db else asyncio.sleep(0)
+        faq_task = rag_service.execute(action="query", question=question)
+        sql_task = self._execute_sql_safe(question) if self._db else None
 
-        faq_result, sql_result = await asyncio.gather(faq_task, sql_task, return_exceptions=True)
+        faq_result: ServiceResult | BaseException
+        sql_result: SQLResult | None | BaseException
+        if sql_task is None:
+            faq_result = await faq_task
+            sql_result = None
+        else:
+            faq_result, sql_result = await asyncio.gather(faq_task, sql_task, return_exceptions=True)
 
         answer_parts = []
 
         # FAQ 結果
-        if not isinstance(faq_result, Exception) and faq_result.success:
+        if not isinstance(faq_result, BaseException) and faq_result.success:
             answer_parts.append(f"Based on knowledge base:\n{faq_result.data.get('answer', '')}")
 
         # SQL 結果
         chart = None
         sql_data = None
-        if not isinstance(sql_result, Exception) and sql_result and sql_result.success:
+        if not isinstance(sql_result, BaseException) and sql_result and sql_result.success:
             yield self._emit_progress(execution_id, 60, "Summarizing data...", phase="summarize")
             summary = await self._summarize_sql_result(question, sql_result)
             answer_parts.append(f"\nBased on data analysis:\n{summary}")
@@ -344,7 +365,7 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
             {
                 "answer": "\n".join(answer_parts) if answer_parts else "No relevant information.",
                 "query_type": QueryType.HYBRID.value,
-                "sources": faq_result.data.get("documents", []) if not isinstance(faq_result, Exception) else [],
+                "sources": faq_result.data.get("documents", []) if not isinstance(faq_result, BaseException) else [],
                 "sql_result": sql_data,
                 "chart": chart.model_dump() if chart else None,
                 "suggestions": suggestions,
@@ -363,13 +384,17 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
 
     async def _generate_sql(self, question: str) -> str:
         """SQL を生成."""
+        llm = self._llm
+        if llm is None:
+            msg = "LLM is not initialized"
+            raise RuntimeError(msg)
         schema_info = self._format_schema()
         prompt = f"""Convert this question to SQL ({self._config.sql_dialect}):
 Schema: {schema_info}
 Question: {question}
 Rules: SELECT only, add LIMIT {self._config.sql_max_rows}
 SQL:"""
-        response = await self._llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+        response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
         return self._extract_sql(str(response.get("content", "")))
 
     async def _execute_sql(self, sql: str) -> SQLResult:
@@ -409,9 +434,13 @@ SQL:"""
         if not result.data:
             return "No data found."
 
+        llm = self._llm
+        if llm is None:
+            msg = "LLM is not initialized"
+            raise RuntimeError(msg)
         sample = result.data[:10]
         prompt = f"Summarize this data for question '{question}':\nData: {sample}\nTotal: {result.row_count}"
-        response = await self._llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+        response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
         return str(response.get("content", ""))
 
     def _generate_chart(self, question: str, result: SQLResult) -> ChartData | None:
@@ -437,8 +466,12 @@ SQL:"""
 
     async def _generate_suggestions(self, question: str) -> list[str]:
         """フォローアップ質問を生成."""
+        llm = self._llm
+        if llm is None:
+            msg = "LLM is not initialized"
+            raise RuntimeError(msg)
         prompt = f"Based on '{question}', suggest 3 follow-up questions (one per line):"
-        response = await self._llm.generate(role="cheap", messages=[{"role": "user", "content": prompt}])
+        response = await llm.generate(role="cheap", messages=[{"role": "user", "content": prompt}])
         content = str(response.get("content", ""))
         return [line.strip().lstrip("123.-) ") for line in content.split("\n") if line.strip()][:3]
 

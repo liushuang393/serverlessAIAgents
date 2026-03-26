@@ -383,6 +383,6 @@ class RedisTaskStore[T]:
     def _to_json(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, default=str)
 
-    @staticmethod
-    def _from_json(raw: str) -> Any:
-        return json.loads(raw)
+    def _from_json(self, raw: str) -> T:
+        value: T = json.loads(raw)
+        return value

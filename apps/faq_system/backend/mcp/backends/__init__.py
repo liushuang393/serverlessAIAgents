@@ -15,6 +15,7 @@ from apps.faq_system.backend.mcp.backends.base import (
     RetrievedDocument,
 )
 
+
 __all__ = [
     "BackendType",
     "RetrievalBackend",
@@ -22,4 +23,3 @@ __all__ = [
     "RetrievalResult",
     "RetrievedDocument",
 ]
-

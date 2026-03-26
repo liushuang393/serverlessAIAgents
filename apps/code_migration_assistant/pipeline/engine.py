@@ -22,9 +22,9 @@ import anyio
 try:
     from claude_agent_sdk import ClaudeAgentOptions, ResultMessage, query
 except ModuleNotFoundError:  # pragma: no cover - SDK 未導入環境向けフォールバック
-    ClaudeAgentOptions = None  # type: ignore[assignment]
-    ResultMessage = object  # type: ignore[assignment]
-    query = None  # type: ignore[assignment]
+    ClaudeAgentOptions = None
+    ResultMessage = object
+    query = None
 
 from apps.code_migration_assistant.agents.definitions import get_agent_definition
 from apps.code_migration_assistant.evolution.manager import EvolutionManager
@@ -316,7 +316,7 @@ class MigrationEngine:
         cobol_file: COBOLFile,
         version_dir: Path,
         artifacts: dict[str, Any],
-        event_queue: asyncio.Queue,
+        event_queue: asyncio.Queue[SSEEvent | None],
         start_stage: str | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """パイプライン全6ステージを実行する.
@@ -660,7 +660,9 @@ class MigrationEngine:
         json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", result_text, re.DOTALL)
         if json_match:
             try:
-                return json.loads(json_match.group(1))
+                parsed = json.loads(json_match.group(1))
+                if isinstance(parsed, dict):
+                    return parsed
             except json.JSONDecodeError:
                 pass
 

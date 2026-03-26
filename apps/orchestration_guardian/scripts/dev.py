@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-def ensure_env_file(app_dir: Path):
+def ensure_env_file(app_dir: Path) -> None:
     """
     Check if .env exists. If not, try to copy from .env.example or similar.
     """
@@ -28,7 +28,7 @@ def ensure_env_file(app_dir: Path):
     print("Warning: No .env or .env.example found. Application might fail if it requires environment variables.")
 
 
-def start_docker_dependencies(app_dir: Path):
+def start_docker_dependencies(app_dir: Path) -> None:
     """
     Check for docker-compose.yml and start infrastructure services (DB, Redis, etc.).
     Excludes the main app service (backend/frontend) if possible.
@@ -78,7 +78,7 @@ def start_docker_dependencies(app_dir: Path):
         print("Warning: 'docker' command not found. Skipping docker startup.")
 
 
-def main():
+def main() -> None:
     # app_dir is the parent of 'scripts' directory
     script_dir = Path(__file__).resolve().parent
     app_dir = script_dir.parent
@@ -94,7 +94,7 @@ def main():
     # For Orchestration Guardian, it's a simple python module run.
 
     target_module = "apps.orchestration_guardian.main"
-    cmd = [sys.executable, "-m", target_module]
+    cmd: list[str] = [sys.executable, "-m", target_module]
 
     # Pass through any arguments
     if len(sys.argv) > 1:

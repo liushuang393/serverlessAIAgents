@@ -15,7 +15,8 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -35,6 +36,20 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+class _RunnableSkill(Protocol):
+    """`run` を提供する skill 契約."""
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """Skill を実行する."""
+
+
+class _ExecutableService(Protocol):
+    """`execute` を提供する service 契約."""
+
+    async def execute(self, **kwargs: Any) -> Any:
+        """Service を実行する."""
 
 
 # =============================================================================
@@ -139,11 +154,11 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
             self.set_capability_bundle(bundle)
 
         # Skills (遅延初期化)
-        self._retriever = None
-        self._answer_generator = None
-        self._gap_analyzer = None
-        self._text2sql_service = None
-        self._suggestion_service = None
+        self._retriever: _RunnableSkill | None = None
+        self._answer_generator: _RunnableSkill | None = None
+        self._gap_analyzer: _RunnableSkill | None = None
+        self._text2sql_service: _ExecutableService | None = None
+        self._suggestion_service: _ExecutableService | None = None
         self._initialized = False
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
@@ -214,11 +229,16 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
 
     async def _handle_faq_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """FAQ クエリを処理."""
+        retriever = self._retriever
+        answer_generator = self._answer_generator
+        if retriever is None or answer_generator is None:
+            return FAQResponse(question=question, query_type="faq", answer="FAQ サービス不可", error="not_init")
+
         agent_trace.append("Executing RAG retrieval")
-        retrieval_result = await self._retriever.run({"query": question, "top_k": self._config.rag_top_k})
+        retrieval_result = await retriever.run({"query": question, "top_k": self._config.rag_top_k})
         chunks = retrieval_result.get("chunks", [])
 
-        answer_result = await self._answer_generator.run({"question": question, "context": chunks})
+        answer_result = await answer_generator.run({"question": question, "context": chunks})
         answer = answer_result.get("answer", "")
         confidence = answer_result.get("confidence", 0.8)
         citations = answer_result.get("citations", [])
@@ -287,6 +307,11 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
 
     async def _handle_hybrid_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """ハイブリッドクエリを処理（RAG + SQL 両方を試行）."""
+        retriever = self._retriever
+        answer_generator = self._answer_generator
+        if retriever is None or answer_generator is None:
+            return FAQResponse(question=question, query_type="hybrid", answer="FAQ サービス不可", error="not_init")
+
         agent_trace.append("Executing hybrid query (RAG + SQL)")
 
         # まず SQL を試行
@@ -311,11 +336,11 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
                 agent_trace.append(f"SQL query failed: {e}")
 
         # RAG で回答生成
-        retrieval_result = await self._retriever.run(
+        retrieval_result = await retriever.run(
             {"query": question, "top_k": self._config.rag_top_k},
         )
         chunks = retrieval_result.get("chunks", [])
-        answer_result = await self._answer_generator.run(
+        answer_result = await answer_generator.run(
             {"question": question, "context": chunks},
         )
         answer = answer_result.get("answer", "")
@@ -385,23 +410,25 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
 
     async def _generate_suggestions(self, question: str, query_type: str) -> list[dict[str, Any]]:
         """提案生成."""
-        if self._suggestion_service:
+        suggestion_service = self._suggestion_service
+        if suggestion_service is not None:
             try:
-                res = await self._suggestion_service.execute(action="suggest", question=question, query_type=query_type)
+                res = await suggestion_service.execute(action="suggest", question=question, query_type=query_type)
                 if res.success:
-                    return res.data.get("suggestions", [])
+                    raw_suggestions = res.data.get("suggestions", [])
+                    if isinstance(raw_suggestions, list):
+                        return [item for item in raw_suggestions if isinstance(item, dict)]
             except Exception:
                 pass
         return [{"text": "詳細を教えて", "type": "followup"}]
 
     async def _analyze_gap(self, question: str, response: FAQResponse) -> dict[str, Any]:
         """ギャップ分析."""
-        if not self._gap_analyzer:
+        gap_analyzer = self._gap_analyzer
+        if gap_analyzer is None:
             return {}
         try:
-            return await self._gap_analyzer.run(
-                {"query_logs": [{"question": question, "confidence": response.confidence}]}
-            )
+            return await gap_analyzer.run({"query_logs": [{"question": question, "confidence": response.confidence}]})
         except Exception:
             return {}
 
@@ -410,21 +437,31 @@ class FAQAgent(RAGCapableMixin, AgentBlock):
         if self._initialized:
             return
 
-        from kernel.skills.builtin.knowledge_qa import AnswerGenerator, GapAnalyzer, Retriever
-        from shared.services import SQLDialect, Text2SQLConfig, Text2SQLService
+        knowledge_qa_module = import_module("kernel.skills.builtin.knowledge_qa")
+        shared_services_module = import_module("shared.services")
 
-        self._retriever = Retriever()
-        self._answer_generator = AnswerGenerator(llm_client=self._llm_client)
-        self._gap_analyzer = GapAnalyzer() if self._config.enable_gap_analysis else None
+        retriever_cls = knowledge_qa_module.Retriever
+        answer_generator_cls = knowledge_qa_module.AnswerGenerator
+        gap_analyzer_cls = knowledge_qa_module.GapAnalyzer
+        sql_dialect_cls = shared_services_module.SQLDialect
+        text2sql_config_cls = shared_services_module.Text2SQLConfig
+        text2sql_service_cls = shared_services_module.Text2SQLService
+
+        self._retriever = retriever_cls()
+        self._answer_generator = answer_generator_cls(llm_client=self._llm_client)
+        self._gap_analyzer = gap_analyzer_cls() if self._config.enable_gap_analysis else None
 
         try:
-            dialect = SQLDialect(self._config.sql_dialect)
+            dialect = sql_dialect_cls(self._config.sql_dialect)
         except Exception:
-            dialect = SQLDialect.POSTGRESQL
+            dialect = sql_dialect_cls.POSTGRESQL
 
-        self._text2sql_service = Text2SQLService(Text2SQLConfig(schema=self._config.sql_schema, dialect=dialect))
+        self._text2sql_service = text2sql_service_cls(
+            text2sql_config_cls(schema=self._config.sql_schema, dialect=dialect)
+        )
 
-        from shared.services import SuggestionConfig, SuggestionService
+        suggestion_config_cls = shared_services_module.SuggestionConfig
+        suggestion_service_cls = shared_services_module.SuggestionService
 
-        self._suggestion_service = SuggestionService(SuggestionConfig())
+        self._suggestion_service = suggestion_service_cls(suggestion_config_cls())
         self._initialized = True

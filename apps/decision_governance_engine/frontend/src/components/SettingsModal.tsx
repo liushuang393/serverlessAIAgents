@@ -54,7 +54,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   /** 設定を保存 */
   const saveConfig = useCallback(async (agentId: string, updates: Partial<AgentRAGConfig>) => {
@@ -69,7 +69,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     } finally {
       setIsSaving(false);
     }
-  }, [fetchConfigs]);
+  }, [fetchConfigs, t]);
 
   /** RAG使用トグル */
   const toggleRAG = useCallback((agentId: string) => {

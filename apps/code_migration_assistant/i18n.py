@@ -6,16 +6,18 @@ from typing import Any
 
 
 class I18n:
-    def __init__(self, locale: str = "ja"):
+    def __init__(self, locale: str = "ja") -> None:
         self.locale = locale
         self.translations: dict[str, Any] = {}
         self._load_translations()
 
-    def _load_translations(self):
+    def _load_translations(self) -> None:
         locale_path = Path(__file__).parent / "locales" / f"{self.locale}.json"
         if locale_path.exists():
             with open(locale_path, encoding="utf-8") as f:
-                self.translations = json.load(f)
+                payload = json.load(f)
+            if isinstance(payload, dict):
+                self.translations = payload
 
     def t(self, key: str, default: str | None = None) -> str:
         """Translate a key."""

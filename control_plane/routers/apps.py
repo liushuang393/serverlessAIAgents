@@ -139,7 +139,7 @@ def _get_app_config_event_store() -> AppConfigEventStore:
     return _app_config_events
 
 
-def _get_app_or_404(discovery: AppDiscoveryService, app_name: str):
+def _get_app_or_404(discovery: AppDiscoveryService, app_name: str) -> Any:
     """App を取得し、存在しない場合は 404 を返す."""
     config = discovery.get_app(app_name)
     if config is None:
@@ -382,7 +382,8 @@ def _runtime_commands(app_config: Any) -> dict[str, str | None]:
 
 def _runtime_cli(app_config: Any) -> dict[str, Any]:
     """App 表示用 CLI 設定を作成."""
-    return app_config.runtime.cli.model_dump()
+    payload = app_config.runtime.cli.model_dump()
+    return payload if isinstance(payload, dict) else {}
 
 
 def _runtime_payload(app_config: Any, *, request: Request | None = None) -> dict[str, Any]:

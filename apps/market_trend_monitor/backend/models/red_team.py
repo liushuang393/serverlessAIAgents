@@ -206,7 +206,7 @@ class RedTeamAnalysisSchema(BaseModel):
     overall_uncertainty: float = Field(ge=0.0, le=1.0, default=0.0)
     recommendation: str = ""
     analyzed_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class ChallengeSchema(BaseModel):
@@ -218,7 +218,7 @@ class ChallengeSchema(BaseModel):
     argument: str
     counter_evidence_ids: list[str] = Field(default_factory=list)
     created_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class ChallengeResultSchema(BaseModel):
@@ -231,4 +231,4 @@ class ChallengeResultSchema(BaseModel):
     confidence_adjustment: float
     evaluator_notes: str = ""
     evaluated_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)

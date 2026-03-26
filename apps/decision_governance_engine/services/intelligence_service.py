@@ -18,6 +18,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
 
@@ -28,12 +29,21 @@ from apps.decision_governance_engine.schemas.contract_schemas import (
 from pydantic import BaseModel, Field
 
 
+if TYPE_CHECKING:
+    from types import ModuleType
+
+
 logger = logging.getLogger(__name__)
 
-try:
-    import httpx
-except ImportError:  # pragma: no cover - optional dependency
-    httpx = None
+
+def _load_httpx_module() -> ModuleType | None:
+    """httpx を必要時に読み込む."""
+    try:
+        import httpx
+    except ImportError:  # pragma: no cover - optional dependency
+        return None
+    return httpx
+
 
 try:
     from duckduckgo_search import DDGS
@@ -168,12 +178,12 @@ class IntelligenceService:
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for item in results:
-            if isinstance(item, Exception):
+            if isinstance(item, BaseException):
                 warnings.append(f"ソース取得エラー: {str(item)[:80]}")
                 continue
             batch_evidence, provider, provider_warnings = item
             evidence.extend(batch_evidence)
-            warnings.extend(provider_warnings)
+            warnings.extend(str(entry) for entry in provider_warnings)
             if provider:
                 provider_hits[provider] = provider_hits.get(provider, 0) + len(batch_evidence)
 
@@ -263,17 +273,18 @@ class IntelligenceService:
         """SerpAPI から取得する."""
         if not self.config.serpapi_key:
             return [], []
-        if httpx is None:
+        httpx_module = _load_httpx_module()
+        if httpx_module is None:
             return [], ["serpapi_skipped: httpx missing"]
 
-        params = {
+        params: dict[str, str | int] = {
             "engine": "google",
             "q": query,
             "api_key": self.config.serpapi_key,
             "num": min(self.config.max_sources, 10),
         }
         try:
-            async with httpx.AsyncClient(timeout=self.config.timeout_seconds) as client:
+            async with httpx_module.AsyncClient(timeout=self.config.timeout_seconds) as client:
                 response = await client.get("https://serpapi.com/search.json", params=params)
                 response.raise_for_status()
             payload = response.json()
@@ -315,14 +326,15 @@ class IntelligenceService:
         """Bing Web Search から取得する."""
         if not self.config.bing_api_key:
             return [], []
-        if httpx is None:
+        httpx_module = _load_httpx_module()
+        if httpx_module is None:
             return [], ["bing_skipped: httpx missing"]
 
-        headers = {"Ocp-Apim-Subscription-Key": self.config.bing_api_key}
-        params = {"q": query, "count": min(self.config.max_sources, 10), "mkt": "en-US"}
+        headers: dict[str, str] = {"Ocp-Apim-Subscription-Key": self.config.bing_api_key}
+        params: dict[str, str | int] = {"q": query, "count": min(self.config.max_sources, 10), "mkt": "en-US"}
 
         try:
-            async with httpx.AsyncClient(timeout=self.config.timeout_seconds) as client:
+            async with httpx_module.AsyncClient(timeout=self.config.timeout_seconds) as client:
                 response = await client.get(self.config.bing_endpoint, headers=headers, params=params)
                 response.raise_for_status()
             payload = response.json()
@@ -376,8 +388,6 @@ class IntelligenceService:
 
         evidence: list[EvidenceItem] = []
         for row in rows:
-            if not isinstance(row, dict):
-                continue
             url = self._clean_text(row.get("href") or row.get("url"))
             if not url:
                 continue

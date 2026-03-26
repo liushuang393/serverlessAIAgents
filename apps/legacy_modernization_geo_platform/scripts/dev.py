@@ -30,7 +30,8 @@ def main() -> None:
         cmd.extend(sys.argv[1:])
     if sys.platform != "win32":
         os.execvp(cmd[0], cmd)
-    subprocess.run(cmd, check=False)
+    else:
+        subprocess.run(cmd, check=False)
 
 
 if __name__ == "__main__":

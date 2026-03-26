@@ -8,18 +8,22 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime
+from types import ModuleType
 from typing import Any
 from urllib.parse import urlparse
 
 from apps.market_trend_monitor.backend.models import Article, SourceType
 
-from kernel import get_llm
+from infrastructure.providers.llm_provider import get_llm
 
 
+httpx: ModuleType | None
 try:
-    import httpx
+    import httpx as _httpx
 except ImportError:  # pragma: no cover - optional dependency
     httpx = None
+else:
+    httpx = _httpx
 
 try:
     import trafilatura
@@ -135,7 +139,7 @@ class OfficialSiteScraper:
             try:
                 response = await client.get(url)
                 response.raise_for_status()
-                return response.text
+                return str(response.text)
             except Exception as exc:
                 self._logger.warning(
                     "公式サイト取得失敗: url=%s attempt=%d/%d error=%s",

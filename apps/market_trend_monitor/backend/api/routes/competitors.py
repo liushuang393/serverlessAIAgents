@@ -1,9 +1,11 @@
 """競合追跡・成熟度・レポートAPI."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.market_trend_monitor.backend.agents import CollectorAgent
 from apps.market_trend_monitor.backend.api.state import store
@@ -20,17 +22,33 @@ from kernel.agents.agent_factory import create as create_agent
 from kernel.protocols.a2a_hub import get_hub
 
 
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.agents.competitor_tracking_agent import CompetitorTrackingAgent
+    from apps.market_trend_monitor.backend.services.maturity_assessment_service import (
+        MaturityAssessmentService,
+    )
+    from apps.market_trend_monitor.backend.services.stakeholder_report_service import (
+        StakeholderReportService,
+    )
+
 router = APIRouter(prefix="/api", tags=["戦略機能"])
 logger = logging.getLogger(__name__)
 COMPETITOR_CONFIG_KEY = "competitor_watchlist_config_v1"
 
 # サービスインスタンスは遅延初期化
-_competitor_agent = None
-_maturity_service = None
-_stakeholder_service = None
+_competitor_agent: CompetitorTrackingAgent | None = None
+_maturity_service: MaturityAssessmentService | None = None
+_stakeholder_service: StakeholderReportService | None = None
 
 
-def _get_competitor_agent():
+def _to_result_dict(value: Any) -> dict[str, Any]:
+    """サービス戻り値を辞書へ正規化する."""
+    if isinstance(value, dict):
+        return {str(key): item for key, item in value.items()}
+    return {}
+
+
+def _get_competitor_agent() -> CompetitorTrackingAgent:
     global _competitor_agent
     if _competitor_agent is None:
         from apps.market_trend_monitor.backend.agents.competitor_tracking_agent import (
@@ -151,8 +169,6 @@ async def _load_articles_for_competitor_tracking(limit: int) -> list[Article]:
     raw_articles = await store.list_articles(limit=limit)
     articles: list[Article] = []
     for item in raw_articles:
-        if not isinstance(item, dict):
-            continue
         articles.append(_to_article(item))
     return articles
 
@@ -210,9 +226,6 @@ async def _collect_articles_for_watchlist_focus(
         "CollectorAgent",
         {"keywords": keywords, "sources": sources},
     )
-
-    if not isinstance(collector_result, dict):
-        return 0
     articles = collector_result.get("articles", [])
     count = len(articles) if isinstance(articles, list) else 0
     if count > 0:
@@ -220,7 +233,7 @@ async def _collect_articles_for_watchlist_focus(
     return count
 
 
-def _get_maturity_service():
+def _get_maturity_service() -> MaturityAssessmentService:
     global _maturity_service
     if _maturity_service is None:
         from apps.market_trend_monitor.backend.services.maturity_assessment_service import (
@@ -231,7 +244,7 @@ def _get_maturity_service():
     return _maturity_service
 
 
-def _get_stakeholder_service():
+def _get_stakeholder_service() -> StakeholderReportService:
     global _stakeholder_service
     if _stakeholder_service is None:
         from apps.market_trend_monitor.backend.services.stakeholder_report_service import (
@@ -248,7 +261,7 @@ def _get_stakeholder_service():
 
 
 @router.get("/competitors")
-async def list_competitors() -> dict:
+async def list_competitors() -> dict[str, Any]:
     """競合プロファイル一覧を取得."""
     agent = _get_competitor_agent()
     await _ensure_persisted_competitor_config(agent)
@@ -295,10 +308,10 @@ class PositioningRequest(BaseModel):
 
 
 @router.post("/competitors/positioning")
-async def compare_positioning(request: PositioningRequest) -> dict:
+async def compare_positioning(request: PositioningRequest) -> dict[str, Any]:
     """市場ポジショニング比較."""
     agent = _get_competitor_agent()
-    return await agent.compare_positioning(request.our_strengths)
+    return _to_result_dict(await agent.compare_positioning(request.our_strengths))
 
 
 class CompetitorDiscoverRequest(BaseModel):
@@ -311,7 +324,7 @@ class CompetitorDiscoverRequest(BaseModel):
 
 
 @router.get("/competitors/config")
-async def get_competitor_config() -> dict:
+async def get_competitor_config() -> dict[str, Any]:
     """競合追跡設定を取得."""
     agent = _get_competitor_agent()
     await _ensure_persisted_competitor_config(agent)
@@ -325,7 +338,7 @@ async def get_competitor_config() -> dict:
 
 
 @router.put("/competitors/config")
-async def update_competitor_config(request: CompetitorConfigRequest) -> dict:
+async def update_competitor_config(request: CompetitorConfigRequest) -> dict[str, Any]:
     """競合追跡設定を更新."""
     agent = _get_competitor_agent()
     competitors = agent.set_competitors(request.competitors)
@@ -341,7 +354,7 @@ async def update_competitor_config(request: CompetitorConfigRequest) -> dict:
 
 
 @router.post("/competitors/discover")
-async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
+async def discover_competitors(request: CompetitorDiscoverRequest) -> dict[str, Any]:
     """最新記事から競合を自動発見."""
     agent = _get_competitor_agent()
     await _ensure_persisted_competitor_config(agent)
@@ -430,13 +443,13 @@ async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
 
 
 @router.get("/competitors/{name}")
-async def get_competitor(name: str) -> dict:
+async def get_competitor(name: str) -> dict[str, Any]:
     """競合プロファイルを取得."""
     agent = _get_competitor_agent()
     profile = agent.get_profile(name)
     if not profile:
         raise HTTPException(status_code=404, detail="Competitor not found")
-    return profile.to_dict()
+    return _to_result_dict(profile.to_dict())
 
 
 # ============================================================
@@ -445,7 +458,7 @@ async def get_competitor(name: str) -> dict:
 
 
 @router.get("/maturity")
-async def list_maturity() -> dict:
+async def list_maturity() -> dict[str, Any]:
     """技術成熟度ランドスケープを取得."""
     service = _get_maturity_service()
     assessments = service.list_assessments()
@@ -456,13 +469,13 @@ async def list_maturity() -> dict:
 
 
 @router.get("/maturity/{technology}")
-async def get_maturity(technology: str) -> dict:
+async def get_maturity(technology: str) -> dict[str, Any]:
     """技術成熟度を取得."""
     service = _get_maturity_service()
     assessment = service.get_assessment(technology)
     if not assessment:
         raise HTTPException(status_code=404, detail="Technology assessment not found")
-    return assessment.to_dict()
+    return _to_result_dict(assessment.to_dict())
 
 
 # ============================================================
@@ -481,7 +494,7 @@ class ReportGenerateRequest(BaseModel):
 @router.get("/stakeholder-reports")
 async def list_stakeholder_reports(
     report_type: str | None = Query(default=None),
-) -> dict:
+) -> dict[str, Any]:
     """ステークホルダーレポート一覧を取得."""
     service = _get_stakeholder_service()
     reports = service.list_reports(report_type=report_type)
@@ -492,10 +505,10 @@ async def list_stakeholder_reports(
 
 
 @router.get("/stakeholder-reports/{report_id}")
-async def get_stakeholder_report(report_id: str) -> dict:
+async def get_stakeholder_report(report_id: str) -> dict[str, Any]:
     """ステークホルダーレポートを取得."""
     service = _get_stakeholder_service()
     report = service.get_report(report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    return report.to_dict()
+    return _to_result_dict(report.to_dict())

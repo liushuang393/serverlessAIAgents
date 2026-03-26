@@ -34,7 +34,7 @@ class PDFGeneratorService:
             self._logger.warning("ReportLab not installed. PDF export is unavailable.")
             return False
 
-    def generate_pdf(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
+    def generate_pdf(self, report: DecisionReport, signed_data: dict[str, Any] | None = None) -> bytes:
         """PDFを生成.
 
         Args:
@@ -51,10 +51,6 @@ class PDFGeneratorService:
         注意:
             - システム理念「変数・返回値強化」に基づき、入力検証を実施
         """
-        if report is None:
-            msg = "report cannot be None"
-            raise ValueError(msg)
-
         if not self._has_reportlab:
             msg = "ReportLab が未インストールのため PDF 出力できません"
             raise RuntimeError(msg)
@@ -69,14 +65,11 @@ class PDFGeneratorService:
             msg = f"PDF生成に失敗しました: {e}"
             raise RuntimeError(msg) from e
 
-    def generate_html(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
+    def generate_html(self, report: DecisionReport, signed_data: dict[str, Any] | None = None) -> bytes:
         """HTMLを生成."""
-        if report is None:
-            msg = "report cannot be None"
-            raise ValueError(msg)
         return self._generate_html_fallback(report, signed_data=signed_data)
 
-    def _to_dict(self, obj: Any) -> dict:
+    def _to_dict(self, obj: Any) -> dict[str, Any]:
         """Pydanticオブジェクトまたはdictをdictに変換.
 
         Args:
@@ -92,17 +85,22 @@ class PDFGeneratorService:
             return {}
         if hasattr(obj, "model_dump"):
             try:
-                return obj.model_dump()
+                dumped = obj.model_dump()
+                return dumped if isinstance(dumped, dict) else {}
             except Exception as e:
                 self._logger.warning(f"Failed to dump Pydantic model: {type(obj).__name__} - {e}")
                 return {}
         if isinstance(obj, dict):
-            return obj
+            return {str(key): value for key, value in obj.items()}
         # 予期しない型の場合
         self._logger.warning(f"Unexpected type in _to_dict: {type(obj).__name__}")
         return {}
 
-    def _generate_with_reportlab(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
+    def _generate_with_reportlab(
+        self,
+        report: DecisionReport,
+        signed_data: dict[str, Any] | None = None,
+    ) -> bytes:
         """ReportLabでPDF生成 v3.0（CJK対応・全フィールド出力）."""
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
@@ -751,7 +749,11 @@ class PDFGeneratorService:
         doc.build(elements)
         return buffer.getvalue()
 
-    def _generate_html_fallback(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
+    def _generate_html_fallback(
+        self,
+        report: DecisionReport,
+        signed_data: dict[str, Any] | None = None,
+    ) -> bytes:
         """HTML形式での提案書出力 v3.1."""
         # Pydanticオブジェクトをdictに変換
         dao = self._to_dict(report.dao)
@@ -974,7 +976,7 @@ th{{background:#1f2937;font-weight:bold}}
 {risks_html}
 </div>"""
 
-    def _build_dao_html(self, dao: dict) -> str:
+    def _build_dao_html(self, dao: dict[str, Any]) -> str:
         """道セクションHTMLを構築 v3.0."""
         problem_type = dao.get("problem_type", "N/A")
         if hasattr(problem_type, "value"):
@@ -1144,7 +1146,7 @@ th{{background:#1f2937;font-weight:bold}}
 {audit_html}
 {selfcheck_html}"""
 
-    def _build_fa_html(self, fa: dict) -> str:
+    def _build_fa_html(self, fa: dict[str, Any]) -> str:
         """法セクションHTMLを構築 v3.1."""
         # v3.1: 戦略的禁止事項（仕組み化）
         prohibitions_html = ""
@@ -1302,7 +1304,7 @@ th{{background:#1f2937;font-weight:bold}}
 {comparison_html}
 {selfcheck_html}"""
 
-    def _build_shu_html(self, shu: dict) -> str:
+    def _build_shu_html(self, shu: dict[str, Any]) -> str:
         """術セクションHTMLを構築 v3.0."""
         # フェーズ
         phases_html = ""
@@ -1451,7 +1453,7 @@ th{{background:#1f2937;font-weight:bold}}
 {phases_html}
 {rhythm_html}"""
 
-    def _build_qi_html(self, qi: dict) -> str:
+    def _build_qi_html(self, qi: dict[str, Any]) -> str:
         """器セクションHTMLを構築 v3.0."""
         # 実装要素
         impl_html = ""
@@ -1607,7 +1609,7 @@ th{{background:#1f2937;font-weight:bold}}
 {integration_html}
 {warnings_html}"""
 
-    def _build_review_html(self, review: dict) -> str:
+    def _build_review_html(self, review: dict[str, Any]) -> str:
         """検証セクションHTMLを構築 v3.1（差分パッチ型）."""
         verdict = review.get("overall_verdict", "N/A")
         if hasattr(verdict, "value"):

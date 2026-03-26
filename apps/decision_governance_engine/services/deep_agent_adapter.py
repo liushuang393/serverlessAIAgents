@@ -69,14 +69,13 @@ class DeepAgentAdapter:
         # コンポーネント初期化
         self._progress = ProgressManager()
         self._compressor = ContextCompressor(llm_client=llm_client)
+        self._evolver: SelfEvolver | None = None
+        self._evolution_store: MemoryEvolutionStore | None = None
 
         # 進化システム（オプション）
         if enable_evolution:
             self._evolution_store = MemoryEvolutionStore()
             self._evolver = SelfEvolver(store=self._evolution_store)
-        else:
-            self._evolver = None
-            self._evolution_store = None
 
     @staticmethod
     def _response_content(response: Any) -> str:

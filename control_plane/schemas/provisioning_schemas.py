@@ -13,6 +13,11 @@ _APP_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 _ENV_KEY_PATTERN = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 
 
+def _default_evolution_scope_policy() -> list[Literal["tenant_app", "tenant_product_line", "global_verified"]]:
+    """Evolution scope policy のデフォルト値."""
+    return ["tenant_app", "tenant_product_line", "global_verified"]
+
+
 class AgentBlueprintInput(BaseModel):
     """App 作成時の Agent 入力."""
 
@@ -84,7 +89,7 @@ class EvolutionConfigInput(BaseModel):
     strategy_service_url: str | None = None
     validator_queue: EvolutionValidatorQueueInput = Field(default_factory=EvolutionValidatorQueueInput)
     scope_policy: list[Literal["tenant_app", "tenant_product_line", "global_verified"]] = Field(
-        default_factory=lambda: ["tenant_app", "tenant_product_line", "global_verified"]
+        default_factory=_default_evolution_scope_policy
     )
     retrieval: EvolutionRetrievalInput = Field(default_factory=EvolutionRetrievalInput)
     suspicion: EvolutionSuspicionInput = Field(default_factory=EvolutionSuspicionInput)

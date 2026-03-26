@@ -148,6 +148,9 @@ class ExecutiveSummary:
             for risk in self.risks:
                 lines.append(f"- ⚠️ {risk}")
             lines.append("")
+        if self.next_step:
+            lines.extend([f"**次のステップ**: {self.next_step}", ""])
+        return "\n".join(lines)
 
 
 class ReportBuilder(ABC):

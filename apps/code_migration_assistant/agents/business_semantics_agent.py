@@ -139,8 +139,6 @@ class BusinessSemanticsAgent:
                 )
 
         for fact in human_facts:
-            if not isinstance(fact, dict):
-                continue
             if str(fact.get("kind", "")).lower() != "event":
                 continue
             events.append(
@@ -182,8 +180,6 @@ class BusinessSemanticsAgent:
                 )
 
         for fact in human_facts:
-            if not isinstance(fact, dict):
-                continue
             if str(fact.get("kind", "")).lower() != "rule":
                 continue
             rules.append(

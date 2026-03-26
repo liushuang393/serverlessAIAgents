@@ -26,7 +26,8 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
 
-    from contracts.interfaces.publish import ICodeGenerator, IConfigManager, IDeployExecutor
+    from contracts.interfaces.deploy_executor import IDeployExecutor
+    from contracts.interfaces.publish import ICodeGenerator, IConfigManager
 
 
 logger = logging.getLogger(__name__)
@@ -50,9 +51,9 @@ class PublishService:
         deploy_executor: IDeployExecutor | None = None,
         config_manager: IConfigManager | None = None,
     ) -> None:
-        self._code_generator = code_generator
-        self._deploy_executor = deploy_executor
-        self._config_manager = config_manager
+        self._code_generator: ICodeGenerator | None = code_generator
+        self._deploy_executor: IDeployExecutor | None = deploy_executor
+        self._config_manager: IConfigManager | None = config_manager
 
     def build_summary(self, request: PublishRequest) -> dict[str, Any]:
         """Return a minimal summary for a publish request."""

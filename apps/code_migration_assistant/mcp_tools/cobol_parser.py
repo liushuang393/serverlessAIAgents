@@ -13,7 +13,7 @@ import re
 from typing import Any
 
 from apps.code_migration_assistant.parsers import PLYCobolParser
-from kernel import MCPTool, MCPToolRequest, MCPToolResponse
+from kernel.protocols.mcp_tool import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 class COBOLParser(MCPTool):
@@ -58,7 +58,8 @@ class COBOLParser(MCPTool):
         cobol_code = request.input.get("cobol_code")
         file_name = request.input.get("file_name", "unknown.cob")
         request.input.get("encoding", "utf-8")
-        parse_options = request.input.get("parse_options", {})
+        parse_options_raw = request.input.get("parse_options", {})
+        parse_options = parse_options_raw if isinstance(parse_options_raw, dict) else {}
 
         # 必須パラメータチェック
         if not cobol_code:
@@ -72,8 +73,8 @@ class COBOLParser(MCPTool):
             ast, metadata, errors, warnings = self._parse_cobol(
                 cobol_code=cobol_code,
                 file_name=file_name,
-                strict_mode=parse_options.get("strict_mode", False),
-                expand_copy=parse_options.get("expand_copy", True),
+                strict_mode=bool(parse_options.get("strict_mode", False)),
+                expand_copy=bool(parse_options.get("expand_copy", True)),
             )
 
             return MCPToolResponse(
@@ -125,7 +126,8 @@ class COBOLParser(MCPTool):
                 ast["program_id"] = "UNKNOWN"
 
             # 変数情報をメタデータに追加
-            metadata = ast.get("metadata", {})
+            metadata_raw = ast.get("metadata", {})
+            metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
             metadata["variables"] = variables
             metadata["file_name"] = file_name
             metadata["strict_mode"] = strict_mode

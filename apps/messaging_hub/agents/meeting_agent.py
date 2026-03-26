@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel, Field
+
 from infrastructure.llm.providers import get_llm
 from kernel.agents.resilient_agent import ResilientAgent
 from kernel.skills.calendar import CalendarEvent
@@ -156,7 +158,23 @@ class MeetingNotes:
         return "\n".join(lines)
 
 
-class MeetingAgent(ResilientAgent):
+class MeetingAgentInput(BaseModel):
+    """会議エージェント入力."""
+
+    action: str = Field(default="brief")
+    event_id: str = Field(default="")
+    transcript: str = Field(default="")
+
+
+class MeetingAgentOutput(BaseModel):
+    """会議エージェント出力."""
+
+    brief: dict[str, Any] | None = None
+    notes: dict[str, Any] | None = None
+    error: str | None = None
+
+
+class MeetingAgent(ResilientAgent[MeetingAgentInput, MeetingAgentOutput]):
     """会議エージェント.
 
     会議の準備、議事録生成、フォローアップを担当。
@@ -177,23 +195,45 @@ class MeetingAgent(ResilientAgent):
         self._calendar = calendar_skill
         self._logger = logging.getLogger(__name__)
 
-    async def process(self, input_data: Any) -> Any:
-        """process メソッド（prepare_meeting_brief にデリゲート）."""
-        if isinstance(input_data, dict):
-            action = input_data.get("action", "brief")
-            if action == "notes":
-                return await self.generate_meeting_notes(
-                    input_data.get("transcript", ""),
-                    input_data.get("event_id"),
-                )
-            return await self.prepare_meeting_brief(
-                input_data.get("event_id", ""),
-            )
-        return {"error": "Invalid input"}
+    @staticmethod
+    def _as_str(value: Any, default: str = "") -> str:
+        """値を文字列へ正規化する."""
+        return value if isinstance(value, str) else default
 
-    def _parse_input(self, input_data: dict[str, Any]) -> Any:
-        """入力をそのまま返す."""
-        return input_data
+    @classmethod
+    def _as_str_list(cls, value: Any) -> list[str]:
+        """値を文字列リストへ正規化する."""
+        if not isinstance(value, list):
+            return []
+        return [cls._as_str(item) for item in value if isinstance(item, str)]
+
+    @classmethod
+    def _normalize_event_data(cls, event_data: dict[str, Any]) -> dict[str, Any]:
+        """イベント辞書を MeetingBrief 用に正規化する."""
+        normalized = dict(event_data)
+        normalized["id"] = cls._as_str(event_data.get("id"), "unknown")
+        normalized["title"] = cls._as_str(event_data.get("title"), "会議")
+        normalized["description"] = cls._as_str(event_data.get("description"))
+        normalized["attendees"] = cls._as_str_list(event_data.get("attendees"))
+        return normalized
+
+    async def process(self, input_data: MeetingAgentInput) -> MeetingAgentOutput:
+        """process メソッド（prepare_meeting_brief にデリゲート）."""
+        if input_data.action == "notes":
+            resolved_event = await self._resolve_event_by_id(input_data.event_id)
+            notes = await self.generate_meeting_notes(
+                transcript=input_data.transcript,
+                event=resolved_event,
+                title="会議",
+            )
+            return MeetingAgentOutput(notes=notes.to_dict())
+
+        brief = await self.prepare_meeting_brief(input_data.event_id)
+        return MeetingAgentOutput(brief=brief.to_dict())
+
+    def _parse_input(self, input_data: dict[str, Any]) -> MeetingAgentInput:
+        """入力を Pydantic モデルへ変換する."""
+        return MeetingAgentInput.model_validate(input_data)
 
     @staticmethod
     def _strip_code_fence(content: str) -> str:
@@ -281,14 +321,17 @@ class MeetingAgent(ResilientAgent):
             event = await self._resolve_event_by_id(event_id)
 
         if event is None:
-            event_data = {
+            event_data: dict[str, Any] = {
                 "id": event_id or "unknown",
                 "title": "会議",
                 "start": datetime.now(),
                 "end": datetime.now() + timedelta(hours=1),
             }
         else:
-            event_data = event.to_dict() if hasattr(event, "to_dict") else {}
+            raw_event_data = event.to_dict() if hasattr(event, "to_dict") else {}
+            event_data = raw_event_data if isinstance(raw_event_data, dict) else {}
+        event_data = self._normalize_event_data(event_data)
+        attendee_names = self._as_str_list(event_data.get("attendees"))
 
         # LLMでブリーフを生成
         llm = get_llm(temperature=0.5)
@@ -312,7 +355,7 @@ JSON形式で出力してください：
 
         user_prompt = f"""会議情報:
 タイトル: {event_data.get("title", "会議")}
-参加者: {", ".join(event_data.get("attendees", []))}
+参加者: {", ".join(attendee_names)}
 説明: {event_data.get("description", "")}
 {f"追加コンテキスト: {context}" if context else ""}
 
@@ -326,18 +369,19 @@ JSON形式で出力してください：
             ],
         )
 
-        content = str(response.get("content", ""))
+        raw_content = response.get("content", "")
+        content = raw_content if isinstance(raw_content, str) else ""
 
         data = self._parse_json_object(content, default={})
 
         brief = MeetingBrief(
-            event_id=event_data.get("id", "unknown"),
-            title=event_data.get("title", "会議"),
-            attendees=event_data.get("attendees", []),
-            agenda=data.get("agenda", []),
-            background=data.get("background", ""),
-            discussion_points=data.get("discussion_points", []),
-            prepared_questions=data.get("prepared_questions", []),
+            event_id=self._as_str(event_data.get("id"), "unknown"),
+            title=self._as_str(event_data.get("title"), "会議"),
+            attendees=attendee_names,
+            agenda=self._as_str_list(data.get("agenda")),
+            background=self._as_str(data.get("background")),
+            discussion_points=self._as_str_list(data.get("discussion_points")),
+            prepared_questions=self._as_str_list(data.get("prepared_questions")),
         )
 
         self._logger.info("会議ブリーフ作成: title=%s", brief.title)

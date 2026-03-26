@@ -56,7 +56,7 @@ async def rerank_middleware(
         reranker = get_reranker(reranker_type, options=reranker_options)
 
         # RetrievedDocument → DocumentInput（dict 形式）に変換
-        doc_inputs: list[dict[str, Any]] = [
+        doc_inputs: list[str | dict[str, Any]] = [
             {
                 "id": doc.doc_id,
                 "content": doc.content,
@@ -145,4 +145,3 @@ def create_reranker_middleware(
         )
 
     return _middleware
-

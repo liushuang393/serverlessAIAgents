@@ -10,7 +10,7 @@ from __future__ import annotations
 import importlib
 import logging
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +24,21 @@ if TYPE_CHECKING:
         AuthResult,
         PolicyEngine,
     )
-    from infrastructure.sandbox.tool_provider import RegisteredTool
+
+
+class RegisteredToolLike(Protocol):
+    """ガバナンス判定に必要なツール契約."""
+
+    name: str
+    plugin_id: str | None
+    plugin_version: str | None
+    requires_approval: bool
+    required_permissions: list[str]
+    operation_type: Any
+    risk_level: Any
+
+    def needs_audit(self) -> bool:
+        """監査要否を返す."""
 
 
 def _lazy(module_path: str, name: str) -> Any:
@@ -113,7 +127,7 @@ class GovernanceEngine:
 
     async def evaluate_tool(
         self,
-        tool: RegisteredTool,
+        tool: RegisteredToolLike,
         tool_call_id: str | None,
         arguments: dict[str, object],
         context: ToolExecutionContext | None = None,
@@ -265,7 +279,7 @@ class GovernanceEngine:
         )
         return result
 
-    def _normalize_auth_context(self, auth_context: AuthContext, tool: RegisteredTool) -> AuthContext:
+    def _normalize_auth_context(self, auth_context: AuthContext, tool: RegisteredToolLike) -> AuthContext:
         """認可コンテキストを補完."""
 
         action = auth_context.action or tool.operation_type.value
@@ -276,7 +290,7 @@ class GovernanceEngine:
 
     def _missing_permissions(
         self,
-        tool: RegisteredTool,
+        tool: RegisteredToolLike,
         auth_context: AuthContext,
     ) -> list[str]:
         """不足権限を計算."""
@@ -292,7 +306,7 @@ class GovernanceEngine:
 
     def _emit_audit(
         self,
-        tool: RegisteredTool,
+        tool: RegisteredToolLike,
         tool_call_id: str | None,
         result: GovernanceResult,
         auth_result: AuthResult | None,

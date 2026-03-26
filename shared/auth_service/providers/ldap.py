@@ -73,7 +73,7 @@ class LDAPProvider(AuthProvider):
     ) -> ExternalIdentity | None:
         """LDAP 同期認証（スレッド実行用）."""
         try:
-            import ldap3  # type: ignore[import-not-found]
+            import ldap3
         except ImportError:
             logger.exception("ldap3 がインストールされていません: pip install ldap3")
             return None

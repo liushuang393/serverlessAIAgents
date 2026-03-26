@@ -81,7 +81,11 @@ class ArtifactStore:
     async def read_json(self, path: Path) -> dict[str, Any]:
         """JSON成果物を読み込む."""
         raw = path.read_text(encoding="utf-8")
-        return json.loads(raw)
+        payload = json.loads(raw)
+        if isinstance(payload, dict):
+            return payload
+        msg = f"JSON artifact must contain an object: {path}"
+        raise ValueError(msg)
 
     async def write_text(
         self,

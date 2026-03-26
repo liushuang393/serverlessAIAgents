@@ -121,7 +121,9 @@ class SignalService:
         if self._adaptive_scoring:
             try:
                 scoring_weights = await self._adaptive_scoring.get_current_weights()
-                return scoring_weights.as_weight_dict()
+                weights = scoring_weights.as_weight_dict()
+                if isinstance(weights, dict):
+                    return {str(key): float(value) for key, value in weights.items()}
             except Exception as e:
                 self._logger.warning("適応的重み取得失敗、デフォルトを使用: %s", e)
         return dict(self.DEFAULT_WEIGHTS)

@@ -301,14 +301,13 @@ class TestCORS:
 class TestOpenAPI:
     """OpenAPI ドキュメントのテスト."""
 
-    @pytest.mark.skip(reason="Pydantic RootModel issue in Python 3.13")
     def test_openapi_json(self, client):
         """OpenAPI JSON を取得."""
         response = client.get("/api/openapi.json")
         assert response.status_code == 200
         data = response.json()
         assert data["info"]["title"] == "BizCore Studio API"
-        assert data["info"]["version"] == "1.0.0"
+        assert data["info"]["version"] == "0.5.0"
 
     def test_swagger_ui(self, client):
         """Swagger UI を取得."""

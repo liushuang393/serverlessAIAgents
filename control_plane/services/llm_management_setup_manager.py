@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Literal, Protocol
 
 import httpx
 import yaml
@@ -183,6 +183,7 @@ class LLMSetupManager:
             filtered_failures.append(failed_step)
 
         statuses = {step.status for step in steps}
+        status: Literal["success", "failed", "partial", "dry_run"]
         if filtered_failures:
             status = "failed"
         elif "dry_run" in statuses:
@@ -285,7 +286,7 @@ class LLMSetupManager:
         )
 
         if not detect_success:
-            install_status = "skipped"
+            install_status: Literal["success", "failed", "skipped", "dry_run"] = "skipped"
             install_message = "自動インストールは無効です。"
             install_command_result: LLMSetupCommandResult | None = None
             if request.auto_install:
@@ -389,7 +390,32 @@ class LLMSetupManager:
                 status="dry_run",
                 message=f"ヘルスチェックを予定しています: GET {url}",
             )
-        return None
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url)
+            if response.status_code < 400:
+                return LLMPreflightStep(
+                    category="backend",
+                    target=backend_name,
+                    phase="health",
+                    status="success",
+                    message=f"ヘルスチェック成功: GET {url}",
+                )
+            return LLMPreflightStep(
+                category="backend",
+                target=backend_name,
+                phase="health",
+                status="failed",
+                message=f"ヘルスチェック失敗: status={response.status_code}",
+            )
+        except Exception as exc:
+            return LLMPreflightStep(
+                category="backend",
+                target=backend_name,
+                phase="health",
+                status="failed",
+                message=f"ヘルスチェック失敗: {exc}",
+            )
 
     async def _wait_for_engine_health(
         self,

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
+    from kernel.agent_decorator import AgentClient, RegisteredAgent, agent, get_skill, list_skills
     from kernel.agents.resilient_agent import ResilientAgent
     from kernel.events import EventSink, EventType, NoOpEventSink
     from kernel.executor import ExecutorAgent, ExecutorConfig, StepResult
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     )
     from kernel.planner import ExecutionPlan, PlannerAgent, PlannerConfig, PlanStep, StepStatus, StepType
     from kernel.plugins import KernelPluginRegistry
+    from kernel.protocols.mcp_tool import MCPTool, MCPToolClient, MCPToolRequest, MCPToolResponse
     from kernel.reporter import (
         ChartData,
         ExecutiveSummary,
@@ -47,20 +49,21 @@ if TYPE_CHECKING:
     from kernel.router import Intent, IntentCategory, IntentRouter, RouterConfig
     from kernel.runtime import RuntimeContext, get_runtime_context, set_runtime_context, use_runtime_context
     from kernel.tools import KernelToolExecutor
+    from kernel.tools.tool_binding import BoundTools, ToolBinder
+    from kernel.tools.tool_definition import ToolDefinition, ToolSource
+    from kernel.tools.tool_discovery import ToolDiscoveryService
+    from kernel.tools.tool_registry import ToolRegistry, get_global_tool_registry
 
 
 __all__ = [
-    # flow
+    "AgentClient",
     "AgentNode",
-    # reporter
+    "BoundTools",
     "ChartData",
-    # events
     "EventSink",
     "EventType",
-    # planner
     "ExecutionPlan",
     "ExecutiveSummary",
-    # executor
     "ExecutorAgent",
     "ExecutorConfig",
     "Flow",
@@ -69,14 +72,15 @@ __all__ = [
     "FlowNode",
     "FlowWrapper",
     "GateNode",
-    # router
     "Intent",
     "IntentCategory",
     "IntentRouter",
-    # plugins
     "KernelPluginRegistry",
-    # tools
     "KernelToolExecutor",
+    "MCPTool",
+    "MCPToolClient",
+    "MCPToolRequest",
+    "MCPToolResponse",
     "NoOpEventSink",
     "OutputFormat",
     "ParallelNode",
@@ -84,28 +88,35 @@ __all__ = [
     "PlannerAgent",
     "PlannerConfig",
     "ProgressTracker",
+    "RegisteredAgent",
     "ReportBuilder",
     "ReportSection",
-    # agents
     "ResilientAgent",
-    # reviewer
     "ResultVerifier",
     "ReviewNode",
     "RouterConfig",
-    # runtime
     "RuntimeContext",
     "SectionedReportBuilder",
     "SimpleReportBuilder",
     "StepResult",
     "StepStatus",
     "StepType",
+    "ToolBinder",
+    "ToolDefinition",
+    "ToolDiscoveryService",
+    "ToolRegistry",
+    "ToolSource",
     "VerificationResult",
     "VerificationStrategy",
+    "agent",
     "create_bar_chart",
     "create_flow",
     "create_line_chart",
     "create_pie_chart",
+    "get_global_tool_registry",
     "get_runtime_context",
+    "get_skill",
+    "list_skills",
     "set_runtime_context",
     "use_runtime_context",
 ]

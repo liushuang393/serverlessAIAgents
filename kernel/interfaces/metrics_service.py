@@ -1,4 +1,5 @@
 """kernel/interfaces/metrics_service.py — メトリクス収集の抽象."""
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
@@ -12,9 +13,7 @@ class MetricsService(Protocol):
     Prometheus / Datadog 等の具体実装を知らない。
     """
 
-    def increment(
-        self, name: str, value: float = 1.0, tags: dict[str, str] | None = None
-    ) -> None:
+    def increment(self, name: str, value: float = 1.0, tags: dict[str, str] | None = None) -> None:
         """カウンターをインクリメント.
 
         Args:
@@ -24,9 +23,7 @@ class MetricsService(Protocol):
         """
         ...
 
-    def gauge(
-        self, name: str, value: float, tags: dict[str, str] | None = None
-    ) -> None:
+    def gauge(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
         """ゲージ値を設定.
 
         Args:
@@ -36,9 +33,7 @@ class MetricsService(Protocol):
         """
         ...
 
-    def histogram(
-        self, name: str, value: float, tags: dict[str, str] | None = None
-    ) -> None:
+    def histogram(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
         """ヒストグラム値を記録.
 
         Args:

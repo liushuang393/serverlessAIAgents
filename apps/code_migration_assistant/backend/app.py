@@ -639,9 +639,6 @@ async def run_migration_task(task_id: str, runtime: TaskRuntime) -> None:
 
     try:
         async for raw_event in runtime.engine._execute_stream(runtime.inputs):
-            if not isinstance(raw_event, dict):
-                continue
-
             await _emit_event(task_id, raw_event)
 
             event_name = str(raw_event.get("event") or "")

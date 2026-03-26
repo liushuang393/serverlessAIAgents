@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, cast
 from pydantic import BaseModel, Field
 
 from contracts.tool import ToolCallStatus as CanonicalToolCallStatus
-from contracts.tool import ToolResult as CanonicalToolResult
+from contracts.tool import UnifiedToolResult as CanonicalToolResult
 
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ class ToolStatus(str, Enum):
 
 
 @dataclass
-class ToolResult:
+class UnifiedToolResult:
     """統一ツール実行結果.
 
     全てのツール種別が同じ形式で結果を返す。
@@ -113,7 +113,7 @@ class ToolResult:
         name: str,
         trace_id: str | None = None,
     ) -> CanonicalToolResult:
-        """Canonical ToolResult 契約へ変換する."""
+        """Canonical UnifiedToolResult 契約へ変換する."""
         status_map = {
             ToolStatus.SUCCESS: CanonicalToolCallStatus.SUCCESS,
             ToolStatus.FAILED: CanonicalToolCallStatus.FAILED,
@@ -146,8 +146,8 @@ class ToolResult:
         *,
         tool_uri: str | None = None,
         tool_type: ToolType = ToolType.CUSTOM,
-    ) -> ToolResult:
-        """Canonical ToolResult 契約から legacy ToolResult を復元する."""
+    ) -> UnifiedToolResult:
+        """Canonical UnifiedToolResult 契約から legacy UnifiedToolResult を復元する."""
         output = contract.metadata.get("legacy_output", contract.content)
         return cls(
             success=contract.status == CanonicalToolCallStatus.SUCCESS and contract.error is None,
@@ -208,7 +208,7 @@ class ToolProvider(ABC):
         self,
         tool_name: str,
         params: dict[str, Any],
-    ) -> ToolResult:
+    ) -> UnifiedToolResult:
         """ツールを呼び出す."""
         ...
 
@@ -262,12 +262,12 @@ class SkillToolProvider(ToolProvider):
         self,
         tool_name: str,
         params: dict[str, Any],
-    ) -> ToolResult:
+    ) -> UnifiedToolResult:
         """Skillを実行."""
         start_time = datetime.now()
 
         if not self._engine:
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.FAILED,
                 tool_uri=f"skill://{tool_name}",
@@ -281,7 +281,7 @@ class SkillToolProvider(ToolProvider):
 
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
 
-            return ToolResult(
+            return UnifiedToolResult(
                 success=True,
                 status=ToolStatus.SUCCESS,
                 tool_uri=f"skill://{tool_name}",
@@ -296,7 +296,7 @@ class SkillToolProvider(ToolProvider):
             )
         except Exception as e:
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.FAILED,
                 tool_uri=f"skill://{tool_name}",
@@ -361,13 +361,13 @@ class MCPToolProvider(ToolProvider):
         self,
         tool_name: str,
         params: dict[str, Any],
-    ) -> ToolResult:
+    ) -> UnifiedToolResult:
         """MCPツールを呼び出す."""
         start_time = datetime.now()
         tool_uri = tool_name if tool_name.startswith("mcp://") else f"mcp://{tool_name}"
 
         if not self._client:
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.FAILED,
                 tool_uri=tool_uri,
@@ -380,7 +380,7 @@ class MCPToolProvider(ToolProvider):
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
 
             if result.get("success"):
-                return ToolResult(
+                return UnifiedToolResult(
                     success=True,
                     status=ToolStatus.SUCCESS,
                     tool_uri=tool_uri,
@@ -388,7 +388,7 @@ class MCPToolProvider(ToolProvider):
                     output=result.get("result"),
                     duration_ms=duration_ms,
                 )
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.FAILED,
                 tool_uri=tool_uri,
@@ -398,7 +398,7 @@ class MCPToolProvider(ToolProvider):
             )
         except Exception as e:
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.FAILED,
                 tool_uri=tool_uri,
@@ -510,13 +510,13 @@ class BuiltinToolProvider(ToolProvider):
         self,
         tool_name: str,
         params: dict[str, Any],
-    ) -> ToolResult:
+    ) -> UnifiedToolResult:
         """内蔵ツールを呼び出す."""
         start_time = datetime.now()
         tool_uri = f"builtin://{tool_name}"
 
         if tool_name not in self._handlers:
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.NOT_FOUND,
                 tool_uri=tool_uri,
@@ -529,7 +529,7 @@ class BuiltinToolProvider(ToolProvider):
             result = await handler(params) if callable(handler) else handler(params)
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
 
-            return ToolResult(
+            return UnifiedToolResult(
                 success=True,
                 status=ToolStatus.SUCCESS,
                 tool_uri=tool_uri,
@@ -539,7 +539,7 @@ class BuiltinToolProvider(ToolProvider):
             )
         except Exception as e:
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-            return ToolResult(
+            return UnifiedToolResult(
                 success=False,
                 status=ToolStatus.FAILED,
                 tool_uri=tool_uri,
@@ -655,7 +655,7 @@ class UnifiedToolProvider:
         self,
         tool_uri: str,
         params: dict[str, Any],
-    ) -> ToolResult:
+    ) -> UnifiedToolResult:
         """ツールを呼び出す.
 
         URIスキームで自動ルーティング。
@@ -665,7 +665,7 @@ class UnifiedToolProvider:
             params: パラメータ
 
         Returns:
-            ToolResult
+            UnifiedToolResult
         """
         start_time = datetime.now()
 
@@ -685,7 +685,7 @@ class UnifiedToolProvider:
             provider = self._custom_providers[tool_name.split("/")[0]]
             return await provider.call(tool_name, params)
         duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-        return ToolResult(
+        return UnifiedToolResult(
             success=False,
             status=ToolStatus.NOT_FOUND,
             tool_uri=tool_uri,
@@ -835,7 +835,7 @@ __all__ = [
     "SkillToolProvider",
     "ToolDefinition",
     "ToolProvider",
-    "ToolResult",
+    "UnifiedToolResult",
     "ToolStatus",
     "ToolType",
     "UnifiedToolDefinition",

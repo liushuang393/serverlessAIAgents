@@ -325,8 +325,6 @@ class DecisionRepository:
                 await session.flush()
 
             stage_io_logs = record.stage_io_logs or {}
-            if not isinstance(stage_io_logs, dict):
-                stage_io_logs = {}
 
             entries = stage_io_logs.get(stage_name, [])
             if not isinstance(entries, list):
@@ -481,8 +479,6 @@ class DecisionRepository:
                 return False
 
             current_review = record.review_result or {}
-            if not isinstance(current_review, dict):
-                current_review = {}
             history = current_review.get("human_review_records", [])
             if not isinstance(history, list):
                 history = []
@@ -524,7 +520,10 @@ class DecisionRepository:
             try:
                 return self._to_jsonable(value.model_dump())
             except Exception:
-                return self._to_jsonable(dict(value))  # type: ignore[arg-type]
+                try:
+                    return self._to_jsonable(dict(value))
+                except Exception:
+                    return str(value)
         if isinstance(value, dict):
             return {str(k): self._to_jsonable(v) for k, v in value.items()}
         if isinstance(value, list):
@@ -543,7 +542,8 @@ class DecisionRepository:
                 continue
             output = item.get("output")
             if isinstance(output, dict):
-                return self._to_jsonable(output)
+                normalized = self._to_jsonable(output)
+                return normalized if isinstance(normalized, dict) else None
         return None
 
     async def _get_from_cache(self, key: str) -> dict[str, Any] | None:
@@ -554,7 +554,8 @@ class DecisionRepository:
         try:
             data = await redis.get(f"{self._cache_prefix}{key}")
             if data:
-                return json.loads(data)
+                decoded = json.loads(data)
+                return decoded if isinstance(decoded, dict) else None
         except Exception as e:
             logger.warning(f"Cache get failed: {e}")
         return None

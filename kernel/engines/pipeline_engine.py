@@ -623,7 +623,8 @@ class PipelineEngine(BaseEngine):
         result: dict[str, Any] | None = None,
     ) -> None:
         """ステージの承認を要求."""
-        from harness.approval import ApprovalRequest, interrupt
+        from harness.approval import ApprovalRequest
+        from harness.approval.interrupt import interrupt
 
         request = ApprovalRequest(
             action=f"stage_{timing}_{stage.name}",

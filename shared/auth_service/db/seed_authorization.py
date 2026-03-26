@@ -138,18 +138,18 @@ async def seed_authorization() -> None:
 
         # ロール-パーミッション割り当て
         for role_name, perm_names in ROLE_PERMISSIONS_MAP.items():
-            role = role_map.get(role_name)
-            if role is None:
+            mapped_role = role_map.get(role_name)
+            if mapped_role is None:
                 continue
             for perm_name in perm_names:
-                perm = perm_map.get(perm_name)
-                if perm is None:
+                mapped_perm = perm_map.get(perm_name)
+                if mapped_perm is None:
                     continue
                 session.add(
                     RolePermission(
                         id=_gen_id("rp"),
-                        role_id=role.id,
-                        permission_id=perm.id,
+                        role_id=mapped_role.id,
+                        permission_id=mapped_perm.id,
                     )
                 )
 
@@ -157,14 +157,14 @@ async def seed_authorization() -> None:
         result = await session.execute(select(UserAccount))
         users = result.scalars().all()
         for user in users:
-            role = role_map.get(user.role)
-            if role is None:
+            mapped_role = role_map.get(user.role)
+            if mapped_role is None:
                 continue
             session.add(
                 UserRole(
                     id=_gen_id("ur"),
                     user_id=user.id,
-                    role_id=role.id,
+                    role_id=mapped_role.id,
                     assigned_by="system",
                 )
             )

@@ -1,4 +1,3 @@
-import os
 import secrets
 
 from fastapi import APIRouter, HTTPException, Request
@@ -6,9 +5,11 @@ from fastapi.responses import RedirectResponse
 
 from apps.faq_system.backend.auth.router import _SESSION_COOKIE_MAX_AGE
 from apps.faq_system.backend.auth.service import get_auth_service
-from infrastructure.security.oauth2_provider import OAuth2Provider
-from infrastructure.security.providers.azure_ad import AzureADOAuth2Provider
-from infrastructure.security.providers.google import GoogleOAuth2Provider
+from infrastructure.security.oauth2_provider import ExternalIdentity as OAuth2Identity
+from shared.auth_service.config import get_settings
+from shared.auth_service.providers.azure_ad import AzureADProvider
+from shared.auth_service.providers.base import ExternalIdentity as SharedExternalIdentity
+from shared.auth_service.providers.google import GoogleOAuth2Provider
 
 
 router = APIRouter(prefix="/api/auth/oauth2", tags=["OAuth2"])
@@ -17,25 +18,22 @@ router = APIRouter(prefix="/api/auth/oauth2", tags=["OAuth2"])
 _oauth_states: dict[str, str] = {}  # state -> provider
 
 
-def _get_provider(provider_name: str, redirect_uri: str) -> OAuth2Provider:
-    if provider_name == "google":
-        client_id = os.getenv("GOOGLE_CLIENT_ID")
-        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
-        if not client_id or not client_secret:
-            raise HTTPException(status_code=500, detail="Google OAuth2 not configured")
-        return GoogleOAuth2Provider(client_id, client_secret, redirect_uri)
-    if provider_name == "azure_ad":
-        client_id = os.getenv("AZURE_AD_CLIENT_ID")
-        client_secret = os.getenv("AZURE_AD_CLIENT_SECRET")
-        tenant_id = os.getenv("AZURE_AD_TENANT_ID", "common")
-        if not client_id or not client_secret:
-            raise HTTPException(status_code=500, detail="Azure AD OAuth2 not configured")
-        return AzureADOAuth2Provider(client_id, client_secret, redirect_uri, tenant_id)
-    raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_name}")
+def _to_oauth_identity(provider_name: str, identity: SharedExternalIdentity) -> OAuth2Identity:
+    """shared.auth_service の外部 ID を FAQ auth 契約へ変換."""
+    return OAuth2Identity(
+        provider=provider_name,
+        username=identity.username,
+        email=identity.email or "",
+        display_name=identity.display_name,
+        department=identity.department,
+        position=identity.position,
+        role=identity.role,
+        raw=identity.raw_info,
+    )
 
 
 @router.get("/{provider_name}/authorize")
-async def authorize(provider_name: str, request: Request):
+async def authorize(provider_name: str, request: Request) -> RedirectResponse:
     """認可リクエストを開始."""
     # Build dynamic redirect URI based on request
     # This assumes the app is served at the same host/port/scheme as request
@@ -56,20 +54,27 @@ async def authorize(provider_name: str, request: Request):
     # The redirect_uri passed to provider MUST match exactly what's registered.
     # Usually http://localhost:8000/api/auth/oauth2/google/callback
 
-    base_url = str(request.base_url).rstrip("/")
-    redirect_uri = f"{base_url}/api/auth/oauth2/{provider_name}/callback"
-
-    provider = _get_provider(provider_name, redirect_uri)
-
     state = secrets.token_urlsafe(32)
     _oauth_states[state] = provider_name
 
-    url = await provider.get_authorization_url(state)
+    settings = get_settings()
+    if provider_name == "google":
+        url = GoogleOAuth2Provider(settings=settings).get_authorization_url(state)
+    elif provider_name == "azure_ad":
+        url = AzureADProvider(settings=settings).get_authorization_url(state)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_name}")
     return RedirectResponse(url)
 
 
 @router.get("/{provider_name}/callback")
-async def callback(provider_name: str, request: Request, code: str, state: str, error: str | None = None):
+async def callback(
+    provider_name: str,
+    request: Request,
+    code: str,
+    state: str,
+    error: str | None = None,
+) -> RedirectResponse:
     """認可コールバック処理."""
     if error:
         # Error from provider
@@ -86,17 +91,25 @@ async def callback(provider_name: str, request: Request, code: str, state: str, 
     base_url = str(request.base_url).rstrip("/")
     redirect_uri = f"{base_url}/api/auth/oauth2/{provider_name}/callback"
 
-    provider = _get_provider(provider_name, redirect_uri)
+    settings = get_settings()
 
     try:
-        token = await provider.exchange_code(code)
-        external_user = await provider.get_user_info(token)
+        external_identity: SharedExternalIdentity | None
+        if provider_name == "google":
+            external_identity = await GoogleOAuth2Provider(settings=settings).exchange_code(code)
+        elif provider_name == "azure_ad":
+            external_identity = await AzureADProvider(settings=settings).exchange_code(code, redirect_uri)
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown provider: {provider_name}")
     except Exception as e:
         # Log error
         import logging
 
         logging.exception(f"OAuth2 exchange failed: {e}")
         return RedirectResponse(url="/login?error=oauth_failed")
+    if external_identity is None:
+        return RedirectResponse(url="/login?error=oauth_failed")
+    external_user = _to_oauth_identity(provider_name, external_identity)
 
     # Authenticate/Register logic
     service = get_auth_service()

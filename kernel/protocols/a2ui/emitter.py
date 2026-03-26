@@ -115,6 +115,7 @@ class A2UIEmitter:
 
         flow_id = getattr(emitter, "_flow_id", None) or "a2ui"
         event_type = str(event_data.get("type", "")).strip()
+        agui_event: A2UIComponentEvent | A2UIUpdateEvent | A2UIClearEvent
         if event_type == "a2ui_component":
             agui_event = A2UIComponentEvent(
                 timestamp=time.time(),

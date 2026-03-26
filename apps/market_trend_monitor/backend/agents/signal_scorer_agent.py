@@ -52,7 +52,7 @@ class SignalScorerOutput(BaseModel):
     signals: list[SignalSchema] = Field(default_factory=list)
     total_evaluated: int = 0
     strong_signals_count: int = 0
-    dashboard_stats: dict = Field(default_factory=dict)
+    dashboard_stats: dict[str, Any] = Field(default_factory=dict)
 
 
 # ============================================================

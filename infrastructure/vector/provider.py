@@ -801,8 +801,14 @@ class SupabaseVectorProvider:
             import uuid
 
             ids = [str(uuid.uuid4()) for _ in documents]
+        if not isinstance(ids, list):
+            msg = "ids must be a list of strings."
+            raise TypeError(msg)
 
         embeddings = kwargs.get("embeddings")
+        if not isinstance(embeddings, list):
+            msg = "embeddings must be a list."
+            raise TypeError(msg)
         metadatas = kwargs.get("metadatas")
 
         rows = []

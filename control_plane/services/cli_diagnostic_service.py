@@ -48,33 +48,33 @@ class CLIDiagnosticService:
             preflight=preflight,
         )
         runtime_cli = app_config.runtime.cli.model_dump()
-        diagnostic = await self._runtime_manager.run_diagnostic_prompt(
+        raw_diagnostic = await self._runtime_manager.run_diagnostic_prompt(
             prompt=prompt,
             runtime_cli=runtime_cli,
         )
 
         merged_output = "\n".join(
             part
-            for part in (diagnostic.get("stdout", ""), diagnostic.get("stderr", ""))
+            for part in (raw_diagnostic.get("stdout", ""), raw_diagnostic.get("stderr", ""))
             if isinstance(part, str) and part
         )
         summary = self._build_summary(error=error, stderr=stderr, cli_output=merged_output)
         recommendations = self._build_recommendations(error=error, stderr=stderr, cli_output=merged_output)
 
-        diagnostic: dict[str, Any] = {
-            "tool": diagnostic.get("tool"),
+        diagnostic_result: dict[str, Any] = {
+            "tool": raw_diagnostic.get("tool"),
             "setup": self._setup_snapshot(preflight),
             "summary": summary,
             "recommendations": recommendations,
             "raw_output": merged_output[-6000:] if merged_output else "",
             "command_source": command_source,
-            "diagnostic_success": bool(diagnostic.get("success")),
-            "diagnostic_command": diagnostic.get("command"),
-            "diagnostic_error": diagnostic.get("error"),
+            "diagnostic_success": bool(raw_diagnostic.get("success")),
+            "diagnostic_command": raw_diagnostic.get("command"),
+            "diagnostic_error": raw_diagnostic.get("error"),
         }
         if repair_trace is not None:
-            diagnostic["retry_trace"] = repair_trace
-        return diagnostic
+            diagnostic_result["retry_trace"] = repair_trace
+        return diagnostic_result
 
     @staticmethod
     def attach_retry_trace(

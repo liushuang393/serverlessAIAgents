@@ -11,10 +11,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents import (
@@ -36,7 +35,6 @@ from apps.code_migration_assistant.workflow.models import (
     LegacyAnalysisArtifact,
     LimitedFixArtifact,
     MigrationDesignArtifact,
-    QualityDecision,
     QualityGateArtifact,
     TaskSpec,
     TestSynthesisArtifact,
@@ -55,7 +53,7 @@ from harness.governance.enterprise_audit import (
 )
 from harness.guardrails.safety_mixin import SafetyMixin
 from harness.policies.policy_engine import AuthContext
-from infrastructure.llm.providers.tool_provider import (
+from infrastructure.sandbox.tool_provider import (
     OperationType,
     RegisteredTool,
     RiskLevel,
@@ -67,11 +65,23 @@ from kernel.runtime import LightningTrainingRequest, TrajectoryAdapter
 from shared.integrations.context_bridge import get_current_context
 
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+
+__all__ = [
+    "ArtifactStore",
+    "LegacyAnalysisArtifact",
+]
+
+
 # =============================================================================
 # Virtual Tools (Governance Policy Hooks)
 # =============================================================================
-def _virtual_tool_func(*args, **kwargs):
+def _virtual_tool_func(*args: Any, **kwargs: Any) -> dict[str, Any]:
     """Virtual tool dummy implementation."""
+    del args, kwargs
+    return {}
 
 
 _MIGRATION_PLUGIN_REQUIRED_PERMISSIONS = ["repo.read", "repo.write", "os.exec"]
@@ -204,7 +214,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         self._compliance_reporter_agent: ComplianceReporterAgent | None = None
 
         # Event Queue for streaming
-        self._event_queue: asyncio.Queue | None = None
+        self._event_queue: asyncio.Queue[dict[str, Any]] | None = None
         self._human_facts: list[dict[str, Any]] = []
         self._capability_trace: list[dict[str, Any]] = []
 
@@ -278,7 +288,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         self._capability_trace = []
         return await self._run_pipeline(inputs)
 
-    async def _execute_stream(self, inputs: dict[str, Any]):
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行（ノード単位イベント）."""
         node_name = "migration_pipeline"
         node_start = self._emit_node_start(node_name)
@@ -286,7 +296,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             yield node_start
 
         # Init Event Queue
-        self._event_queue = asyncio.Queue()
+        self._event_queue = asyncio.Queue[dict[str, Any]]()
 
         # Run pipeline in background
         task = asyncio.create_task(self._run_pipeline(inputs))
@@ -537,499 +547,6 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
         return await run_pipeline_runtime(self, inputs)
 
-        self._ensure_agents_ready()
-
-        # Kill Switch チェック
-        if self._killed:
-            return {"success": False, "error": "Pipeline killed by Kill Switch"}
-
-        source_code = inputs.get("source_code") or inputs.get("cobol_code", "")
-        if not source_code:
-            return {"success": False, "error": "source_code is required"}
-
-        expected_outputs = inputs.get("expected_outputs", {})
-        if not isinstance(expected_outputs, dict):
-            return {"success": False, "error": "expected_outputs must be dict"}
-        fast_mode = bool(inputs.get("fast_mode", True))
-
-        task_id = str(inputs.get("task_id") or f"task-{uuid.uuid4().hex[:12]}")
-        trace_id = str(inputs.get("trace_id") or task_id)
-        module = str(inputs.get("module") or "UNKNOWN")
-
-        # ContextBridgeからコンテキスト取得
-        flow_context = get_current_context()
-
-        task_spec = self._build_task_spec(
-            task_id=task_id,
-            trace_id=trace_id,
-            module=module,
-            expected_outputs=expected_outputs,
-            options=inputs.get("options", {}),
-        )
-
-        artifacts_dir = inputs.get("artifacts_dir")
-        decisions_path = inputs.get("decisions_path")
-        failures_path = inputs.get("failures_path")
-        artifact_store = ArtifactStore(
-            base_dir=Path(str(artifacts_dir)) if artifacts_dir else None,
-            decisions_path=Path(str(decisions_path)) if decisions_path else None,
-            failures_path=Path(str(failures_path)) if failures_path else None,
-        )
-        await artifact_store.initialize()
-        lock_path = await artifact_store.acquire_lock(task_id)
-
-        artifact_paths: dict[str, str] = {}
-
-        try:
-            # 1) 分析
-            # Governance Check (Start Log)
-            await self._check_governance(MIGRATION_ANALYSIS, task_id, {"module": module}, flow_context)
-
-            analysis = self._legacy_analysis_agent.process(
-                {
-                    "source_code": source_code,
-                    "task_spec": task_spec.model_dump(mode="json"),
-                }
-            )
-            analysis_artifact = self._validate_or_fail(LegacyAnalysisArtifact, analysis, "analysis")
-            if analysis_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="analysis",
-                    responsible_stage="analysis",
-                    reason="schema validation failed",
-                )
-                return {"success": False, "stage": "analysis", "error": "invalid analysis artifact"}
-
-            analysis_path = await artifact_store.write_json(
-                stage="analysis",
-                task_id=task_id,
-                artifact_name="legacy_analysis",
-                payload=analysis_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["analysis"] = str(analysis_path)
-            await artifact_store.append_decision(task_id, "分析工程を完了")
-            analysis_for_next = await artifact_store.read_json(analysis_path)
-
-            # Completion Log
-            await self._log_completion(MIGRATION_ANALYSIS, task_id, {"path": str(analysis_path)}, flow_context)
-
-            # 2) 設計
-            await self._check_governance(MIGRATION_DESIGN, task_id, {}, flow_context)
-
-            design = self._migration_design_agent.process({"legacy_analysis": analysis_for_next})
-            design_artifact = self._validate_or_fail(MigrationDesignArtifact, design, "design")
-            if design_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="design",
-                    responsible_stage="design",
-                    reason="schema validation failed",
-                )
-                return {"success": False, "stage": "design", "error": "invalid design artifact"}
-
-            design_path = await artifact_store.write_json(
-                stage="design",
-                task_id=task_id,
-                artifact_name="migration_design",
-                payload=design_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["design"] = str(design_path)
-            await artifact_store.append_decision(task_id, "設計工程を完了")
-            design_for_next = await artifact_store.read_json(design_path)
-
-            await self._log_completion(MIGRATION_DESIGN, task_id, {"path": str(design_path)}, flow_context)
-
-            # ── HITL 承認ポイント（設計後） ──
-            # 設計結果の人間レビューを要求
-            if self._killed:
-                return {"success": False, "error": "Pipeline killed by Kill Switch"}
-
-            try:
-                # 承認フローのリスクレベルもツール定義から取得
-                # request_approval は AsyncIterator なので、イベントを消費して待機する
-                self._logger.info("Initializing HITL approval flow...")
-                approval_iterator = self._approval_flow.request_approval(
-                    action="migration_design_approval",
-                    reason=f"移行設計の承認を要求: モジュール={module}, "
-                    f"変換ルール数={len(design_artifact.mapping_rules)}",
-                    risk_level=MIGRATION_DESIGN.risk_level,
-                    context={
-                        "task_id": task_id,
-                        "module": module,
-                        "design_path": str(design_path),
-                    },
-                )
-
-                # イベントを待機（承認されるとループ終了）
-                async for event in approval_iterator:
-                    self._logger.info(f"Received approval event: {event}")
-
-                    # Forward approval events to stream
-                    if self._event_queue:
-                        # Map to AG-UI expected format or generic
-                        if event.get("event_type") == "approval_required":
-                            await self._event_queue.put(
-                                {
-                                    "event": "approval_required",
-                                    "request_id": event.get("request_id"),
-                                    "reason": event.get("reason"),
-                                    "context": event.get("context"),
-                                }
-                            )
-
-                    if event.get("event_type") == "approval_submitted":
-                        if not event.get("approved", False):
-                            await artifact_store.append_failure(
-                                task_id=task_id,
-                                stage="design",
-                                responsible_stage="approval",
-                                reason=f"Rejected by user: {event.get('comment')}",
-                            )
-                            return {
-                                "success": False,
-                                "stage": "design",
-                                "error": "Migration Design Rejected by User",
-                            }
-                        self._logger.info(f"Design Approved by {event.get('approver')}")
-                        # 承認されたらループを抜けて次の工程へ
-                        break
-
-                    if event.get("event_type") == "approval_timeout":
-                        return {"success": False, "stage": "design", "error": "Approval Timeout"}
-
-                    # 承認待ちでストリームを止めるため、とりあえずループを継続しつつ、外部へのイベント通知はApprovalFlowがやる
-
-            except Exception as e:
-                self._logger.warning(f"HITL approval integration failed, skipping: {e}")
-            # ── HITL 承認ポイント終了 ──
-
-            # 3) 変換
-            await self._check_governance(MIGRATION_TRANSFORM, task_id, {"fast_mode": fast_mode}, flow_context)
-
-            transformation = self._code_transformation_agent.process(
-                {
-                    "source_code": source_code,
-                    "migration_design": design_for_next,
-                    "fast_mode": fast_mode,
-                }
-            )
-            transformation_artifact = self._validate_or_fail(TransformationArtifact, transformation, "code")
-            if transformation_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="code",
-                    responsible_stage="transform",
-                    reason="schema validation failed",
-                )
-                return {
-                    "success": False,
-                    "stage": "transform",
-                    "error": "invalid transformation artifact",
-                }
-
-            transformation_path = await artifact_store.write_json(
-                stage="code",
-                task_id=task_id,
-                artifact_name="transformation",
-                payload=transformation_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["code"] = str(transformation_path)
-            # Write all generated files
-            for gf in transformation_artifact.generated_files:
-                await artifact_store.write_text(
-                    stage="code",
-                    task_id=task_id,
-                    artifact_name=gf.path.replace("/", "_").replace(".java", ""),
-                    extension="java",
-                    content=gf.content,
-                )
-
-            # Keep target_code for single-file tools if needed
-            await artifact_store.write_text(
-                stage="code",
-                task_id=task_id,
-                artifact_name="target_code",
-                extension="java",
-                content=transformation_artifact.target_code,
-            )
-            await artifact_store.append_decision(task_id, "変換工程を完了")
-            transformation_for_next = await artifact_store.read_json(transformation_path)
-
-            await self._log_completion(MIGRATION_TRANSFORM, task_id, {"path": str(transformation_path)}, flow_context)
-
-            # 4) テスト生成
-            await self._check_governance(MIGRATION_TEST_GEN, task_id, {}, flow_context)
-
-            test_synthesis = self._test_synthesis_agent.process(
-                {
-                    "legacy_analysis": analysis_for_next,
-                    "expected_outputs": expected_outputs,
-                    "target_language": task_spec.target_language,
-                }
-            )
-            test_artifact = self._validate_or_fail(TestSynthesisArtifact, test_synthesis, "tests")
-            if test_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="tests",
-                    responsible_stage="test",
-                    reason="schema validation failed",
-                )
-                return {"success": False, "stage": "tests", "error": "invalid test artifact"}
-
-            tests_path = await artifact_store.write_json(
-                stage="tests",
-                task_id=task_id,
-                artifact_name="test_synthesis",
-                payload=test_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["tests"] = str(tests_path)
-            await artifact_store.append_decision(task_id, "テスト生成工程を完了")
-            tests_for_next = await artifact_store.read_json(tests_path)
-
-            await self._log_completion(MIGRATION_TEST_GEN, task_id, {"path": str(tests_path)}, flow_context)
-
-            # 5) 差分検証
-            await self._check_governance(MIGRATION_VERIFY_DIFF, task_id, {}, flow_context)
-
-            differential = self._differential_agent.process(
-                {
-                    "transformation": transformation_for_next,
-                    "test_synthesis": tests_for_next,
-                    "fast_mode": fast_mode,
-                }
-            )
-            diff_artifact = self._validate_or_fail(
-                DifferentialVerificationArtifact,
-                differential,
-                "diff",
-            )
-            if diff_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="diff",
-                    responsible_stage="diff",
-                    reason="schema validation failed",
-                )
-                return {"success": False, "stage": "diff", "error": "invalid differential artifact"}
-
-            diff_path = await artifact_store.write_json(
-                stage="diff",
-                task_id=task_id,
-                artifact_name="differential",
-                payload=diff_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["diff"] = str(diff_path)
-            await artifact_store.append_decision(task_id, "差分検証工程を完了")
-            diff_for_next = await artifact_store.read_json(diff_path)
-
-            await self._log_completion(MIGRATION_VERIFY_DIFF, task_id, {"path": str(diff_path)}, flow_context)
-
-            # 6) 品質裁定
-            await self._check_governance(MIGRATION_QUALITY_GATE, task_id, {}, flow_context)
-
-            known_legacy_issues = await self._load_known_legacy_issues(inputs)
-            quality_gate = self._quality_gate_agent.process(
-                {
-                    "differential": diff_for_next,
-                    "migration_design": design_for_next,
-                    "test_synthesis": tests_for_next,
-                    "known_legacy_issues": known_legacy_issues,
-                }
-            )
-            quality_artifact = self._validate_or_fail(QualityGateArtifact, quality_gate, "quality")
-            if quality_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="quality",
-                    responsible_stage="quality",
-                    reason="schema validation failed",
-                )
-                return {"success": False, "stage": "quality", "error": "invalid quality artifact"}
-
-            quality_path = await artifact_store.write_json(
-                stage="quality",
-                task_id=task_id,
-                artifact_name="quality_gate",
-                payload=quality_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["quality"] = str(quality_path)
-            await artifact_store.append_decision(
-                task_id,
-                f"品質裁定: {quality_artifact.decision.value} / next={quality_artifact.target_agent}",
-            )
-            quality_for_next = await artifact_store.read_json(quality_path)
-
-            await self._log_completion(
-                MIGRATION_QUALITY_GATE,
-                task_id,
-                {"decision": quality_artifact.decision.value},
-                flow_context,
-            )
-
-            # 7) 限定修正
-            if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
-                await self._check_governance(MIGRATION_FIX, task_id, {}, flow_context)
-
-                fix = self._limited_fixer_agent.process(
-                    {
-                        "quality_gate": quality_for_next,
-                        "transformation": transformation_for_next,
-                        "migration_design": design_for_next,
-                    }
-                )
-                fix_artifact = self._validate_or_fail(LimitedFixArtifact, fix, "fix")
-            else:
-                fix_artifact = LimitedFixArtifact(
-                    meta=transformation_artifact.meta.model_copy(update={"stage": "fix"}),
-                    applied=False,
-                    target_code=transformation_artifact.target_code,
-                    patch_summary=["修正不要（裁定が TRANSFORM_ISSUE 以外）"],
-                    retest_required=False,
-                    unknowns=[],
-                    extensions={},
-                )
-
-            if fix_artifact is None:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="fix",
-                    responsible_stage="fix",
-                    reason="schema validation failed",
-                )
-                return {"success": False, "stage": "fix", "error": "invalid fix artifact"}
-
-            fix_path = await artifact_store.write_json(
-                stage="fix",
-                task_id=task_id,
-                artifact_name="limited_fix",
-                payload=fix_artifact.model_dump(mode="json"),
-            )
-            artifact_paths["fix"] = str(fix_path)
-            await artifact_store.append_decision(task_id, "限定修正工程を完了")
-
-            if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
-                await self._log_completion(MIGRATION_FIX, task_id, {"applied": fix_artifact.applied}, flow_context)
-
-            final_differential = diff_artifact
-            final_quality = quality_artifact
-            iterations = 1
-
-            if fix_artifact.retest_required:
-                iterations = 2
-                adjusted_transformation = transformation_for_next.copy()
-                adjusted_transformation["target_code"] = fix_artifact.target_code
-
-                # 再検証時は軽量なのでGovernance Checkはスキップ（または別途定義）
-                post_differential = self._differential_agent.process(
-                    {
-                        "transformation": adjusted_transformation,
-                        "test_synthesis": tests_for_next,
-                        "fast_mode": fast_mode,
-                    }
-                )
-                post_diff_artifact = DifferentialVerificationArtifact.model_validate(post_differential)
-                post_diff_path = await artifact_store.write_json(
-                    stage="diff",
-                    task_id=task_id,
-                    artifact_name="differential_post_fix",
-                    payload=post_diff_artifact.model_dump(mode="json"),
-                )
-                artifact_paths["diff_post_fix"] = str(post_diff_path)
-
-                post_quality = self._quality_gate_agent.process(
-                    {
-                        "differential": post_diff_artifact.model_dump(mode="json"),
-                        "migration_design": design_for_next,
-                        "test_synthesis": tests_for_next,
-                        "known_legacy_issues": known_legacy_issues,
-                    }
-                )
-                post_quality_artifact = QualityGateArtifact.model_validate(post_quality)
-                post_quality_path = await artifact_store.write_json(
-                    stage="quality",
-                    task_id=task_id,
-                    artifact_name="quality_gate_post_fix",
-                    payload=post_quality_artifact.model_dump(mode="json"),
-                )
-                artifact_paths["quality_post_fix"] = str(post_quality_path)
-
-                final_differential = post_diff_artifact
-                final_quality = post_quality_artifact
-                await artifact_store.append_decision(
-                    task_id,
-                    f"再裁定: {final_quality.decision.value}",
-                )
-
-            success = final_quality.decision in {
-                QualityDecision.PASSED,
-                QualityDecision.KNOWN_LEGACY,
-            }
-
-            if not success:
-                await artifact_store.append_failure(
-                    task_id=task_id,
-                    stage="quality",
-                    responsible_stage=final_quality.decision.value,
-                    reason=final_quality.reason,
-                )
-
-            # 8) 報告生成
-            await self._check_governance(MIGRATION_REPORT, task_id, {}, flow_context)
-
-            report = self._compliance_reporter_agent.process(
-                {
-                    "task_id": task_id,
-                    "migration_type": self._migration_type,
-                    "source_code": source_code,
-                    "analysis": analysis_artifact.model_dump(mode="json"),
-                    "design": design_artifact.model_dump(mode="json"),
-                    "transformation": transformation_artifact.model_dump(mode="json"),
-                    "quality": final_quality.model_dump(mode="json"),
-                    "fix": locals().get("fix_artifact", {}).model_dump(mode="json")
-                    if locals().get("fix_artifact")
-                    else {},
-                }
-            )
-
-            report_path = await artifact_store.write_text(
-                stage="report",
-                task_id=task_id,
-                artifact_name="compliance_report",
-                extension="md",
-                content=report.get("report_markdown", "# Report Generation Failed"),
-            )
-            artifact_paths["report"] = str(report_path)
-
-            await self._log_completion(MIGRATION_REPORT, task_id, {"path": str(report_path)}, flow_context)
-
-            class_name = design_artifact.class_mapping.get("primary_class", "MigratedProgram")
-            final_target_code = (
-                locals().get("fix_artifact", {}).target_code
-                if locals().get("fix_artifact") and locals().get("fix_artifact").applied
-                else transformation_artifact.target_code
-            )
-
-            return {
-                "success": success,
-                "migration_type": self._migration_type,
-                "source_language": task_spec.source_language,
-                "target_language": task_spec.target_language,
-                "task_id": task_id,
-                "trace_id": trace_id,
-                "class_name": class_name,
-                "target_code": final_target_code,
-                "verdict": "PASS" if success else "FAIL",
-                "iterations": iterations,
-                "check_result": final_differential.model_dump(mode="json"),
-                "quality_gate": final_quality.model_dump(mode="json"),
-                "artifact_paths": artifact_paths,
-                "fast_mode": fast_mode,
-            }
-        finally:
-            await artifact_store.release_lock(lock_path)
-
     def _build_task_spec(
         self,
         *,
@@ -1132,13 +649,13 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                     "reflection_feedback": feedback,
                 }
             )
-            artifact = self._validate_or_fail(TransformationArtifact, payload, "code")
-            if artifact is None:
+            validated_artifact = self._validate_or_fail(TransformationArtifact, payload, "code")
+            if not isinstance(validated_artifact, TransformationArtifact):
                 msg = "invalid transformation artifact"
                 raise RuntimeError(msg)
 
-            final_artifact = artifact
-            warning_penalty = float(len(artifact.warnings) * 10)
+            final_artifact = validated_artifact
+            warning_penalty = float(len(validated_artifact.warnings) * 10)
             score = max(0.0, 95.0 - warning_penalty)
             accepted = score >= acceptance_threshold or iteration >= max_iterations
             records.append(

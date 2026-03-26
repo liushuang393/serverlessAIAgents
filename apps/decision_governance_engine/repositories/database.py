@@ -15,10 +15,11 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from apps.decision_governance_engine.repositories.models import Base
-from infrastructure.database import DatabaseConfig, DatabaseManager
+from infrastructure.storage.database.config import DatabaseConfig
+from infrastructure.storage.database.session import DatabaseManager
 
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ _redis_client: Any = None
 
 def get_database_url() -> str:
     """データベース URL を取得."""
-    return _db.resolved_url
+    return str(_db.resolved_url)
 
 
 def get_redis_url() -> str:
@@ -84,6 +85,16 @@ async def get_db_session() -> AsyncGenerator[AsyncSession]:
     """
     async with _db.session() as session:
         yield session
+
+
+async def get_db_session_factory() -> async_sessionmaker[AsyncSession]:
+    """非同期セッションファクトリを取得.
+
+    Returns:
+        AsyncSession 用の async_sessionmaker
+    """
+    await _db.init()
+    return _db.get_async_session_factory()
 
 
 async def get_redis() -> Any:

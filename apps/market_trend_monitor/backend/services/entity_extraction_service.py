@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from kernel import get_llm
+from infrastructure.providers.llm_provider import LLMProvider, get_llm
 
 
 class EntityType(str, Enum):
@@ -203,12 +203,12 @@ class EntityExtractionService:
         ],
     }
 
-    def __init__(self, *, llm: Any | None = None) -> None:
+    def __init__(self, *, llm: LLMProvider | None = None) -> None:
         """初期化."""
         self._logger = logging.getLogger(self.__class__.__name__)
         self._llm = llm
 
-    def _get_llm(self) -> Any:
+    def _get_llm(self) -> LLMProvider:
         """LLMインスタンスを取得."""
         if self._llm is None:
             self._llm = get_llm(temperature=0.2)

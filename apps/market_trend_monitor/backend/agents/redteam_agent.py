@@ -54,7 +54,7 @@ class RedTeamOutput(BaseModel):
     adjusted_claims: list[ClaimSchema] = Field(default_factory=list)
     total_challenges: int = 0
     valid_challenges: int = 0
-    stats: dict = Field(default_factory=dict)
+    stats: dict[str, Any] = Field(default_factory=dict)
 
 
 # ============================================================

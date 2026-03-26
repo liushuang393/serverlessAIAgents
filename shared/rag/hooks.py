@@ -193,7 +193,8 @@ class VectorSearchHook:
             await self.connect()
 
         vectordb = self._require_vectordb()
-        return await vectordb.delete(ids)
+        deleted = await vectordb.delete(ids)
+        return int(deleted)
 
     async def __aenter__(self) -> VectorSearchHook:
         """非同期コンテキストマネージャーのエントリー."""

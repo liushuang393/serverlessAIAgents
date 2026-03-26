@@ -126,7 +126,8 @@ class ImportanceAdjuster:
         # 最終スコア
         importance = base_score * access_factor * decay_factor * stability_factor
 
-        return max(0.0, min(1.0, importance))
+        normalized_importance = max(0.0, min(1.0, importance))
+        return float(normalized_importance)
 
     async def adjust_importance(self, entry: MemoryEntry) -> float:
         """記憶の重要度を調整.

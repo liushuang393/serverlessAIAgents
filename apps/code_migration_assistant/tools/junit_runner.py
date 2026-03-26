@@ -216,7 +216,7 @@ class JUnitRunner:
             ],
         )
 
-    def _parse_junit_xml(self, reports_dir: Path, run_result: subprocess.CompletedProcess) -> JUnitResult:
+    def _parse_junit_xml(self, reports_dir: Path, run_result: subprocess.CompletedProcess[str]) -> JUnitResult:
         """JUnit XML レポートをパース."""
         tests: list[TestResult] = []
         total = passed = failed = errors = skipped = 0
@@ -298,7 +298,7 @@ class JUnitRunner:
             stderr=run_result.stderr,
         )
 
-    def _parse_from_stdout(self, run_result: subprocess.CompletedProcess) -> JUnitResult:
+    def _parse_from_stdout(self, run_result: subprocess.CompletedProcess[str]) -> JUnitResult:
         """stdout からテスト結果を解析."""
         stdout = run_result.stdout
 

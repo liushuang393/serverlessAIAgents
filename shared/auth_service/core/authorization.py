@@ -61,6 +61,15 @@ class AuthorizationService:
         """初期化."""
         self._cache: dict[str, _CacheEntry] = {}
 
+    @staticmethod
+    def _as_str_list(value: Any) -> list[str] | None:
+        """キャッシュ値を文字列リストへ安全に変換する."""
+        if not isinstance(value, list):
+            return None
+        if not all(isinstance(item, str) for item in value):
+            return None
+        return value
+
     @property
     def _ttl(self) -> int:
         return get_settings().AUTHZ_CACHE_TTL_SECONDS
@@ -79,8 +88,9 @@ class AuthorizationService:
         """
         cache_key = f"perms:{user_id}"
         cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached  # type: ignore[return-value]
+        cached_permissions = self._as_str_list(cached)
+        if cached_permissions is not None:
+            return cached_permissions
 
         permissions = await self._resolve_permissions(user_id)
         self._set_cache(cache_key, permissions)
@@ -97,8 +107,9 @@ class AuthorizationService:
         """
         cache_key = f"roles:{user_id}"
         cached = self._get_cached(cache_key)
-        if cached is not None:
-            return cached  # type: ignore[return-value]
+        cached_roles = self._as_str_list(cached)
+        if cached_roles is not None:
+            return cached_roles
 
         roles = await self._resolve_roles(user_id)
         self._set_cache(cache_key, roles)

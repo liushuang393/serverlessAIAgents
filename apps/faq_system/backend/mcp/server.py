@@ -13,11 +13,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from kernel.protocols.mcp_tool import MCPTool, MCPToolRequest, MCPToolResponse
-
 from apps.faq_system.backend.mcp.tools.file_search import FileSearchTool
 from apps.faq_system.backend.mcp.tools.hybrid_search import HybridSearchTool
 from apps.faq_system.backend.mcp.tools.knowledge_search import KnowledgeSearchTool
+from kernel.protocols.mcp_tool import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 logger = logging.getLogger(__name__)
@@ -50,10 +49,7 @@ class FAQMCPServer:
         Returns:
             ツール名とバージョンの一覧
         """
-        return [
-            {"name": t.tool_name, "version": t.version}
-            for t in self._tools.values()
-        ]
+        return [{"name": t.tool_name, "version": t.version} for t in self._tools.values()]
 
     async def call_tool(
         self,
@@ -115,26 +111,31 @@ class FAQMCPServer:
         server = cls()
 
         # 伝統的RAG検索ツール
-        server.register_tool(KnowledgeSearchTool(
-            collection=collection,
-            chunk_strategy=chunk_strategy,
-            reranker=reranker,
-            top_k=top_k,
-        ))
+        server.register_tool(
+            KnowledgeSearchTool(
+                collection=collection,
+                chunk_strategy=chunk_strategy,
+                reranker=reranker,
+                top_k=top_k,
+            )
+        )
 
         # ファイルシステム検索ツール
-        server.register_tool(FileSearchTool(
-            search_dirs=search_dirs or [],
-        ))
+        server.register_tool(
+            FileSearchTool(
+                search_dirs=search_dirs or [],
+            )
+        )
 
         # ハイブリッド検索ツール
-        server.register_tool(HybridSearchTool(
-            collection=collection,
-            chunk_strategy=chunk_strategy,
-            reranker=reranker,
-            search_dirs=search_dirs or [],
-            top_k=top_k,
-        ))
+        server.register_tool(
+            HybridSearchTool(
+                collection=collection,
+                chunk_strategy=chunk_strategy,
+                reranker=reranker,
+                search_dirs=search_dirs or [],
+                top_k=top_k,
+            )
+        )
 
         return server
-

@@ -478,8 +478,6 @@ JSON形式で出力してください。"""
         seen_descriptions: set[str] = set()
 
         for f in raw_findings:
-            if not isinstance(f, dict):
-                continue
             desc = self._truncate_text(f.get("description", ""), self.MAX_IMPACT_SCOPE_LEN)
             # 重複除去
             if desc in seen_descriptions:

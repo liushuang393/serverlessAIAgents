@@ -21,6 +21,7 @@ from contracts.runtime.context import (
     set_runtime_context,
 )
 
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 

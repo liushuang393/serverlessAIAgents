@@ -92,7 +92,7 @@ class LangChainAdapter(ThirdPartyAdapter):
 
             return self._retriever
         except ImportError:
-            self._logger.error(
+            self._logger.exception(
                 "langchain 未インストール。pip install langchain langchain-community を実行してください"
             )
             raise
@@ -183,4 +183,3 @@ class LangChainAdapter(ThirdPartyAdapter):
                 query=query.query,
                 metadata={"error": str(e)},
             )
-

@@ -225,11 +225,11 @@ class AgentBlock(ABC):
 
 def _apply_auto_adapt() -> None:
     """auto_adapt デコレーターを遅延適用（循環インポート回避）."""
-    global AgentBlock
     try:
         from kernel.agents.decorators import auto_adapt
 
-        AgentBlock = auto_adapt()(AgentBlock)
+        decorator: Any = auto_adapt()
+        decorator(AgentBlock)
     except ImportError:
         pass
 

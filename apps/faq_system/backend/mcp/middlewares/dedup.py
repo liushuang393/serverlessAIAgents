@@ -44,7 +44,7 @@ async def dedup_middleware(
 
     for doc in result.documents:
         # コンテンツハッシュで完全一致を排除
-        content_hash = hashlib.md5(doc.content.encode("utf-8")).hexdigest()  # noqa: S324
+        content_hash = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()
         if content_hash in seen_hashes:
             continue
 
@@ -114,4 +114,3 @@ def create_dedup_middleware(
         return await dedup_middleware(result, similarity_threshold=similarity_threshold)
 
     return _middleware
-

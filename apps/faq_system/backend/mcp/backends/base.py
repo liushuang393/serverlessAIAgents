@@ -144,4 +144,3 @@ class RetrievalBackend(ABC):
     def __repr__(self) -> str:
         """文字列表現."""
         return f"{self.__class__.__name__}(type={self.backend_type.value}, name={self.name})"
-

@@ -9,11 +9,8 @@ from dataclasses import dataclass
 from typing import Any
 
 
-StageRunner = Callable[[dict[str, Any]], dict[str, Any] | Awaitable[dict[str, Any]]]
-SkillExecutor = Callable[
-    [str, dict[str, Any], "StageCapability"],
-    dict[str, Any] | Awaitable[dict[str, Any]],
-]
+StageRunner = Callable[[dict[str, Any]], object | Awaitable[object]]
+SkillExecutor = Callable[..., object | Awaitable[object]]
 
 
 @dataclass(slots=True, frozen=True)
@@ -156,7 +153,7 @@ class SkillStageAdapter:
             result = self._skill_executor(capability.capability_id, payload, capability)
         except TypeError:
             # 互換性のため 2 引数形式も許容
-            result = self._skill_executor(  # type: ignore[call-arg]
+            result = self._skill_executor(
                 capability.capability_id,
                 payload,
             )

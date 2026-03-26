@@ -21,6 +21,7 @@ import argparse
 import ast
 import json
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,17 +38,51 @@ FRAMEWORK_MODULES = {
 }
 
 
-def check_app(app_dir: Path) -> dict:
+def _resolve_module_path(module_name: str) -> Path | None:
+    """モジュール名から実ファイルパスを静的に解決する."""
+    module_path = ROOT / Path(*module_name.split("."))
+    file_path = module_path.with_suffix(".py")
+    if file_path.is_file():
+        return file_path
+
+    package_init = module_path / "__init__.py"
+    if package_init.is_file():
+        return package_init
+
+    return None
+
+
+def _has_configured_entry_point(config: dict[str, Any]) -> bool:
+    """app_config.json の entry_points.api_module を入口として解決できるか確認する."""
+    entry_points = config.get("entry_points")
+    if not isinstance(entry_points, dict):
+        return False
+
+    api_module = entry_points.get("api_module")
+    if not isinstance(api_module, str):
+        return False
+
+    module_name = api_module.split(":", 1)[0].strip()
+    if not module_name:
+        return False
+
+    return _resolve_module_path(module_name) is not None
+
+
+def check_app(app_dir: Path) -> dict[str, Any]:
     """単一 app のコンプライアンスを検証."""
     name = app_dir.name
-    result: dict = {"name": name, "issues": []}
+    result: dict[str, Any] = {"name": name, "issues": []}
+    config: dict[str, Any] = {}
 
     # 1. app_config.json
     config_path = app_dir / "app_config.json"
     result["app_config_exists"] = config_path.exists()
     if config_path.exists():
         try:
-            config = json.loads(config_path.read_text(encoding="utf-8"))
+            loaded_config = json.loads(config_path.read_text(encoding="utf-8"))
+            if isinstance(loaded_config, dict):
+                config = loaded_config
             missing = REQUIRED_CONFIG_FIELDS - set(config.keys())
             result["config_missing_fields"] = sorted(missing)
             if missing:
@@ -60,9 +95,10 @@ def check_app(app_dir: Path) -> dict:
     # 2. エントリーポイント
     has_main = (app_dir / "main.py").exists()
     has_init = (app_dir / "__init__.py").exists()
-    result["has_entry_point"] = has_main or has_init
+    has_configured_entry = _has_configured_entry_point(config)
+    result["has_entry_point"] = has_configured_entry or has_main or has_init
     if not result["has_entry_point"]:
-        result["issues"].append("エントリーポイント (main.py / __init__.py) なし")
+        result["issues"].append("エントリーポイント (entry_points.api_module / main.py / __init__.py) なし")
 
     # 3. フレームワーク import
     framework_imports: set[str] = set()

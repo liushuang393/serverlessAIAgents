@@ -296,6 +296,9 @@ class EnhancedMemoryManager:
             MemoryEntry
         """
         entry = await self._base.remember(text, topic, metadata)
+        if entry is None:
+            msg = "Memory entry could not be created."
+            raise RuntimeError(msg)
 
         # 设置重要性
         self._tracker.set_importance(entry.id, importance)

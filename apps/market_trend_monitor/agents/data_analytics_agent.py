@@ -31,7 +31,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from kernel.agents import ResilientAgent
+from kernel.agents.resilient_agent import ResilientAgent
 
 
 logger = logging.getLogger(__name__)

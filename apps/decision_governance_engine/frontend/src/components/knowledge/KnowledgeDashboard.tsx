@@ -14,7 +14,7 @@ interface Props {
 
 export const KnowledgeDashboard: React.FC<Props> = ({ showCollectionForm }) => {
   const { t } = useI18n();
-  const { collections, fetchCollections, createCollection, deleteCollection, loading } = useKnowledgeStore();
+  const { collections, createCollection, deleteCollection, loading } = useKnowledgeStore();
   const [showForm, setShowForm] = useState(!!showCollectionForm);
   const [form, setForm] = useState({
     collection_name: '',

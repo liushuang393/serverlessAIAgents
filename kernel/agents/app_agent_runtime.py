@@ -56,7 +56,11 @@ class AppAgentRuntime:
         if agent is None:
             msg = f"Agent not found: {agent_id}"
             raise KeyError(msg)
-        return await agent.run(input_data)
+        result = await agent.run(input_data)
+        if not isinstance(result, dict):
+            msg = f"Agent must return dict payload: {agent_id}"
+            raise TypeError(msg)
+        return result
 
     async def stream(self, agent_id: str, input_data: dict[str, Any]) -> AsyncIterator[AGUIEvent]:
         """agent 実行を AG-UI イベント列として返す."""

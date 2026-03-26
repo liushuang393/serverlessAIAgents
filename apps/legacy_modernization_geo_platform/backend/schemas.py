@@ -163,7 +163,7 @@ class ApprovalRequest(ContractApprovalRequest):
     approved: bool = True
     reviewer_name: str = "operator"
     comment: str | None = None
-    action: ApprovalStatus | None = None
+    action: str = ""
 
     @model_validator(mode="before")
     @classmethod
@@ -189,7 +189,7 @@ class ApprovalRequest(ContractApprovalRequest):
         payload["approved"] = approved
         payload["reviewer_name"] = reviewer_name
         payload["comment"] = comment_text or None
-        payload["action"] = action
+        payload["action"] = action.value
         payload["requester"] = str(payload.get("requester") or reviewer_name).strip() or reviewer_name
         payload["priority"] = str(payload.get("priority") or _approval_priority(action)).strip() or _approval_priority(
             action
@@ -218,7 +218,7 @@ class ApprovalRequest(ContractApprovalRequest):
             "approved": self.approved,
             "reviewer_name": self.reviewer_name,
             "comment": self.comment,
-            "action": self.action.value if self.action is not None else None,
+            "action": self.action or None,
         }
 
 

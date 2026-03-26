@@ -31,7 +31,7 @@ from typing import Any, cast
 
 import httpx
 
-from kernel import get_llm
+from infrastructure.providers.llm_provider import get_llm
 
 
 logger = logging.getLogger(__name__)

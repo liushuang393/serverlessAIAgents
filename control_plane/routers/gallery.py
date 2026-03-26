@@ -51,7 +51,8 @@ async def search_gallery(
     Returns:
         検索結果
     """
-    return await engine.search_gallery(request)
+    response = await engine.search_gallery(request)
+    return GallerySearchResponse.model_validate(response)
 
 
 @router.get("/search", response_model=GallerySearchResponse)
@@ -97,7 +98,8 @@ async def search_gallery_get(
         sort_by=sort_by,
         sort_order=sort_order,
     )
-    return await engine.search_gallery(request)
+    response = await engine.search_gallery(request)
+    return GallerySearchResponse.model_validate(response)
 
 
 @router.get("/featured", response_model=FeaturedResponse)
@@ -112,7 +114,8 @@ async def get_featured(
     Returns:
         推荐レスポンス
     """
-    return await engine.get_featured()
+    response = await engine.get_featured()
+    return FeaturedResponse.model_validate(response)
 
 
 @router.get("/{item_id}", response_model=GalleryItem)
@@ -135,7 +138,7 @@ async def get_gallery_item(
     item = await engine.get_gallery_item(item_id)
     if item is None:
         raise HTTPException(status_code=404, detail=f"Item not found: {item_id}")
-    return item
+    return GalleryItem.model_validate(item)
 
 
 @router.post("/install")

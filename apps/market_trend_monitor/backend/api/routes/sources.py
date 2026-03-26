@@ -11,6 +11,11 @@ from pydantic import BaseModel, Field
 router = APIRouter(tags=["情報源"])
 
 
+def _as_dict(value: object) -> dict[str, Any]:
+    """辞書戻り値を正規化."""
+    return value if isinstance(value, dict) else {}
+
+
 class SourceCreateRequest(BaseModel):
     """情報源登録リクエスト."""
 
@@ -33,7 +38,7 @@ class SourceUpdateRequest(BaseModel):
 
 
 @router.get("/api/sources")
-async def list_sources(enabled_only: bool = Query(default=False)) -> dict:
+async def list_sources(enabled_only: bool = Query(default=False)) -> dict[str, Any]:
     """情報源一覧を取得."""
     sources = await source_registry_service.list_sources(enabled_only=enabled_only)
     return {
@@ -43,7 +48,7 @@ async def list_sources(enabled_only: bool = Query(default=False)) -> dict:
 
 
 @router.post("/api/sources")
-async def create_source(request: SourceCreateRequest) -> dict:
+async def create_source(request: SourceCreateRequest) -> dict[str, Any]:
     """情報源を登録."""
     try:
         source_type = SourceType(request.source_type)
@@ -59,11 +64,11 @@ async def create_source(request: SourceCreateRequest) -> dict:
         terms_url=request.terms_url,
         metadata=request.metadata,
     )
-    return SourceRegistrySchema(**entry.to_dict()).model_dump()
+    return _as_dict(SourceRegistrySchema(**entry.to_dict()).model_dump())
 
 
 @router.put("/api/sources/{source_id}")
-async def update_source(source_id: str, request: SourceUpdateRequest) -> dict:
+async def update_source(source_id: str, request: SourceUpdateRequest) -> dict[str, Any]:
     """情報源を更新."""
     entry = await source_registry_service.update_source(
         source_id,
@@ -74,4 +79,4 @@ async def update_source(source_id: str, request: SourceUpdateRequest) -> dict:
     )
     if not entry:
         raise HTTPException(status_code=404, detail="Source not found")
-    return SourceRegistrySchema(**entry.to_dict()).model_dump()
+    return _as_dict(SourceRegistrySchema(**entry.to_dict()).model_dump())

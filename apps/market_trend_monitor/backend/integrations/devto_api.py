@@ -39,7 +39,7 @@ class DevToAPIClient:
         Returns:
             記事リスト
         """
-        params = {
+        params: dict[str, str | int] = {
             "tag": tag,
             "per_page": min(per_page, 30),
             "page": page,
@@ -56,7 +56,8 @@ class DevToAPIClient:
                     headers=headers,
                 )
                 resp.raise_for_status()
-                return resp.json()
+                payload = resp.json()
+                return payload if isinstance(payload, list) else []
         except Exception as e:
             self._logger.warning("DEV.to API失敗: %s", e)
             return []

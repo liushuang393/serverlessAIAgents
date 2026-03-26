@@ -80,9 +80,6 @@ class KnowledgeBaseRegistry:
 
     async def ensure_initialized(self) -> None:
         """DB から設定をロード（未存在なら作成）."""
-        if self._initialized:
-            return
-
         async with self._lock:
             if self._initialized:
                 return

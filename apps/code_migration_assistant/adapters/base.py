@@ -116,7 +116,7 @@ class TargetLanguageAdapter(ABC):
         """
 
     @abstractmethod
-    def generate_test_skeleton(self, class_name: str, test_cases: list[dict]) -> str:
+    def generate_test_skeleton(self, class_name: str, test_cases: list[dict[str, Any]]) -> str:
         """テストコードのスケルトンを生成する.
 
         Args:

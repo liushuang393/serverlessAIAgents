@@ -167,8 +167,8 @@ class FortranAdapter(SourceLanguageAdapter):
 
             # 外部関数呼び出し（EXTERNAL宣言）
             if "EXTERNAL" in line_upper:
-                match = re.findall(r"\b(\w+)\b", line_upper.replace("EXTERNAL", ""))
-                for name in match:
+                external_names = re.findall(r"\b(\w+)\b", line_upper.replace("EXTERNAL", ""))
+                for name in external_names:
                     if name not in self.KEYWORDS:
                         calls.append(
                             {
@@ -350,10 +350,10 @@ class FortranAdapter(SourceLanguageAdapter):
 
         # FORTRAN デフォルト暗黙型規則
         if not rules:
-            for c in "IJKLMN":
-                rules[c] = "INTEGER"
-            for c in "ABCDEFGHOPQRSTUVWXYZ":
-                rules[c] = "REAL"
+            for initial in "IJKLMN":
+                rules[initial] = "INTEGER"
+            for initial in "ABCDEFGHOPQRSTUVWXYZ":
+                rules[initial] = "REAL"
 
         return rules
 

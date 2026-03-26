@@ -128,9 +128,10 @@ class AgentAggregatorService:
             )
             for agent_info in app_config.agents:
                 canonical = self._capability_registry.canonicalize_many(agent_info.capabilities)
+                capability_names = [item.id for item in canonical]
                 agent_business_base = self._taxonomy.infer_agent_business_base(
                     raw_business_base=agent_info.business_base,
-                    capabilities=agent_info.capabilities,
+                    capabilities=capability_names,
                     fallback_app_base=app_business_base,
                 )
                 agent_pattern = self._taxonomy.infer_agent_pattern(
@@ -155,7 +156,7 @@ class AgentAggregatorService:
                         app_icon=app_config.icon,
                         module=agent_info.module,
                         capabilities=[item.model_dump() for item in canonical],
-                        capabilities_legacy=list(agent_info.capabilities),
+                        capabilities_legacy=capability_names,
                         business_base=agent_business_base,
                         agent_type=agent_type,
                         agent_pattern=agent_pattern,

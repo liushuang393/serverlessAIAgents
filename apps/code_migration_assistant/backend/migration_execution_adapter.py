@@ -12,7 +12,11 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @dataclass
@@ -54,7 +58,7 @@ class ExecutionAdapter:
     async def start(self, task_id: str, config: ExecutionConfig) -> None:
         raise NotImplementedError
 
-    async def stream_events(self, task_id: str):
+    def stream_events(self, task_id: str) -> AsyncIterator[dict[str, Any]]:
         raise NotImplementedError
 
     async def await_result(self, task_id: str) -> ExecutionResult:
@@ -117,7 +121,7 @@ class CmaCliExecutionAdapter(ExecutionAdapter):
             events_path=events_path,
         )
 
-    async def stream_events(self, task_id: str):
+    async def stream_events(self, task_id: str) -> AsyncIterator[dict[str, Any]]:
         handle = self._handles.get(task_id)
         if handle is None:
             yield {"type": "error", "stage": None, "message": f"task not started: {task_id}"}

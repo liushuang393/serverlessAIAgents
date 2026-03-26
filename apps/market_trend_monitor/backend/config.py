@@ -6,6 +6,7 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 from shared.config.manifest import load_app_manifest_dict
@@ -28,7 +29,7 @@ def _parse_port(value: str | int | None, default: int) -> int:
     return default
 
 
-def _load_app_config() -> dict[str, object]:
+def _load_app_config() -> dict[str, Any]:
     """アプリ共通設定ファイルを読み込む."""
     config_path = Path(__file__).resolve().parents[1] / "app_config.json"
     if not config_path.is_file():

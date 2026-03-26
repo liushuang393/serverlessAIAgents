@@ -3,6 +3,7 @@
 import io
 import logging
 from datetime import datetime
+from typing import Any
 
 from apps.market_trend_monitor.backend.api.state import store
 from apps.market_trend_monitor.backend.services.report_export_service import ReportExportService
@@ -17,17 +18,20 @@ report_export_service = ReportExportService()
 trend_history_service = TrendHistoryService()
 
 
-def _to_frontend_report(report: dict, fallback_trends: list[dict] | None = None) -> dict:
+def _to_frontend_report(
+    report: dict[str, Any],
+    fallback_trends: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """フロントエンド互換のレポート形式に変換."""
     sections = report.get("sections", [])
     summary = sections[0]["content"] if sections else ""
     generated_at = report.get("generated_at") or report.get("created_at") or datetime.now().isoformat()
     trend_snapshot = report.get("trend_snapshot", [])
 
-    trends: list[dict]
+    trends: list[dict[str, Any]]
     trends = trend_snapshot if isinstance(trend_snapshot, list) else fallback_trends or []
 
-    converted_sections: list[dict] = []
+    converted_sections: list[dict[str, Any]] = []
     for section in sections:
         charts = section.get("charts", [])
         converted_sections.append(
@@ -52,14 +56,14 @@ def _to_frontend_report(report: dict, fallback_trends: list[dict] | None = None)
 
 
 @router.get("/trends")
-async def list_trends(limit: int | None = Query(default=None, ge=1, le=500)) -> dict:
+async def list_trends(limit: int | None = Query(default=None, ge=1, le=500)) -> dict[str, Any]:
     """トレンド一覧を取得."""
     trends = await store.list_trends(limit=limit)
     return {"trends": trends, "total": len(trends)}
 
 
 @router.get("/trends/{trend_id}")
-async def get_trend(trend_id: str) -> dict:
+async def get_trend(trend_id: str) -> dict[str, Any]:
     """トレンド詳細を取得."""
     trend = await store.get_trend(trend_id)
     if not trend:
@@ -68,14 +72,14 @@ async def get_trend(trend_id: str) -> dict:
 
 
 @router.get("/articles")
-async def list_articles(limit: int | None = Query(default=None, ge=1, le=500)) -> dict:
+async def list_articles(limit: int | None = Query(default=None, ge=1, le=500)) -> dict[str, Any]:
     """記事一覧を取得."""
     articles = await store.list_articles(limit=limit)
     return {"articles": articles, "total": len(articles)}
 
 
 @router.get("/reports")
-async def list_reports(limit: int | None = Query(default=None, ge=1, le=200)) -> dict:
+async def list_reports(limit: int | None = Query(default=None, ge=1, le=200)) -> dict[str, Any]:
     """レポート一覧を取得."""
     reports = await store.list_reports(limit=limit)
     fallback_trends = await store.list_trends()
@@ -84,7 +88,7 @@ async def list_reports(limit: int | None = Query(default=None, ge=1, le=200)) ->
 
 
 @router.get("/reports/{report_id}")
-async def get_report(report_id: str) -> dict:
+async def get_report(report_id: str) -> dict[str, Any]:
     """レポート詳細を取得."""
     report = await store.get_report(report_id)
     if not report:
@@ -128,7 +132,7 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
 
 
 @router.get("/trends/{topic}/velocity")
-async def get_trend_velocity(topic: str, window: int = Query(default=5, ge=2, le=20)) -> dict:
+async def get_trend_velocity(topic: str, window: int = Query(default=5, ge=2, le=20)) -> dict[str, Any]:
     """Phase 12: トレンド速度（1階微分）を取得."""
     velocity = await trend_history_service.get_velocity(topic, window=window)
     return {"topic": topic, "velocity": velocity, "window": window}
@@ -138,7 +142,7 @@ async def get_trend_velocity(topic: str, window: int = Query(default=5, ge=2, le
 async def get_trend_acceleration(
     topic: str,
     window: int = Query(default=5, ge=2, le=20),
-) -> dict:
+) -> dict[str, Any]:
     """Phase 12: トレンド加速度（2階微分）を取得."""
     acceleration = await trend_history_service.get_acceleration(topic, window=window)
     return {"topic": topic, "acceleration": acceleration, "window": window}
@@ -148,7 +152,7 @@ async def get_trend_acceleration(
 async def get_trend_history(
     topic: str,
     limit: int = Query(default=50, ge=1, le=200),
-) -> dict:
+) -> dict[str, Any]:
     """Phase 12: トレンド履歴を取得."""
     history = await trend_history_service.get_topic_history(topic, limit=limit)
     return {"topic": topic, "history": history, "total": len(history)}

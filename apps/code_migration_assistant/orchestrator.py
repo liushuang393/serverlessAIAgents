@@ -23,6 +23,22 @@ v5.0: Legacy-to-Agent™ プラットフォーム統合
 from collections.abc import AsyncIterator
 from typing import Any
 
+from apps.code_migration_assistant.engine import CodeMigrationEngine
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    """辞書戻り値を正規化."""
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _as_list_of_dicts(value: Any) -> list[dict[str, Any]]:
+    """辞書リスト戻り値を正規化."""
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
 
 class CodeMigrationOrchestrator:
     """Legacy-to-Agent™ Enterprise Modernization Platform Orchestrator.
@@ -57,9 +73,9 @@ class CodeMigrationOrchestrator:
         """
         self._migration_type = migration_type
         # Engine を遅延初期化
-        self._engine = None
+        self._engine: CodeMigrationEngine | None = None
 
-    def _get_engine(self):
+    def _get_engine(self) -> CodeMigrationEngine:
         """CodeMigrationEngine を取得（遅延初期化）."""
         if self._engine is None:
             from apps.code_migration_assistant.engine import CodeMigrationEngine
@@ -86,19 +102,20 @@ class CodeMigrationOrchestrator:
         engine = self._get_engine()
 
         # Engine で移行を実行
-        return await engine.run(
+        result = await engine.run(
             {
                 "source_code": source_code,
                 "expected_outputs": expected_outputs or {},
                 "fast_mode": not run_tests,
             }
         )
+        return _as_dict(result)
 
     async def get_latest_training_samples(self) -> list[dict[str, Any]]:
         """直近実行の学習用トランジションを取得."""
         engine = self._get_engine()
         if hasattr(engine, "get_latest_transition_samples"):
-            return await engine.get_latest_transition_samples()
+            return _as_list_of_dicts(await engine.get_latest_transition_samples())
         return []
 
     async def train_latest_run(
@@ -109,7 +126,7 @@ class CodeMigrationOrchestrator:
         """直近 run を Lightning 学習へ投入."""
         engine = self._get_engine()
         if hasattr(engine, "train_latest_run"):
-            return await engine.train_latest_run(apply_optimized_profile=apply_optimized_profile)
+            return _as_dict(await engine.train_latest_run(apply_optimized_profile=apply_optimized_profile))
         return {
             "success": False,
             "backend": "none",
@@ -123,7 +140,7 @@ class CodeMigrationOrchestrator:
         """現在の最適化 LLM プロファイルを取得."""
         engine = self._get_engine()
         if hasattr(engine, "get_optimized_llm_profile"):
-            return engine.get_optimized_llm_profile()
+            return _as_dict(engine.get_optimized_llm_profile())
         return {}
 
     # ========================================

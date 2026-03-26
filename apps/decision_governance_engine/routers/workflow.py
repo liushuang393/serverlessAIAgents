@@ -18,7 +18,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from apps.decision_governance_engine.flow_config import get_flow_definition
-from apps.decision_governance_engine.routers.decision import get_engine
 from apps.decision_governance_engine.services.agent_registry import AgentRegistry
 from kernel.core.flow_definition import FlowDefinitionRegistry
 from kernel.core.result_store import ResultStoreManager
@@ -66,8 +65,16 @@ async def health_check() -> HealthResponse:
 @router.get("/api/agents", response_model=list[AgentDefinition])
 async def get_agents() -> list[AgentDefinition]:
     """Agent定義を取得（非推奨: /api/agents/definitionsを使用）."""
-    engine = get_engine()
-    return [AgentDefinition(**d) for d in engine.get_agent_definitions()]
+    registry = AgentRegistry()
+    await registry.initialize()
+    return [
+        AgentDefinition(
+            id=agent.id,
+            name=agent.name,
+            label=agent.label,
+        )
+        for agent in registry.get_agent_definitions()
+    ]
 
 
 @router.get("/api/agents/definitions")

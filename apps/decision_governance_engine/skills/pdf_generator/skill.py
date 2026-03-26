@@ -8,7 +8,8 @@ import io
 import logging
 from typing import Any
 
-from apps.decision_governance_engine.schemas.output_schemas import DecisionReport, SignatureBlock
+from apps.decision_governance_engine.schemas.output_schemas import DecisionReport, ProposalTitle, SignatureBlock
+from pydantic import BaseModel
 
 
 # Optional: ReportLab dependency
@@ -53,11 +54,44 @@ class PDFGenerationSkill:
             except Exception as e:
                 self._logger.warning(f"Font registration failed: {e}")
 
+    @staticmethod
+    def _resolve_title(report: DecisionReport) -> ProposalTitle:
+        """提案タイトルを確定形に正規化."""
+        if report.proposal_title is not None:
+            return report.proposal_title
+        return ProposalTitle(
+            title_ja="提案書",
+            title_en="Proposal",
+            case_id=report.report_id,
+            subtitle="",
+        )
+
+    @staticmethod
+    def _resolve_signature_block(
+        report: DecisionReport,
+        signed_data: dict[str, Any] | None,
+    ) -> SignatureBlock:
+        """署名ブロックを確定形に正規化."""
+        if signed_data is not None:
+            return SignatureBlock(**signed_data)
+        if report.signature_block is not None:
+            return report.signature_block
+        return SignatureBlock(created_date=report.created_at.strftime("%Y-%m-%d"))
+
+    @staticmethod
+    def _as_dict(value: dict[str, Any] | BaseModel | None) -> dict[str, Any]:
+        """dict または Pydantic モデルを辞書へ正規化."""
+        if value is None:
+            return {}
+        if isinstance(value, dict):
+            return value
+        return value.model_dump(mode="json")
+
     async def export_report(
         self,
         report: DecisionReport,
         format: str = "pdf",
-        signed_data: dict | None = None,
+        signed_data: dict[str, Any] | None = None,
     ) -> bytes:
         """レポートをエクスポートする.
 
@@ -74,7 +108,7 @@ class PDFGenerationSkill:
 
         return self._generate_pdf(report, signed_data)
 
-    def _generate_pdf(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
+    def _generate_pdf(self, report: DecisionReport, signed_data: dict[str, Any] | None = None) -> bytes:
         """ReportLabを使用してPDFを生成."""
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -115,6 +149,10 @@ class PDFGenerationSkill:
 
         elements: list[Any] = []
         self._has_content_on_page = False
+        title = self._resolve_title(report)
+        sig = self._resolve_signature_block(report, signed_data)
+        dao = self._as_dict(report.dao)
+        shu = self._as_dict(report.shu)
 
         def add_element(elem: Any) -> None:
             elements.append(elem)
@@ -127,20 +165,15 @@ class PDFGenerationSkill:
 
         # --- 表紙 ---
         add_element(Spacer(1, 5 * cm))
-        add_element(Paragraph(report.proposal_title.title_ja, title_style))
-        add_element(
-            Paragraph(
-                report.proposal_title.title_en, ParagraphStyle("EN", fontSize=12, alignment=1, textColor=colors.grey)
-            )
-        )
+        add_element(Paragraph(title.title_ja, title_style))
+        add_element(Paragraph(title.title_en, ParagraphStyle("EN", fontSize=12, alignment=1, textColor=colors.grey)))
         add_element(Spacer(1, 1 * cm))
-        if report.proposal_title.subtitle:
-            add_element(Paragraph(report.proposal_title.subtitle, ParagraphStyle("Sub", fontSize=14, alignment=1)))
+        if title.subtitle:
+            add_element(Paragraph(title.subtitle, ParagraphStyle("Sub", fontSize=14, alignment=1)))
 
         add_element(Spacer(1, 10 * cm))
 
         # 作成者情報 (表紙下部)
-        sig = report.signature_block
         author_info = f"{sig.author_department}<br/>{sig.author_position} {sig.author_name}"
         add_element(Paragraph(author_info, ParagraphStyle("Author", fontSize=12, alignment=2)))
         add_element(Paragraph(f"作成日: {sig.created_date}", ParagraphStyle("Date", fontSize=10, alignment=2)))
@@ -156,9 +189,9 @@ class PDFGenerationSkill:
         add_element(Spacer(1, 0.5 * cm))
 
         # 2. 道
-        if report.dao:
+        if dao:
             add_element(Paragraph("2. 現状の課題・問題点（道）", heading_style))
-            add_element(Paragraph(str(report.dao.get("essence", "")), normal_style))
+            add_element(Paragraph(str(dao.get("essence", "")), normal_style))
             add_element(Spacer(1, 0.5 * cm))
 
         # 3. 法
@@ -166,12 +199,12 @@ class PDFGenerationSkill:
             add_element(Paragraph("3. 提案内容・解決策（法）", heading_style))
             # ... 詳細は簡略化 ...
             add_element(Paragraph("戦略の詳細はHTML版またはシステム画面を参照してください。", normal_style))
-            add_element(Spacer(1, 0.5 * cm))
+        add_element(Spacer(1, 0.5 * cm))
 
         # 4. 術
-        if report.shu:
+        if shu:
             add_element(Paragraph("4. 実行計画・スケジュール（術）", heading_style))
-            add_element(Paragraph(f"<b>最初の一歩:</b> {report.shu.get('first_action', '')}", normal_style))
+            add_element(Paragraph(f"<b>最初の一歩:</b> {shu.get('first_action', '')}", normal_style))
             add_element(Spacer(1, 0.5 * cm))
 
         # --- 署名欄 ---
@@ -179,9 +212,7 @@ class PDFGenerationSkill:
         add_element(Paragraph("署名 / 承認状況", heading_style))
 
         # 署名データの決定 (引数優先)
-        sig_block = report.signature_block
-        if signed_data:
-            sig_block = SignatureBlock(**signed_data)
+        sig_block = self._resolve_signature_block(report, signed_data)
 
         # テーブル形式の署名欄
         table_data = [
@@ -231,12 +262,11 @@ class PDFGenerationSkill:
         doc.build(elements)
         return buffer.getvalue()
 
-    def _generate_html(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
+    def _generate_html(self, report: DecisionReport, signed_data: dict[str, Any] | None = None) -> bytes:
         """A2UIデザインに準拠したプレミアムHTMLを生成."""
         # 既存の _generate_html_fallback をベースに改善
-        sig = report.signature_block
-        if signed_data:
-            sig = SignatureBlock(**signed_data)
+        sig = self._resolve_signature_block(report, signed_data)
+        title = self._resolve_title(report)
 
         # 印影バッジ
         signed_badge = ""
@@ -255,7 +285,7 @@ class PDFGenerationSkill:
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{report.proposal_title.title_ja}</title>
+    <title>{title.title_ja}</title>
     <style>
         :root {{
             --primary: #6366f1;
@@ -292,9 +322,9 @@ class PDFGenerationSkill:
 </head>
 <body>
     <div class="cover" style="position:relative;">
-        <h1>{report.proposal_title.title_ja}</h1>
-        <div class="subtitle">{report.proposal_title.title_en}</div>
-        <p>{report.proposal_title.subtitle}</p>
+        <h1>{title.title_ja}</h1>
+        <div class="subtitle">{title.title_en}</div>
+        <p>{title.subtitle}</p>
         <div style="margin-top: 50px; text-align: right; padding-right: 50px;">
             <p>{sig.author_department}</p>
             <p>{sig.author_position} {sig.author_name}</p>

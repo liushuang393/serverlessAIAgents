@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
@@ -141,7 +141,7 @@ def _default_requested_scopes() -> list[str]:
 
 
 def _build_login_payload(req: LoginRequest, request: Request) -> dict[str, Any]:
-    payload = req.model_dump()
+    payload = {str(key): value for key, value in req.model_dump().items()}
     if not _clean_text(payload.get("client_app")):
         payload["client_app"] = _clean_text(os.getenv("FAQ_APP_NAME", "faq_system"))
     if _resolve_auth_mode() == _AUTH_MODE_TENANT_SSO:
@@ -215,7 +215,7 @@ def _set_local_session_cookie(response: Response, session_token: str) -> None:
     )
 
 
-def _raise_proxy_unavailable(detail: str) -> None:
+def _raise_proxy_unavailable(detail: str) -> NoReturn:
     raise HTTPException(
         status_code=502,
         detail={"message": f"auth_service request failed: {detail}", "error_code": "auth_proxy_failed"},
@@ -241,8 +241,24 @@ async def login(req: LoginRequest, request: Request, response: Response) -> Auth
     success, message, user = await service.authenticate(req.username, req.password, req.totp_code)
     if not success or user is None:
         if message == "MFA_REQUIRED":
-            return AuthResponse(success=False, message="MFA_REQUIRED")
-        return AuthResponse(success=False, message=message)
+            return AuthResponse(
+                success=False,
+                message="MFA_REQUIRED",
+                user=None,
+                access_token=None,
+                refresh_token=None,
+                token_type="bearer",
+                expires_in=None,
+            )
+        return AuthResponse(
+            success=False,
+            message=message,
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
 
     access_token = service.create_access_token(user)
     session_token = await service.create_session(user)
@@ -252,6 +268,7 @@ async def login(req: LoginRequest, request: Request, response: Response) -> Auth
         message=message,
         user=user,
         access_token=access_token,
+        refresh_token=None,
         token_type="bearer",
         expires_in=service.get_expire_seconds(),
     )
@@ -349,7 +366,15 @@ async def register(req: RegisterRequest, request: Request, response: Response) -
         email=req.email,
     )
     if not success or user is None:
-        return AuthResponse(success=False, message=message)
+        return AuthResponse(
+            success=False,
+            message=message,
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
 
     access_token = service.create_access_token(user)
     session_token = await service.create_session(user)
@@ -359,6 +384,7 @@ async def register(req: RegisterRequest, request: Request, response: Response) -
         message=message,
         user=user,
         access_token=access_token,
+        refresh_token=None,
         token_type="bearer",
         expires_in=service.get_expire_seconds(),
     )
@@ -409,8 +435,24 @@ async def get_me(
             _raise_proxy_unavailable(str(exc))
 
     if user is None:
-        return AuthResponse(success=False, message="未認証", user=None)
-    return AuthResponse(success=True, message="認証済み", user=user)
+        return AuthResponse(
+            success=False,
+            message="未認証",
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
+    return AuthResponse(
+        success=True,
+        message="認証済み",
+        user=user,
+        access_token=None,
+        refresh_token=None,
+        token_type="bearer",
+        expires_in=None,
+    )
 
 
 @router.post("/token")
@@ -546,8 +588,24 @@ async def update_profile(
         position=req.position,
     )
     if updated is None:
-        return AuthResponse(success=False, message="プロフィール更新に失敗しました")
-    return AuthResponse(success=True, message="プロフィールを更新しました", user=updated)
+        return AuthResponse(
+            success=False,
+            message="プロフィール更新に失敗しました",
+            user=None,
+            access_token=None,
+            refresh_token=None,
+            token_type="bearer",
+            expires_in=None,
+        )
+    return AuthResponse(
+        success=True,
+        message="プロフィールを更新しました",
+        user=updated,
+        access_token=None,
+        refresh_token=None,
+        token_type="bearer",
+        expires_in=None,
+    )
 
 
 @router.post("/mfa/setup", response_model=MfaSetupResponse)

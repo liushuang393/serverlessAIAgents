@@ -13,7 +13,7 @@ import re
 import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -35,7 +35,17 @@ from shared.config.manifest import load_app_manifest
 
 if TYPE_CHECKING:
     from harness.governance.engine import ToolExecutionContext
-    from infrastructure.llm.providers.tool_provider import RegisteredTool
+
+
+class RegisteredToolLike(Protocol):
+    """プラグイン評価に必要なツール契約."""
+
+    name: str
+    plugin_id: str | None
+    plugin_version: str | None
+    required_permissions: list[str]
+    operation_type: Any
+    risk_level: Any
 
 
 _SEMVER_PART_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
@@ -287,7 +297,7 @@ class PluginRegistry:
 
     def evaluate_tool(
         self,
-        tool: RegisteredTool,
+        tool: RegisteredToolLike,
         context: ToolExecutionContext,
     ) -> PluginRuntimeAssessment:
         """ツール実行時の plugin 評価を行う."""

@@ -32,7 +32,6 @@ from apps.market_trend_monitor.backend.models import (
     CollectorOutput,
     SourceType,
 )
-from dateutil import parser as date_parser
 
 from kernel import ResilientAgent
 from shared.config import get_settings
@@ -324,7 +323,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                             "author": news_article.get("author", "Unknown"),
                             "is_breakthrough": is_breakthrough,
                             "language": news_article.get("language", "en"),
-                            **(news_article.get("metadata") if isinstance(news_article.get("metadata"), dict) else {}),
+                            **(news_article["metadata"] if isinstance(news_article.get("metadata"), dict) else {}),
                         },
                     )
                     articles.append(article)
@@ -591,7 +590,8 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         if not raw:
             return datetime.now()
         try:
-            return date_parser.parse(raw)
+            normalized = raw.replace("Z", "+00:00")
+            return datetime.fromisoformat(normalized)
         except Exception:
             return datetime.now()
 

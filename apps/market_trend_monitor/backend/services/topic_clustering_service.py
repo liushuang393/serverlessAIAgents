@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from kernel import get_embedding
+from infrastructure.providers.embedding_provider import EmbeddingProvider, get_embedding
 
 
 if TYPE_CHECKING:
@@ -57,7 +57,7 @@ class TopicClusteringService:
     def __init__(
         self,
         *,
-        embedding: Any | None = None,
+        embedding: EmbeddingProvider | None = None,
         similarity_threshold: float = 0.75,
     ) -> None:
         """初期化."""
@@ -66,7 +66,7 @@ class TopicClusteringService:
         self._similarity_threshold = similarity_threshold
         self._clusters: dict[str, TopicCluster] = {}
 
-    def _get_embedding(self) -> Any:
+    def _get_embedding(self) -> EmbeddingProvider:
         """Embeddingインスタンスを取得."""
         if self._embedding is None:
             self._embedding = get_embedding()
@@ -93,7 +93,7 @@ class TopicClusteringService:
         emb = self._get_embedding()
 
         texts = [f"{a.title}\n{a.content}" for a in articles]
-        embeddings = await emb.embed_batch(texts)
+        embeddings = await emb.embed_documents(texts)
 
         clusters: list[TopicCluster] = []
         assigned = [False] * len(articles)
@@ -158,7 +158,7 @@ class TopicClusteringService:
         threshold = threshold if threshold is not None else self._similarity_threshold
         emb = self._get_embedding()
         text = f"{article.title}\n{article.content}"
-        article_embedding = await emb.embed_text(text)
+        article_embedding = await emb.embed_query(text)
 
         best_cluster = None
         best_similarity = 0.0
@@ -228,7 +228,7 @@ class TopicClusteringService:
         norm_b = sum(x * x for x in b) ** 0.5
         if norm_a == 0 or norm_b == 0:
             return 0.0
-        return dot / (norm_a * norm_b)
+        return float(dot / (norm_a * norm_b))
 
     @staticmethod
     def _compute_centroid(embeddings: list[list[float]]) -> list[float]:

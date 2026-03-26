@@ -42,7 +42,7 @@ class MigrationTask:
     task_id: str
     status: TaskStatus = TaskStatus.PENDING
     current_stage: str | None = None
-    events: asyncio.Queue = field(default_factory=asyncio.Queue)
+    events: asyncio.Queue[tuple[int, dict[str, Any]] | None] = field(default_factory=asyncio.Queue)
     event_history: list[tuple[int, dict[str, Any]]] = field(default_factory=list)
     event_counter: int = 0
     download_path: Path | None = None

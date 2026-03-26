@@ -32,6 +32,7 @@ import httpx
 from control_plane.services.cli_diagnostic_service import CLIDiagnosticService
 from control_plane.services.cli_repair_service import CLIRepairService
 from control_plane.services.runtime_command_resolver import (
+    CommandAction,
     ResolvedRuntimeCommands,
     RuntimeCommandResolver,
 )
@@ -1101,9 +1102,9 @@ class AppLifecycleManager:
             resolved_commands.source.get("backend_dev", "fallback"),
             resolved_commands.source.get("frontend_dev", "fallback"),
         )
-        diagnostic: dict[str, Any] | None = None
+        failure_diagnostic: dict[str, Any] | None = None
         if not success:
-            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+            failure_diagnostic = await self._diagnostic_service.diagnose_action_failure(
                 app_config=config,
                 action="local_start",
                 config_path=config_path,
@@ -1130,7 +1131,7 @@ class AppLifecycleManager:
             stderr="",
             error=error_msg,
             command_source=command_source,
-            diagnostic=diagnostic,
+            diagnostic=failure_diagnostic,
             checked_health=checked_health,
             execution_mode="local",
         )
@@ -1786,8 +1787,13 @@ class AppLifecycleManager:
         app_dir = config_path.parent
         if allow_command_override:
             resolved_commands = self._resolve_runtime_commands(config, config_path)
-            action_key = action if action in {"publish", "start", "stop"} else "start"
-            command_override = resolved_commands.get(action_key)  # type: ignore[arg-type]
+            if action == "publish":
+                action_key: CommandAction = "publish"
+            elif action == "stop":
+                action_key = "stop"
+            else:
+                action_key = "start"
+            command_override = resolved_commands.get(action_key)
             if command_override is not None:
                 shell_result = await self._run_shell_action(
                     config,

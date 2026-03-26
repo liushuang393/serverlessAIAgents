@@ -184,7 +184,7 @@ class PredictionSchema(BaseModel):
     actual_outcome: str | None = None
     review_note: str | None = None
     reviewed_at: str | None = None
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, object] = Field(default_factory=dict)
 
 
 class PredictionReviewInput(BaseModel):

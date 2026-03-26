@@ -353,7 +353,8 @@ JSON のみを出力してください。"""
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0]
 
-            skill_def = json.loads(content.strip())
+            parsed_skill_def = json.loads(content.strip())
+            skill_def = parsed_skill_def if isinstance(parsed_skill_def, dict) else {"raw_response": parsed_skill_def}
             self._logger.info("スキル生成成功: %s", skill_def.get("name", "unknown"))
             return skill_def
 
@@ -505,7 +506,7 @@ JSON のみを出力してください。"""
 
         # ステップをマップに変換
         step_map = {s.id: s for s in workflow.steps}
-        current_step_id = workflow.entry_step_id
+        current_step_id: str | None = workflow.entry_step_id
 
         while current_step_id:
             step = step_map.get(current_step_id)
@@ -543,7 +544,7 @@ JSON のみを出力してください。"""
 
             # スキル実行
             try:
-                result = await self._gateway.call(
+                skill_result = await self._gateway.call(
                     step.skill_name,
                     resolved_params,
                     dry_run=dry_run,
@@ -552,19 +553,19 @@ JSON のみを出力してください。"""
                 step_result = {
                     "step_id": step.id,
                     "skill_name": step.skill_name,
-                    "status": "success" if result.success else "failed",
-                    "result": result.result,
-                    "error": result.error,
-                    "duration_ms": result.duration_ms,
+                    "status": "success" if skill_result.success else "failed",
+                    "result": skill_result.result,
+                    "error": skill_result.error,
+                    "duration_ms": skill_result.duration_ms,
                     "dry_run": dry_run,
                 }
                 step_results.append(step_result)
 
                 # コンテキスト更新
-                context["results"][step.id] = result.result
+                context["results"][step.id] = skill_result.result
 
                 # 次ステップ決定
-                current_step_id = step.on_success if result.success else step.on_failure
+                current_step_id = step.on_success if skill_result.success else step.on_failure
 
             except Exception as e:
                 self._logger.exception("ステップ実行エラー: %s - %s", step.id, e)
@@ -582,7 +583,7 @@ JSON のみを出力してください。"""
         completed_at = datetime.now()
         final_status = "success" if all(r.get("status") in ("success", "skipped") for r in step_results) else "failed"
 
-        result = WorkflowRunResult(
+        workflow_result = WorkflowRunResult(
             workflow_id=workflow_id,
             run_id=run_id,
             status=final_status,
@@ -598,7 +599,7 @@ JSON のみを出力してください。"""
             final_status,
         )
 
-        return result
+        return workflow_result
 
     def _resolve_params(
         self,

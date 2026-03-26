@@ -12,13 +12,6 @@ from typing import Any
 from shared.services.unified_rag import UnifiedRAGService
 
 
-def _get_skill_base() -> type:
-    """遅延インポート: kernel.skills.base.Skill（L2→L3 違反回避）."""
-    from kernel.skills.base import Skill as _Skill
-
-    return _Skill
-
-
 @dataclass
 class RAGConfig:
     """RAG 設定."""
@@ -38,7 +31,7 @@ class RAGResult:
     context_used: str = ""
 
 
-class RAGSkill(_get_skill_base()):
+class RAGSkill:
     """RAG Skill - 統合RAGサービスを利用した実装."""
 
     def __init__(
@@ -47,7 +40,6 @@ class RAGSkill(_get_skill_base()):
         rag_config: RAGConfig | None = None,
     ) -> None:
         """初期化."""
-        super().__init__()
         self._rag_config = rag_config or RAGConfig()
         self.rag_service = UnifiedRAGService(collection_name=collection_name)
         self._logger = logging.getLogger(__name__)

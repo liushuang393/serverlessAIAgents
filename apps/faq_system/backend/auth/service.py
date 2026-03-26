@@ -127,12 +127,16 @@ class AuthService:
         self._bootstrap_lock = asyncio.Lock()
         self._bootstrap_completed = False
 
+    def _is_bootstrap_completed(self) -> bool:
+        """ブートストラップ完了状態を返す."""
+        return self._bootstrap_completed
+
     async def ensure_bootstrap_data(self) -> None:
         """DB と初期データを利用可能状態にする."""
         if self._bootstrap_completed:
             return
         async with self._bootstrap_lock:
-            if self._bootstrap_completed:
+            if self._is_bootstrap_completed():
                 return
 
             await ensure_database_ready()
@@ -278,20 +282,20 @@ class AuthService:
         department = ""
         position = ""
 
-        if oauth_identity.provider == "azure_ad" and oauth_identity.raw_info:
-            department = oauth_identity.raw_info.get("officeLocation") or ""
-            position = oauth_identity.raw_info.get("jobTitle") or ""
+        if oauth_identity.provider == "azure_ad" and oauth_identity.raw:
+            department = str(oauth_identity.raw.get("officeLocation") or oauth_identity.department or "")
+            position = str(oauth_identity.raw.get("jobTitle") or oauth_identity.position or "")
 
         identity = ExternalIdentity(
-            username=oauth_identity.username or oauth_identity.sub,
+            username=oauth_identity.username or oauth_identity.email.split("@")[0] or "unknown",
             display_name=oauth_identity.display_name or oauth_identity.username or "Unknown",
-            email=oauth_identity.email,
+            email=oauth_identity.email or None,
             department=department,
             position=position,
             role=role,
         )
 
-        return await self._upsert_external_user(identity, oauth_identity.provider)  # type: ignore
+        return await self._upsert_external_user(identity, oauth_identity.provider)
 
     def create_access_token(self, user: UserInfo) -> str:
         """アクセストークン生成."""
@@ -319,13 +323,16 @@ class AuthService:
         try:
             import jwt as pyjwt
 
-            return pyjwt.decode(
+            decoded = pyjwt.decode(
                 token,
                 self._jwt_config.secret_key,
                 algorithms=[self._jwt_config.algorithm],
                 audience=self._jwt_config.audience,
                 issuer=self._jwt_config.issuer,
             )
+            if isinstance(decoded, dict):
+                return decoded
+            return None
         except Exception:
             return None
 
@@ -714,7 +721,7 @@ class AuthService:
         password: str,
     ) -> ExternalIdentity | None:
         try:
-            import ldap3  # type: ignore[import-not-found]
+            import ldap3
         except ImportError:
             logger.warning("ldap3 not installed. LDAP authentication is unavailable.")
             return None
@@ -892,6 +899,7 @@ class AuthService:
         provider: str | AuthProvider,
     ) -> UserInfo:
         now = datetime.now(tz=UTC)
+        provider_name = provider.value if isinstance(provider, AuthProvider) else provider
         async with get_db_session() as session:
             account = await session.scalar(select(UserAccount).where(UserAccount.username == identity.username))
 
@@ -907,7 +915,7 @@ class AuthService:
                     department=identity.department,
                     position=identity.position,
                     role=identity.role,
-                    auth_source=provider.value,
+                    auth_source=provider_name,
                     is_active=True,
                     created_at=now,
                     updated_at=now,
@@ -919,7 +927,7 @@ class AuthService:
                 account.department = identity.department
                 account.position = identity.position
                 account.role = identity.role
-                account.auth_source = provider.value
+                account.auth_source = provider_name
                 account.is_active = True
                 account.last_login_at = now
                 account.updated_at = now
@@ -1017,6 +1025,8 @@ class AuthService:
             department=account.department,
             position=account.position,
             role=account.role,
+            tenant_id=None,
+            azp=account.auth_source or None,
         )
 
 

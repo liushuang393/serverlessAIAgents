@@ -149,14 +149,15 @@ class NewsAPIClient:
         if from_date is None:
             from_date = datetime.now() - timedelta(days=7)
 
-        params = {
+        params: dict[str, str | int] = {
             "q": query,
             "language": language,
             "sortBy": sort_by,
             "pageSize": page_size,
             "from": from_date.strftime("%Y-%m-%d"),
-            "apiKey": self._api_key,
         }
+        if self._api_key is not None:
+            params["apiKey"] = self._api_key
 
         # リトライ機構付きでリクエスト
         for attempt in range(self._max_retries):
@@ -174,7 +175,8 @@ class NewsAPIClient:
                 ):
                     if response.status == 200:
                         data = await response.json()
-                        return data.get("articles", [])
+                        articles = data.get("articles", []) if isinstance(data, dict) else []
+                        return articles if isinstance(articles, list) else []
                     if response.status == 429:
                         # レート制限エラー
                         self._logger.warning(f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})")
@@ -224,11 +226,12 @@ class NewsAPIClient:
         if self._api_key is None and not self._allow_mock_fallback:
             return self._fallback_or_empty(f"top headlines {country}", 0, "api_key_missing")
 
-        params = {
+        params: dict[str, str | int] = {
             "country": country,
             "pageSize": page_size,
-            "apiKey": self._api_key,
         }
+        if self._api_key is not None:
+            params["apiKey"] = self._api_key
 
         if category:
             params["category"] = category
@@ -249,7 +252,8 @@ class NewsAPIClient:
                 ):
                     if response.status == 200:
                         data = await response.json()
-                        return data.get("articles", [])
+                        articles = data.get("articles", []) if isinstance(data, dict) else []
+                        return articles if isinstance(articles, list) else []
                     if response.status == 429:
                         # レート制限エラー
                         self._logger.warning(f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})")

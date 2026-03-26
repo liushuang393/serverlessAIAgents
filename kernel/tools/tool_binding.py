@@ -152,6 +152,12 @@ class ToolExecutor:
         return uri in self._tools
 
 
+def _assign_bound_tools_fallback(agent: Any, bound: BoundTools, executor: ToolExecutor) -> None:
+    """set_bound_tools 未実装エージェントへフォールバック注入する."""
+    agent._tools = bound
+    agent._tool_executor = executor
+
+
 class ToolBinder:
     """ツールバインダー.
 
@@ -204,8 +210,7 @@ class ToolBinder:
             agent.set_bound_tools(bound, executor)
         else:
             # フォールバック: set_bound_tools 未実装の場合
-            agent._tools = bound  # type: ignore[attr-defined]
-            agent._tool_executor = executor  # type: ignore[attr-defined]
+            _assign_bound_tools_fallback(agent, bound, executor)
 
         return agent
 

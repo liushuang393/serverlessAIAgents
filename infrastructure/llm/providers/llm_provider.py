@@ -200,9 +200,9 @@ class LLMProvider:
         from infrastructure.llm.llm_client import LLMMessage
 
         if isinstance(role, list):
-            llm_messages = [LLMMessage(**message) for message in role]
+            legacy_messages = [LLMMessage(**message) for message in role]
             async for chunk in self._require_client().stream(
-                llm_messages,
+                legacy_messages,
                 tools=tools,
                 temperature=temperature,
                 max_tokens=max_tokens,
@@ -212,7 +212,7 @@ class LLMProvider:
                 yield chunk
             return
 
-        llm_messages = [LLMMessage(**message) for message in messages] if messages else None
+        llm_messages: list[LLMMessage] | None = [LLMMessage(**message) for message in messages] if messages else None
         async for chunk in self._require_client().stream(
             role,
             prompt,

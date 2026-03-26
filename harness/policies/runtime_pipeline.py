@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from contracts.policy import ApprovalRequest
-from contracts.tool import ToolExecutorService
 from harness.approval.service import ApprovalService
 from harness.evaluation.service import EvaluationService
 from harness.gating.tool_gate import ToolGate
@@ -18,7 +17,7 @@ from harness.gating.tool_gate import ToolGate
 
 if TYPE_CHECKING:
     from contracts.policy import EvalResult
-    from contracts.tool import ToolRequest, ToolResult
+    from contracts.tool import ToolExecutorService, ToolRequest, ToolResult
     from harness.governance import ToolExecutionContext
     from infrastructure.sandbox.tool_provider import RegisteredTool
 

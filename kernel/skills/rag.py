@@ -38,6 +38,14 @@ def _get_llm(**kwargs: Any) -> Any:
     return get_llm(**kwargs)
 
 
+def get_llm(**kwargs: Any) -> Any:
+    """公開互換レイヤ.
+
+    tests/unit/test_skills_rag_chatbot.py など既存の patch point を維持する。
+    """
+    return _get_llm(**kwargs)
+
+
 @dataclass
 class RAGConfig:
     """RAG 設定.
@@ -110,7 +118,7 @@ class RAGSkill:
         self._logger = logging.getLogger(__name__)
 
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: Any = _get_llm(temperature=temperature)
+        self._llm: Any = get_llm(temperature=temperature)
 
         # Memory Manager（ベクトル検索有効）
         if memory_manager:

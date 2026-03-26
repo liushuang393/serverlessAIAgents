@@ -133,7 +133,7 @@ class MaintenanceResponse(BaseModel):
 # =============================================================================
 
 
-class MaintenanceAgent(ResilientAgent):
+class MaintenanceAgent(ResilientAgent[Any, Any]):
     """メンテナンス支援Agent.
 
     特徴:

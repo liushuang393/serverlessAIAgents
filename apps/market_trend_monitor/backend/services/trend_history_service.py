@@ -118,8 +118,8 @@ class TrendHistoryService:
         if not older:
             return 0.0
 
-        recent_avg = sum(h["score"] for h in recent) / len(recent)
-        older_avg = sum(h["score"] for h in older) / len(older)
+        recent_avg = sum(float(h.get("score", 0.0)) for h in recent) / len(recent)
+        older_avg = sum(float(h.get("score", 0.0)) for h in older) / len(older)
         return recent_avg - older_avg
 
     async def get_acceleration(self, topic: str, window: int = 5) -> float:
@@ -146,9 +146,9 @@ class TrendHistoryService:
         if not seg1 or not seg2 or not seg3:
             return 0.0
 
-        avg1 = sum(h["score"] for h in seg1) / len(seg1)
-        avg2 = sum(h["score"] for h in seg2) / len(seg2)
-        avg3 = sum(h["score"] for h in seg3) / len(seg3)
+        avg1 = sum(float(h.get("score", 0.0)) for h in seg1) / len(seg1)
+        avg2 = sum(float(h.get("score", 0.0)) for h in seg2) / len(seg2)
+        avg3 = sum(float(h.get("score", 0.0)) for h in seg3) / len(seg3)
 
         velocity_old = avg2 - avg1
         velocity_new = avg3 - avg2

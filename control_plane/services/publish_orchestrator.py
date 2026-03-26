@@ -82,6 +82,10 @@ class PublishOrchestrator:
         # キャンセル要求
         self._cancel_requests: set[str] = set()
 
+    def _discard_publish_task(self, publish_id: str) -> None:
+        """完了済み publish タスク参照を破棄する."""
+        self._publish_tasks.pop(publish_id, None)
+
     async def publish(self, request: PublishRequest) -> AsyncIterator[PublishEvent]:
         """一键发布を実行してイベントを逐次返す.
 
@@ -125,7 +129,7 @@ class PublishOrchestrator:
             name=f"platform-publish-{publish_id}",
         )
         self._publish_tasks[publish_id] = task
-        task.add_done_callback(lambda _task, pid=publish_id: self._publish_tasks.pop(pid, None))
+        task.add_done_callback(lambda _task: self._discard_publish_task(publish_id))
 
         return publish_id
 

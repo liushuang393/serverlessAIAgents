@@ -302,7 +302,7 @@ export const ProcessingPage: React.FC = () => {
       });
       // 自動遷移を削除 - ユーザーがボタンをクリックして遷移
     }
-  }, [isComplete, report, question, setReport, streamRequestId, setRequestId, addToHistory]);
+  }, [isComplete, report, question, requestId, setReport, streamRequestId, setRequestId, addToHistory]);
 
   // 実行中でも request_id をストアへ反映（resume 用）
   useEffect(() => {
@@ -322,7 +322,7 @@ export const ProcessingPage: React.FC = () => {
       });
       // エラー時も自動遷移しない - 画面に留まってエラーを表示
     }
-  }, [error, isComplete, question, addToHistory]);
+  }, [error, isComplete, question, requestId, streamRequestId, addToHistory]);
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = Math.round((completedCount / agents.length) * 100);

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,10 @@ from kernel.agents.specialized.faq_agent import (
     FAQResponse,
 )
 from shared.services.query_classifier import classify_query
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 logger = logging.getLogger(__name__)
@@ -159,10 +163,13 @@ class FAQAgent(AgentBlock):
             tool_name = self._select_tool(query_type)
             agent_trace.append(f"Selected MCP tool: {tool_name}")
 
-            mcp_result = await mcp.call_tool(tool_name, {
-                "query": question,
-                "top_k": self._config.rag_top_k,
-            })
+            mcp_result = await mcp.call_tool(
+                tool_name,
+                {
+                    "query": question,
+                    "top_k": self._config.rag_top_k,
+                },
+            )
 
             # 3. 結果を FAQResponse に変換
             if mcp_result.success and mcp_result.output is not None:
@@ -206,6 +213,34 @@ class FAQAgent(AgentBlock):
                 error=str(e),
                 execution_time_ms=elapsed,
             ).model_dump()
+
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+        """進捗イベントを返しながら FAQ 実行を行う."""
+        question = str(input_data.get("question", ""))
+
+        yield {
+            "type": "progress",
+            "progress": 0,
+            "message": f"「{question[:20]}」を処理中...",
+        }
+
+        yield {
+            "type": "progress",
+            "progress": 30,
+            "message": "検索経路を選択中...",
+        }
+
+        result = await self.run(input_data)
+
+        yield {
+            "type": "progress",
+            "progress": 100,
+            "message": "完了",
+        }
+        yield {
+            "type": "result",
+            "data": result,
+        }
 
     def _select_tool(self, query_type: str) -> str:
         """クエリタイプに応じた MCP ツールを選択.
@@ -281,11 +316,7 @@ class FAQAgent(AgentBlock):
         if "chart" in result_dict and isinstance(result_dict["chart"], dict):
             output.chart = ChartSchema(**result_dict["chart"])
         if "suggestions" in result_dict:
-            output.suggestions = [
-                SuggestionSchema(**s)
-                for s in result_dict["suggestions"]
-                if isinstance(s, dict)
-            ]
+            output.suggestions = [SuggestionSchema(**s) for s in result_dict["suggestions"] if isinstance(s, dict)]
         if "citations" in result_dict:
             output.documents = [
                 DocumentSchema(

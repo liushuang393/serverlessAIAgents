@@ -16,17 +16,22 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from mcp import ClientSession
+    from mcp import ClientSession as MCPClientSession
 
     from kernel.core.security import AuditLogger, ParameterValidator, ToolWhitelist
     from kernel.protocols.mcp_config import MCPConfig, MCPServerConfig
 
 # mcp パッケージの遅延インポート用モジュール変数
 # _ensure_mcp_imports() で初期化され、テストからは patch で差し替え可能
-ClientSession: type | None = None  # type: ignore[no-redef]
-StdioServerParameters: type | None = None
-stdio_client: Any = None
+_client_session_cls: type[Any] | None = None
+_stdio_server_parameters_cls: type[Any] | None = None
+_stdio_client_fn: Any = None
 _mcp_imported: bool = False
+
+# 既存コードとテストの patch point を維持する公開互換シンボル
+ClientSession: type[Any] | None = None
+StdioServerParameters: type[Any] | None = None
+stdio_client: Any = None
 
 
 def _ensure_mcp_imports() -> None:
@@ -38,16 +43,20 @@ def _ensure_mcp_imports() -> None:
     Raises:
         ImportError: mcp パッケージがインストールされていない場合
     """
-    global ClientSession, StdioServerParameters, stdio_client, _mcp_imported
+    global ClientSession, StdioServerParameters, stdio_client
+    global _client_session_cls, _stdio_server_parameters_cls, _stdio_client_fn, _mcp_imported
     if _mcp_imported:
         return
     try:
         import mcp as _mcp
         from mcp.client.stdio import stdio_client as _stdio_client
 
-        ClientSession = _mcp.ClientSession
-        StdioServerParameters = _mcp.StdioServerParameters
-        stdio_client = _stdio_client
+        _client_session_cls = _mcp.ClientSession
+        _stdio_server_parameters_cls = _mcp.StdioServerParameters
+        _stdio_client_fn = _stdio_client
+        ClientSession = _client_session_cls
+        StdioServerParameters = _stdio_server_parameters_cls
+        stdio_client = _stdio_client_fn
         _mcp_imported = True
     except ImportError as exc:
         msg = "mcp パッケージが必要です。 `pip install mcp` でインストールしてください。"
@@ -105,7 +114,7 @@ class MCPClient:
         """
         self._config = config
         self._logger = logger or logging.getLogger(__name__)
-        self._sessions: dict[str, ClientSession] = {}  # type: ignore[type-arg]
+        self._sessions: dict[str, MCPClientSession] = {}
         self._tools: dict[str, dict[str, Any]] = {}
         self._contexts: dict[str, Any] = {}  # stdio_client コンテキストを保持
 
@@ -158,9 +167,15 @@ class MCPClient:
 
         # mcp パッケージを遅延インポート（初回のみ実行）
         _ensure_mcp_imports()
+        server_params_cls = StdioServerParameters or _stdio_server_parameters_cls
+        stdio_client_fn = stdio_client or _stdio_client_fn
+        client_session_cls = ClientSession or _client_session_cls
+        if server_params_cls is None or stdio_client_fn is None or client_session_cls is None:
+            msg = "mcp runtime symbols are not available"
+            raise RuntimeError(msg)
 
         # StdioServerParameters を作成
-        server_params = StdioServerParameters(
+        server_params = server_params_cls(
             command=config.command,
             args=config.args,
             env=config.env if config.env else None,
@@ -168,10 +183,10 @@ class MCPClient:
 
         # stdio クライアントを使用して接続
         # コンテキストマネージャーを保持して接続を維持
-        context = stdio_client(server_params)
+        context = stdio_client_fn(server_params)
         read, write = await context.__aenter__()
 
-        session = ClientSession(read, write)
+        session = client_session_cls(read, write)
 
         # セッションを初期化
         await session.initialize()

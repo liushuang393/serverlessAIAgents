@@ -134,7 +134,7 @@ class InternalKBResponse(BaseModel):
 # =============================================================================
 
 
-class InternalKBAgent(ResilientAgent):
+class InternalKBAgent(ResilientAgent[Any, Any]):
     """社内KB Agent（RBAC制御 + 保守モード）.
 
     社内向け知識ベース専用のAgent。

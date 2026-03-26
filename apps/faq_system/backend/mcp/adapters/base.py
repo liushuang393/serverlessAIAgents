@@ -20,8 +20,6 @@ from typing import Any
 from apps.faq_system.backend.mcp.backends.base import (
     BackendType,
     RetrievalBackend,
-    RetrievalQuery,
-    RetrievalResult,
 )
 
 
@@ -91,4 +89,3 @@ class ThirdPartyAdapter(RetrievalBackend):
         """クリーンアップ."""
         self._framework_instance = None
         self._initialized = False
-

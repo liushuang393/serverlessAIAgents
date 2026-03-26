@@ -24,15 +24,21 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 
+LoadDotenvCallable = Callable[..., bool]
+_load_dotenv: LoadDotenvCallable | None
+
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv as _dotenv_load_dotenv
 except ImportError:  # pragma: no cover - optional dependency
-    load_dotenv = None
+    _load_dotenv = None
+else:
+    _load_dotenv = _dotenv_load_dotenv
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -44,9 +50,9 @@ _APP_ENV_PATH = _APP_ROOT / ".env"
 
 def _load_faq_app_env() -> None:
     """FAQ アプリ専用 .env をロードする."""
-    if load_dotenv is None or not _APP_ENV_PATH.is_file():
+    if _load_dotenv is None or not _APP_ENV_PATH.is_file():
         return
-    load_dotenv(_APP_ENV_PATH, override=True)
+    _load_dotenv(_APP_ENV_PATH, override=True)
     os.environ.setdefault("AGENTFLOW_ENV_FILE", str(_APP_ENV_PATH))
 
 

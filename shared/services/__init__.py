@@ -7,7 +7,8 @@ dependency-violation なしにインポートできる正規パス。
 from shared.services.base import ServiceResult
 from shared.services.chart_service import ChartConfig, ChartService
 from shared.services.rag_service import ChunkStrategy, RAGConfig, RAGService, RerankerType
-from shared.services.suggestion_service import SuggestionConfig, SuggestionService
+from shared.services.semantic_layer import SemanticLayerConfig, SemanticLayerService
+from shared.services.suggestion_service import SuggestionConfig, SuggestionService, SuggestionType
 from shared.services.text2sql_service import SQLDialect, Text2SQLConfig, Text2SQLService
 from shared.services.weather_service import WeatherConfig, WeatherService
 from shared.services.workflow_service import WorkflowService
@@ -21,9 +22,12 @@ __all__ = [
     "RAGService",
     "RerankerType",
     "SQLDialect",
+    "SemanticLayerConfig",
+    "SemanticLayerService",
     "ServiceResult",
     "SuggestionConfig",
     "SuggestionService",
+    "SuggestionType",
     "Text2SQLConfig",
     "Text2SQLService",
     "WeatherConfig",

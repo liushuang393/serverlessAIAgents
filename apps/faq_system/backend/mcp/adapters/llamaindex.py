@@ -103,9 +103,7 @@ class LlamaIndexAdapter(ThirdPartyAdapter):
             return index
 
         except ImportError:
-            self._logger.error(
-                "llama-index 未インストール。pip install llama-index を実行してください"
-            )
+            self._logger.exception("llama-index 未インストール。pip install llama-index を実行してください")
             raise
         except Exception:
             self._logger.exception("LlamaIndex インデックス生成失敗")
@@ -165,4 +163,3 @@ class LlamaIndexAdapter(ThirdPartyAdapter):
                 query=query.query,
                 metadata={"error": str(e)},
             )
-

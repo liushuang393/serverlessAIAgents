@@ -49,7 +49,8 @@ class AuthService:
 
     async def ensure_ready(self) -> None:
         """DB 初期化を保証する."""
-        if self._bootstrap_completed:
+        already_bootstrapped = self._bootstrap_completed
+        if already_bootstrapped:
             return
         async with self._bootstrap_lock:
             if self._bootstrap_completed:
@@ -86,24 +87,25 @@ class AuthService:
         if provider_name == "local_db":
             from shared.auth_service.providers.local import LocalDBProvider
 
-            provider = LocalDBProvider(settings=self._settings)
-            result = await provider.authenticate_with_mfa(username, password, totp_code)
+            local_provider = LocalDBProvider(settings=self._settings)
+            auth_result = await local_provider.authenticate_with_mfa(username, password, totp_code)
         else:
             from shared.auth_service.providers import get_provider
 
-            provider = get_provider(provider_name)
-            result = await provider.authenticate(username, password)
+            external_provider = get_provider(provider_name)
+            auth_result = await external_provider.authenticate(username, password)
 
-        if not result.success or result.identity is None:
-            return False, result.message, None, None
+        if not auth_result.success or auth_result.identity is None:
+            return False, auth_result.message, None, None
 
         # 外部認証の場合は DB にユーザーを upsert
         if provider_name != "local_db":
-            user_info = await self._upsert_external_user(result.identity, provider_name)
+            user_info = await self._upsert_external_user(auth_result.identity, provider_name)
         else:
-            user_info = await self._get_user_info_by_username(result.identity.username)
-            if user_info is None:
+            local_user_info = await self._get_user_info_by_username(auth_result.identity.username)
+            if local_user_info is None:
                 return False, "ユーザー情報の取得に失敗しました", None, None
+            user_info = local_user_info
 
         token_pair = await self._issue_token_pair(
             user_info,
@@ -294,6 +296,7 @@ class AuthService:
             scopes=claims.scopes,
             azp=claims.azp,
             email=claims.email,
+            mfa_enabled=False,
             permissions=claims.permissions,
         )
 

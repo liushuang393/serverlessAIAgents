@@ -35,7 +35,7 @@ class ClaimCreateRequest(BaseModel):
 async def list_evidence(
     source_type: str | None = None,
     min_reliability: float = Query(default=0.0, ge=0.0, le=1.0),
-) -> dict:
+) -> dict[str, Any]:
     """証拠一覧を取得."""
     if source_type:
         try:
@@ -52,13 +52,13 @@ async def list_evidence(
 
 
 @router.get("/api/evidence/grounding")
-async def get_grounding_guard() -> dict:
+async def get_grounding_guard() -> dict[str, Any]:
     """Grounding Guard 診断を取得."""
     return await evidence_service.get_grounding_guard()
 
 
 @router.get("/api/evidence/{evidence_id}")
-async def get_evidence(evidence_id: str) -> dict:
+async def get_evidence(evidence_id: str) -> dict[str, Any]:
     """証拠詳細を取得."""
     evidence = await evidence_service.get_evidence(evidence_id)
     if not evidence:
@@ -67,7 +67,7 @@ async def get_evidence(evidence_id: str) -> dict:
 
 
 @router.post("/api/evidence")
-async def create_evidence(request: EvidenceCreateRequest) -> dict:
+async def create_evidence(request: EvidenceCreateRequest) -> dict[str, Any]:
     """証拠を登録."""
     try:
         source_type = SourceType(request.source_type)
@@ -93,7 +93,7 @@ async def create_evidence(request: EvidenceCreateRequest) -> dict:
 async def list_claims(
     level: str | None = None,
     min_confidence: float = Query(default=0.0, ge=0.0, le=1.0),
-) -> dict:
+) -> dict[str, Any]:
     """主張一覧を取得."""
     if level:
         try:
@@ -107,7 +107,7 @@ async def list_claims(
 
 
 @router.post("/api/claims")
-async def create_claim(request: ClaimCreateRequest) -> dict:
+async def create_claim(request: ClaimCreateRequest) -> dict[str, Any]:
     """主張を作成."""
     claim = await evidence_service.create_claim(
         statement=request.statement,
@@ -117,7 +117,7 @@ async def create_claim(request: ClaimCreateRequest) -> dict:
 
 
 @router.get("/api/claims/{claim_id}/chain")
-async def get_claim_chain(claim_id: str) -> dict:
+async def get_claim_chain(claim_id: str) -> dict[str, Any]:
     """主張の証拠チェーンを取得."""
     evidences = await evidence_service.get_evidence_chain(claim_id)
     return {"evidences": [e.to_dict() for e in evidences], "total": len(evidences)}

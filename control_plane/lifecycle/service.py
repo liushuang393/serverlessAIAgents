@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING, Any
 
 from control_plane.schemas.app_config_schemas import AppConfig
 from control_plane.services.app_lifecycle import AppLifecycleManager
-from control_plane.services.runtime_command_resolver import RuntimeCommandResolver
+from control_plane.services.runtime_command_resolver import (
+    CommandAction,
+    RuntimeCommandResolver,
+)
 
 
 if TYPE_CHECKING:
@@ -37,7 +40,8 @@ class LifecycleService:
                 app_dir=config_path.parent,
                 runtime_commands=config.runtime.commands,
             )
-            resolved = commands.get(action) if action in commands.source else None
+            action_key = _normalize_command_action(action)
+            resolved = commands.get(action_key) if action_key is not None else None
         else:
             resolved = getattr(config.runtime.commands, action, None)
         if isinstance(resolved, str) and resolved.strip():
@@ -51,3 +55,17 @@ def _resolve_config_path(manifest: AppManifest) -> Path | None:
     if not isinstance(raw_path, str) or not raw_path.strip():
         return None
     return Path(raw_path)
+
+
+def _normalize_command_action(action: str) -> CommandAction | None:
+    if action == "backend_dev":
+        return "backend_dev"
+    if action == "frontend_dev":
+        return "frontend_dev"
+    if action == "publish":
+        return "publish"
+    if action == "start":
+        return "start"
+    if action == "stop":
+        return "stop"
+    return None

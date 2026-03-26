@@ -136,6 +136,16 @@ class RuntimeCommandsConfig(BaseModel):
     stop: str | None = Field(default=None, description="stop コマンド")
 
 
+def _default_cli_preferred() -> list[Literal["codex", "claude"]]:
+    """CLI 優先順位のデフォルト値."""
+    return ["codex", "claude"]
+
+
+def _default_evolution_scope_policy() -> list[Literal["tenant_app", "tenant_product_line", "global_verified"]]:
+    """進化スコープ順序のデフォルト値."""
+    return ["tenant_app", "tenant_product_line", "global_verified"]
+
+
 class RuntimeCLIAuthConfig(BaseModel):
     """CLI 認証設定."""
 
@@ -159,7 +169,7 @@ class RuntimeCLIConfig(BaseModel):
     """Runtime CLI 設定."""
 
     preferred: list[Literal["codex", "claude"]] = Field(
-        default_factory=lambda: ["codex", "claude"],
+        default_factory=_default_cli_preferred,
         description="診断時に優先する CLI 順序",
     )
     codex: RuntimeCLIToolConfig = Field(default_factory=RuntimeCLIToolConfig, description="Codex CLI 設定")
@@ -344,7 +354,7 @@ class EvolutionConfig(BaseModel):
     strategy_service_url: str | None = Field(default=None, description="Strategy Service URL")
     validator_queue: EvolutionValidatorQueueConfig = Field(default_factory=EvolutionValidatorQueueConfig)
     scope_policy: list[Literal["tenant_app", "tenant_product_line", "global_verified"]] = Field(
-        default_factory=lambda: ["tenant_app", "tenant_product_line", "global_verified"],
+        default_factory=_default_evolution_scope_policy,
         description="戦略検索スコープ順序",
     )
     retrieval: EvolutionRetrievalConfig = Field(default_factory=EvolutionRetrievalConfig)

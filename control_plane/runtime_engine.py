@@ -6,16 +6,16 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from control_plane.dashboards.runtime import TenantDashboard
+from control_plane.dashboards.service import TenantDashboard
 from control_plane.publish.contracts import PublishResponse
-from control_plane.publish.runtime import (
+from control_plane.services.component_library import (
     ComponentEntry,
     ComponentLibrary,
     ComponentType,
-    GalleryService,
-    PublishOrchestrator,
     get_component_library,
 )
+from control_plane.services.gallery_service import GalleryService
+from control_plane.services.publish_orchestrator import PublishOrchestrator
 from infrastructure.llm.providers import get_llm
 from kernel.engines.base import EngineConfig
 from kernel.engines.simple_engine import SimpleEngine
@@ -58,11 +58,11 @@ class PlatformEngine(SimpleEngine):
             ),
         )
 
-        self._llm_client = llm_client
-        self._library = component_library or get_component_library()
-        self._gallery = GalleryService(component_library=self._library)
-        self._publisher = PublishOrchestrator(component_library=self._library)
-        self._dashboard = TenantDashboard(component_library=self._library)
+        self._llm_client: Any = llm_client
+        self._library: ComponentLibrary = component_library or get_component_library()
+        self._gallery: GalleryService = GalleryService(component_library=self._library)
+        self._publisher: PublishOrchestrator = PublishOrchestrator(component_library=self._library)
+        self._dashboard: TenantDashboard = TenantDashboard(component_library=self._library)
         self._logger = logging.getLogger(__name__)
 
     async def search_gallery(self, query: str | GallerySearchRequest) -> GallerySearchResponse:
@@ -147,4 +147,4 @@ class PlatformEngine(SimpleEngine):
 
     async def get_dashboard_summary(self, tenant_id: str) -> dict[str, Any]:
         """テナント別ダッシュボード要約を返す。"""
-        return await self._dashboard.get_summary(tenant_id)
+        return await self._dashboard.get_dashboard_summary(tenant_id)

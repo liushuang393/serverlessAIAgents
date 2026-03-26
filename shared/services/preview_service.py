@@ -182,7 +182,7 @@ class PreviewService(IWorkflowRunner):
         node_config: dict[str, Any],
     ) -> dict[str, Any]:
         """ノードを実行する（登録Agent優先、設定解決をフォールバック）。"""
-        from kernel import AgentClient
+        from kernel.agent_decorator import AgentClient
 
         if agent_type:
             try:
@@ -217,27 +217,30 @@ class PreviewService(IWorkflowRunner):
         if instance is not None:
             return instance
 
+        resolved_instance: Any | None = None
+
         class_path = node_config.get("class_path")
         if isinstance(class_path, str) and "." in class_path:
             try:
-                module_name, class_name = class_path.rsplit(".", 1)
-                module = importlib.import_module(module_name)
-                klass = getattr(module, class_name)
-                return klass() if inspect.isclass(klass) else klass
+                path_module_name, path_class_name = class_path.rsplit(".", 1)
+                module = importlib.import_module(path_module_name)
+                klass = getattr(module, path_class_name)
+                resolved_instance = klass() if inspect.isclass(klass) else klass
             except Exception:
-                return None
+                resolved_instance = None
+            return resolved_instance
 
-        module_name = node_config.get("module")
-        class_name = node_config.get("class_name")
-        if isinstance(module_name, str) and isinstance(class_name, str):
+        configured_module_name = node_config.get("module")
+        configured_class_name = node_config.get("class_name")
+        if isinstance(configured_module_name, str) and isinstance(configured_class_name, str):
             try:
-                module = importlib.import_module(module_name)
-                klass = getattr(module, class_name)
-                return klass() if inspect.isclass(klass) else klass
+                module = importlib.import_module(configured_module_name)
+                klass = getattr(module, configured_class_name)
+                resolved_instance = klass() if inspect.isclass(klass) else klass
             except Exception:
-                return None
+                resolved_instance = None
 
-        return None
+        return resolved_instance
 
     async def run_debug(
         self,

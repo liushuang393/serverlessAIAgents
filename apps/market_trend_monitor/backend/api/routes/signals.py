@@ -1,5 +1,7 @@
 """信号評価API."""
 
+from typing import Any
+
 from apps.market_trend_monitor.backend.api.state import signal_service
 from apps.market_trend_monitor.backend.models import SignalGrade
 from apps.market_trend_monitor.backend.services.registry import recommendation_service
@@ -9,8 +11,13 @@ from fastapi import APIRouter, HTTPException
 router = APIRouter(tags=["信号評価"])
 
 
+def _as_dict(value: object) -> dict[str, Any]:
+    """辞書戻り値を正規化."""
+    return value if isinstance(value, dict) else {}
+
+
 @router.get("/api/signals")
-async def list_signals(min_grade: str | None = None) -> dict:
+async def list_signals(min_grade: str | None = None) -> dict[str, Any]:
     """信号一覧を取得."""
     if min_grade:
         try:
@@ -24,13 +31,13 @@ async def list_signals(min_grade: str | None = None) -> dict:
 
 
 @router.get("/api/signals/dashboard")
-async def get_signal_dashboard() -> dict:
+async def get_signal_dashboard() -> dict[str, Any]:
     """信号ダッシュボード統計を取得."""
-    return signal_service.get_dashboard_stats()
+    return _as_dict(signal_service.get_dashboard_stats())
 
 
 @router.get("/api/signals/recommendations")
-async def get_recommendations() -> dict:
+async def get_recommendations() -> dict[str, Any]:
     """全シグナルに基づくアクション推奨を取得."""
     signals = signal_service.list_signals()
     signal_dicts = [s.to_dict() for s in signals]
@@ -39,9 +46,9 @@ async def get_recommendations() -> dict:
 
 
 @router.get("/api/signals/{signal_id}")
-async def get_signal(signal_id: str) -> dict:
+async def get_signal(signal_id: str) -> dict[str, Any]:
     """信号詳細を取得."""
     signal = signal_service.get_signal(signal_id)
     if not signal:
         raise HTTPException(status_code=404, detail="Signal not found")
-    return signal.to_dict()
+    return _as_dict(signal.to_dict())

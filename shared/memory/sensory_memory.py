@@ -232,4 +232,5 @@ class SensoryMemory:
         threshold = sorted_scores[percentile_index] if percentile_index < len(sorted_scores) else 0.0
 
         # 最小閾値を適用
-        return max(threshold, self._config.min_importance_threshold)
+        resolved_threshold = max(threshold, self._config.min_importance_threshold)
+        return float(resolved_threshold)

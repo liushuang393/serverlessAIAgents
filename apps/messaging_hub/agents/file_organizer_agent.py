@@ -131,7 +131,7 @@ class DuplicateGroup:
         }
 
 
-class FileOrganizerAgent(ResilientAgent):
+class FileOrganizerAgent(ResilientAgent[Any, Any]):
     """ファイル整理エージェント.
 
     SkillGateway経由でファイルシステムを操作し、
@@ -268,7 +268,7 @@ class FileOrganizerAgent(ResilientAgent):
         rel_path = Path(path_raw) if path_raw else Path(name_value)
         if rel_path.is_absolute():
             full_path = rel_path
-            rel_path = Path(name_value) if name_value else rel_path.name
+            rel_path = Path(name_value) if name_value else Path(rel_path.name)
         else:
             workspace_path = (Path.cwd() / rel_path).resolve()
             if workspace_path.exists() and self._is_subpath(workspace_path, base):
@@ -300,7 +300,7 @@ class FileOrganizerAgent(ResilientAgent):
         if isinstance(raw, dict):
             return raw
         if hasattr(raw, "model_dump"):
-            dumped = raw.model_dump()  # type: ignore[no-any-return]
+            dumped = raw.model_dump()
             if isinstance(dumped, dict):
                 return dumped
         if hasattr(raw, "__dict__"):
@@ -334,17 +334,17 @@ class FileOrganizerAgent(ResilientAgent):
             if not root.exists() or not root.is_dir():
                 return []
             normalized = []
-            for item in root.iterdir():
-                stat = item.stat()
+            for entry in root.iterdir():
+                stat = entry.stat()
                 normalized.append(
                     {
-                        "name": item.name,
-                        "path": item.name,
-                        "full_path": item,
+                        "name": entry.name,
+                        "path": entry.name,
+                        "full_path": entry,
                         "size": int(stat.st_size),
                         "modified": float(stat.st_mtime),
-                        "is_dir": item.is_dir(),
-                        "is_file": item.is_file(),
+                        "is_dir": entry.is_dir(),
+                        "is_file": entry.is_file(),
                     }
                 )
 

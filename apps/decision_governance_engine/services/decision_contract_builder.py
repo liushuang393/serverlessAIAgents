@@ -92,8 +92,10 @@ class DecisionGovContractBuilder:
         success_probability: float | None = None
         if isinstance(rec_paths, list) and rec_paths:
             first = rec_paths[0] if isinstance(rec_paths[0], Mapping) else {}
+            raw_probability = first.get("success_probability")
             try:
-                success_probability = float(first.get("success_probability"))
+                if isinstance(raw_probability, str | int | float):
+                    success_probability = float(raw_probability)
             except (TypeError, ValueError):
                 success_probability = None
 

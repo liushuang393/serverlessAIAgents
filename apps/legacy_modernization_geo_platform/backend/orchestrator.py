@@ -23,6 +23,7 @@ from apps.legacy_modernization_geo_platform.backend.qa import GeoQualityGate
 from apps.legacy_modernization_geo_platform.backend.reporting import build_campaign_report
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreArtifact,
+    AccountScoreEntry,
     AccountSignalArtifact,
     ApprovalRecord,
     ApprovalRequest,
@@ -31,14 +32,20 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     BrandMemoryArtifact,
     CampaignReport,
     ContentBlueprintArtifact,
+    ContentBlueprintPage,
     ContentDraftArtifact,
     ContentDraftPage,
     EvidenceMatrixArtifact,
+    EvidenceMatrixEntry,
+    FAQEntry,
+    FunnelCluster,
     GeoExecuteRequest,
     GeoQAReport,
     LegacySemanticsArtifact,
+    PersonaQuestionSet,
     PublishManifest,
     QuestionGraphArtifact,
+    SignalEntry,
     TaskCommandRequest,
     TaskEvent,
     TaskStateResponse,
@@ -53,6 +60,7 @@ if TYPE_CHECKING:
 
     from fastapi import WebSocket
 
+    from apps.legacy_modernization_geo_platform.backend.intelligence import IntelligenceSnapshot
     from apps.legacy_modernization_geo_platform.backend.repository import GeoRepository
     from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
     from kernel.agents.app_agent_runtime import AppAgentRuntime
@@ -181,7 +189,14 @@ class GeoOrchestrator:
     ) -> ApprovalRecord:
         """Apply an approval decision."""
         runtime = self._runtimes.get(task_id)
-        status = payload.action or (ApprovalStatus.APPROVED if payload.approved else ApprovalStatus.REJECTED)
+        try:
+            status = (
+                ApprovalStatus(payload.action)
+                if payload.action
+                else (ApprovalStatus.APPROVED if payload.approved else ApprovalStatus.REJECTED)
+            )
+        except ValueError:
+            status = ApprovalStatus.APPROVED if payload.approved else ApprovalStatus.REJECTED
         updated = self._repository.update_approval(
             request_id,
             status=status,
@@ -687,6 +702,252 @@ class GeoOrchestrator:
             artifact=artifact,
             markdown=markdown,
             summary=summary,
+        )
+
+    def _build_brand_memory(self, task_id: str, request: GeoExecuteRequest) -> BrandMemoryArtifact:
+        """BrandMemory のフォールバック成果物を構築する."""
+        stacks = list(request.targets.legacy_stacks or ["COBOL"])
+        regions = list(request.inputs.regions or request.targets.regions or ["Japan"])
+        differentiators = [
+            "段階移行を前提とした現実的な modernization 計画",
+            "監査可能な証拠チェーンに基づく提案",
+            "既存業務ルールを残しながら Java へ移行する設計",
+        ]
+        return BrandMemoryArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:brand_memory", stage="brand_memory"),
+            evidence=[{"stack": stack} for stack in stacks],
+            positioning=f"{request.campaign_name} 向け legacy modernization 需要を捉えるための基礎メッセージ",
+            differentiators=differentiators,
+            supported_stacks=stacks,
+            target_regions=regions,
+        )
+
+    def _build_demand_signal(
+        self,
+        task_id: str,
+        request: GeoExecuteRequest,
+        intelligence_snapshot: IntelligenceSnapshot,
+    ) -> AccountSignalArtifact:
+        """DemandSignal のフォールバック成果物を構築する."""
+        company = (request.inputs.target_accounts or [request.campaign_name])[0]
+        signals = [
+            SignalEntry(
+                type="market_signal",
+                description=source.summary or source.title,
+                source=source.url,
+                confidence=0.85 if source.reliability == "HIGH" else 0.6,
+            )
+            for source in intelligence_snapshot.sources[:5]
+        ]
+        return AccountSignalArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:demand_signal", stage="demand_signal"),
+            evidence=[source.to_evidence_dict() for source in intelligence_snapshot.sources[:5]],
+            unknowns=list(intelligence_snapshot.warnings),
+            company=company,
+            signals=signals,
+            urgency_hypothesis="需要は顕在化しており、段階移行への関心が高まっている。",
+            modernization_fit_score=min(100, 55 + len(signals) * 8),
+        )
+
+    def _build_account_score(
+        self,
+        task_id: str,
+        request: GeoExecuteRequest,
+        signal_artifact: AccountSignalArtifact,
+    ) -> AccountScoreArtifact:
+        """AccountScore のフォールバック成果物を構築する."""
+        urgency_score = min(100, 40 + len(signal_artifact.signals) * 10)
+        fit_score = max(signal_artifact.modernization_fit_score, 50)
+        priority = "high" if fit_score >= 75 or urgency_score >= 75 else "medium"
+        rationale = [
+            f"target stacks: {', '.join(request.targets.legacy_stacks or ['legacy modernization'])}",
+            f"signal count: {len(signal_artifact.signals)}",
+        ]
+        return AccountScoreArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:account_score", stage="icp_scoring"),
+            evidence=list(signal_artifact.evidence),
+            unknowns=list(signal_artifact.unknowns),
+            account_scores=[
+                AccountScoreEntry(
+                    company=signal_artifact.company,
+                    fit_score=fit_score,
+                    urgency_score=urgency_score,
+                    priority=priority,
+                    rationale=rationale,
+                )
+            ],
+            recommended_focus=list(request.inputs.target_services or request.targets.industries or ["assessment"]),
+        )
+
+    def _build_question_graph(
+        self,
+        task_id: str,
+        request: GeoExecuteRequest,
+        score_artifact: AccountScoreArtifact,
+    ) -> QuestionGraphArtifact:
+        """QuestionGraph のフォールバック成果物を構築する."""
+        target_stack = (request.targets.legacy_stacks or ["legacy system"])[0]
+        primary_questions = [
+            f"{target_stack} を Java へ段階移行する際の主要リスクは何か",
+            "比較検討で必要な証拠と KPI は何か",
+            "既存業務を止めずに移行する実行順序はどう設計するか",
+        ]
+        return QuestionGraphArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:question_graph", stage="question_map"),
+            evidence=list(score_artifact.evidence),
+            personas=[
+                PersonaQuestionSet(
+                    role="technology-lead",
+                    questions=primary_questions,
+                    high_intent_questions=primary_questions[:2],
+                )
+            ],
+            funnel_clusters=[
+                FunnelCluster(stage="consideration", questions=primary_questions, recommended_page_type="guide")
+            ],
+            content_clusters=[{"label": "migration-guide", "questions": primary_questions}],
+        )
+
+    def _build_evidence_matrix(
+        self,
+        task_id: str,
+        question_graph: QuestionGraphArtifact,
+        intelligence_snapshot: IntelligenceSnapshot,
+    ) -> EvidenceMatrixArtifact:
+        """EvidenceMatrix のフォールバック成果物を構築する."""
+        question_ref = (
+            question_graph.personas[0].high_intent_questions[0]
+            if question_graph.personas and question_graph.personas[0].high_intent_questions
+            else "migration strategy"
+        )
+        entries = [
+            EvidenceMatrixEntry(
+                claim=source.summary or source.title,
+                question_ref=question_ref,
+                source_url=source.url,
+                title=source.title,
+                publisher=source.publisher,
+                summary=source.summary,
+                snippet=source.snippet,
+                reliability=source.reliability,
+                citation_ready=source.citation_ready,
+                fresh=source.is_fresh,
+            )
+            for source in intelligence_snapshot.sources[:8]
+        ]
+        return EvidenceMatrixArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:evidence_matrix", stage="evidence_collection"),
+            evidence=[source.to_evidence_dict() for source in intelligence_snapshot.sources[:8]],
+            unknowns=list(intelligence_snapshot.warnings),
+            entries=entries,
+            provider_status={
+                "primary_provider": intelligence_snapshot.primary_provider,
+                "warnings": list(intelligence_snapshot.warnings),
+            },
+        )
+
+    def _build_legacy_semantics(
+        self,
+        task_id: str,
+        request: GeoExecuteRequest,
+        brand_memory: BrandMemoryArtifact,
+    ) -> LegacySemanticsArtifact:
+        """LegacySemantics のフォールバック成果物を構築する."""
+        services = list(request.inputs.target_services or ["assessment"])
+        return LegacySemanticsArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:legacy_semantics", stage="legacy_semantics"),
+            evidence=list(brand_memory.evidence),
+            business_processes=services,
+            business_events=["modernization assessment requested", "migration roadmap drafted"],
+            state_model={"regions": list(brand_memory.target_regions), "stacks": list(brand_memory.supported_stacks)},
+            business_rules=list(brand_memory.differentiators),
+        )
+
+    def _build_content_blueprint(
+        self,
+        task_id: str,
+        request: GeoExecuteRequest,
+        question_graph: QuestionGraphArtifact,
+    ) -> ContentBlueprintArtifact:
+        """ContentBlueprint のフォールバック成果物を構築する."""
+        questions = (
+            question_graph.personas[0].high_intent_questions
+            if question_graph.personas and question_graph.personas[0].high_intent_questions
+            else ["legacy modernization の評価ポイントは何か"]
+        )
+        page = ContentBlueprintPage(
+            slug=f"{task_id}-guide",
+            title=f"{request.campaign_name} migration guide",
+            persona="technology-lead",
+            primary_question=questions[0],
+            page_type="guide",
+            cta="無料診断を依頼する",
+        )
+        return ContentBlueprintArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:content_blueprint", stage="strategy"),
+            evidence=list(question_graph.evidence),
+            pages=[page],
+            target_language=normalize_content_language((request.inputs.content_languages or ["ja"])[0]),
+        )
+
+    def _build_content_draft(
+        self,
+        task_id: str,
+        request: GeoExecuteRequest,
+        blueprint: ContentBlueprintArtifact,
+        evidence_matrix: EvidenceMatrixArtifact,
+        legacy_semantics: LegacySemanticsArtifact,
+    ) -> ContentDraftArtifact:
+        """ContentDraft のフォールバック成果物を構築する."""
+        pages: list[ContentDraftPage] = []
+        evidence_summary = (
+            evidence_matrix.entries[0].summary
+            if evidence_matrix.entries
+            else " phased migration and evidence-backed planning reduce delivery risk."
+        )
+        for page in blueprint.pages:
+            faq_entries = [
+                FAQEntry(
+                    question="どこから始めるべきか", answer="現行業務の棚卸しと段階移行計画の定義から開始します。"
+                ),
+                FAQEntry(
+                    question="どの証拠を比較に使うか", answer="公開情報、導入条件、制約、業界特性を並べて比較します。"
+                ),
+            ]
+            body_markdown = "\n".join(
+                [
+                    f"## {page.primary_question}",
+                    "",
+                    evidence_summary,
+                    "",
+                    "### 推奨アプローチ",
+                    f"- 対象業務: {', '.join(legacy_semantics.business_processes or ['assessment'])}",
+                    f"- 対象技術: {', '.join(request.targets.legacy_stacks or ['legacy modernization'])}",
+                    "- 比較表現は条件付きで記述し、出典を明示する",
+                ]
+            )
+            pages.append(
+                ContentDraftPage(
+                    slug=page.slug,
+                    title=page.title,
+                    summary=evidence_summary[:160],
+                    body_markdown=body_markdown,
+                    cta=page.cta,
+                    faq_entries=faq_entries,
+                    json_ld={
+                        "@context": "https://schema.org",
+                        "@type": "WebPage",
+                        "name": page.title,
+                        "description": evidence_summary[:160],
+                    },
+                )
+            )
+        return ContentDraftArtifact(
+            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:content_draft", stage="content_composition"),
+            evidence=[entry.model_dump(mode="json") for entry in evidence_matrix.entries],
+            unknowns=list(evidence_matrix.unknowns),
+            pages=pages,
+            target_language=blueprint.target_language,
         )
 
     @staticmethod

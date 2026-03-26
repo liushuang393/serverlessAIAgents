@@ -62,7 +62,7 @@ class StorageBackend(Protocol):
     async def get_stats(self) -> dict[str, Any]: ...
 
 
-class BaseStorageBackend(ABC):
+class BaseStorageBackend(StorageBackend, ABC):
     """ストレージバックエンド基底クラス.
 
     共通の実装を提供する抽象基底クラス。

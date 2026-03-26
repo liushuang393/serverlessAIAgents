@@ -132,4 +132,3 @@ def create_score_normalize_middleware(
         return await score_normalize_middleware(result, method=method)
 
     return _middleware
-

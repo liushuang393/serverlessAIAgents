@@ -343,9 +343,11 @@ class RAGOverviewService:
         raw_config: dict[str, Any],
     ) -> str | None:
         runtime_raw = raw_config.get("runtime")
-        runtime_data = runtime_raw if isinstance(runtime_raw, dict) else {}
-        runtime_urls = runtime_data.get("urls") if isinstance(runtime_data.get("urls"), dict) else {}
-        runtime_db = runtime_data.get("database") if isinstance(runtime_data.get("database"), dict) else {}
+        runtime_data: dict[str, Any] = runtime_raw if isinstance(runtime_raw, dict) else {}
+        runtime_urls_raw = runtime_data.get("urls")
+        runtime_urls: dict[str, Any] = runtime_urls_raw if isinstance(runtime_urls_raw, dict) else {}
+        runtime_db_raw = runtime_data.get("database")
+        runtime_db: dict[str, Any] = runtime_db_raw if isinstance(runtime_db_raw, dict) else {}
 
         return (
             self._clean_text(runtime_db.get("url"))
@@ -680,16 +682,19 @@ class RAGOverviewService:
         raw_config: dict[str, Any],
     ) -> dict[str, Any]:
         runtime_raw = raw_config.get("runtime")
-        runtime_data = runtime_raw if isinstance(runtime_raw, dict) else {}
-        runtime_urls = runtime_data.get("urls") if isinstance(runtime_data.get("urls"), dict) else {}
-        runtime_db = runtime_data.get("database") if isinstance(runtime_data.get("database"), dict) else {}
+        runtime_data: dict[str, Any] = runtime_raw if isinstance(runtime_raw, dict) else {}
+        runtime_urls_raw = runtime_data.get("urls")
+        runtime_urls: dict[str, Any] = runtime_urls_raw if isinstance(runtime_urls_raw, dict) else {}
+        runtime_db_raw = runtime_data.get("database")
+        runtime_db: dict[str, Any] = runtime_db_raw if isinstance(runtime_db_raw, dict) else {}
 
         services_raw = raw_config.get("services")
-        services = services_raw if isinstance(services_raw, dict) else {}
-        sql_raw = services.get("sql") if isinstance(services.get("sql"), dict) else {}
+        services: dict[str, Any] = services_raw if isinstance(services_raw, dict) else {}
+        sql_raw_value = services.get("sql")
+        sql_raw: dict[str, Any] = sql_raw_value if isinstance(sql_raw_value, dict) else {}
 
         deps_raw = raw_config.get("dependencies")
-        dependencies = deps_raw if isinstance(deps_raw, dict) else {}
+        dependencies: dict[str, Any] = deps_raw if isinstance(deps_raw, dict) else {}
 
         runtime_db_model = app_config.runtime.database
         runtime_urls_model = app_config.runtime.urls

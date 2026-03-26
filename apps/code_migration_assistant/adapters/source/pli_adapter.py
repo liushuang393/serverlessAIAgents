@@ -339,19 +339,19 @@ class PLIAdapter(SourceLanguageAdapter):
     def _extract_structures(self, lines: list[str]) -> list[dict[str, Any]]:
         """構造体を抽出."""
         structures: list[dict[str, Any]] = []
-        current_struct = None
+        current_struct: dict[str, Any] | None = None
 
         for line in lines:
             # 構造体開始（レベル1）
             match = re.match(r"(?:DECLARE|DCL)\s+1\s+(\w+)", line, re.IGNORECASE)
             if match:
-                if current_struct:
+                if current_struct is not None:
                     structures.append(current_struct)
                 current_struct = {"name": match.group(1), "members": []}
                 continue
 
             # 構造体メンバー（レベル2以上）
-            if current_struct:
+            if current_struct is not None:
                 match = re.match(r"(?:DECLARE|DCL)?\s*(\d+)\s+(\w+)", line, re.IGNORECASE)
                 if match and int(match.group(1)) > 1:
                     current_struct["members"].append(
@@ -362,7 +362,7 @@ class PLIAdapter(SourceLanguageAdapter):
                         }
                     )
 
-        if current_struct:
+        if current_struct is not None:
             structures.append(current_struct)
 
         return structures

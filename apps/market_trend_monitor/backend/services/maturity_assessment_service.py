@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from kernel import get_llm
+from infrastructure.providers.llm_provider import LLMProvider, get_llm
 
 
 if TYPE_CHECKING:
@@ -99,7 +99,7 @@ class MaturityAssessmentService:
     def __init__(
         self,
         *,
-        llm: Any | None = None,
+        llm: LLMProvider | None = None,
         technologies: list[str] | None = None,
     ) -> None:
         """初期化."""
@@ -108,7 +108,7 @@ class MaturityAssessmentService:
         self._technologies = technologies or DEFAULT_TECHNOLOGIES
         self._assessments: dict[str, TechnologyMaturity] = {}
 
-    def _get_llm(self) -> Any:
+    def _get_llm(self) -> LLMProvider:
         """LLMインスタンスを取得."""
         if self._llm is None:
             self._llm = get_llm(temperature=0.3)
@@ -259,7 +259,9 @@ class MaturityAssessmentService:
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start : end + 1])
+                parsed = json.loads(raw[start : end + 1])
+                if isinstance(parsed, dict):
+                    return parsed
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

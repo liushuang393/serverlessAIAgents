@@ -54,10 +54,11 @@ class JavaGenerator(MCPTool):
 
         # LLMクライアント初期化
         settings = get_settings()
+        llm_runtime = settings.get_active_llm_config()
         llm_config = LLMConfig(
-            provider=settings.llm_provider,
-            api_key=settings.llm_api_key,
-            model=settings.llm_model,
+            provider=settings.get_active_provider(),
+            api_key=llm_runtime.get("api_key") if isinstance(llm_runtime.get("api_key"), str) else None,
+            model=settings.get_active_model(),
             temperature=0.2,  # コード生成には低めの温度
             max_tokens=2000,
         )
@@ -388,7 +389,7 @@ Java Code:
 ```java"""
 
         response = await self._llm_client.generate(role="coding", prompt=prompt)
-        java_code = response.content
+        java_code = response.content or ""
 
         # コードブロックから抽出
         if "```" in java_code:

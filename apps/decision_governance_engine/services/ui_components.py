@@ -25,10 +25,13 @@ class DecisionUIComponentBuilder:
     v3.0: 全ての道・法・術・器フィールドをコンポーネント化。
     """
 
-    def _to_dict(self, obj: Any) -> dict:
+    def _to_dict(self, obj: Any) -> dict[str, Any]:
         """Pydanticオブジェクトまたはdictをdictに変換."""
         if hasattr(obj, "model_dump"):
-            return obj.model_dump()
+            payload = obj.model_dump()
+            if isinstance(payload, dict):
+                return payload
+            return {}
         if isinstance(obj, dict):
             return obj
         return {}
@@ -70,7 +73,7 @@ class DecisionUIComponentBuilder:
     def _build_summary_card(self, report: DecisionReport) -> CardComponent:
         """エグゼクティブサマリーカードを構築 v3.0."""
         summary = report.executive_summary
-        children = [
+        children: list[A2UIComponent] = [
             TextComponent(summary.one_line_decision, variant="headline"),
         ]
 
@@ -91,7 +94,7 @@ class DecisionUIComponentBuilder:
 
         # リスク一覧
         if summary.key_risks:
-            risk_items = [TextComponent(f"⚠️ {r}") for r in summary.key_risks]
+            risk_items: list[A2UIComponent] = [TextComponent(f"⚠️ {r}") for r in summary.key_risks]
             children.append(ListComponent(items=risk_items, title="主要リスク"))
 
         return CardComponent(title="📊 エグゼクティブサマリー", children=children)
@@ -117,7 +120,7 @@ class DecisionUIComponentBuilder:
         # v3.0: 本質導出プロセス
         ed = dao.get("essence_derivation", {})
         if ed:
-            ed_children = [
+            ed_children: list[A2UIComponent] = [
                 TextComponent(f"表面的問題: {ed.get('surface_problem', '')}"),
                 TextComponent(f"一段深い理由: {ed.get('underlying_why', '')}"),
                 TextComponent(f"根本制約: {ed.get('root_constraint', '')}"),
@@ -128,7 +131,7 @@ class DecisionUIComponentBuilder:
         # v3.0: 既存代替手段
         alternatives = dao.get("existing_alternatives", [])
         if alternatives:
-            alt_items = [
+            alt_items: list[A2UIComponent] = [
                 TextComponent(
                     f"• {a.get('name', '')}: {a.get('why_not_viable', '')} (制約: {a.get('specific_constraint', '')})"
                 )
@@ -139,19 +142,19 @@ class DecisionUIComponentBuilder:
         # 不可変制約
         constraints = dao.get("immutable_constraints", [])
         if constraints:
-            constraint_items = [TextComponent(f"• {c}") for c in constraints]
+            constraint_items: list[A2UIComponent] = [TextComponent(f"• {c}") for c in constraints]
             children.append(ListComponent(items=constraint_items, title="🔒 不可変制約"))
 
         # 隠れた前提
         assumptions = dao.get("hidden_assumptions", [])
         if assumptions:
-            assumption_items = [TextComponent(f"• {a}") for a in assumptions]
+            assumption_items: list[A2UIComponent] = [TextComponent(f"• {a}") for a in assumptions]
             children.append(ListComponent(items=assumption_items, title="💭 隠れた前提"))
 
         # 因果齿轮
         gears = dao.get("causal_gears", [])
         if gears:
-            gear_items = [
+            gear_items: list[A2UIComponent] = [
                 TextComponent(f"⚙️ {g.get('name', '')} (Leverage: {g.get('leverage', '')}): {g.get('description', '')}")
                 for g in gears
             ]
@@ -162,7 +165,7 @@ class DecisionUIComponentBuilder:
         # 死穴
         traps = dao.get("death_traps", [])
         if traps:
-            trap_items = [
+            trap_items: list[A2UIComponent] = [
                 TextComponent(
                     f"⚠️ {t.get('action', '')} ({t.get('severity', '')}): {t.get('reason', '')}",
                     variant="warning",
@@ -174,7 +177,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 制約境界条件
         boundaries = dao.get("constraint_boundaries", [])
         if boundaries:
-            b_items = [
+            b_items: list[A2UIComponent] = [
                 TextComponent(
                     f"🚧 {cb.get('constraint_name', '')}: {cb.get('definition', '')} "
                     f"(違反例: {cb.get('violation_example', '')}、例外: {cb.get('exceptions', '')})"
@@ -186,7 +189,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 成立ルート比較
         routes = dao.get("solution_routes", [])
         if routes:
-            r_items = [
+            r_items: list[A2UIComponent] = [
                 TextComponent(
                     f"🛤️ [{sr.get('route_type', '')}] {sr.get('description', '')} "
                     f"(実現可能性: {sr.get('viability', '')})"
@@ -198,7 +201,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 定量指標
         metrics = dao.get("quantified_metrics", [])
         if metrics:
-            m_items = [
+            m_items: list[A2UIComponent] = [
                 TextComponent(
                     f"📊 P{qm.get('priority', '')} {qm.get('metric_name', '')}: "
                     f"目標 {qm.get('target_value', '')} ({qm.get('tradeoff_note', '')})"
@@ -210,7 +213,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 監査証拠チェックリスト
         audit_items = dao.get("audit_evidence_checklist", [])
         if audit_items:
-            a_items = [
+            a_items: list[A2UIComponent] = [
                 TextComponent(
                     f"📋 [{ae.get('category', '')}] {ae.get('required_evidence', '')} "
                     f"→ {ae.get('verification_method', '')}"
@@ -239,7 +242,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 戦略的禁止事項（仕組み化）
         prohibitions = fa.get("strategic_prohibitions", [])
         if prohibitions:
-            prohibition_items = []
+            prohibition_items: list[A2UIComponent] = []
             for p in prohibitions:
                 text = f"⛔ {p.get('prohibition', '')}: {p.get('rationale', '')} → {p.get('violation_consequence', '')}"
                 if p.get("prevention_measure"):
@@ -254,7 +257,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 競争優位仮説
         comp_hyp = fa.get("competitive_hypothesis", {})
         if comp_hyp:
-            hyp_children = [
+            hyp_children: list[A2UIComponent] = [
                 TextComponent(f"🎯 差別化軸: {comp_hyp.get('axis_name', '')}", variant="highlight"),
                 TextComponent(f"対象顧客: {comp_hyp.get('target_customer', '')}"),
                 TextComponent(f"代替障壁: {comp_hyp.get('substitution_barrier', '')}"),
@@ -266,7 +269,7 @@ class DecisionUIComponentBuilder:
             # v3.0フォールバック
             diff_axis = fa.get("differentiation_axis", {})
             if diff_axis:
-                diff_children = [
+                diff_children: list[A2UIComponent] = [
                     TextComponent(f"🎯 勝負する軸: {diff_axis.get('axis_name', '')}", variant="highlight"),
                     TextComponent(f"理由: {diff_axis.get('why_this_axis', '')}"),
                     TextComponent(f"❌ 勝負しない軸: {diff_axis.get('not_this_axis', '')}"),
@@ -283,7 +286,7 @@ class DecisionUIComponentBuilder:
             strategy_type = path.get("strategy_type", "")
             if hasattr(strategy_type, "value"):
                 strategy_type = strategy_type.value
-            path_children = [
+            path_children: list[A2UIComponent] = [
                 TextComponent(path.get("description", "")),
                 TextComponent(f"価値実現: {path.get('time_to_value', '')} | 可逆性: {path.get('reversibility', '')}"),
             ]
@@ -304,11 +307,11 @@ class DecisionUIComponentBuilder:
                 path_children.append(TextComponent(f"⚡ リスク集中点: {risk_conc}", variant="warning"))
             pros = path.get("pros", [])
             if pros:
-                pros_items = [TextComponent(f"✅ {p}") for p in pros]
+                pros_items: list[A2UIComponent] = [TextComponent(f"✅ {p}") for p in pros]
                 path_children.append(ListComponent(items=pros_items, title="メリット"))
             cons = path.get("cons", [])
             if cons:
-                cons_items = [TextComponent(f"❌ {c}") for c in cons]
+                cons_items: list[A2UIComponent] = [TextComponent(f"❌ {c}") for c in cons]
                 path_children.append(ListComponent(items=cons_items, title="デメリット"))
             path_card = CardComponent(
                 title=f"📌 {path.get('name', '推奨案')} ({strategy_type})",
@@ -322,7 +325,7 @@ class DecisionUIComponentBuilder:
             jf_children: list[A2UIComponent] = []
             must_gates = jf.get("must_gates", [])
             if must_gates:
-                must_items = [
+                must_items: list[A2UIComponent] = [
                     TextComponent(
                         f"🚪 {g.get('criterion', '')} — 閾値: {g.get('threshold', '')}",
                         variant="warning",
@@ -332,7 +335,7 @@ class DecisionUIComponentBuilder:
                 jf_children.append(ListComponent(items=must_items, title="Must（不可変ゲート）"))
             should = jf.get("should_criteria", [])
             if should:
-                should_items = [
+                should_items: list[A2UIComponent] = [
                     TextComponent(
                         f"📏 {s.get('criterion', '')} [{s.get('weight', '')}] — {s.get('scoring_method', '')}"
                     )
@@ -413,13 +416,13 @@ class DecisionUIComponentBuilder:
         # v3.0: 切り捨てリスト
         cut_list = shu.get("cut_list", [])
         if cut_list:
-            cut_items = [TextComponent(f"❌ {c}", variant="warning") for c in cut_list]
+            cut_items: list[A2UIComponent] = [TextComponent(f"❌ {c}", variant="warning") for c in cut_list]
             children.append(ListComponent(items=cut_items, title="✂️ 切り捨てリスト（最初の30日間でやらないこと）"))
 
         # v3.0: 文脈特化行動
         context_actions = shu.get("context_specific_actions", [])
         if context_actions:
-            context_items = [
+            context_items: list[A2UIComponent] = [
                 TextComponent(
                     f"🎯 {a.get('action', '')}: {a.get('why_this_context', '')} → {a.get('expected_output', '')}"
                 )
@@ -430,7 +433,7 @@ class DecisionUIComponentBuilder:
         # v3.0: 単一検証ポイント
         validation = shu.get("single_validation_point", {})
         if validation:
-            validation_children = [
+            validation_children: list[A2UIComponent] = [
                 TextComponent(f"検証対象: {validation.get('validation_target', '')}"),
                 TextComponent(f"成功基準: {validation.get('success_criteria', '')}"),
                 TextComponent(f"失敗時行動: {validation.get('failure_action', '')}", variant="warning"),
@@ -445,7 +448,7 @@ class DecisionUIComponentBuilder:
         # v3.0: 撤退基準
         exit_criteria = shu.get("exit_criteria", {})
         if exit_criteria:
-            exit_children = [
+            exit_children: list[A2UIComponent] = [
                 TextComponent(f"チェックポイント: {exit_criteria.get('checkpoint', '')}"),
                 TextComponent(f"撤退トリガー: {exit_criteria.get('exit_trigger', '')}"),
                 TextComponent(f"撤退時行動: {exit_criteria.get('exit_action', '')}", variant="warning"),
@@ -453,7 +456,7 @@ class DecisionUIComponentBuilder:
             children.append(CardComponent(title="🚪 撤退基準（どこで止めるか）", children=exit_children))
 
         # フェーズ
-        phases_children = []
+        phases_children: list[A2UIComponent] = []
         for phase in shu.get("phases", []):
             phase_text = TextComponent(
                 f"Phase {phase.get('phase_number', '?')}: {phase.get('name', '')} ({phase.get('duration', '')})"
@@ -472,14 +475,14 @@ class DecisionUIComponentBuilder:
         rhythm = shu.get("rhythm_control", {})
         if rhythm:
             focus = rhythm.get("focus", {})
-            rhythm_children = [
+            rhythm_children: list[A2UIComponent] = [
                 TextComponent(f"聚焦: {focus.get('name', '')}", variant="highlight"),
                 TextComponent(focus.get("description", "")),
                 TextComponent(f"成功指標: {focus.get('success_metric', '')}"),
             ]
             avoid_list = focus.get("avoid_list", [])
             if avoid_list:
-                avoid_items = [TextComponent(f"❌ {a}") for a in avoid_list]
+                avoid_items: list[A2UIComponent] = [TextComponent(f"❌ {a}") for a in avoid_list]
                 rhythm_children.append(ListComponent(items=avoid_items, title="この期間やらないこと"))
             rhythm_children.append(TextComponent(f"チェックポイント: {rhythm.get('checkpoint_date', '')}"))
             rhythm_children.append(TextComponent(f"次の判断: {rhythm.get('next_decision_point', '')}"))
@@ -514,7 +517,7 @@ class DecisionUIComponentBuilder:
         # v3.1: 拡張アーキテクチャ段階
         expansion = qi.get("expansion_stages", [])
         if expansion:
-            exp_items = [
+            exp_items: list[A2UIComponent] = [
                 TextComponent(
                     f"📈 {s.get('stage_name', '')}: {s.get('introduction_condition', '')} → +{', '.join(s.get('added_components', []))}"
                 )
@@ -536,13 +539,13 @@ class DecisionUIComponentBuilder:
         # v3.1: 将来スケール要件
         future = qi.get("future_scale_requirements", [])
         if future:
-            future_items = [TextComponent(f"🔮 {r}") for r in future]
+            future_items: list[A2UIComponent] = [TextComponent(f"🔮 {r}") for r in future]
             children.append(ListComponent(items=future_items, title="🔮 将来スケール要件（PoC範囲外）"))
 
         # v3.0: ドメイン固有技術
         domain_techs = qi.get("domain_technologies", [])
         if domain_techs:
-            tech_items = [
+            tech_items: list[A2UIComponent] = [
                 TextComponent(
                     f"🛠️ {t.get('technology_name', '')} ({t.get('category', '')}): {t.get('why_required', '')}",
                     variant="highlight",
@@ -554,7 +557,7 @@ class DecisionUIComponentBuilder:
         # v3.0: 規制対応
         regulations = qi.get("regulatory_considerations", [])
         if regulations:
-            reg_items = [
+            reg_items: list[A2UIComponent] = [
                 TextComponent(
                     f"📜 {r.get('region', '')} / {r.get('regulation', '')}: {r.get('requirement', '')} → {r.get('implementation_impact', '')}",
                     variant="warning",
@@ -566,7 +569,7 @@ class DecisionUIComponentBuilder:
         # v3.0: 地理的考慮
         geographics = qi.get("geographic_considerations", [])
         if geographics:
-            geo_items = [
+            geo_items: list[A2UIComponent] = [
                 TextComponent(
                     f"🌍 {g.get('region', '')}: {g.get('latency_requirement', '')} | {g.get('infrastructure_need', '')}"
                 )
@@ -577,7 +580,7 @@ class DecisionUIComponentBuilder:
         # 実装要素
         impls = qi.get("implementations", [])
         if impls:
-            impl_items = [
+            impl_items: list[A2UIComponent] = [
                 TextComponent(
                     f"🔧 {impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})"
                 )
@@ -593,13 +596,13 @@ class DecisionUIComponentBuilder:
         # 統合ポイント
         integration = qi.get("integration_points", [])
         if integration:
-            int_items = [TextComponent(f"🔗 {i}") for i in integration]
+            int_items: list[A2UIComponent] = [TextComponent(f"🔗 {i}") for i in integration]
             children.append(ListComponent(items=int_items, title="🔗 統合ポイント"))
 
         # 技術負債警告
         warnings = qi.get("technical_debt_warnings", [])
         if warnings:
-            warn_items = [TextComponent(f"⚠️ {w}", variant="warning") for w in warnings]
+            warn_items: list[A2UIComponent] = [TextComponent(f"⚠️ {w}", variant="warning") for w in warnings]
             children.append(ListComponent(items=warn_items, title="⚠️ 技術負債警告"))
 
         return CardComponent(title="🔧 器 - 技術実装", children=children)

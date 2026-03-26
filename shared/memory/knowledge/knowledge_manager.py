@@ -155,7 +155,7 @@ class KnowledgeManager:
             body=content,
             tags=tags or [],
             source=source,
-            source_id=source_id,
+            source_id=source_id or "",
             importance=importance,
             metadata=metadata or {},
         )
@@ -186,7 +186,7 @@ class KnowledgeManager:
                 body=entry_data.get("content", entry_data.get("body", "")),
                 tags=entry_data.get("tags", []),
                 source=KnowledgeSource(entry_data.get("source", "document")),
-                source_id=entry_data.get("source_id"),
+                source_id=str(entry_data.get("source_id", "")),
                 importance=entry_data.get("importance", 0.5),
                 metadata=entry_data.get("metadata", {}),
             )

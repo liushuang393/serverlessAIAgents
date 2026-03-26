@@ -136,7 +136,7 @@ class ModelRouter:
             モデル情報
         """
         config = self._models.get(model_name)
-        if config:
+        if config and config.model is not None:
             return MODELS.get(config.model)
         return None
 

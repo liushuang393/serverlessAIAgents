@@ -5,6 +5,7 @@
 """
 
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -624,7 +625,7 @@ class FaInput(BaseModel):
     """FaAgent入力."""
 
     dao_result: DaoOutput = Field(..., description="DaoAgent結果")
-    available_resources: dict = Field(default_factory=dict, description="利用可能リソース")
+    available_resources: dict[str, Any] = Field(default_factory=dict, description="利用可能リソース")
     time_horizon: str = Field(default="", description="時間軸")
 
 

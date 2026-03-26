@@ -70,7 +70,7 @@ class AssistantConfig:
     use_emoji: bool = True
 
 
-class PersonalAssistantCoordinator(ResilientAgent):
+class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
     """私人助理協調器.
 
     主管が自然言語でタスクを依頼し、簡潔なサマリーを受け取る。
@@ -543,7 +543,7 @@ class PersonalAssistantCoordinator(ResilientAgent):
         """入力をそのまま返す."""
         return input_data
 
-    async def process(  # type: ignore[override]
+    async def process(
         self,
         message: str | Any = "",
         user_id: str = "default",
@@ -1165,6 +1165,11 @@ class PersonalAssistantCoordinator(ResilientAgent):
             "weaknesses": weaknesses,
             "watch_points": watch_points,
         }
+        aspects_value = result.get("aspects", [])
+        if isinstance(aspects_value, list):
+            joined_aspects = ", ".join(str(item) for item in aspects_value)
+        else:
+            joined_aspects = str(aspects_value)
         return self._contract_payload(
             result=result,
             evidence=research.get("evidence", []),
@@ -1173,7 +1178,7 @@ class PersonalAssistantCoordinator(ResilientAgent):
                 **result,
                 "summary_points": [
                     f"競合「{competitor}」の分析完了",
-                    f"分析観点: {', '.join(result['aspects'])}",
+                    f"分析観点: {joined_aspects}",
                     f"分析メモ {len(lines)} 件を生成",
                 ],
                 "recommended_actions": [

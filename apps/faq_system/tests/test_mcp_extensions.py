@@ -5,10 +5,7 @@
 
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -173,9 +170,7 @@ class TestRerankerMiddleware:
             RetrievedDocument(doc_id="2", content="配送について", score=0.8),
             RetrievedDocument(doc_id="3", content="返品 手続き 方法", score=0.3),
         ]
-        result = RetrievalResult(
-            documents=docs, query="返品ポリシー", total_found=3
-        )
+        result = RetrievalResult(documents=docs, query="返品ポリシー", total_found=3)
 
         middleware = create_reranker_middleware("bm25", top_k=2)
         reranked = await middleware(result)
@@ -314,4 +309,3 @@ class TestPipelineWithMiddlewares:
         # リランカーとスコア正規化が適用されている
         assert "reranker_type" in result.metadata
         assert "score_normalization" in result.metadata
-

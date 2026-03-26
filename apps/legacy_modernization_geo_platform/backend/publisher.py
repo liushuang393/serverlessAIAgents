@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     ArtifactMeta,
     ContentDraftArtifact,
+    ContentDraftPage,
     PublishedPageRecord,
     PublishManifest,
     html_language_code,
@@ -89,7 +90,7 @@ class GeoPublisher:
             evidence=[{"page_url": item.page_url, "title": item.title} for item in records],
         )
 
-    def _render_page(self, page: object, language: str) -> str:
+    def _render_page(self, page: ContentDraftPage, language: str) -> str:
         """Render a public GEO page with JSON-LD embedded."""
         normalized_language = normalize_content_language(language)
         copy = _PUBLIC_COPY[normalized_language]

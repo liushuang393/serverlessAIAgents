@@ -144,8 +144,6 @@ async def _run_engine_for_program(
 
     final_result: dict[str, Any] | None = None
     async for raw_event in engine._execute_stream(inputs):
-        if not isinstance(raw_event, dict):
-            continue
         normalized = _normalize_stream_event(program_name=program_name, raw_event=raw_event)
         if normalized is not None:
             await on_event(normalized)

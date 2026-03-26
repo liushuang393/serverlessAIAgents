@@ -16,12 +16,16 @@ from infrastructure.llm.gateway import LLMGatewayConfig, load_gateway_config
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from types import ModuleType
 
 
-try:
-    import fcntl
-except ImportError:  # pragma: no cover - non-posix fallback
-    fcntl = None
+def _load_fcntl() -> ModuleType | None:
+    """fcntl モジュールを遅延読み込みする."""
+    try:
+        import fcntl
+    except ImportError:  # pragma: no cover - non-posix fallback
+        return None
+    return fcntl
 
 
 class LLMConfigStore:
@@ -94,12 +98,13 @@ class LLMConfigStore:
         """Lock helper. Uses advisory file lock when available."""
         self._lock_path.parent.mkdir(parents=True, exist_ok=True)
         lock_file = self._lock_path.open("a+", encoding="utf-8")
+        fcntl_module = _load_fcntl()
         try:
-            if fcntl is not None:
-                flag = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
-                fcntl.flock(lock_file.fileno(), flag)
+            if fcntl_module is not None:
+                flag = fcntl_module.LOCK_EX if exclusive else fcntl_module.LOCK_SH
+                fcntl_module.flock(lock_file.fileno(), flag)
             yield
         finally:
-            if fcntl is not None:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            if fcntl_module is not None:
+                fcntl_module.flock(lock_file.fileno(), fcntl_module.LOCK_UN)
             lock_file.close()

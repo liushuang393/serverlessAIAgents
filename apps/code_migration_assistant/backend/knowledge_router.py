@@ -101,9 +101,9 @@ class TestQueryRequest(BaseModel):
 class ChunkPreviewRequest(BaseModel):
     """チャンクプレビューリクエスト."""
 
-    chunk_strategy: str | None = Field(None)
-    chunk_size: int | None = Field(None, ge=100, le=10000)
-    chunk_overlap: int | None = Field(None, ge=0, le=2000)
+    chunk_strategy: str | None = None
+    chunk_size: int | None = Field(default=None, ge=100, le=10000)
+    chunk_overlap: int | None = Field(default=None, ge=0, le=2000)
 
 
 # ---------------------------------------------------------------------------

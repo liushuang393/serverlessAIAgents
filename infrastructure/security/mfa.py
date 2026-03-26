@@ -42,7 +42,8 @@ class TimeBasedMFA:
         try:
             import pyotp
 
-            return pyotp.random_base32(length)
+            generated = pyotp.random_base32(length)
+            return str(generated)
         except ImportError:
             import secrets
 
@@ -65,7 +66,8 @@ class TimeBasedMFA:
             import pyotp
 
             totp = pyotp.TOTP(secret)
-            return totp.provisioning_uri(name=username, issuer_name=app_name)
+            provisioning_uri = totp.provisioning_uri(name=username, issuer_name=app_name)
+            return str(provisioning_uri)
         except ImportError:
             from urllib.parse import quote
 
@@ -94,7 +96,8 @@ class TimeBasedMFA:
             import pyotp
 
             totp = pyotp.TOTP(secret)
-            return totp.verify(code, valid_window=window)
+            verified = totp.verify(code, valid_window=window)
+            return bool(verified)
         except ImportError:
             return TimeBasedMFA._verify_totp_rfc6238(secret, code, window)
 

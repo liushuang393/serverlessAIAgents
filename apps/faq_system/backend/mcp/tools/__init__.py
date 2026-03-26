@@ -5,4 +5,3 @@
 - file_search: ファイルシステム検索
 - hybrid_search: ハイブリッド検索
 """
-

@@ -689,7 +689,8 @@ class LiteLLMGateway:
             if api_key := self._resolve_api_key(model_cfg):
                 kwargs["api_key"] = api_key
             response = await litellm.aembedding(**kwargs)
-            data = response.get("data") if isinstance(response, dict) else getattr(response, "data", [])
+            raw_data = response.get("data") if isinstance(response, dict) else getattr(response, "data", [])
+            data = raw_data if isinstance(raw_data, list) else []
             vectors: list[list[float]] = []
             for item in data:
                 embedding = item.get("embedding") if isinstance(item, dict) else getattr(item, "embedding", None)

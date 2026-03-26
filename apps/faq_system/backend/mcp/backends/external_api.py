@@ -71,11 +71,11 @@ class ExternalAPIBackend(RetrievalBackend):
 
         # レスポンスフィールドマッピング（API の JSON 構造 → 内部フィールド）
         default_mapping: dict[str, str] = {
-            "results_key": "results",      # 結果リストのキー
-            "content_key": "content",      # コンテンツフィールド
-            "title_key": "title",          # タイトルフィールド
-            "url_key": "url",              # URL フィールド
-            "score_key": "score",          # スコアフィールド
+            "results_key": "results",  # 結果リストのキー
+            "content_key": "content",  # コンテンツフィールド
+            "title_key": "title",  # タイトルフィールド
+            "url_key": "url",  # URL フィールド
+            "score_key": "score",  # スコアフィールド
         }
         if response_mapping:
             default_mapping.update(response_mapping)
@@ -93,7 +93,7 @@ class ExternalAPIBackend(RetrievalBackend):
         try:
             import httpx
         except ImportError:
-            self._logger.error("httpx 未インストール。pip install httpx を実行してください")
+            self._logger.exception("httpx 未インストール。pip install httpx を実行してください")
             return RetrievalResult(
                 query=query.query,
                 backend_type=BackendType.EXTERNAL_API,
@@ -171,8 +171,6 @@ class ExternalAPIBackend(RetrievalBackend):
             items = data.get(results_key, [])
             if not isinstance(items, list):
                 items = [data]
-        else:
-            return []
 
         content_key = self._mapping["content_key"]
         title_key = self._mapping["title_key"]
@@ -204,4 +202,3 @@ class ExternalAPIBackend(RetrievalBackend):
             )
 
         return documents
-

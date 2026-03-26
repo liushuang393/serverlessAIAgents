@@ -9,16 +9,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 
-try:
+if TYPE_CHECKING:
     from claude_agent_sdk import AgentDefinition
-except ModuleNotFoundError:  # pragma: no cover - SDK 未導入環境向けフォールバック
+else:
 
     @dataclass
     class AgentDefinition:
-        """claude_agent_sdk.AgentDefinition の互換型."""
+        """claude_agent_sdk.AgentDefinition の最小互換型."""
 
         description: str
         prompt: str

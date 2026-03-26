@@ -19,6 +19,7 @@ import json
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.input_schemas import (
@@ -38,7 +39,7 @@ def setup_logging(verbose: bool = False) -> None:
     )
 
 
-async def run_decision_engine(question: str, constraints: ConstraintSet | None = None) -> dict:
+async def run_decision_engine(question: str, constraints: ConstraintSet | None = None) -> dict[str, Any]:
     """Decision Engineを実行.
 
     Args:
@@ -51,7 +52,7 @@ async def run_decision_engine(question: str, constraints: ConstraintSet | None =
     engine = DecisionEngine()
 
     # PipelineEngine API を使用
-    inputs = {
+    inputs: dict[str, Any] = {
         "question": question,
         "constraints": (constraints.model_dump() if constraints else {}),
     }
@@ -60,8 +61,11 @@ async def run_decision_engine(question: str, constraints: ConstraintSet | None =
 
     # Pydanticモデルの場合はdictに変換
     if hasattr(result, "model_dump"):
-        return result.model_dump()
-    return result
+        raw_result = result.model_dump()
+        if isinstance(raw_result, dict):
+            return {str(key): value for key, value in raw_result.items()}
+        return {}
+    return {str(key): value for key, value in result.items()}
 
 
 def interactive_mode() -> None:

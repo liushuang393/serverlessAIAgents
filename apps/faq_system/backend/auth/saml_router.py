@@ -62,8 +62,18 @@ async def _prepare_saml_request(request: Request) -> dict[str, Any]:
     }
 
 
+def _first_attribute_value(value: object, default: str) -> str:
+    """SAML 属性値の先頭文字列を取得."""
+    if isinstance(value, list) and value:
+        first = value[0]
+        return str(first) if first is not None else default
+    if value is None:
+        return default
+    return str(value)
+
+
 @router.get("/login")
-async def saml_login(request: Request):
+async def saml_login(request: Request) -> Response:
     """SAML SSO を開始."""
     settings = _get_saml_settings()
     if not settings["idp"]["entityId"]:
@@ -76,7 +86,7 @@ async def saml_login(request: Request):
 
 
 @router.post("/acs")
-async def saml_acs(request: Request):
+async def saml_acs(request: Request) -> Response:
     """Assertion Consumer Service (ログイン後の受け口)."""
     settings = _get_saml_settings()
     provider = SAMLProvider(settings)
@@ -95,15 +105,18 @@ async def saml_acs(request: Request):
 
     attrs = identity.attributes
     # 例: OKTA や Azure AD の一般的な属性名
-    email = attrs.get("email", attrs.get("mail", [None]))[0]
-    display_name = attrs.get("displayName", attrs.get("name", [identity.name_id]))[0]
+    email = _first_attribute_value(attrs.get("email", attrs.get("mail")), "")
+    display_name = _first_attribute_value(
+        attrs.get("displayName", attrs.get("name")),
+        identity.name_id,
+    )
 
     ext_user = ExternalIdentity(
-        sub=identity.name_id,
         username=email or identity.name_id,  # メールを優先
         email=email,
         display_name=display_name,
         provider="saml",
+        raw={"name_id": identity.name_id, "attributes": attrs},
     )
 
     user_info = await service.login_external(ext_user)
@@ -126,7 +139,7 @@ async def saml_acs(request: Request):
 
 
 @router.get("/metadata")
-async def saml_metadata():
+async def saml_metadata() -> Response:
     """SP メタデータを公開."""
     settings = _get_saml_settings()
     from onelogin.saml2.settings import OneLogin_Saml2_Settings

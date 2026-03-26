@@ -8,9 +8,31 @@
     - ベストプラクティスの蓄積
 """
 
-from typing import Any
+from typing import Any, Protocol
 
-from kernel import MCPTool, MCPToolRequest, MCPToolResponse
+from kernel.protocols.mcp_tool import MCPTool, MCPToolRequest, MCPToolResponse
+
+
+class MemoryManagerProtocol(Protocol):
+    """MemoryManager の最小契約."""
+
+    async def remember(
+        self,
+        *,
+        content: str,
+        topic: str,
+        memory_type: str,
+        importance_score: float,
+        metadata: dict[str, Any],
+    ) -> str: ...
+
+    async def recall(
+        self,
+        *,
+        query: str,
+        memory_type: str | None,
+        top_k: int,
+    ) -> list[dict[str, Any]]: ...
 
 
 class MemorySystem(MCPTool):
@@ -45,7 +67,7 @@ class MemorySystem(MCPTool):
         実際の実装では、MemoryManagerを注入する必要があります。
     """
 
-    def __init__(self, memory_manager: Any | None = None) -> None:
+    def __init__(self, memory_manager: MemoryManagerProtocol | None = None) -> None:
         """MemorySystemを初期化.
 
         Args:
@@ -65,7 +87,8 @@ class MemorySystem(MCPTool):
         """
         # 入力パラメータを取得
         operation = request.input.get("operation")
-        data = request.input.get("data", {})
+        data_value = request.input.get("data", {})
+        data = data_value if isinstance(data_value, dict) else {}
 
         # 必須パラメータチェック
         if not operation:
@@ -126,12 +149,19 @@ class MemorySystem(MCPTool):
             raise ValueError(msg)
 
         # オプションパラメータ
-        memory_type = data.get("memory_type", "pattern")
-        importance_score = data.get("importance_score", 0.5)
-        metadata = data.get("metadata", {})
+        memory_type = str(data.get("memory_type", "pattern"))
+        importance_raw = data.get("importance_score", 0.5)
+        importance_score = float(importance_raw) if isinstance(importance_raw, int | float) else 0.5
+        metadata_raw = data.get("metadata", {})
+        metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
 
         # 記憶を保存
-        memory_id = await self.memory_manager.remember(
+        manager = self.memory_manager
+        if manager is None:
+            msg = "Memory Manager is not configured"
+            raise ValueError(msg)
+
+        memory_id = await manager.remember(
             content=content,
             topic=topic,
             memory_type=memory_type,
@@ -161,11 +191,18 @@ class MemorySystem(MCPTool):
             raise ValueError(msg)
 
         # オプションパラメータ
-        memory_type = data.get("memory_type")
-        top_k = data.get("top_k", 5)
+        memory_type_raw = data.get("memory_type")
+        memory_type = memory_type_raw if isinstance(memory_type_raw, str) else None
+        top_k_raw = data.get("top_k", 5)
+        top_k = int(top_k_raw) if isinstance(top_k_raw, int | float | str) else 5
 
         # 記憶を検索
-        memories = await self.memory_manager.recall(
+        manager = self.memory_manager
+        if manager is None:
+            msg = "Memory Manager is not configured"
+            raise ValueError(msg)
+
+        memories = await manager.recall(
             query=query,
             memory_type=memory_type,
             top_k=top_k,

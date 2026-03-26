@@ -103,7 +103,11 @@ class ApprovalDecisionRequest(BaseModel):
 ApprovalRequest = ApprovalDecisionRequest
 
 
-async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: dict):
+async def run_migration_task(
+    task_id: str,
+    engine: CodeMigrationEngine,
+    inputs: dict[str, Any],
+) -> None:
     """Background task to run the engine and stream events via WebSocket."""
     logger.info(f"Starting migration task {task_id}")
     try:
@@ -142,7 +146,10 @@ async def auth_middleware(request: Request, call_next: Any) -> Any:
 
 
 @app.post("/api/migration/start")
-async def start_migration(request: MigrationRequest, background_tasks: BackgroundTasks):
+async def start_migration(
+    request: MigrationRequest,
+    background_tasks: BackgroundTasks,
+) -> dict[str, str]:
     task_id = str(uuid.uuid4())
 
     # Initialize Engine
@@ -164,7 +171,7 @@ async def start_migration(request: MigrationRequest, background_tasks: Backgroun
 
 
 @app.websocket("/api/ws/{task_id}")
-async def websocket_endpoint(websocket: WebSocket, task_id: str):
+async def websocket_endpoint(websocket: WebSocket, task_id: str) -> None:
     if not await _require_ws_api_key(websocket):
         return
     await websocket.accept()
@@ -184,7 +191,7 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
 
 
 @app.get("/api/approvals/{task_id}")
-async def get_approvals(task_id: str):
+async def get_approvals(task_id: str) -> list[dict[str, Any]]:
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -195,7 +202,11 @@ async def get_approvals(task_id: str):
 
 
 @app.post("/api/approvals/{task_id}/{request_id}")
-async def submit_approval(task_id: str, request_id: str, approval: ApprovalDecisionRequest):
+async def submit_approval(
+    task_id: str,
+    request_id: str,
+    approval: ApprovalDecisionRequest,
+) -> dict[str, str]:
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
 

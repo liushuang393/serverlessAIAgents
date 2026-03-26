@@ -559,20 +559,17 @@ class CLIRuntimeManager:
             auth_method = "chat_auth" if authenticated else None
             return {"authenticated": authenticated, "auth_method": auth_method}
 
-        if tool == "claude":
-            parsed_json: dict[str, Any] | None = None
-            if stdout:
-                try:
-                    maybe = json.loads(stdout)
-                    if isinstance(maybe, dict):
-                        parsed_json = maybe
-                except json.JSONDecodeError:
-                    parsed_json = None
-            authenticated = bool(parsed_json and parsed_json.get("loggedIn") is True)
-            auth_method = "claude_ai_auth" if authenticated else None
-            return {"authenticated": authenticated, "auth_method": auth_method}
-
-        return {"authenticated": False, "auth_method": None}
+        parsed_json: dict[str, Any] | None = None
+        if stdout:
+            try:
+                maybe = json.loads(stdout)
+                if isinstance(maybe, dict):
+                    parsed_json = maybe
+            except json.JSONDecodeError:
+                parsed_json = None
+        authenticated = bool(parsed_json and parsed_json.get("loggedIn") is True)
+        auth_method = "claude_ai_auth" if authenticated else None
+        return {"authenticated": authenticated, "auth_method": auth_method}
 
     def _build_diagnostic_command(
         self,

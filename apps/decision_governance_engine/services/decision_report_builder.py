@@ -64,7 +64,11 @@ class DecisionReportBuilder(SectionedReportBuilder):
         )
 
         # Pydantic モデルを JSON シリアライズ可能な辞書に変換
-        return self.to_json_serializable(report)
+        serialized = self.to_json_serializable(report)
+        if isinstance(serialized, dict):
+            return serialized
+        msg = "Decision report could not be serialized to a dictionary."
+        raise ValueError(msg)
 
     def build_sections(
         self,

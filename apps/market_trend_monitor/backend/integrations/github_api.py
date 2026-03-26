@@ -48,7 +48,7 @@ class GitHubAPIClient:
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
 
-        params = {
+        params: dict[str, str | int] = {
             "q": query,
             "per_page": per_page,
             "sort": "updated",
@@ -65,7 +65,8 @@ class GitHubAPIClient:
 
                 if response.status_code == 200:
                     payload = response.json()
-                    return payload.get("items", [])
+                    items = payload.get("items", []) if isinstance(payload, dict) else []
+                    return items if isinstance(items, list) else []
 
                 if response.status_code == 403:
                     wait = self._calc_rate_limit_wait(response)

@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -40,6 +41,9 @@ from kernel.protocols.a2ui.rich_content import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+ProgressCallback = Callable[[int, str, str], Awaitable[None]]
 
 
 # =============================================================================
@@ -185,7 +189,7 @@ manager = ConnectionManager()
 async def _analyze_code(
     source_code: str,
     language: str,
-    progress_callback: Any = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     """コード分析（code_analysis Skills を使用）."""
     await asyncio.sleep(0.5)  # シミュレート
@@ -195,18 +199,19 @@ async def _analyze_code(
 
     # デモ分析結果
     lines = source_code.strip().split("\n")
-    analysis = {
+    issues: list[dict[str, str]] = []
+    analysis: dict[str, Any] = {
         "loc": len(lines),
         "complexity": min(len(lines) // 10 + 1, 10),
-        "issues": [],
+        "issues": issues,
         "dependencies": [],
     }
 
     # 簡易的なコード分析
     if "PERFORM" in source_code.upper():
-        analysis["issues"].append({"type": "info", "message": "PERFORMステートメント検出"})
+        issues.append({"type": "info", "message": "PERFORMステートメント検出"})
     if "EVALUATE" in source_code.upper():
-        analysis["issues"].append({"type": "info", "message": "EVALUATEステートメント検出"})
+        issues.append({"type": "info", "message": "EVALUATEステートメント検出"})
 
     if progress_callback:
         await progress_callback(40, "複雑度計算中...", "analyze")
@@ -218,7 +223,7 @@ async def _transform_code(
     source_code: str,
     source_language: str,
     target_language: str,
-    progress_callback: Any = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     """コード変換."""
     await asyncio.sleep(1)
@@ -257,7 +262,7 @@ public class MigratedProgram {{
 
 async def _verify_code(
     target_code: str,
-    progress_callback: Any = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     """コード検証."""
     await asyncio.sleep(0.5)
@@ -349,7 +354,7 @@ def _build_migration_report(
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index() -> str:
     """トップページ - コード移行UI."""
     return """
 <!DOCTYPE html>
@@ -687,7 +692,7 @@ async def migrate(request: MigrationRequest) -> dict[str, Any]:
 async def migrate_stream(request: MigrationRequest) -> StreamingResponse:
     """コード移行（ストリーム）."""
 
-    async def event_generator():
+    async def event_generator() -> Any:
         try:
             # 分析
             yield f"data: {json.dumps({'type': 'progress', 'progress': 10, 'message': '分析中...'})}\n\n"
@@ -733,7 +738,7 @@ async def analyze(request: AnalysisRequest) -> dict[str, Any]:
 
 
 @app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
+async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
     """WebSocket エンドポイント."""
     if not await _require_ws_api_key(websocket):
         return
@@ -748,7 +753,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 source_lang = data.get("source_language", "cobol")
                 target_lang = data.get("target_language", "java")
 
-                async def progress_cb(progress: int, message: str, step: str = ""):
+                async def progress_cb(progress: int, message: str, step: str = "") -> None:
                     await manager.send_message(
                         client_id,
                         {

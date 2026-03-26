@@ -30,6 +30,18 @@ def get_engine() -> PlatformEngine:
     return _engine
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    """ダッシュボード応答を辞書へ正規化する."""
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list_of_dicts(value: Any) -> list[dict[str, Any]]:
+    """ダッシュボード応答を辞書リストへ正規化する."""
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, dict)]
+
+
 @router.get("/{tenant_id}")
 async def get_dashboard_summary(
     tenant_id: str,
@@ -44,7 +56,8 @@ async def get_dashboard_summary(
     Returns:
         サマリー情報
     """
-    return await engine.get_dashboard_summary(tenant_id)
+    summary = await engine.get_dashboard_summary(tenant_id)
+    return _as_dict(summary)
 
 
 @router.get("/{tenant_id}/stats")
@@ -61,7 +74,8 @@ async def get_tenant_stats(
     Returns:
         統計情報
     """
-    return await engine.get_tenant_stats(tenant_id)
+    stats = await engine.get_tenant_stats(tenant_id)
+    return _as_dict(stats)
 
 
 @router.get("/{tenant_id}/top-components")
@@ -80,7 +94,8 @@ async def get_top_components(
     Returns:
         人気コンポーネントリスト
     """
-    return await engine.get_top_components(tenant_id, limit)
+    components = await engine.get_top_components(tenant_id, limit)
+    return _as_list_of_dicts(components)
 
 
 @router.get("/{tenant_id}/activities")

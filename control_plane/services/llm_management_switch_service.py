@@ -188,8 +188,8 @@ class LLMSwitchService:
 
         if request.update_fallback_chain:
             for role in request.roles:
-                existing = updated.routing_policy.fallback_chain.get(role, [])
-                merged = [target_alias, *[item for item in existing if item != target_alias]]
+                existing_chain = updated.routing_policy.fallback_chain.get(role, [])
+                merged = [target_alias, *[item for item in existing_chain if item != target_alias]]
                 updated.routing_policy.fallback_chain[role] = merged
 
         return updated, target_alias, diffs

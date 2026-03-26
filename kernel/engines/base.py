@@ -703,7 +703,7 @@ class BaseEngine(ABC):
         if not self._config.hitl.enabled:
             return
 
-        from harness.approval import set_checkpointer, set_thread_id
+        from harness.approval.interrupt import set_checkpointer, set_thread_id
 
         if self._config.hitl.checkpointer:
             set_checkpointer(self._config.hitl.checkpointer)
@@ -716,13 +716,13 @@ class BaseEngine(ABC):
         if not self._config.hitl.enabled:
             return
 
-        from harness.approval import clear_interrupt
+        from harness.approval.interrupt import clear_interrupt
 
         clear_interrupt()
 
     def _is_interrupt_signal(self, exc: Exception) -> bool:
         """例外が InterruptSignal かどうかを判定."""
-        from harness.approval import InterruptSignal
+        from harness.approval.interrupt import InterruptSignal
 
         return isinstance(exc, InterruptSignal)
 
@@ -732,8 +732,8 @@ class BaseEngine(ABC):
         inputs: dict[str, Any],
     ) -> None:
         """割り込みを処理し、状態を保存."""
-        from harness.approval import InterruptSignal
         from harness.approval.checkpointer import CheckpointCursor, CheckpointData
+        from harness.approval.interrupt import InterruptSignal
 
         if not isinstance(exc, InterruptSignal):
             return
@@ -784,7 +784,7 @@ class BaseEngine(ABC):
         Raises:
             InterruptError: チェックポイントが見つからない場合
         """
-        from harness.approval import InterruptError, resume_with_command
+        from harness.approval.interrupt import InterruptError, resume_with_command
 
         checkpointer = self._config.hitl.checkpointer
         if checkpointer is None:

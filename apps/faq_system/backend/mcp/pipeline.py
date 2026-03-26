@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Coroutine
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from apps.faq_system.backend.mcp.backends.base import (
@@ -162,4 +162,3 @@ class RetrievalPipeline:
         """全バックエンドをクリーンアップ."""
         for step in self._steps:
             await step.backend.cleanup()
-

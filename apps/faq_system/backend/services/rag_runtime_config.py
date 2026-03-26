@@ -189,7 +189,8 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
     try:
-        return json.loads(path.read_text("utf-8"))
+        loaded = json.loads(path.read_text("utf-8"))
+        return loaded if isinstance(loaded, dict) else {}
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("Failed to parse app_config.json: %s", exc)
         return {}

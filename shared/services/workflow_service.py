@@ -179,7 +179,7 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
         ]
 
         try:
-            from kernel.patterns import DeepAgentCoordinator
+            from kernel.patterns.deep_agent import DeepAgentCoordinator
 
             coordinator = DeepAgentCoordinator(
                 llm_client=config.get("llm_client"),
@@ -508,27 +508,35 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
         if instance is not None:
             return instance
 
+        resolved_agent: Any | None = None
+
         class_path = agent_config.get("class_path")
         if isinstance(class_path, str) and "." in class_path:
             try:
-                module_name, class_name = class_path.rsplit(".", 1)
-                module = importlib.import_module(module_name)
-                klass = getattr(module, class_name)
-                return klass() if inspect.isclass(klass) else klass
+                path_module_name, path_class_name = class_path.rsplit(".", 1)
+                module = importlib.import_module(path_module_name)
+                klass = getattr(module, path_class_name)
+                resolved_agent = klass() if inspect.isclass(klass) else klass
             except Exception as exc:
                 self._logger.warning("failed to load class_path=%s: %s", class_path, exc)
+            return resolved_agent
 
-        module_name = agent_config.get("module")
-        class_name = agent_config.get("class_name")
-        if isinstance(module_name, str) and isinstance(class_name, str):
+        configured_module_name = agent_config.get("module")
+        configured_class_name = agent_config.get("class_name")
+        if isinstance(configured_module_name, str) and isinstance(configured_class_name, str):
             try:
-                module = importlib.import_module(module_name)
-                klass = getattr(module, class_name)
-                return klass() if inspect.isclass(klass) else klass
+                module = importlib.import_module(configured_module_name)
+                klass = getattr(module, configured_class_name)
+                resolved_agent = klass() if inspect.isclass(klass) else klass
             except Exception as exc:
-                self._logger.warning("failed to load module/class=%s.%s: %s", module_name, class_name, exc)
+                self._logger.warning(
+                    "failed to load module/class=%s.%s: %s",
+                    configured_module_name,
+                    configured_class_name,
+                    exc,
+                )
 
-        return None
+        return resolved_agent
 
     def _update_status(
         self,

@@ -7,7 +7,7 @@
 import asyncio
 import logging
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -312,7 +312,9 @@ class PredictionService:
         if self._adaptive_scoring:
             try:
                 recent_reviews = list(self._reviews.values())[-10:]
-                self._schedule_task(lambda: self._adaptive_scoring.update_weights(recent_reviews))
+                adaptive_scoring = self._adaptive_scoring
+                if adaptive_scoring is not None:
+                    self._schedule_task(lambda: adaptive_scoring.update_weights(recent_reviews))
             except Exception as e:
                 self._logger.warning("適応的スコアリング更新失敗: %s", e)
 
@@ -391,7 +393,7 @@ class PredictionService:
             persisted += 1
         return persisted
 
-    def _schedule_task(self, task_factory: Callable[[], Awaitable[Any]]) -> None:
+    def _schedule_task(self, task_factory: Callable[[], Coroutine[Any, Any, object]]) -> None:
         """実行中イベントループに永続化タスクを登録."""
         try:
             loop = asyncio.get_running_loop()
@@ -505,7 +507,7 @@ class PredictionService:
                 "outcome_distribution": {},
             }
 
-        outcome_counts = {}
+        outcome_counts: dict[str, int] = {}
         for r in reviews:
             o = r.outcome.value
             outcome_counts[o] = outcome_counts.get(o, 0) + 1

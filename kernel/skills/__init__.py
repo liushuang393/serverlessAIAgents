@@ -2,7 +2,7 @@
 
 from kernel.skills.base import Skill, SkillMetadata
 from kernel.skills.calendar import CalendarSkill
-from kernel.skills.chatbot import ChatBotSkill
+from kernel.skills.chatbot import ChatBotConfig, ChatBotSkill
 from kernel.skills.conversation_export import ConversationExportSkill, ExportFormat
 from kernel.skills.factory import create_skill_gateway
 from kernel.skills.gateway import RiskLevel
@@ -17,6 +17,7 @@ from kernel.skills.validator import SkillValidator
 
 __all__ = [
     "CalendarSkill",
+    "ChatBotConfig",
     "ChatBotSkill",
     "ConversationExportSkill",
     "ExportFormat",

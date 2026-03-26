@@ -40,7 +40,7 @@ class StackOverflowAPIClient:
         Returns:
             質問リスト
         """
-        params: dict[str, Any] = {
+        params: dict[str, str | int] = {
             "tagged": tagged,
             "site": "stackoverflow",
             "pagesize": min(page_size, 30),
@@ -56,7 +56,8 @@ class StackOverflowAPIClient:
                 resp = await client.get(f"{self.BASE_URL}/questions", params=params)
                 resp.raise_for_status()
                 data = resp.json()
-                return data.get("items", [])
+                items = data.get("items", []) if isinstance(data, dict) else []
+                return items if isinstance(items, list) else []
         except Exception as e:
             self._logger.warning("StackOverflow API失敗: %s", e)
             return []
@@ -71,7 +72,7 @@ class StackOverflowAPIClient:
             タグ情報リスト
         """
         tag_str = ";".join(tags[:5])
-        params: dict[str, Any] = {
+        params: dict[str, str] = {
             "site": "stackoverflow",
             "filter": "default",
         }
@@ -86,7 +87,8 @@ class StackOverflowAPIClient:
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                return data.get("items", [])
+                items = data.get("items", []) if isinstance(data, dict) else []
+                return items if isinstance(items, list) else []
         except Exception as e:
             self._logger.warning("StackOverflow タグ情報取得失敗: %s", e)
             return []

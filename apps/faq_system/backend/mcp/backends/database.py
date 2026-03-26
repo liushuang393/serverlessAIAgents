@@ -205,4 +205,3 @@ class DatabaseBackend(RetrievalBackend):
             )
 
         return documents
-

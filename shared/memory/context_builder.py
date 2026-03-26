@@ -197,7 +197,8 @@ class ContextBuilder:
         elapsed_hours = (datetime.now() - entry.timestamp).total_seconds() / 3600
         recency = max(0.0, 1.0 - elapsed_hours / 24.0)
 
-        return 0.55 * relevance + 0.30 * importance + 0.15 * recency
+        total_score = 0.55 * relevance + 0.30 * importance + 0.15 * recency
+        return float(total_score)
 
     def _should_include(self, entry: MemoryEntry) -> bool:
         """記憶を注入対象に含めるかフィルタリング.

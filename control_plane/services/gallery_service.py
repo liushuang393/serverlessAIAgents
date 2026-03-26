@@ -115,13 +115,14 @@ class GalleryService:
             Galleryアイテムリスト
         """
         # タイプフィルターを変換
-        types = None
+        types: list[ComponentType] | None = None
         if request.filter.types:
-            types = [
+            converted_types = [
                 self._gallery_to_component_type(t)
                 for t in request.filter.types
                 if self._gallery_to_component_type(t) is not None
             ]
+            types = [component_type for component_type in converted_types if component_type is not None]
 
         # ローカル検索
         entries = self._library.search(

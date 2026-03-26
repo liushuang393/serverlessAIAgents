@@ -17,7 +17,7 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +29,10 @@ from kernel.protocols.a2ui.rich_content import (
     ChartType,
     RichResponse,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 logging.basicConfig(level=logging.INFO)
@@ -251,7 +255,7 @@ async def _generate_report(
     response.add_chart(ChartType.LINE, growth_chart, title="成長率分析")
 
     # センチメント分布（円グラフ）
-    sentiment_counts = {}
+    sentiment_counts: dict[str, int] = {}
     for t in trends:
         s = t["sentiment"]
         sentiment_counts[s] = sentiment_counts.get(s, 0) + 1
@@ -574,7 +578,7 @@ async def collect_v2(request: CollectRequest) -> dict[str, Any]:
 async def collect_stream_v2(request: CollectRequest) -> StreamingResponse:
     """データ収集（ストリーム）."""
 
-    async def event_generator():
+    async def event_generator() -> AsyncIterator[str]:
         try:
             # Step 1: 収集
             yield f"data: {json.dumps({'type': 'progress', 'progress': 10, 'message': 'データを収集中...', 'step': 'collect'})}\n\n"

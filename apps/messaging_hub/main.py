@@ -42,12 +42,12 @@ import uuid
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from apps.messaging_hub.agents.file_organizer_agent import FileOrganizerAgent
@@ -61,7 +61,7 @@ from apps.messaging_hub.storage import SQLiteMessagingHubStore
 from harness.budget.service import BudgetConfig, TokenBudgetManager
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension, ScoringResult
-from kernel import get_llm
+from infrastructure.llm.providers import get_llm
 from kernel.runtime import WebSocketHub
 from kernel.skills import (
     ChatBotSkill,
@@ -80,6 +80,11 @@ from shared.channels import (
     TelegramAdapter,
     WhatsAppAdapter,
 )
+
+
+if TYPE_CHECKING:
+    from kernel.skills.conversation_export import ExportMessage
+    from shared.channels.base import MessageChannelAdapter
 
 
 # 配置日志
@@ -962,7 +967,8 @@ async def _execute_skill_with_tracking(
                 "status": "completed" if result.success else "failed",
             },
         )
-        payload = result.to_dict()
+        payload_raw = result.to_dict()
+        payload = payload_raw if isinstance(payload_raw, dict) else {}
         payload["run_id"] = run_id
         payload["step_id"] = step_id
         return payload
@@ -1067,7 +1073,7 @@ async def _ensure_discord_runtime_task() -> None:
     """Ensure discord runtime task is running when adapter is connected."""
     current_task = _platform_runtime_tasks.get("discord")
     discord_adapter = gateway.get_channel("discord")
-    if discord_adapter is None:
+    if not isinstance(discord_adapter, DiscordAdapter):
         if current_task and not current_task.done():
             current_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -1096,10 +1102,10 @@ async def _connect_platform_from_env(platform_name: str) -> tuple[bool, str]:
     try:
         if platform_name == "telegram":
             token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-            adapter = TelegramAdapter(token=token)
-            gateway.register_channel(platform_name, adapter)
+            telegram_adapter = TelegramAdapter(token=token)
+            gateway.register_channel(platform_name, telegram_adapter)
             try:
-                bot_info = await adapter.get_bot_info()
+                bot_info = await telegram_adapter.get_bot_info()
                 logger.info("Telegram bot: @%s", bot_info.get("username"))
             except Exception as exc:
                 logger.warning("Telegram get_bot_info failed: %s", exc)
@@ -1108,10 +1114,10 @@ async def _connect_platform_from_env(platform_name: str) -> tuple[bool, str]:
         if platform_name == "slack":
             token = os.getenv("SLACK_BOT_TOKEN", "").strip()
             signing_secret = os.getenv("SLACK_SIGNING_SECRET", "").strip() or None
-            adapter = SlackAdapter(token=token, signing_secret=signing_secret)
-            gateway.register_channel(platform_name, adapter)
+            slack_adapter = SlackAdapter(token=token, signing_secret=signing_secret)
+            gateway.register_channel(platform_name, slack_adapter)
             try:
-                bot_info = await adapter.get_bot_info()
+                bot_info = await slack_adapter.get_bot_info()
                 logger.info("Slack bot: %s", bot_info.get("user"))
             except Exception as exc:
                 logger.warning("Slack get_bot_info failed: %s", exc)
@@ -1119,34 +1125,34 @@ async def _connect_platform_from_env(platform_name: str) -> tuple[bool, str]:
 
         if platform_name == "discord":
             token = os.getenv("DISCORD_BOT_TOKEN", "").strip()
-            adapter = DiscordAdapter(token=token)
-            gateway.register_channel(platform_name, adapter)
+            discord_adapter = DiscordAdapter(token=token)
+            gateway.register_channel(platform_name, discord_adapter)
             return True, "token configured"
 
         if platform_name == "teams":
             app_id = os.getenv("TEAMS_APP_ID", "").strip()
             app_password = os.getenv("TEAMS_APP_PASSWORD", "").strip()
-            adapter = TeamsAdapter(app_id=app_id, app_password=app_password)
-            gateway.register_channel(platform_name, adapter)
+            teams_adapter = TeamsAdapter(app_id=app_id, app_password=app_password)
+            gateway.register_channel(platform_name, teams_adapter)
             return True, "app credentials configured"
 
         if platform_name == "whatsapp":
             phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
             access_token = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
             verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "").strip() or None
-            adapter = WhatsAppAdapter(
+            whatsapp_adapter = WhatsAppAdapter(
                 phone_number_id=phone_number_id,
                 access_token=access_token,
                 verify_token=verify_token,
             )
-            gateway.register_channel(platform_name, adapter)
+            gateway.register_channel(platform_name, whatsapp_adapter)
             return True, "business credentials configured"
 
         if platform_name == "signal":
             api_url = os.getenv("SIGNAL_API_URL", "").strip()
             phone_number = os.getenv("SIGNAL_PHONE_NUMBER", "").strip()
-            adapter = SignalAdapter(api_url=api_url, phone_number=phone_number)
-            gateway.register_channel(platform_name, adapter)
+            signal_adapter = SignalAdapter(api_url=api_url, phone_number=phone_number)
+            gateway.register_channel(platform_name, signal_adapter)
             return True, "signal-cli credentials configured"
     except Exception as exc:
         gateway.unregister_channel(platform_name)
@@ -1155,6 +1161,13 @@ async def _connect_platform_from_env(platform_name: str) -> tuple[bool, str]:
         return False, str(exc)
 
     return False, "unsupported platform"
+
+
+async def _get_platform_bot_info(adapter: MessageChannelAdapter) -> dict[str, Any]:
+    """Bot 情報取得に対応している adapter のみ問い合わせる."""
+    if isinstance(adapter, TelegramAdapter | SlackAdapter | DiscordAdapter | TeamsAdapter):
+        return await adapter.get_bot_info()
+    return {}
 
 
 # =========================================================================
@@ -1228,7 +1241,7 @@ async def telegram_webhook(request: Request) -> JSONResponse:
         update_data = await request.json()
 
         telegram_adapter = gateway.get_channel("telegram")
-        if telegram_adapter:
+        if isinstance(telegram_adapter, TelegramAdapter):
             await telegram_adapter.handle_webhook(update_data, gateway)
 
         return JSONResponse({"ok": True})
@@ -1253,7 +1266,7 @@ async def slack_webhook(request: Request) -> JSONResponse:
         headers = dict(request.headers)
 
         slack_adapter = gateway.get_channel("slack")
-        if slack_adapter:
+        if isinstance(slack_adapter, SlackAdapter):
             response = await slack_adapter.handle_webhook(body, headers, gateway)
             return JSONResponse(response)
 
@@ -1272,7 +1285,7 @@ async def teams_webhook(request: Request) -> JSONResponse:
         auth_header = request.headers.get("Authorization", "")
 
         teams_adapter = gateway.get_channel("teams")
-        if teams_adapter:
+        if isinstance(teams_adapter, TeamsAdapter):
             response = await teams_adapter.handle_webhook(activity_data, auth_header, gateway)
             return JSONResponse(response)
 
@@ -1284,19 +1297,24 @@ async def teams_webhook(request: Request) -> JSONResponse:
 
 
 @app.api_route("/webhook/whatsapp", methods=["GET", "POST"])
-async def whatsapp_webhook(request: Request) -> JSONResponse:
+async def whatsapp_webhook(request: Request) -> JSONResponse | PlainTextResponse:
     """WhatsApp Webhook 端点（検証とメッセージ両方対応）."""
     try:
         whatsapp_adapter = gateway.get_channel("whatsapp")
-        if not whatsapp_adapter:
+        if not isinstance(whatsapp_adapter, WhatsAppAdapter):
             return JSONResponse({"ok": False, "error": "WhatsApp not configured"})
 
         if request.method == "GET":
             # Webhook 検証
-            verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
             params = dict(request.query_params)
-            response = await whatsapp_adapter.verify_webhook(params, verify_token)
-            return JSONResponse(response)
+            challenge = whatsapp_adapter.verify_webhook(
+                str(params.get("hub.mode", "")),
+                str(params.get("hub.verify_token", "")),
+                str(params.get("hub.challenge", "")),
+            )
+            if challenge is None:
+                return JSONResponse({"ok": False, "error": "verification_failed"}, status_code=403)
+            return PlainTextResponse(challenge)
         # メッセージ処理
         payload = await request.json()
         response = await whatsapp_adapter.handle_webhook(payload, gateway)
@@ -1314,7 +1332,7 @@ async def signal_webhook(request: Request) -> JSONResponse:
         payload = await request.json()
 
         signal_adapter = gateway.get_channel("signal")
-        if signal_adapter:
+        if isinstance(signal_adapter, SignalAdapter):
             response = await signal_adapter.handle_webhook(payload, gateway)
             return JSONResponse(response)
 
@@ -1388,7 +1406,7 @@ async def list_platforms() -> dict[str, Any]:
         adapter = gateway.get_channel(platform_name)
         if adapter:
             try:
-                bot_info = await adapter.get_bot_info()
+                bot_info = await _get_platform_bot_info(adapter)
                 platforms.append(
                     {
                         "name": platform_name,
@@ -1659,7 +1677,7 @@ async def api_export(format: str = "json") -> JSONResponse:
     try:
         # セッションから会話履歴を取得
         sessions = chatbot.list_sessions()
-        messages = []
+        messages: list[ExportMessage | dict[str, Any]] = []
 
         for session in sessions:
             session_messages = session.get("messages", [])
@@ -1699,7 +1717,7 @@ def _export_extension(export_format: ExportFormat) -> str:
     """Resolve file extension from export format."""
     if export_format is ExportFormat.MARKDOWN:
         return "md"
-    return export_format.value
+    return str(export_format.value)
 
 
 def _safe_filename_part(value: str) -> str:
@@ -2270,7 +2288,10 @@ async def sr_chat_export(
 ) -> dict[str, Any]:
     """sr_chat メッセージ履歴をエクスポート."""
     export_format = _resolve_export_format(format)
-    messages = await _collect_sr_export_messages(conversation_id)
+    messages_raw = await _collect_sr_export_messages(conversation_id)
+    messages: list[ExportMessage | dict[str, Any]] = []
+    for message in messages_raw:
+        messages.append(message)
     exporter = ConversationExportSkill()
     data = await exporter.export(messages, format=export_format)
     return {
@@ -2684,7 +2705,7 @@ if __name__ == "__main__":
 
     # 检查 LLM provider
     try:
-        llm = get_llm()
+        get_llm()
         logger.info("✓ LLM Provider initialized")
     except Exception as e:
         logger.exception("✗ Failed to initialize LLM: %s", e)
@@ -2692,7 +2713,7 @@ if __name__ == "__main__":
 
     # 启动服务
     config_path = Path(__file__).resolve().parent / "app_config.json"
-    config_raw: dict = {}
+    config_raw: dict[str, Any] = {}
     if config_path.is_file():
         try:
             config_raw = json.loads(config_path.read_text("utf-8"))

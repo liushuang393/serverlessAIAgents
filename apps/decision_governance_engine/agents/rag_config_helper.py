@@ -86,7 +86,7 @@ def should_use_rag(agent_id: str) -> bool:
     if config_data is None:
         # デフォルトは使用しない
         return False
-    return config_data.get("use_rag", False)
+    return bool(config_data.get("use_rag", False))
 
 
 async def initialize_agent_rag(

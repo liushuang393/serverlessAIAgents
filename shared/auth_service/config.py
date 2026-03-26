@@ -9,21 +9,66 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _resolve_app_runtime_lazy(*args: object, **kwargs: object) -> object:
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+
+class _RuntimeUrlsLike(Protocol):
+    @property
+    def backend(self) -> str | None: ...
+
+
+class _RuntimeHostsLike(Protocol):
+    @property
+    def backend(self) -> str | None: ...
+
+
+class _RuntimePortsLike(Protocol):
+    @property
+    def api(self) -> int | None: ...
+
+
+class _ResolvedRuntimeLike(Protocol):
+    @property
+    def urls(self) -> _RuntimeUrlsLike: ...
+
+    @property
+    def hosts(self) -> _RuntimeHostsLike: ...
+
+    @property
+    def ports(self) -> _RuntimePortsLike: ...
+
+
+def _resolve_app_runtime_lazy(
+    config_path: str | Path,
+    *,
+    env: Mapping[str, str] | None = None,
+    backend_host_env: str | None = None,
+    backend_port_env: str | None = None,
+    frontend_port_env: str | None = None,
+) -> _ResolvedRuntimeLike:
     """遅延インポート: kernel.runtime.resolve_app_runtime（L2→L3 違反回避）."""
     from kernel.runtime import resolve_app_runtime as _resolve
 
-    return _resolve(*args, **kwargs)
+    return _resolve(
+        config_path,
+        env=env,
+        backend_host_env=backend_host_env,
+        backend_port_env=backend_port_env,
+        frontend_port_env=frontend_port_env,
+    )
 
 
 _AUTH_ENV_FILE = Path(__file__).resolve().parent / ".env"
 _AUTH_APP_CONFIG = Path(__file__).resolve().parent / "app_config.json"
-_AUTH_MANIFEST = json.loads(_AUTH_APP_CONFIG.read_text(encoding="utf-8"))
+_loaded_manifest = json.loads(_AUTH_APP_CONFIG.read_text(encoding="utf-8"))
+_AUTH_MANIFEST: dict[str, Any] = _loaded_manifest if isinstance(_loaded_manifest, dict) else {}
 _AUTH_RUNTIME = _resolve_app_runtime_lazy(
     _AUTH_APP_CONFIG,
     env=os.environ,

@@ -16,6 +16,7 @@ v1.1 新機能:
 """
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from apps.market_trend_monitor.backend.agents import (
@@ -26,7 +27,7 @@ from apps.market_trend_monitor.backend.agents import (
 )
 from apps.market_trend_monitor.backend.config import config
 
-from kernel import PipelineEngine
+from kernel.engines.pipeline_engine import PipelineEngine
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,6 @@ logger = logging.getLogger(__name__)
 # PipelineEngine: マルチステージパイプライン処理
 # 各ステージが明確に分離され、エラーハンドリングと観測性が向上
 engine = PipelineEngine(
-    name="market-trend-monitor",
     stages=[
         {
             "name": "collect",
@@ -61,8 +61,6 @@ engine = PipelineEngine(
             "description": "通知ステージ: 重要な変化を検知して通知",
         },
     ],
-    # ストリーミング有効化（SSE/WebSocket対応）
-    enable_streaming=True,
 )
 
 
@@ -91,10 +89,10 @@ async def run(input_data: dict[str, Any] | None = None) -> dict[str, Any]:
     logger.info("Starting market trend workflow (Engine Pattern)")
     result = await engine.run(input_data)
     logger.info("Market trend workflow completed")
-    return result
+    return result if isinstance(result, dict) else {}
 
 
-async def run_stream(input_data: dict[str, Any] | None = None):
+async def run_stream(input_data: dict[str, Any] | None = None) -> AsyncIterator[dict[str, Any]]:
     """ストリームモードで実行（SSE用）.
 
     Args:
@@ -111,7 +109,8 @@ async def run_stream(input_data: dict[str, Any] | None = None):
 
     logger.info("Starting market trend workflow stream (Engine Pattern)")
     async for event in engine.run_stream(input_data):
-        yield event
+        if isinstance(event, dict):
+            yield event
 
 
 async def cleanup() -> None:

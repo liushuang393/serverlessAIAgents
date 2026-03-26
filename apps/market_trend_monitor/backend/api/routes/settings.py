@@ -1,11 +1,18 @@
 """設定API."""
 
+from typing import Any
+
 from apps.market_trend_monitor.backend.config import config
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 
 router = APIRouter(tags=["設定"])
+
+
+def _as_dict(value: object) -> dict[str, Any]:
+    """辞書戻り値を正規化."""
+    return value if isinstance(value, dict) else {}
 
 
 class SettingsUpdateRequest(BaseModel):
@@ -20,7 +27,7 @@ class SettingsUpdateRequest(BaseModel):
 
 
 @router.get("/api/settings")
-async def get_settings() -> dict:
+async def get_settings() -> dict[str, Any]:
     """設定を取得."""
     return {
         "collector": {
@@ -41,7 +48,7 @@ async def get_settings() -> dict:
 
 
 @router.put("/api/settings")
-async def update_settings(request: SettingsUpdateRequest) -> dict:
+async def update_settings(request: SettingsUpdateRequest) -> dict[str, Any]:
     """設定を更新."""
     if request.keywords is not None:
         config.collector.keywords = request.keywords
@@ -56,4 +63,4 @@ async def update_settings(request: SettingsUpdateRequest) -> dict:
     if request.alert_growth_rate_threshold is not None:
         config.notifier.alert_growth_rate_threshold = request.alert_growth_rate_threshold
 
-    return await get_settings()
+    return _as_dict(await get_settings())

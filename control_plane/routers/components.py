@@ -23,9 +23,20 @@ from control_plane.schemas.component_schemas import (
     ComponentResponse,
     ComponentUpdateRequest,
 )
+from control_plane.schemas.component_schemas import (
+    ComponentType as SchemaComponentType,
+)
+from control_plane.schemas.component_schemas import (
+    ComponentVisibility as SchemaComponentVisibility,
+)
 from control_plane.services.component_library import (
     ComponentEntry,
-    ComponentType,
+)
+from control_plane.services.component_library import (
+    ComponentType as LibraryComponentType,
+)
+from control_plane.services.component_library import (
+    ComponentVisibility as LibraryComponentVisibility,
 )
 
 
@@ -48,13 +59,13 @@ def _entry_to_response(entry: ComponentEntry) -> ComponentResponse:
     return ComponentResponse(
         id=entry.id,
         name=entry.name,
-        type=entry.type,
+        type=SchemaComponentType(entry.type.value),
         version=entry.version,
         description=entry.description,
         author=entry.author,
         category=entry.category,
         tags=entry.tags,
-        visibility=entry.visibility,
+        visibility=SchemaComponentVisibility(entry.visibility.value),
         tenant_id=entry.tenant_id,
         source_path=entry.source_path,
         config=entry.config,
@@ -67,10 +78,20 @@ def _entry_to_response(entry: ComponentEntry) -> ComponentResponse:
     )
 
 
+def _to_library_component_type(value: SchemaComponentType) -> LibraryComponentType:
+    """Schema enum を library enum に変換する."""
+    return LibraryComponentType(value.value)
+
+
+def _to_library_visibility(value: SchemaComponentVisibility) -> LibraryComponentVisibility:
+    """Schema 可視性 enum を library enum に変換する."""
+    return LibraryComponentVisibility(value.value)
+
+
 @router.get("", response_model=ComponentListResponse)
 async def list_components(
     query: str = Query(default="", description="検索クエリ"),
-    types: list[ComponentType] | None = Query(default=None, description="タイプフィルター"),
+    types: list[SchemaComponentType] | None = Query(default=None, description="タイプフィルター"),
     categories: list[str] | None = Query(default=None, description="カテゴリフィルター"),
     tags: list[str] | None = Query(default=None, description="タグフィルター"),
     limit: int = Query(default=20, ge=1, le=100, description="最大取得数"),
@@ -91,9 +112,10 @@ async def list_components(
     Returns:
         コンポーネントリスト
     """
+    library_types = [_to_library_component_type(component_type) for component_type in types] if types else None
     entries = engine.search_components(
         query=query,
-        types=types,
+        types=library_types,
         categories=categories,
         tags=tags,
         limit=limit,
@@ -102,7 +124,7 @@ async def list_components(
 
     total = engine.count_components(
         query=query,
-        types=types,
+        types=library_types,
         categories=categories,
         tags=tags,
     )
@@ -134,14 +156,14 @@ async def create_component(
     """
     # ComponentEntry を作成
     entry = ComponentEntry(
-        id=engine._library.generate_id(request.name, request.type),
+        id=engine._library.generate_id(request.name, _to_library_component_type(request.type)),
         name=request.name,
-        type=request.type,
+        type=_to_library_component_type(request.type),
         version=request.version,
         description=request.description,
         category=request.category,
         tags=request.tags,
-        visibility=request.visibility,
+        visibility=_to_library_visibility(request.visibility),
         source_path=request.source_path,
         source_code=request.source_code,
         config=request.config,
@@ -215,7 +237,7 @@ async def update_component(
     if request.tags is not None:
         entry.tags = request.tags
     if request.visibility is not None:
-        entry.visibility = request.visibility
+        entry.visibility = _to_library_visibility(request.visibility)
     if request.source_code is not None:
         entry.source_code = request.source_code
     if request.config is not None:
