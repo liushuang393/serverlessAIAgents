@@ -64,6 +64,13 @@ repos:
         types: [python]
         always_run: true
 
+      - id: check-encoding
+        name: Check file encoding (UTF-8, no BOM)
+        entry: conda run -n agentflow python scripts/check_encoding.py
+        language: system
+        types: [text]
+        pass_filenames: true
+
   # ========================================
   # Python: Type Checking (Disabled - run manually: mypy contracts infrastructure shared kernel harness control_plane domain apps tests)
   # ========================================

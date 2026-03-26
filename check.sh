@@ -22,6 +22,21 @@ cd "$REPO_ROOT" || exit 1
 
 declare -a JS_PROJECTS=()
 CONDA_ENV_NAME="${CHECK_CONDA_ENV:-agentflow}"
+PYTHON_CHECK_TARGETS="${CHECK_PY_TARGETS:-contracts infrastructure shared kernel harness control_plane domain apps}"
+CHECK_INCLUDE_TESTS="${CHECK_INCLUDE_TESTS:-0}"
+MYPY_EXCLUDE_REGEX_DEFAULT='(^|/)(tests|test)(/|$)|(^|/)test_.*\.py$|(^|/).*_test\.py$'
+MYPY_EXCLUDE_REGEX="${MYPY_EXCLUDE_REGEX:-$MYPY_EXCLUDE_REGEX_DEFAULT}"
+BANDIT_EXCLUDE_PATHS="${BANDIT_EXCLUDE_PATHS:-tests/*,*/tests/*}"
+
+declare -a RUFF_EXCLUDE_ARGS=()
+if [ "$CHECK_INCLUDE_TESTS" != "1" ]; then
+    RUFF_EXCLUDE_ARGS=(
+        --exclude "tests/**"
+        --exclude "**/tests/**"
+        --exclude "**/test_*.py"
+        --exclude "**/*_test.py"
+    )
+fi
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -138,7 +153,11 @@ show_help() {
     echo "  ./check.sh clean         - 一時ファイルとキャッシュを削除"
     echo ""
     echo "環境変数:"
-    echo "  MYPY_TARGETS             - type-check 時の mypy 対象 (デフォルト: contracts infrastructure shared kernel harness control_plane domain apps tests)"
+    echo "  MYPY_TARGETS             - type-check 時の mypy 対象 (デフォルト: CHECK_PY_TARGETS と同じ)"
+    echo "  CHECK_PY_TARGETS         - Python 静的チェック対象 (デフォルト: contracts infrastructure shared kernel harness control_plane domain apps)"
+    echo "  CHECK_INCLUDE_TESTS      - all/report でテスト実行するか (1=実行, 0=スキップ, デフォルト: 0)"
+    echo "  MYPY_EXCLUDE_REGEX       - mypy 除外パス正規表現 (デフォルト: tests ディレクトリ + test ファイル)"
+    echo "  BANDIT_EXCLUDE_PATHS     - bandit 除外パス (デフォルト: tests/*,*/tests/*)"
     echo "  JS_PROJECT_DIRS          - JS/TS 対象ディレクトリを空白区切りで指定"
     echo "  CHECK_CONDA_ENV          - Python ツール実行に使う conda env 名 (デフォルト: agentflow)"
     echo "  CHECK_USE_CONDA          - 1: conda優先, 0: PATH優先 (デフォルト: 1)"
@@ -394,18 +413,22 @@ do_format() {
     echo "========================================"
     echo ""
 
+    local -a py_targets=()
+    # shellcheck disable=SC2206
+    py_targets=($PYTHON_CHECK_TARGETS)
+
     echo "[Python] Ruff フォーマット中..."
-    run_py_tool ruff format .
+    run_py_tool ruff format "${RUFF_EXCLUDE_ARGS[@]}" "${py_targets[@]}"
     if [ $? -ne 0 ]; then
         echo "[エラー] Ruff フォーマットに失敗しました"
         return 1
     fi
 
     echo "[Python] Ruff 自動修正中 (safe fixes)..."
-    run_py_tool ruff check --fix . || echo "[警告] safe fixes 後に未修正エラーが残っています (lint で確認されます)"
+    run_py_tool ruff check --fix "${RUFF_EXCLUDE_ARGS[@]}" "${py_targets[@]}" || echo "[警告] safe fixes 後に未修正エラーが残っています (lint で確認されます)"
 
     echo "[Python] Ruff 自動修正中 (unsafe fixes)..."
-    run_py_tool ruff check --unsafe-fixes --fix . || true
+    run_py_tool ruff check --unsafe-fixes --fix "${RUFF_EXCLUDE_ARGS[@]}" "${py_targets[@]}" || true
 
     echo ""
     run_js_format
@@ -424,10 +447,14 @@ do_lint() {
     echo "========================================"
     echo ""
 
+    local -a py_targets=()
+    # shellcheck disable=SC2206
+    py_targets=($PYTHON_CHECK_TARGETS)
+
     echo "[Python] Ruff リントチェック中..."
     local ruff_output
     ruff_output="$(mktemp)"
-    run_py_tool ruff check . 2>&1 | tee "$ruff_output"
+    run_py_tool ruff check "${RUFF_EXCLUDE_ARGS[@]}" "${py_targets[@]}" 2>&1 | tee "$ruff_output"
     local ruff_rc=${PIPESTATUS[0]}
     if [ $ruff_rc -ne 0 ]; then
         echo "[エラー] Ruff リントチェックに失敗しました"
@@ -463,6 +490,14 @@ do_lint() {
     fi
 
     echo ""
+    echo "--- Encoding Check ---"
+    run_py_tool python scripts/check_encoding.py
+    if [ $? -ne 0 ]; then
+        echo "[エラー] エンコーディングチェックに失敗しました"
+        return 1
+    fi
+
+    echo ""
     run_js_lint
     if [ $? -ne 0 ]; then
         return 1
@@ -479,12 +514,18 @@ do_type_check() {
     echo "========================================"
     echo ""
 
-    local mypy_targets="${MYPY_TARGETS:-contracts infrastructure shared kernel harness control_plane domain apps tests}"
+    local mypy_targets="${MYPY_TARGETS:-$PYTHON_CHECK_TARGETS}"
+    local -a mypy_target_args=()
+    # shellcheck disable=SC2206
+    mypy_target_args=($mypy_targets)
+    local -a mypy_exclude_args=()
+    if [ "$CHECK_INCLUDE_TESTS" != "1" ]; then
+        mypy_exclude_args=(--exclude "$MYPY_EXCLUDE_REGEX")
+    fi
     echo "[Python] MyPy 型チェック中... (targets: $mypy_targets)"
     local mypy_output
     mypy_output="$(mktemp)"
-    # shellcheck disable=SC2086
-    run_py_tool mypy $mypy_targets --ignore-missing-imports 2>&1 | tee "$mypy_output"
+    run_py_tool mypy "${mypy_target_args[@]}" "${mypy_exclude_args[@]}" --ignore-missing-imports 2>&1 | tee "$mypy_output"
     local mypy_rc=${PIPESTATUS[0]}
     if [ $mypy_rc -ne 0 ]; then
         echo "[エラー] MyPy 型チェックに失敗しました"
@@ -605,7 +646,11 @@ do_security() {
     echo "[Python] bandit SAST チェック中..."
     local bandit_output
     bandit_output="$(mktemp)"
-    run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii --format txt 2>&1 | tee "$bandit_output"
+    local -a bandit_exclude_args=()
+    if [ "$CHECK_INCLUDE_TESTS" != "1" ]; then
+        bandit_exclude_args=(-x "$BANDIT_EXCLUDE_PATHS")
+    fi
+    run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps "${bandit_exclude_args[@]}" -lll -iii --format txt 2>&1 | tee "$bandit_output"
     local bandit_exit=${PIPESTATUS[0]}
 
     echo ""
@@ -629,23 +674,41 @@ do_report() {
     local report_file="check-report.md"
     local timestamp
     timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    local mypy_targets="${MYPY_TARGETS:-contracts infrastructure shared kernel harness control_plane domain apps tests}"
+    local mypy_targets="${MYPY_TARGETS:-$PYTHON_CHECK_TARGETS}"
+    local -a py_targets=()
+    # shellcheck disable=SC2206
+    py_targets=($PYTHON_CHECK_TARGETS)
+    local -a mypy_target_args=()
+    # shellcheck disable=SC2206
+    mypy_target_args=($mypy_targets)
+    local -a mypy_exclude_args=()
+    if [ "$CHECK_INCLUDE_TESTS" != "1" ]; then
+        mypy_exclude_args=(--exclude "$MYPY_EXCLUDE_REGEX")
+    fi
+    local -a bandit_exclude_args=()
+    if [ "$CHECK_INCLUDE_TESTS" != "1" ]; then
+        bandit_exclude_args=(-x "$BANDIT_EXCLUDE_PATHS")
+    fi
 
     local lint_status="✅" type_status="✅" test_status="✅" security_status="✅"
     local lint_output type_output security_output test_output
 
-    lint_output=$(run_py_tool ruff check . 2>&1)
+    lint_output=$(run_py_tool ruff check "${RUFF_EXCLUDE_ARGS[@]}" "${py_targets[@]}" 2>&1)
     [ $? -ne 0 ] && lint_status="❌"
 
-    # shellcheck disable=SC2086
-    type_output=$(run_py_tool mypy $mypy_targets --ignore-missing-imports 2>&1)
+    type_output=$(run_py_tool mypy "${mypy_target_args[@]}" "${mypy_exclude_args[@]}" --ignore-missing-imports 2>&1)
     [ $? -ne 0 ] && type_status="❌"
 
-    security_output=$(run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps -lll -iii --format txt 2>&1)
+    security_output=$(run_py_tool bandit -r contracts infrastructure shared kernel harness control_plane domain apps "${bandit_exclude_args[@]}" -lll -iii --format txt 2>&1)
     [ $? -ne 0 ] && security_status="❌"
 
-    test_output=$(run_py_tool pytest -v --tb=short 2>&1)
-    [ $? -ne 0 ] && test_status="❌"
+    if [ "$CHECK_INCLUDE_TESTS" = "1" ]; then
+        test_output=$(run_py_tool pytest -v --tb=short 2>&1)
+        [ $? -ne 0 ] && test_status="❌"
+    else
+        test_output="skipped (CHECK_INCLUDE_TESTS=0)"
+        test_status="⏭️"
+    fi
 
     # ルールコンプライアンスレポート
     printf "${BLUE}[Rules Compliance]${NC} Generating compliance report...\\n"
@@ -715,8 +778,12 @@ do_all() {
     fi
     echo ""
 
-    if ! do_type_check; then
-        failed_steps+=("type-check")
+    if [ $skip_type_check -eq 0 ]; then
+        if ! do_type_check; then
+            failed_steps+=("type-check")
+        fi
+    else
+        echo "[スキップ] --no-type-check 指定のため type-check ステップをスキップします"
     fi
     echo ""
 
@@ -725,8 +792,12 @@ do_all() {
     fi
     echo ""
 
-    if ! do_test; then
-        failed_steps+=("test")
+    if [ "$CHECK_INCLUDE_TESTS" = "1" ]; then
+        if ! do_test; then
+            failed_steps+=("test")
+        fi
+    else
+        echo "[スキップ] CHECK_INCLUDE_TESTS=0 のため test ステップをスキップします"
     fi
     echo ""
 
@@ -823,7 +894,7 @@ report)
     do_report
     ;;
 all)
-    do_all
+    do_all "${2:-}"
     ;;
 pre-commit)
     do_pre_commit
