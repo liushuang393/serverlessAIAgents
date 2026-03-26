@@ -30,7 +30,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, TypeVar
 
-from infrastructure.observability.metrics import get_metrics
 from kernel.executor.reliability.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerConfig,
@@ -105,8 +104,12 @@ def reliable(
             )
             breaker = get_circuit_breaker(circuit_breaker, config)
 
-        # メトリクス取得
-        metrics = get_metrics() if record_metrics else None
+        # メトリクス取得（遅延: kernel→infrastructure）
+        metrics = None
+        if record_metrics:
+            from infrastructure.observability.metrics import get_metrics
+
+            metrics = get_metrics()
         if metrics:
             call_counter = metrics.counter(
                 f"{func_name}_calls_total",

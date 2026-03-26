@@ -38,7 +38,6 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from infrastructure.tool_provider import RegisteredTool, ToolProvider
 from kernel.agents.agent_block import AgentBlock
 from kernel.patterns.coordinator import CoordinationPattern, CoordinatorBase
 from kernel.patterns.shared_context import SharedContext
@@ -1205,7 +1204,7 @@ class AgentPool:
         self,
         llm_client: Any = None,
         predefined_agents: dict[str, AgentBlock] | None = None,
-        tool_provider: ToolProvider | None = None,
+        tool_provider: Any = None,
         skill_registry: SkillRegistry | None = None,
         skill_engine: SkillEngine | None = None,
         mcp_config: MCPConfig | None = None,
@@ -1230,8 +1229,13 @@ class AgentPool:
         self._tool_catalog: Any = tool_catalog
         self._logger = logging.getLogger(__name__)
 
-        # ツールプロバイダー（@tool登録されたツールを自動発見）
-        self._tools = tool_provider or ToolProvider.discover()
+        # ツールプロバイダー（@tool登録されたツールを自動発見、遅延: kernel→infrastructure）
+        if tool_provider is not None:
+            self._tools = tool_provider
+        else:
+            from infrastructure.tool_provider import ToolProvider
+
+            self._tools = ToolProvider.discover()
 
         # SkillEngine（動的 Skill 解析用）
         self._skill_engine = skill_engine
@@ -1423,12 +1427,14 @@ class AgentPool:
             "lazy_loading_enabled": False,
         }
 
-    def register_tool(self, tool: RegisteredTool) -> None:
+    def register_tool(self, tool: Any) -> None:
         """ツールを登録.
 
         Args:
-            tool: 登録するツール
+            tool: 登録するツール (RegisteredTool)
         """
+        from infrastructure.tool_provider import ToolProvider  # 遅延: kernel→infrastructure
+
         ToolProvider.register(tool)
         # 再発見してキャッシュ更新
         self._tools = ToolProvider.discover()
@@ -1466,7 +1472,7 @@ class AgentPool:
         if mcp_tools is not None:
             self._default_bindings[key]["mcp_tools"] = mcp_tools
 
-    def get_tools_for_agent(self, agent_type: AgentType | str) -> list[RegisteredTool]:
+    def get_tools_for_agent(self, agent_type: AgentType | str) -> list[Any]:
         """Agent種別用のツールを取得.
 
         Args:

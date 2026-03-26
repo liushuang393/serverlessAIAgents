@@ -25,8 +25,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from infrastructure.llm.providers import get_llm
-
 
 _logger = logging.getLogger(__name__)
 
@@ -268,6 +266,8 @@ class ExecutiveSummaryBuilder:
     async def _summarize_with_llm(self, details: str) -> list[str]:
         """LLMで詳細を要約."""
         try:
+            from infrastructure.llm.providers import get_llm  # 遅延: kernel→infrastructure
+
             llm = get_llm(temperature=0.3)
             prompt = f"""以下の内容を、主管向けに3つの重要ポイントにまとめてください。
 箇条書きで、各項目は20文字以内で。

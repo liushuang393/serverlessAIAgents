@@ -21,11 +21,8 @@ from contracts.runtime.context import (
     set_runtime_context,
 )
 
-
 if TYPE_CHECKING:
     from collections.abc import Iterator
-
-    from infrastructure.config import AgentFlowSettings
 
 
 @contextmanager
@@ -67,11 +64,12 @@ def use_runtime_context(context: RuntimeContext | None) -> Iterator[None]:
                 pass
 
 
-def resolve_settings(context: RuntimeContext | None = None) -> AgentFlowSettings:
+def resolve_settings(context: RuntimeContext | None = None) -> Any:
     """Resolve settings using runtime context override if provided."""
-    if context is not None and context.settings is not None:
+    from infrastructure.config import AgentFlowSettings, get_settings  # 遅延: kernel→infrastructure
+
+    if context is not None and isinstance(context.settings, AgentFlowSettings):
         return context.settings
-    from infrastructure.config import get_settings
 
     return get_settings()
 
