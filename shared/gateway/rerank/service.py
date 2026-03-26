@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from infrastructure.rerank.registry import get_rerank_backend
-
 
 if TYPE_CHECKING:
     from infrastructure.rerank.ports import RerankResult
@@ -16,6 +14,9 @@ class SharedRerankGateway:
     """rerank backend を隠蔽する共通 gateway."""
 
     def __init__(self, toggle: ComponentToggle | None = None) -> None:
+        # 遅延 import: infrastructure 依存をトップレベルから排除
+        from infrastructure.rerank.registry import get_rerank_backend
+
         self._backend = get_rerank_backend(toggle)
 
     async def rerank(self, query: str, documents: list[str], *, top_k: int = 5) -> list[RerankResult]:

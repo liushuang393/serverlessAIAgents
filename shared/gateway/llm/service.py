@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.llm import get_llm_backend
-
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -17,6 +15,9 @@ class SharedLLMGateway:
     """LLM backend を隠蔽する共有 Gateway."""
 
     def __init__(self, toggle: ComponentToggle | None = None) -> None:
+        # 遅延 import: infrastructure 依存をトップレベルから排除
+        from infrastructure.llm import get_llm_backend
+
         self._backend = get_llm_backend(toggle)
 
     async def generate(

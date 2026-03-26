@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from infrastructure.embeddings.registry import get_embedding_backend
-
 
 if TYPE_CHECKING:
     from shared.registry import ComponentToggle
@@ -15,6 +13,9 @@ class SharedEmbeddingGateway:
     """埋め込み backend を隠蔽する共通 gateway."""
 
     def __init__(self, toggle: ComponentToggle | None = None) -> None:
+        # 遅延 import: infrastructure 依存をトップレベルから排除
+        from infrastructure.embeddings.registry import get_embedding_backend
+
         self._backend = get_embedding_backend(toggle)
 
     async def embed_query(self, text: str) -> list[float]:
