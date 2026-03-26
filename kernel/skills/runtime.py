@@ -39,7 +39,6 @@ from typing import TYPE_CHECKING, Any, cast
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from infrastructure.sandbox.base import ExecutionResult
     from kernel.skills.base import Skill
 
 
@@ -67,8 +66,8 @@ class ScriptResult:
     error: str | None = None
 
     @classmethod
-    def from_execution_result(cls, result: ExecutionResult, parse_json: bool = True) -> ScriptResult:
-        """ExecutionResultから変換.
+    def from_execution_result(cls, result: Any, parse_json: bool = True) -> ScriptResult:
+        """ExecutionResult (infrastructure.sandbox.base) から変換.
 
         Args:
             result: サンドボックス実行結果

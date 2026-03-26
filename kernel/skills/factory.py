@@ -15,14 +15,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from infrastructure.browser.browser_skill import BrowserSkill
-from infrastructure.browser.config import BrowserSkillConfig
-from infrastructure.os.command import CommandSkill
-from infrastructure.os.config import ExecutionMode, OSSkillConfig
-from infrastructure.os.filesystem import FileSystemSkill
-from infrastructure.os.network import NetworkSkill
-from infrastructure.os.process import ProcessSkill
-from infrastructure.os.system_info import SystemInfoSkill
 from kernel.skills.gateway import (
     GatewayConfig,
     RiskLevel,
@@ -56,6 +48,16 @@ def create_skill_gateway(
     Returns:
         設定済みゲートウェイ
     """
+    # 後方互換: infrastructure から遅延ロード
+    from infrastructure.browser.browser_skill import BrowserSkill
+    from infrastructure.browser.config import BrowserSkillConfig
+    from infrastructure.os.command import CommandSkill
+    from infrastructure.os.config import ExecutionMode, OSSkillConfig
+    from infrastructure.os.filesystem import FileSystemSkill
+    from infrastructure.os.network import NetworkSkill
+    from infrastructure.os.process import ProcessSkill
+    from infrastructure.os.system_info import SystemInfoSkill
+
     workspace = workspace_path or Path.cwd()
 
     # OS スキル設定

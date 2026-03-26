@@ -13,15 +13,24 @@
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from infrastructure.llm.providers import get_llm
 from kernel.skills.base import Skill, SkillMetadata
 
 
-if TYPE_CHECKING:
-    from infrastructure.llm_provider import LLMProvider
+# DI 用モジュールレベル LLM ファクトリ（テスト等で差し替え可能）
+_llm_factory: Callable[..., Any] | None = None
+
+
+def _get_llm(**kwargs: Any) -> Any:
+    """LLM プロバイダーを取得（DI ファクトリ優先、フォールバックで遅延 import）."""
+    if _llm_factory is not None:
+        return _llm_factory(**kwargs)
+    from infrastructure.llm.providers import get_llm
+
+    return get_llm(**kwargs)
 
 
 @dataclass
@@ -111,7 +120,7 @@ class SkillGenerator:
             llm_provider: LLM プロバイダー（省略時は自動検出）
             max_retries: 最大リトライ回数
         """
-        self._llm: LLMProvider = llm_provider or get_llm()
+        self._llm: Any = llm_provider or _get_llm()
         self._max_retries = max_retries
         self._logger = logging.getLogger(__name__)
 

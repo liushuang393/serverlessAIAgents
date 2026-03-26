@@ -22,15 +22,24 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.llm.providers import get_llm
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from infrastructure.llm_provider import LLMProvider
     from kernel.patterns.coordinator import CoordinatorBase
     from kernel.skills.rag import RAGSkill
+
+# DI 用モジュールレベル LLM ファクトリ（テスト等で差し替え可能）
+_llm_factory: Callable[..., Any] | None = None
+
+
+def _get_llm(**kwargs: Any) -> Any:
+    """LLM プロバイダーを取得（DI ファクトリ優先、フォールバックで遅延 import）."""
+    if _llm_factory is not None:
+        return _llm_factory(**kwargs)
+    from infrastructure.llm.providers import get_llm
+
+    return get_llm(**kwargs)
 
 
 @dataclass
@@ -176,7 +185,7 @@ class ChatBotSkill:
         self._logger = logging.getLogger(__name__)
 
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: LLMProvider = get_llm(temperature=temperature)
+        self._llm: Any = _get_llm(temperature=temperature)
 
         # オプション機能
         self._coordinator = coordinator

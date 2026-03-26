@@ -21,7 +21,6 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from infrastructure.llm.gateway import LiteLLMGateway
 from kernel.runtime import get_runtime_context
 
 
@@ -104,6 +103,9 @@ class OpenAIImageClient:
         """初期化."""
         self._api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         self._model = model or os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+        # 後方互換: infrastructure から遅延ロード
+        from infrastructure.llm.gateway import LiteLLMGateway
+
         self._gateway = LiteLLMGateway()
         self._role = os.getenv("IMAGE_ROLE", "cheap")
         self._model_alias = os.getenv("OPENAI_IMAGE_MODEL_ALIAS")

@@ -27,7 +27,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from infrastructure.llm.gateway import LiteLLMGateway
 from kernel.runtime import get_runtime_context
 
 
@@ -110,6 +109,9 @@ class VoiceSkill:
         """
         self._config = config or VoiceConfig()
         self._logger = logging.getLogger("voice_skill")
+        # 後方互換: infrastructure から遅延ロード
+        from infrastructure.llm.gateway import LiteLLMGateway
+
         self._gateway = LiteLLMGateway()
 
     async def transcribe(

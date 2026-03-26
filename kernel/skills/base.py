@@ -104,7 +104,7 @@ class SkillMetadata:
             self.created_at = datetime.now().isoformat()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SkillMetadata":
+    def from_dict(cls, data: object) -> "SkillMetadata":
         """辞書から SkillMetadata を作成.
 
         Args:

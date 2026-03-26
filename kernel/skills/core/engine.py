@@ -15,11 +15,11 @@
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any
 
-from infrastructure.llm.providers import get_llm
 from kernel.skills.core.base import Skill
 from kernel.skills.core.generator import SkillGenerator
 from kernel.skills.core.loader import SkillLoader, SkillRegistry
@@ -28,8 +28,17 @@ from kernel.skills.core.persister import SkillPersister
 from kernel.skills.core.validator import SkillValidator
 
 
-if TYPE_CHECKING:
-    from infrastructure.llm_provider import LLMProvider
+# DI 用モジュールレベル LLM ファクトリ（テスト等で差し替え可能）
+_llm_factory: Callable[..., Any] | None = None
+
+
+def _get_llm(**kwargs: Any) -> Any:
+    """LLM プロバイダーを取得（DI ファクトリ優先、フォールバックで遅延 import）."""
+    if _llm_factory is not None:
+        return _llm_factory(**kwargs)
+    from infrastructure.llm.providers import get_llm
+
+    return get_llm(**kwargs)
 
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"
@@ -103,7 +112,7 @@ class SkillEngine:
             temperature: LLM 温度パラメータ（省略時はデフォルト）
         """
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: LLMProvider = get_llm(temperature=temperature)
+        self._llm: Any = _get_llm(temperature=temperature)
         self._auto_learn = auto_learn
         self._logger = logging.getLogger(__name__)
 

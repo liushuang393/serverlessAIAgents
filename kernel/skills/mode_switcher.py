@@ -23,11 +23,18 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.os.config import ExecutionMode
-
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+
+def _execution_mode_cls() -> Any:
+    """ExecutionMode Enum を遅延ロードして返す（キャッシュ付き）."""
+    if not hasattr(_execution_mode_cls, "_cached"):
+        from infrastructure.os.config import ExecutionMode
+
+        _execution_mode_cls._cached = ExecutionMode  # type: ignore[attr-defined]
+    return _execution_mode_cls._cached  # type: ignore[attr-defined]
 
 
 class SwitchDirection(str, Enum):
@@ -41,8 +48,8 @@ class SwitchDirection(str, Enum):
 class ModeTransition:
     """モード遷移記録."""
 
-    from_mode: ExecutionMode
-    to_mode: ExecutionMode
+    from_mode: Any  # infrastructure.os.config.ExecutionMode
+    to_mode: Any  # infrastructure.os.config.ExecutionMode
     reason: str
     requested_by: str
     approved_by: str | None
@@ -107,9 +114,9 @@ class ModeSwitcher:
         self._revert_task: Any = None
 
     @property
-    def current_mode(self) -> ExecutionMode:
+    def current_mode(self) -> Any:
         """現在の実行モード."""
-        return ExecutionMode(self._gateway._config.execution_mode)
+        return _execution_mode_cls()(self._gateway._config.execution_mode)
 
     @property
     def history(self) -> list[ModeTransition]:
@@ -132,11 +139,11 @@ class ModeSwitcher:
             遷移記録
         """
         current = self.current_mode
-        if current == ExecutionMode.ISOLATED:
+        if current == _execution_mode_cls().ISOLATED:
             self._logger.info("既に isolated モードです")
             return ModeTransition(
                 from_mode=current,
-                to_mode=ExecutionMode.ISOLATED,
+                to_mode=_execution_mode_cls().ISOLATED,
                 reason=reason,
                 requested_by=requested_by,
                 approved_by=None,
@@ -147,11 +154,11 @@ class ModeSwitcher:
         await self._cancel_auto_revert()
 
         # 即時切替（安全方向）
-        self._gateway._config.execution_mode = ExecutionMode.ISOLATED.value
+        self._gateway._config.execution_mode = _execution_mode_cls().ISOLATED.value
 
         transition = ModeTransition(
             from_mode=current,
-            to_mode=ExecutionMode.ISOLATED,
+            to_mode=_execution_mode_cls().ISOLATED,
             reason=reason,
             requested_by=requested_by,
             approved_by=None,  # 安全方向は承認不要
@@ -161,7 +168,7 @@ class ModeSwitcher:
         self._logger.info(
             "AUDIT: モード切替 %s → %s (理由: %s)",
             current.value,
-            ExecutionMode.ISOLATED.value,
+            _execution_mode_cls().ISOLATED.value,
             reason,
         )
 
@@ -188,11 +195,11 @@ class ModeSwitcher:
             ModeSwitchDenied: 切替が拒否された場合
         """
         current = self.current_mode
-        if current == ExecutionMode.REAL_MACHINE:
+        if current == _execution_mode_cls().REAL_MACHINE:
             self._logger.info("既に real_machine モードです")
             return ModeTransition(
                 from_mode=current,
-                to_mode=ExecutionMode.REAL_MACHINE,
+                to_mode=_execution_mode_cls().REAL_MACHINE,
                 reason=reason,
                 requested_by=requested_by,
                 approved_by=None,
@@ -213,7 +220,7 @@ class ModeSwitcher:
             if not confirmed:
                 transition = ModeTransition(
                     from_mode=current,
-                    to_mode=ExecutionMode.REAL_MACHINE,
+                    to_mode=_execution_mode_cls().REAL_MACHINE,
                     reason=reason,
                     requested_by=requested_by,
                     approved_by=None,
@@ -226,11 +233,11 @@ class ModeSwitcher:
             approved_by = "user"
 
         # 切替実行
-        self._gateway._config.execution_mode = ExecutionMode.REAL_MACHINE.value
+        self._gateway._config.execution_mode = _execution_mode_cls().REAL_MACHINE.value
 
         transition = ModeTransition(
             from_mode=current,
-            to_mode=ExecutionMode.REAL_MACHINE,
+            to_mode=_execution_mode_cls().REAL_MACHINE,
             reason=reason,
             requested_by=requested_by,
             approved_by=approved_by or "skip_confirmation",
@@ -240,7 +247,7 @@ class ModeSwitcher:
         self._logger.warning(
             "AUDIT: モード切替 %s → %s (理由: %s, 承認者: %s)",
             current.value,
-            ExecutionMode.REAL_MACHINE.value,
+            _execution_mode_cls().REAL_MACHINE.value,
             reason,
             approved_by,
         )

@@ -18,13 +18,24 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from infrastructure.llm.providers import get_llm
 from shared.memory.memory_manager import MemoryManager
 from shared.memory.types import CompressionConfig
 
 
 if TYPE_CHECKING:
-    from infrastructure.llm_provider import LLMProvider
+    from collections.abc import Callable
+
+# DI 用モジュールレベル LLM ファクトリ（テスト等で差し替え可能）
+_llm_factory: Callable[..., Any] | None = None
+
+
+def _get_llm(**kwargs: Any) -> Any:
+    """LLM プロバイダーを取得（DI ファクトリ優先、フォールバックで遅延 import）."""
+    if _llm_factory is not None:
+        return _llm_factory(**kwargs)
+    from infrastructure.llm.providers import get_llm
+
+    return get_llm(**kwargs)
 
 
 @dataclass
@@ -99,7 +110,7 @@ class RAGSkill:
         self._logger = logging.getLogger(__name__)
 
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: LLMProvider = get_llm(temperature=temperature)
+        self._llm: Any = _get_llm(temperature=temperature)
 
         # Memory Manager（ベクトル検索有効）
         if memory_manager:
@@ -142,8 +153,15 @@ class RAGSkill:
             ドキュメント ID
         """
         entry = await self._memory.remember(content, topic, metadata)
-        self._logger.debug(f"Added document: {entry.id}")
-        return entry.id
+        if entry is None:
+            msg = "failed to store document in memory"
+            raise RuntimeError(msg)
+        entry_id = entry.id
+        if not isinstance(entry_id, str):
+            msg = "memory entry id must be a string"
+            raise RuntimeError(msg)
+        self._logger.debug("Added document: %s", entry_id)
+        return entry_id
 
     async def query(
         self,
