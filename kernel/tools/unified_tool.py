@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, cast
 from pydantic import BaseModel, Field
 
 from contracts.tool import ToolCallStatus as CanonicalToolCallStatus
-from contracts.tool import UnifiedToolResult as CanonicalToolResult
+from contracts.tool import ToolResult as CanonicalToolResult
 
 
 if TYPE_CHECKING:
@@ -161,6 +161,10 @@ class UnifiedToolResult:
         )
 
 
+# 後方互換エイリアス: 旧名 ToolResult を維持
+ToolResult = UnifiedToolResult
+
+
 class UnifiedToolDefinition(BaseModel):
     """統一ツール定義.
 
@@ -186,6 +190,7 @@ class UnifiedToolDefinition(BaseModel):
 
 # 後方互換エイリアス: 旧名 ToolDefinition を維持
 ToolDefinition = UnifiedToolDefinition
+ToolResult = UnifiedToolResult
 
 
 def _legacy_status_from_contract(status: CanonicalToolCallStatus) -> ToolStatus:
@@ -835,9 +840,10 @@ __all__ = [
     "SkillToolProvider",
     "ToolDefinition",
     "ToolProvider",
-    "UnifiedToolResult",
+    "ToolResult",
     "ToolStatus",
     "ToolType",
     "UnifiedToolDefinition",
     "UnifiedToolProvider",
+    "UnifiedToolResult",
 ]
