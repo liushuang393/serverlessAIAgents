@@ -265,8 +265,7 @@ cd shared/auth_service/frontend && npm install && npm run dev
 #### Docker 起動（PostgreSQL）
 
 ```bash
-cd shared/auth_service
-
+cd share
 # 全サービス起動（DB + API + 管理画面）
 docker compose up --build -d
 
