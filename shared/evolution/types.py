@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class ScopeLevel(str, Enum):
+class ScopeLevel(StrEnum):
     """Scope levels for strategy inheritance."""
 
     TENANT_APP = "tenant_app"
@@ -17,7 +17,7 @@ class ScopeLevel(str, Enum):
     GLOBAL_VERIFIED = "global_verified"
 
 
-class StrategyStatus(str, Enum):
+class StrategyStatus(StrEnum):
     """Lifecycle states for a strategy."""
 
     CANDIDATE = "candidate"
@@ -26,7 +26,7 @@ class StrategyStatus(str, Enum):
     DEPRECATED = "deprecated"
 
 
-class RetrievalMode(str, Enum):
+class RetrievalMode(StrEnum):
     """Retrieval modes used by gate and router."""
 
     SKIP = "skip"
@@ -34,7 +34,7 @@ class RetrievalMode(str, Enum):
     DEEP = "deep_retrieval"
 
 
-class StalenessRisk(str, Enum):
+class StalenessRisk(StrEnum):
     """Staleness risk label."""
 
     LOW = "low"

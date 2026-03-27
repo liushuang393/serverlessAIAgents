@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.services.base import (
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class SuggestionType(str, Enum):
+class SuggestionType(StrEnum):
     """提案タイプ."""
 
     FOLLOW_UP = "follow_up"  # フォローアップ質問
@@ -57,7 +57,7 @@ class SuggestionType(str, Enum):
     TREND = "trend"  # トレンド分析提案
 
 
-class SuggestionPriority(str, Enum):
+class SuggestionPriority(StrEnum):
     """提案優先度."""
 
     HIGH = "high"

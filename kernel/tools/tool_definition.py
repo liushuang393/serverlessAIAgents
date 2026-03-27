@@ -21,13 +21,13 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class ToolSource(str, Enum):
+class ToolSource(StrEnum):
     """ツールのソースタイプ.
 
     ツールがどこから来たかを識別する列挙型。

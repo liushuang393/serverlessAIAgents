@@ -6,13 +6,13 @@ providing a consistent interface regardless of the source.
 
 import time
 import uuid
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class PerceptionEventType(str, Enum):
+class PerceptionEventType(StrEnum):
     """Types of perception events.
 
     These represent different categories of inputs that an agent

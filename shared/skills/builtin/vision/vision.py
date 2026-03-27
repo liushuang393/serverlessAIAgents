@@ -25,7 +25,7 @@ from __future__ import annotations
 import base64
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
 
@@ -42,7 +42,7 @@ def _get_llm_func() -> Any:
     return _get_llm
 
 
-class VisionProvider(str, Enum):
+class VisionProvider(StrEnum):
     """Vision プロバイダー."""
 
     OPENAI = "openai"  # GPT-4V

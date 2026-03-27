@@ -18,19 +18,19 @@ from kernel.core.exceptions import (
 )
 
 
-class TestInput(BaseModel):
+class AgentTestInput(BaseModel):
     """テスト用入力モデル."""
 
     query: str
 
 
-class TestOutput(BaseModel):
+class AgentTestOutput(BaseModel):
     """テスト用出力モデル."""
 
     answer: str
 
 
-class ConcreteAgent(ResilientAgent[TestInput, TestOutput]):
+class ConcreteAgent(ResilientAgent[AgentTestInput, AgentTestOutput]):
     """テスト用の具象 Agent."""
 
     name = "ConcreteAgent"
@@ -38,13 +38,13 @@ class ConcreteAgent(ResilientAgent[TestInput, TestOutput]):
     max_retries = 2
     retry_delay = 0.1
 
-    def _parse_input(self, input_data: dict[str, Any]) -> TestInput:
+    def _parse_input(self, input_data: dict[str, Any]) -> AgentTestInput:
         """入力パース."""
-        return TestInput(**input_data)
+        return AgentTestInput(**input_data)
 
-    async def process(self, input_data: TestInput) -> TestOutput:
+    async def process(self, input_data: AgentTestInput) -> AgentTestOutput:
         """処理実行."""
-        return TestOutput(answer=f"Echo: {input_data.query}")
+        return AgentTestOutput(answer=f"Echo: {input_data.query}")
 
 
 class TestResilientAgent:
@@ -75,7 +75,7 @@ class TestResilientAgent:
 
         original_process = agent.process
 
-        async def flaky_process(input_data: TestInput) -> TestOutput:
+        async def flaky_process(input_data: AgentTestInput) -> AgentTestOutput:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
@@ -96,7 +96,7 @@ class TestResilientAgent:
         agent = ConcreteAgent()
         call_count = 0
 
-        async def flaky_process(input_data: TestInput) -> TestOutput:
+        async def flaky_process(input_data: AgentTestInput) -> AgentTestOutput:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -106,7 +106,7 @@ class TestResilientAgent:
                     expected="non-empty",
                     actual="",
                 )
-            return TestOutput(answer="fixed")
+            return AgentTestOutput(answer="fixed")
 
         agent.process = flaky_process  # type: ignore
 
@@ -120,7 +120,7 @@ class TestResilientAgent:
         agent = ConcreteAgent()
         agent.max_retries = 2
 
-        async def always_fail(input_data: TestInput) -> TestOutput:
+        async def always_fail(input_data: AgentTestInput) -> AgentTestOutput:
             msg = "Always fail"
             raise ValueError(msg)
 
@@ -150,9 +150,9 @@ class TestResilientAgent:
         agent.timeout_seconds = 1
         agent.max_retries = 0
 
-        async def slow_process(input_data: TestInput) -> TestOutput:
+        async def slow_process(input_data: AgentTestInput) -> AgentTestOutput:
             await asyncio.sleep(10)
-            return TestOutput(answer="never")
+            return AgentTestOutput(answer="never")
 
         agent.process = slow_process  # type: ignore
 
@@ -184,7 +184,7 @@ class TestResilientAgent:
     def test_validate_output_default(self) -> None:
         """デフォルト出力検証のテスト."""
         agent = ConcreteAgent()
-        output = TestOutput(answer="test")
+        output = AgentTestOutput(answer="test")
 
         assert agent.validate_output(output) is True
 

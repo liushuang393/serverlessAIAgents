@@ -27,7 +27,7 @@
 """
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +39,7 @@ from kernel.agents.agent_factory import AgentFactorySpec
 from kernel.agents.agent_factory import create as create_agent
 
 
-class AgentStatus(str, Enum):
+class AgentStatus(StrEnum):
     """Agent状態（前後端共通）."""
 
     WAITING = "waiting"

@@ -10,13 +10,13 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from infrastructure.providers.llm_provider import LLMProvider, get_llm
 
 
-class EntityType(str, Enum):
+class EntityType(StrEnum):
     """エンティティタイプ."""
 
     COMPANY = "company"

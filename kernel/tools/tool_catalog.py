@@ -23,11 +23,11 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class CatalogSource(str, Enum):
+class CatalogSource(StrEnum):
     """ツールカタログのソース種別."""
 
     SKILL = "skill"  # SKILL.md ビルトインスキル

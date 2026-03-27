@@ -34,7 +34,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class KBType(str, Enum):
+class KBType(StrEnum):
     """知識ベースタイプ."""
 
     INTERNAL = "internal"  # 社内KB（要認証）
@@ -54,7 +54,7 @@ class KBType(str, Enum):
     CONFIDENTIAL = "confidential"  # 機密KB（高権限）
 
 
-class KBVisibility(str, Enum):
+class KBVisibility(StrEnum):
     """可視性レベル."""
 
     PUBLIC = "public"  # 公開

@@ -31,13 +31,13 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ThreatType(str, Enum):
+class ThreatType(StrEnum):
     """脅威タイプ."""
 
     PROMPT_INJECTION = "prompt_injection"  # プロンプトインジェクション
@@ -47,7 +47,7 @@ class ThreatType(str, Enum):
     PII_EXPOSURE = "pii_exposure"  # PII 露出
 
 
-class PIIType(str, Enum):
+class PIIType(StrEnum):
     """PII（個人識別情報）の種別."""
 
     EMAIL = "email"

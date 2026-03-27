@@ -9,7 +9,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.skills.builtin.bi_analytics.analyzer import AnalysisResult
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ChartType(str, Enum):
+class ChartType(StrEnum):
     """チャート種別."""
 
     BAR = "bar"  # 棒グラフ

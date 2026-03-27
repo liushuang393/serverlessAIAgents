@@ -6,12 +6,12 @@ invariants that must always hold.
 """
 
 import uuid
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class ConstraintType(str, Enum):
+class ConstraintType(StrEnum):
     """Types of constraints.
 
     These represent different categories of constraints

@@ -51,7 +51,7 @@ repos:
       - id: check-layer-boundaries
         name: "Arch: Layer boundary check"
         language: system
-        entry: conda run --no-banner -n agentflow python scripts/check_layer_boundaries.py
+        entry: conda run -n agentflow python scripts/check_layer_boundaries.py
         pass_filenames: false
         types: [python]
         always_run: true
@@ -59,7 +59,7 @@ repos:
       - id: check-no-direct-provider
         name: "Arch: Provider SDK direct import check"
         language: system
-        entry: conda run --no-banner -n agentflow python scripts/check_no_direct_provider_calls.py
+        entry: conda run -n agentflow python scripts/check_no_direct_provider_calls.py
         pass_filenames: false
         types: [python]
         always_run: true
@@ -186,7 +186,20 @@ repos:
     hooks:
       - id: bandit
         name: "Security: bandit SAST (HIGH severity)"
-        args: ["-lll", "-iii", "-r", "contracts", "infrastructure", "shared", "kernel", "harness", "control_plane", "domain", "apps"]
+        args:
+          [
+            "-lll",
+            "-iii",
+            "-r",
+            "contracts",
+            "infrastructure",
+            "shared",
+            "kernel",
+            "harness",
+            "control_plane",
+            "domain",
+            "apps",
+          ]
         exclude: ^tests/
 
   # ========================================

@@ -20,15 +20,15 @@ class LLMBackendRegistry:
         self._registry: ToggleableFactoryRegistry[LLMBackend] = ToggleableFactoryRegistry(component_name="llm_backend")
         self._registry.register(
             ComponentSpec(name="llm_backend", layer=LayerName.INFRASTRUCTURE, implementation="default"),
-            lambda: AgentFlowLLMBackend(),
+            AgentFlowLLMBackend,
         )
         self._registry.register(
             ComponentSpec(name="llm_backend", layer=LayerName.INFRASTRUCTURE, implementation="noop"),
-            lambda: NoOpLLMBackend(),
+            NoOpLLMBackend,
         )
         self._registry.register(
             ComponentSpec(name="llm_backend", layer=LayerName.INFRASTRUCTURE, implementation="mock"),
-            lambda: MockLLMBackend(),
+            MockLLMBackend,
         )
 
     def resolve(self, toggle: ComponentToggle | None = None) -> LLMBackend:

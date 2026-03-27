@@ -29,7 +29,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
@@ -38,7 +38,7 @@ from pydantic import BaseModel, Field
 T = TypeVar("T")
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """エラーコード定義."""
 
     # 一般
@@ -218,7 +218,7 @@ class PagedResponse[T](BaseModel):
         )
 
 
-class StreamEventType(str, Enum):
+class StreamEventType(StrEnum):
     """ストリームイベント種別."""
 
     PROGRESS = "progress"

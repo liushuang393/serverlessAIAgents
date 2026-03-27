@@ -18,7 +18,7 @@ import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, TextIO
 
 
@@ -31,7 +31,7 @@ _context_var: dict[str, Any] = {}
 _context_lock = threading.Lock()
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     """ログレベル."""
 
     DEBUG = "DEBUG"

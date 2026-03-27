@@ -28,14 +28,14 @@ import re
 from dataclasses import dataclass, field
 from dataclasses import field as dataclass_field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class MetricType(str, Enum):
+class MetricType(StrEnum):
     """指標タイプ."""
 
     MEASURE = "measure"  # 数値指標（売上、件数等）
@@ -44,7 +44,7 @@ class MetricType(str, Enum):
     COUNT = "count"  # カウント指標
 
 
-class AggregationType(str, Enum):
+class AggregationType(StrEnum):
     """集計タイプ."""
 
     SUM = "sum"
@@ -55,7 +55,7 @@ class AggregationType(str, Enum):
     DISTINCT_COUNT = "distinct_count"
 
 
-class TimeGranularity(str, Enum):
+class TimeGranularity(StrEnum):
     """時間粒度."""
 
     DAY = "day"
@@ -173,7 +173,7 @@ class SQLHints:
 # =============================================================================
 
 
-class FilterOperator(str, Enum):
+class FilterOperator(StrEnum):
     """フィルタ演算子."""
 
     EQ = "="
@@ -190,7 +190,7 @@ class FilterOperator(str, Enum):
     BETWEEN = "BETWEEN"
 
 
-class SortDirection(str, Enum):
+class SortDirection(StrEnum):
     """ソート方向."""
 
     ASC = "ASC"

@@ -18,7 +18,7 @@ import asyncio
 import importlib
 import inspect
 import time
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.services.base import (
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class WorkflowType(str, Enum):
+class WorkflowType(StrEnum):
     """ワークフロータイプ."""
 
     DEEP_AGENT = "deep_agent"

@@ -34,13 +34,13 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class EvidenceType(str, Enum):
+class EvidenceType(StrEnum):
     """根拠タイプ."""
 
     TOOL_RESULT = "tool_result"  # ツール実行結果
@@ -51,7 +51,7 @@ class EvidenceType(str, Enum):
     EXTERNAL_API = "external_api"  # 外部API
 
 
-class FallbackAction(str, Enum):
+class FallbackAction(StrEnum):
     """フォールバックアクション."""
 
     REJECT = "reject"  # 出力を拒否

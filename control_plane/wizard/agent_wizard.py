@@ -444,7 +444,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from kernel.core.agent_block import AgentBlock
+from kernel.agents.agent_block import AgentBlock
 
 
 class {name}(AgentBlock):

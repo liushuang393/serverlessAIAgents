@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AuthMode(str, Enum):
+class AuthMode(StrEnum):
     """認可モード."""
 
     RBAC = "rbac"  # Role-Based Access Control
@@ -52,7 +52,7 @@ class AuthMode(str, Enum):
     HYBRID = "hybrid"  # 複合モード
 
 
-class AuthDecision(str, Enum):
+class AuthDecision(StrEnum):
     """認可決定."""
 
     ALLOW = "allow"

@@ -24,11 +24,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class SSEEventType(str, Enum):
+class SSEEventType(StrEnum):
     """SSE イベント種別."""
 
     # 進捗

@@ -28,13 +28,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class DeviationType(str, Enum):
+class DeviationType(StrEnum):
     """偏离类型."""
 
     GOAL_DRIFT = "goal_drift"  # 目标偏离
@@ -46,7 +46,7 @@ class DeviationType(str, Enum):
     PREMATURE_END = "premature_end"  # 过早结束
 
 
-class ReasoningState(str, Enum):
+class ReasoningState(StrEnum):
     """推理状态."""
 
     ON_TRACK = "on_track"  # 正常进行

@@ -1,7 +1,7 @@
 {
   "name": "orchestration_guardian",
   "display_name": "Orchestration Guardian",
-  "description": "Agent orchestration and protocol readiness checker",
+  "description": "全Agentの orchestration 品質を自動スコアリング。\nStreaming / A2A / RAG 契約の準拠状況をリアルタイム監査",
   "business_base": "governance",
   "product_line": "framework",
   "surface_profile": "operator",
@@ -34,11 +34,7 @@
   ],
   "services": {
     "governance": {
-      "checks": [
-        "orchestration",
-        "protocols",
-        "security_baseline"
-      ]
+      "checks": ["orchestration", "protocols", "security_baseline"]
     }
   },
   "dependencies": {
@@ -72,12 +68,7 @@
       "stop": "docker compose -f docker-compose.yml down"
     }
   },
-  "tags": [
-    "orchestration",
-    "governance",
-    "protocol",
-    "audit"
-  ],
+  "tags": ["orchestration", "governance", "protocol", "audit"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -96,9 +87,7 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "text"
-      ],
+      "allowed_modalities": ["text"],
       "extra_model_refs": []
     },
     "rag": {
@@ -126,9 +115,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -164,11 +151,7 @@
       "consumer_group": "evolution-validator-v1",
       "max_retries": 5
     },
-    "scope_policy": [
-      "tenant_app",
-      "tenant_product_line",
-      "global_verified"
-    ],
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
       "high_complexity_threshold": 0.7,

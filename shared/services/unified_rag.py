@@ -19,10 +19,10 @@ from infrastructure.llm.providers import (
 
 logger = logging.getLogger(__name__)
 
-from enum import Enum
+from enum import StrEnum
 
 
-class RAGPattern(str, Enum):
+class RAGPattern(StrEnum):
     """RAG 実行パターン."""
 
     BASIC = "basic"  # 単純なベクトル検索

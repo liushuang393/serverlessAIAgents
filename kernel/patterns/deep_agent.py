@@ -33,7 +33,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """タスク状態."""
 
     PENDING = "pending"
@@ -68,7 +68,7 @@ class TaskStatus(str, Enum):
     BLOCKED = "blocked"
 
 
-class AgentType(str, Enum):
+class AgentType(StrEnum):
     """通用Agent種別（5-6個の基本Agent）."""
 
     RESEARCH = "research"  # 調研・検索
@@ -145,7 +145,7 @@ class CognitiveAnalysis(BaseModel):
     suggested_agents: list[str] = Field(default_factory=list, description="推薦Agent")
 
 
-class QualityDimension(str, Enum):
+class QualityDimension(StrEnum):
     """品質評審次元."""
 
     COMPLETENESS = "completeness"  # 完全性
@@ -193,7 +193,7 @@ class EvolutionRecord(BaseModel):
     applied: bool = Field(default=False, description="適用済みか")
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     """Agent間メッセージ種別."""
 
     RESULT = "result"  # 実行結果
@@ -547,7 +547,7 @@ class MemoryEvolutionStore(EvolutionStore):
 # - LLMLingua Selective Context (ACL 2024)
 
 
-class CompactionStrategy(str, Enum):
+class CompactionStrategy(StrEnum):
     """圧縮戦略."""
 
     SELECTIVE = "selective"  # 情報重要度に基づく選択的保持

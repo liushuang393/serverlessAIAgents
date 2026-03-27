@@ -21,11 +21,11 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class VariableType(str, Enum):
+class VariableType(StrEnum):
     """ワークスペース変数タイプ."""
 
     # 高優先度（削除されにくい）

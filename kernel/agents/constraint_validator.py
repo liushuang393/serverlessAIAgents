@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, ValidationError
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ValidationSeverity(str, Enum):
+class ValidationSeverity(StrEnum):
     """検証結果の深刻度."""
 
     INFO = "info"  # 情報のみ
@@ -44,7 +44,7 @@ class ValidationSeverity(str, Enum):
     CRITICAL = "critical"  # 重大（即座に停止）
 
 
-class ConstraintType(str, Enum):
+class ConstraintType(StrEnum):
     """制約の種類."""
 
     SCHEMA = "schema"  # スキーマ検証

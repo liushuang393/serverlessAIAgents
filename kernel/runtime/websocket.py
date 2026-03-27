@@ -7,7 +7,7 @@ import json
 import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-class WSMessageType(str, Enum):
+class WSMessageType(StrEnum):
     """WebSocket message types."""
 
     CONNECT = "connect"

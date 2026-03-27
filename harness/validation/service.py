@@ -7,14 +7,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 
 _logger = logging.getLogger(__name__)
 
 
-class ValidationSeverity(str, Enum):
+class ValidationSeverity(StrEnum):
     """バリデーション重要度."""
 
     ERROR = "error"

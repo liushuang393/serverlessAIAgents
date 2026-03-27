@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from contracts.policy import ApprovalRequest as ContractApprovalRequest
 
 
-class InterruptType(str, Enum):
+class InterruptType(StrEnum):
     """割り込みタイプ."""
 
     APPROVAL = "approval"  # 承認待ち
@@ -25,7 +25,7 @@ class InterruptType(str, Enum):
     ESCALATION = "escalation"  # エスカレーション
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     """承認ステータス."""
 
     PENDING = "pending"  # 保留中
@@ -35,7 +35,7 @@ class ApprovalStatus(str, Enum):
     CANCELLED = "cancelled"  # キャンセル
 
 
-class CommandType(str, Enum):
+class CommandType(StrEnum):
     """コマンドタイプ（再開時の指示）."""
 
     RESUME = "resume"  # 通常再開

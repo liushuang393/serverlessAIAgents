@@ -16,7 +16,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from infrastructure.llm.providers import get_llm
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from kernel.skills.gateway import SkillGateway
 
 
-class WorkflowStatus(str, Enum):
+class WorkflowStatus(StrEnum):
     """ワークフローステータス."""
 
     DRAFT = "draft"
@@ -349,7 +349,7 @@ JSON のみを出力してください。"""
         try:
             # コードブロックを除去
             if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
+                content = content.split("```json")[1].split("```", maxsplit=1)[0]
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0]
 

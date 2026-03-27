@@ -31,14 +31,14 @@ import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol, assert_never, overload
 
 from kernel.agents.registry import Registry
 from kernel.runtime.multi_tenant.manager import get_current_tenant
 
 
-class ComponentType(str, Enum):
+class ComponentType(StrEnum):
     """コンポーネントタイプ."""
 
     AGENT = "agent"
@@ -49,7 +49,7 @@ class ComponentType(str, Enum):
     TEMPLATE = "template"
 
 
-class ComponentVisibility(str, Enum):
+class ComponentVisibility(StrEnum):
     """コンポーネント可視性."""
 
     PRIVATE = "private"  # 所有者のみ

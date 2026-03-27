@@ -6,14 +6,14 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from apps.market_trend_monitor.backend.models.schemas import SourceType
 from pydantic import BaseModel, Field
 
 
-class ClaimLevel(str, Enum):
+class ClaimLevel(StrEnum):
     """主張レベル.
 
     証拠数と信頼度に基づいて自動昇格します。

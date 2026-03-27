@@ -5,11 +5,11 @@ Market Trend Monitor のデータスキーマを定義します。
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     """データソースタイプ."""
 
     NEWS = "news"
@@ -21,7 +21,7 @@ class SourceType(str, Enum):
     OFFICIAL_SITE = "official_site"
 
 
-class SentimentType(str, Enum):
+class SentimentType(StrEnum):
     """センチメントタイプ."""
 
     POSITIVE = "positive"
@@ -29,7 +29,7 @@ class SentimentType(str, Enum):
     NEGATIVE = "negative"
 
 
-class NotificationPriority(str, Enum):
+class NotificationPriority(StrEnum):
     """通知優先度."""
 
     LOW = "low"

@@ -1,7 +1,7 @@
 {
   "name": "dev_studio",
   "display_name": "Developer Studio",
-  "description": "開発支援ツール（コード解析、コード生成、Agentウィザード）。独立した開発用サーバーとして動作します。",
+  "description": "コード解析・多言語コード生成・Agent自動生成ウィザードを統合。\nPython/Java/COBOLを解析してReact+FastAPIアプリを自動構築",
   "business_base": "platform",
   "product_line": "framework",
   "surface_profile": "developer",
@@ -10,7 +10,7 @@
   "icon": "🛠️",
   "ports": {
     "api": 8011,
-    "frontend": null,
+    "frontend": 5173,
     "db": null,
     "redis": null
   },
@@ -21,12 +21,12 @@
   "runtime": {
     "urls": {
       "backend": "http://localhost:8011",
-      "frontend": null,
+      "frontend": "http://localhost:5173",
       "health": "http://localhost:8011/health"
     },
     "commands": {
       "backend_dev": "uvicorn apps.dev_studio.main:app --host 0.0.0.0 --port 8011 --reload",
-      "frontend_dev": null,
+      "frontend_dev": "cd apps/dev_studio/frontend && npx serve -s . -p 5173",
       "publish": "docker compose -f docker-compose.yml up -d --build",
       "start": "docker compose -f docker-compose.yml up -d",
       "stop": "docker compose -f docker-compose.yml down"

@@ -7,14 +7,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 _logger = logging.getLogger(__name__)
 
 
-class ScoreDimension(str, Enum):
+class ScoreDimension(StrEnum):
     """スコア次元."""
 
     ACCURACY = "accuracy"

@@ -11,7 +11,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 DocumentInput = str | dict[str, Any]
 
 
-class RerankerType(str, Enum):
+class RerankerType(StrEnum):
     COHERE = "cohere"
     CROSS_ENCODER = "cross_encoder"
     CROSS_ENCODER_RURI = "cross_encoder_ruri"

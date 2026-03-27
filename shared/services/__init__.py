@@ -1,7 +1,8 @@
 """services パッケージ — shared 層サービス統合エントリポイント.
 
-platform/services/ から移設。kernel/ や shared/ 内部から
-dependency-violation なしにインポートできる正規パス。
+shared 層サービスの正規 import パス。
+旧 platform app 系の残骸ではなく、kernel/ や shared/ 内部から
+依存規約に沿って参照するための入口。
 """
 
 from shared.services.base import ServiceResult

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 
@@ -19,7 +19,7 @@ from typing import Any, Literal
 # =============================================================================
 
 
-class CodeOutputType(str, Enum):
+class CodeOutputType(StrEnum):
     """コード出力タイプ."""
 
     FRONTEND = "frontend"  # React/Vue フロントエンド
@@ -27,7 +27,7 @@ class CodeOutputType(str, Enum):
     FULLSTACK = "fullstack"  # 前後端完全アプリ
 
 
-class DeployTarget(str, Enum):
+class DeployTarget(StrEnum):
     """デプロイターゲット."""
 
     VERCEL = "vercel"

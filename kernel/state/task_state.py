@@ -4,10 +4,10 @@ The task state machine defines all valid states a task can be in
 and the valid transitions between them.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class TaskState(str, Enum):
+class TaskState(StrEnum):
     """Agent OS task lifecycle states.
 
     States follow a progression from creation to completion:

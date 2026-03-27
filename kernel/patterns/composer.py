@@ -21,7 +21,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class CompositionPattern(str, Enum):
+class CompositionPattern(StrEnum):
     """Agent組合パターン."""
 
     SUPERVISOR_WORKER = "supervisor_worker"  # 主管-作業者パターン
@@ -44,11 +44,11 @@ class CompositionPattern(str, Enum):
     BROADCAST = "broadcast"  # ブロードキャスト（並行配信）パターン
 
     # エイリアス（使いやすさ向上）
-    SEQUENTIAL = "pipeline"  # noqa: PIE796 - intentional alias for PIPELINE
-    PARALLEL = "broadcast"  # noqa: PIE796 - intentional alias for BROADCAST
+    SEQUENTIAL = "pipeline"
+    PARALLEL = "broadcast"
 
 
-class AgentRole(str, Enum):
+class AgentRole(StrEnum):
     """Agent役割."""
 
     # 基本役割

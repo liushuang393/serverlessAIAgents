@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class GapType(str, Enum):
+class GapType(StrEnum):
     """能力缺口タイプ."""
 
     SKILL = "skill"  # 技能缺口
@@ -21,7 +21,7 @@ class GapType(str, Enum):
     KNOWLEDGE = "knowledge"  # 知识缺口
 
 
-class EngineType(str, Enum):
+class EngineType(StrEnum):
     """Engine タイプ."""
 
     SIMPLE = "simple"  # SimpleEngine
@@ -30,7 +30,7 @@ class EngineType(str, Enum):
     RAG = "rag"  # RAGEngine
 
 
-class ValidationStatus(str, Enum):
+class ValidationStatus(StrEnum):
     """検証ステータス."""
 
     PENDING = "pending"

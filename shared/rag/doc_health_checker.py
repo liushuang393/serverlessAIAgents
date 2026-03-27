@@ -24,14 +24,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """健康度ステータス."""
 
     HEALTHY = "healthy"  # 健康
@@ -40,7 +40,7 @@ class HealthStatus(str, Enum):
     EXPIRED = "expired"  # 期限切れ
 
 
-class IssueType(str, Enum):
+class IssueType(StrEnum):
     """問題タイプ."""
 
     EXPIRED = "expired"  # 期限切れ
@@ -53,7 +53,7 @@ class IssueType(str, Enum):
     STALE = "stale"  # 長期未更新
 
 
-class IssueSeverity(str, Enum):
+class IssueSeverity(StrEnum):
     """問題深刻度."""
 
     LOW = "low"

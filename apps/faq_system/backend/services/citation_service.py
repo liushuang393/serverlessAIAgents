@@ -20,14 +20,14 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class CitationStyle(str, Enum):
+class CitationStyle(StrEnum):
     """引用スタイル."""
 
     INLINE = "inline"  # [1] 形式
@@ -36,7 +36,7 @@ class CitationStyle(str, Enum):
     COMPACT = "compact"  # 簡略引用
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     """ソースタイプ."""
 
     DOCUMENT = "document"

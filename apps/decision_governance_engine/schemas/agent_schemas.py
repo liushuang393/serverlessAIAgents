@@ -4,7 +4,7 @@
 全ての出力は構造化され、自由文テキストは禁止。
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
-class QuestionCategory(str, Enum):
+class QuestionCategory(StrEnum):
     """問題カテゴリ分類."""
 
     # 受理可能（決策系）
@@ -37,7 +37,7 @@ class QuestionCategory(str, Enum):
     CREATIVE_REQUEST = "creative_request"
 
 
-class ProblemType(str, Enum):
+class ProblemType(StrEnum):
     """問題タイプ分類."""
 
     RESOURCE_ALLOCATION = "RESOURCE_ALLOCATION"
@@ -47,7 +47,7 @@ class ProblemType(str, Enum):
     STRATEGY_DIRECTION = "STRATEGY_DIRECTION"
 
 
-class ReviewVerdict(str, Enum):
+class ReviewVerdict(StrEnum):
     """検証判定結果."""
 
     PASS = "PASS"
@@ -55,7 +55,7 @@ class ReviewVerdict(str, Enum):
     COACH = "COACH"  # 旧 REJECT → コーチング型改善指導（即終了せずレポートに指摘を表示）
 
 
-class FindingSeverity(str, Enum):
+class FindingSeverity(StrEnum):
     """検証所見の重大度."""
 
     CRITICAL = "CRITICAL"
@@ -63,7 +63,7 @@ class FindingSeverity(str, Enum):
     INFO = "INFO"
 
 
-class FindingCategory(str, Enum):
+class FindingCategory(StrEnum):
     """検証所見のカテゴリ."""
 
     LOGIC_FLAW = "LOGIC_FLAW"
@@ -78,7 +78,7 @@ class FindingCategory(str, Enum):
 # =============================================================================
 
 
-class IrreversibilityLevel(str, Enum):
+class IrreversibilityLevel(StrEnum):
     """不可逆性レベル."""
 
     HIGH = "HIGH"  # 一度決めたら取り消し困難
@@ -189,7 +189,7 @@ class GatekeeperOutput(BaseModel):
 # =============================================================================
 
 
-class ProblemNatureType(str, Enum):
+class ProblemNatureType(StrEnum):
     """問題の本質的性質（v3.0: 制約主導型分析）.
 
     単なるカテゴリ分類ではなく、問題の「存在理由」を分類する。
@@ -223,7 +223,7 @@ class EssenceDerivation(BaseModel):
     essence_statement: str = Field(..., max_length=50, description="本質の一文（非これ不可）")
 
 
-class LeverageLevel(str, Enum):
+class LeverageLevel(StrEnum):
     """レバレッジ効果レベル."""
 
     HIGH = "HIGH"
@@ -231,7 +231,7 @@ class LeverageLevel(str, Enum):
     LOW = "LOW"
 
 
-class DeathTrapSeverity(str, Enum):
+class DeathTrapSeverity(StrEnum):
     """死穴の深刻度."""
 
     FATAL = "FATAL"  # 致命的 - これをやったら終わり
@@ -293,7 +293,7 @@ class AuditEvidenceItem(BaseModel):
     verification_method: str = Field(default="", max_length=100, description="確認方法")
 
 
-class SelfCheckStatus(str, Enum):
+class SelfCheckStatus(StrEnum):
     """セルフチェック総合ステータス（v3.1）."""
 
     PASS = "PASS"  # 全項目クリア
@@ -424,7 +424,7 @@ class DaoOutput(BaseModel):
 # =============================================================================
 
 
-class StrategyType(str, Enum):
+class StrategyType(StrEnum):
     """戦略タイプ（稳健型 vs 激进型）."""
 
     CONSERVATIVE = "CONSERVATIVE"  # 稳健型：低リスク、慢回報、可控性高
@@ -432,7 +432,7 @@ class StrategyType(str, Enum):
     BALANCED = "BALANCED"  # バランス型：中間
 
 
-class ReversibilityLevel(str, Enum):
+class ReversibilityLevel(StrEnum):
     """可逆性レベル."""
 
     HIGH = "HIGH"  # 高：やり直し可能、ピボットしやすい
@@ -691,7 +691,7 @@ class FaOutput(BaseModel):
 # =============================================================================
 
 
-class RhythmPeriod(str, Enum):
+class RhythmPeriod(StrEnum):
     """節奏周期."""
 
     WEEK_1 = "WEEK_1"  # 1週間
@@ -1162,7 +1162,7 @@ class QiOutput(BaseModel):
 
 
 # v3.1: 修正アクション分類
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """修正アクション分類（v3.1）."""
 
     PATCH = "PATCH"  # 追記だけでOK（再走不要）

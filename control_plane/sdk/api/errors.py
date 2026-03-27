@@ -13,7 +13,7 @@ Example:
     ... )
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from fastapi import Request
@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """エラーコード.
 
     全アプリケーション共通のエラーコード。

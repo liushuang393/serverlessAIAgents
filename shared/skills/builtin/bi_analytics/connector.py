@@ -10,7 +10,7 @@ import io
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ConnectorType(str, Enum):
+class ConnectorType(StrEnum):
     """コネクタ種別."""
 
     POSTGRES = "postgres"

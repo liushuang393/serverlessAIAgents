@@ -23,7 +23,7 @@ import time
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -92,7 +92,7 @@ _CONDA_ACTIVATE_PREFIX = 'eval "$(conda shell.bash activate agentflow)" && '
 ExecutionMode = Literal["local", "docker"]
 
 
-class AppStatus(str, Enum):
+class AppStatus(StrEnum):
     """App の稼働状態."""
 
     HEALTHY = "healthy"

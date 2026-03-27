@@ -23,7 +23,7 @@ from __future__ import annotations
 import base64
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -48,7 +48,7 @@ def _gateway_metadata() -> dict[str, str]:
     return payload
 
 
-class VoiceProvider(str, Enum):
+class VoiceProvider(StrEnum):
     """音声プロバイダー."""
 
     OPENAI = "openai"  # Whisper + TTS
@@ -57,7 +57,7 @@ class VoiceProvider(str, Enum):
     AUTO = "auto"  # 自動検出
 
 
-class TTSVoice(str, Enum):
+class TTSVoice(StrEnum):
     """TTS 音声タイプ（OpenAI）."""
 
     ALLOY = "alloy"

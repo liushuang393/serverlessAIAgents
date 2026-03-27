@@ -19,7 +19,7 @@ _logger = logging.getLogger(__name__)
 EnumT = TypeVar("EnumT", bound=Enum)
 
 
-def safe_enum(
+def safe_enum[EnumT: Enum](
     enum_cls: type[EnumT],
     value: Any,
     default: EnumT,

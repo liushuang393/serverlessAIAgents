@@ -28,7 +28,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Protocol
 
 
@@ -43,7 +43,7 @@ def _global_state_store_cls() -> type[Any]:
     return GlobalStateStore
 
 
-class SyncEventType(str, Enum):
+class SyncEventType(StrEnum):
     """同期イベント種別."""
 
     STATE_UPDATE = "state_update"  # 状態更新

@@ -271,6 +271,8 @@ class ICodeGenerator(Protocol):
 
 - App が `app_config.json` を持つ場合、通常の起動ポートは `app_config.json` を単一定義元とする。
 - `<APP>_HOST` / `<APP>_PORT` は、ローカル一時検証・CI 上書き用のオプションとし、`*.env.example` では既定でコメントアウトする。
+- 起動時の優先順位は `明示指定（CLI 引数 / compose 注入 env） > app_config.json` とし、その後ろにコード側 fallback を置かない。manifest に値がない場合は補完せず、`app_config.json` を修正する。
+- `scripts/dev.py` / `scripts/compose.py` / `docker-compose*.yml` / `vite.config.*` / 起動 shell は、この優先順位を崩さないこと。
 - 実行ログに表示する host/port は、最終的な実行値（CLI 引数を含む）と一致させる。
 
 ### 良い例・悪い例

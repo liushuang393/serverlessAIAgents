@@ -27,11 +27,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class SandboxState(str, Enum):
+class SandboxState(StrEnum):
     """サンドボックス状態.
 
     Daytonaのライフサイクル設計を参考に定義。

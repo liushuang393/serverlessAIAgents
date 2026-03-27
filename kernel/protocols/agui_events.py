@@ -9,13 +9,13 @@ SSE シリアライズ:
 """
 
 import json
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class AGUIEventType(str, Enum):
+class AGUIEventType(StrEnum):
     """AG-UI イベントタイプ.
 
     AG-UI プロトコルで定義されているイベントタイプ。

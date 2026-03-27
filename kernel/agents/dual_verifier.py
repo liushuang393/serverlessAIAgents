@@ -27,7 +27,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class VerifyStatus(str, Enum):
+class VerifyStatus(StrEnum):
     """校验状态."""
 
     PASS = "pass"  # 通过
@@ -47,7 +47,7 @@ class VerifyStatus(str, Enum):
     NEED_HUMAN = "need_human"  # 需要人工确认
 
 
-class VerifyType(str, Enum):
+class VerifyType(StrEnum):
     """校验类型."""
 
     SCHEMA = "schema"  # 模式匹配

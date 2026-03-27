@@ -31,7 +31,7 @@ import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.memory.memory_manager import MemoryManager
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from infrastructure.memory.types import MemoryEntry
 
 
-class DistillationStrategy(str, Enum):
+class DistillationStrategy(StrEnum):
     """蒸馏策略."""
 
     SIMILARITY = "similarity"  # 基于相似度合并
@@ -50,7 +50,7 @@ class DistillationStrategy(str, Enum):
     HIERARCHICAL = "hierarchical"  # 层次化抽象
 
 
-class ForgettingStrategy(str, Enum):
+class ForgettingStrategy(StrEnum):
     """遗忘策略."""
 
     LRU = "lru"  # 最近最少使用

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
 
 from pydantic import Field
@@ -10,7 +10,7 @@ from pydantic import Field
 from contracts.base import ContractModel
 
 
-class ToolCallStatus(str, Enum):
+class ToolCallStatus(StrEnum):
     """ツール呼び出し状態."""
 
     PENDING = "pending"

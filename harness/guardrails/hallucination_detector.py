@@ -29,7 +29,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class IssueType(str, Enum):
+class IssueType(StrEnum):
     """问题类型."""
 
     FACTUAL_ERROR = "factual_error"  # 事实错误
@@ -51,7 +51,7 @@ class IssueType(str, Enum):
     CONTRADICTION = "contradiction"  # 自相矛盾
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """严重程度."""
 
     LOW = "low"

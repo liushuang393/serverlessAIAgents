@@ -27,7 +27,7 @@ import logging
 import re
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.services.base import (
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class SQLDialect(str, Enum):
+class SQLDialect(StrEnum):
     """SQLダイアレクト."""
 
     POSTGRESQL = "postgresql"
@@ -58,7 +58,7 @@ class SQLDialect(str, Enum):
     MSSQL = "mssql"
 
 
-class ChartType(str, Enum):
+class ChartType(StrEnum):
     """チャートタイプ."""
 
     BAR = "bar"

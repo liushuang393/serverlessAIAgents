@@ -11,7 +11,7 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from infrastructure.providers.llm_provider import LLMProvider, get_llm
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Article
 
 
-class MarketPosition(str, Enum):
+class MarketPosition(StrEnum):
     """市場ポジション."""
 
     LEADER = "leader"

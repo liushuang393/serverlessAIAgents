@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -54,7 +54,7 @@ router = APIRouter(prefix="/api/agents", tags=["拡張Agent"])
 # ---------------------------------------------------------------------------
 
 
-class AgentType(str, Enum):
+class AgentType(StrEnum):
     """Agent 種別."""
 
     INTERNAL_KB = "internal_kb"

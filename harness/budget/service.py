@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Protocol
 
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class BudgetCategory(str, Enum):
+class BudgetCategory(StrEnum):
     """予算カテゴリ."""
 
     SYSTEM_PROMPT = "system_prompt"  # システムプロンプト

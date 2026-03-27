@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 # ============================================================
 
 
-class A2ATaskState(str, Enum):
+class A2ATaskState(StrEnum):
     """A2A タスク状態.
 
     python_a2a SDK の TaskState に準拠。
@@ -37,7 +37,7 @@ class A2ATaskState(str, Enum):
     UNKNOWN = "unknown"
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     """メッセージ送信者の役割."""
 
     AGENT = "agent"
@@ -45,7 +45,7 @@ class Role(str, Enum):
     SYSTEM = "system"
 
 
-class TransportProtocol(str, Enum):
+class TransportProtocol(StrEnum):
     """A2A 通信トランスポート."""
 
     JSONRPC = "JSONRPC"

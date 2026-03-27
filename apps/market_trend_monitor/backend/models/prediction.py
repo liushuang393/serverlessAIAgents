@@ -6,13 +6,13 @@
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class PredictionStatus(str, Enum):
+class PredictionStatus(StrEnum):
     """予測ステータス.
 
     予測の結果状態を表現します。
@@ -28,7 +28,7 @@ class PredictionStatus(str, Enum):
     INCORRECT = "incorrect"
 
 
-class PredictionOutcome(str, Enum):
+class PredictionOutcome(StrEnum):
     """予測結果判定.
 
     復盤時の結果判定を表現します。

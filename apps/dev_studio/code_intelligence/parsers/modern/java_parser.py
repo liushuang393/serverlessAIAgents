@@ -53,7 +53,7 @@ class JavaParser(CodeParser):
         return "java"
 
     @property
-    def supported_extensions(self) -> list[str]:
+    def file_extensions(self) -> list[str]:
         return [".java"]
 
     # 正規表現パターン

@@ -10,7 +10,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from infrastructure.providers.llm_provider import LLMProvider, get_llm
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Evidence
 
 
-class MaturityPhase(str, Enum):
+class MaturityPhase(StrEnum):
     """技術成熟度フェーズ (Gartner Hype Cycle)."""
 
     INNOVATION_TRIGGER = "innovation_trigger"

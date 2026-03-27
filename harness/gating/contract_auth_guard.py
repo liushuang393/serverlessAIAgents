@@ -429,7 +429,7 @@ class ContractAuthGuard:
         return None
 
 
-async def _maybe_await(value: _T | Awaitable[_T]) -> _T:
+async def _maybe_await[T](value: T | Awaitable[T]) -> T:
     if hasattr(value, "__await__"):
         return await value
     return value

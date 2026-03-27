@@ -139,10 +139,15 @@ async def get_optimized_context(
     )
 
 
-# 将来的にルーターを追加するためのプレースホルダー
-# app.include_router(code_intelligence.router, prefix="/code")
-# app.include_router(codegen.router, prefix="/codegen")
-# app.include_router(wizard.router, prefix="/wizard")
+# サブルーターを登録
+from apps.dev_studio.code_intelligence.router import router as code_intelligence_router
+from apps.dev_studio.codegen.router import router as codegen_router
+from apps.dev_studio.wizard.router import router as wizard_router
+
+
+app.include_router(code_intelligence_router, prefix="/code")
+app.include_router(codegen_router, prefix="/codegen")
+app.include_router(wizard_router, prefix="/wizard")
 
 if __name__ == "__main__":
     uvicorn.run("apps.dev_studio.main:app", host="0.0.0.0", port=8011, reload=True)

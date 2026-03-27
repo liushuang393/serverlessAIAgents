@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """タスクの実行状態."""
 
     PENDING = "pending"

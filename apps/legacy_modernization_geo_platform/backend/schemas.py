@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -56,7 +56,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """High-level task lifecycle states."""
 
     QUEUED = "queued"
@@ -67,7 +67,7 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     """Supported approval outcomes."""
 
     PENDING = "pending"

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +24,7 @@ from typing import Any
 _logger = logging.getLogger(__name__)
 
 
-class PipelineStage(str, Enum):
+class PipelineStage(StrEnum):
     """パイプラインステージ."""
 
     ANALYZE = "analyze"
@@ -35,7 +35,7 @@ class PipelineStage(str, Enum):
     DEPLOY = "deploy"
 
 
-class CIPlatform(str, Enum):
+class CIPlatform(StrEnum):
     """CI/CDプラットフォーム."""
 
     GITHUB = "github"

@@ -7,13 +7,13 @@ validated and processed by the system.
 
 import time
 import uuid
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """Types of actions the reasoner can decide on.
 
     These represent the possible next steps an agent can take.

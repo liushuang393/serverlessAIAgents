@@ -1,6 +1,7 @@
 """互換 facade.
 
-tenant invitation の正規実装は top-level `platform.tenants.service` に移設済み。
+tenant invitation の正規実装は `control_plane.tenants.service`。
+旧 platform app 再編時の互換 import 窓口として残している。
 """
 
 from control_plane.tenants.service import (

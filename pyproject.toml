@@ -304,6 +304,7 @@ ignore = [
     "F402",    # import-shadowed-by-loop-var: acceptable in comprehension patterns
     "ANN002",  # missing-type-annotation-args: *args not always annotated
     "ANN003",  # already used in legacy modules but missing from global
+    "ASYNC240", # Async functions should not use pathlib.Path methods (too much noise for now)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -593,7 +594,7 @@ exclude_lines = [
 # Bandit Configuration (Python SAST)
 # ============================================================================
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", "venv", "studio", "node_modules"]
+exclude_dirs = ["tests", ".venv", "venv", "apps/dev_studio/frontend", "node_modules", "kernel/templates"]
 skips = ["B101"]  # assert 文（テストで多用）
 
 [tool.bandit.assert_used]

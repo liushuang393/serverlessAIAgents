@@ -31,7 +31,7 @@ import uuid
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -47,7 +47,7 @@ _current_context: ContextVar[FlowContext | None] = ContextVar("current_flow_cont
 logger = logging.getLogger(__name__)
 
 
-class SourceSystemType(str, Enum):
+class SourceSystemType(StrEnum):
     """呼び出し元システムタイプ."""
 
     WEB_APP = "web_app"  # Webアプリケーション

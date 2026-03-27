@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class IntentCategory(str, Enum):
+class IntentCategory(StrEnum):
     """意図カテゴリ."""
 
     TASK_EXECUTION = "task_execution"  # タスク実行要求

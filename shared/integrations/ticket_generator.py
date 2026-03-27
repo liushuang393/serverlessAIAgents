@@ -31,14 +31,14 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class TicketPriority(str, Enum):
+class TicketPriority(StrEnum):
     """工単優先度."""
 
     LOW = "low"
@@ -47,7 +47,7 @@ class TicketPriority(str, Enum):
     URGENT = "urgent"
 
 
-class TicketStatus(str, Enum):
+class TicketStatus(StrEnum):
     """工単ステータス."""
 
     OPEN = "open"
@@ -57,7 +57,7 @@ class TicketStatus(str, Enum):
     CLOSED = "closed"
 
 
-class TicketType(str, Enum):
+class TicketType(StrEnum):
     """工単タイプ."""
 
     INQUIRY = "inquiry"  # 問合せ

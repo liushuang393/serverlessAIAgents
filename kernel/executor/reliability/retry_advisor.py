@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import ValidationError
 
 
-class RetryAction(str, Enum):
+class RetryAction(StrEnum):
     """リトライ時の次アクション."""
 
     RETRY = "retry"

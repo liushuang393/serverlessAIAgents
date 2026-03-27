@@ -35,7 +35,7 @@ import functools
 import inspect
 import logging
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field
@@ -49,7 +49,7 @@ if TYPE_CHECKING:
 _tool_registry: dict[str, RegisteredTool] = {}
 
 
-class OperationType(str, Enum):
+class OperationType(StrEnum):
     """ツール操作タイプ."""
 
     READ = "read"  # 読み取り（安全）
@@ -58,7 +58,7 @@ class OperationType(str, Enum):
     EXECUTE = "execute"  # 外部実行（要監視）
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """リスクレベル."""
 
     LOW = "low"  # 低リスク（自動承認可）

@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -25,7 +25,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class Platform(str, Enum):
+class Platform(StrEnum):
     """サポートするECプラットフォーム."""
 
     AMAZON = "amazon"

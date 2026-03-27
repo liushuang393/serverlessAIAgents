@@ -27,14 +27,14 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class AuditEventType(str, Enum):
+class AuditEventType(StrEnum):
     """監査イベントタイプ."""
 
     # 認証関連
@@ -63,7 +63,7 @@ class AuditEventType(str, Enum):
     ANOMALY_DETECTED = "anomaly_detected"
 
 
-class AuditSeverity(str, Enum):
+class AuditSeverity(StrEnum):
     """監査深刻度."""
 
     INFO = "info"

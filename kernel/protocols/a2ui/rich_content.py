@@ -29,11 +29,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class RichComponentType(str, Enum):
+class RichComponentType(StrEnum):
     """富文本コンポーネント種別."""
 
     MARKDOWN = "markdown"
@@ -50,7 +50,7 @@ class RichComponentType(str, Enum):
     TIMELINE = "timeline"
 
 
-class ChartType(str, Enum):
+class ChartType(StrEnum):
     """チャート種別."""
 
     BAR = "bar"
@@ -63,7 +63,7 @@ class ChartType(str, Enum):
     TREEMAP = "treemap"
 
 
-class AlertType(str, Enum):
+class AlertType(StrEnum):
     """アラート種別."""
 
     INFO = "info"

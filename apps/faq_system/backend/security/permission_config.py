@@ -22,14 +22,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class PermissionLevel(str, Enum):
+class PermissionLevel(StrEnum):
     """権限レベル."""
 
     NONE = "none"  # アクセス不可
@@ -38,7 +38,7 @@ class PermissionLevel(str, Enum):
     ADMIN = "admin"  # 管理者
 
 
-class KBPermission(str, Enum):
+class KBPermission(StrEnum):
     """KB 権限."""
 
     INTERNAL_READ = "internal:read"

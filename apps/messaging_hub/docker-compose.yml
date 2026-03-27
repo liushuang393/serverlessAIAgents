@@ -5,8 +5,10 @@ services:
       dockerfile: apps/messaging_hub/Dockerfile
     container_name: messaging-hub-backend
     ports:
-      - "${API_PORT:-8004}:8004"
+      - "${MSGHUB_PORT}:${MSGHUB_PORT}"
     environment:
+      - MSGHUB_HOST=${MSGHUB_HOST}
+      - MSGHUB_PORT=${MSGHUB_PORT}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
@@ -14,7 +16,11 @@ services:
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ[\\\"MSGHUB_PORT\\\"]}/health')\"",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

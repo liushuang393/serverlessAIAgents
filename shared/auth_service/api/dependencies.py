@@ -6,14 +6,19 @@ JWT の permissions クレームでローカルチェックする FastAPI 依存
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import Depends, Header, HTTPException, status
 
-from shared.auth_service.api.schemas import UserInfo
 from shared.auth_service.core.authorization import AuthorizationService
 from shared.auth_service.service import get_auth_service
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from shared.auth_service.api.schemas import UserInfo
+
 
 logger = logging.getLogger(__name__)
 

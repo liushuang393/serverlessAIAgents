@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import datetime as datetime_module
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 
-class DecisionRole(str, Enum):
+class DecisionRole(StrEnum):
     """决策结论角色（固定 4 类）."""
 
     GO = "GO"
@@ -36,7 +36,7 @@ class DecisionRole(str, Enum):
     PILOT = "PILOT"
 
 
-class DecisionMode(str, Enum):
+class DecisionMode(StrEnum):
     """コスト/速度モード（将来拡張用）."""
 
     FAST = "FAST"
@@ -44,7 +44,7 @@ class DecisionMode(str, Enum):
     AUDIT = "AUDIT"
 
 
-class EvidenceReliability(str, Enum):
+class EvidenceReliability(StrEnum):
     """外部情報ソースの信頼度（簡易）."""
 
     LOW = "LOW"
@@ -52,7 +52,7 @@ class EvidenceReliability(str, Enum):
     HIGH = "HIGH"
 
 
-class ClaimType(str, Enum):
+class ClaimType(StrEnum):
     """主張タイプ.
 
     - FACT: 外部証拠で裏取り可能な事実

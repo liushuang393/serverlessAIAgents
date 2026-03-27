@@ -10,7 +10,7 @@
 - WorkflowResult: ワークフロー実行結果全体
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
-class ImageRole(str, Enum):
+class ImageRole(StrEnum):
     """デザインセット内の画像役割."""
 
     HERO = "HERO"  # メインビジュアル / キービジュアル
@@ -31,7 +31,7 @@ class ImageRole(str, Enum):
     INFOGRAPHIC = "INFOGRAPHIC"  # テキストオーバーレイ / スペックシート
 
 
-class DesignCategory(str, Enum):
+class DesignCategory(StrEnum):
     """デザイン意図カテゴリ."""
 
     PRODUCT_PHOTOGRAPHY = "PRODUCT_PHOTOGRAPHY"  # 商品撮影

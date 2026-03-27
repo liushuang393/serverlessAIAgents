@@ -1,7 +1,12 @@
 # 六層分離レビューと不足是正計画
 
+> 履歴注記: この文書は旧レビュー記録です。本文中の `apps/platform` および top-level `platform/`
+> は当時の設計上の呼称で、現行リポジトリに `apps/platform` は存在しません。現在の control plane
+> 実装は `control_plane/` にあります。
+
 ## 要約
-- 現状判定は「部分着手」で、六層分離は未完了です。新しい箱は作られていますが、実体の大半はまだ旧 `agentflow/` と `apps/platform` に残っています。
+
+- 当時の現状判定は「部分着手」で、六層分離は未完了でした。新しい箱は作られていたものの、実体の大半は旧 `agentflow/` と `apps/platform` に残っている前提で整理されています。
 - 仕様書 `5.1` との主要不一致は 5 点です。
   - `platform/` が存在せず、代わりに `control_plane/` がある
   - 目標ディレクトリの未作成がある
@@ -11,6 +16,7 @@
 - モジュール化も未達です。差し替え口があるのは実質 `LLM`、`TraceExporter`、一部 `Approval/Evaluation/Gating` だけで、仕様で要求した Embedding / Rerank / RAG / Artifact / Discovery / Lifecycle / Protocol には未展開です。
 
 ## 層別レビュー
+
 - Layer 0 `contracts`
   - 必須 8 バケットは存在します。
   - 余剰バケット `contracts/runtime` と `contracts/evolution` があり、仕様の目標構造から外れています。
@@ -38,19 +44,20 @@
   - `budget/`, `context/`, `guardrails/`, `policies/`, `replay/`, `risk/`, `scoring/`, `validation/`, `cleanup/` は placeholder のみです。
   - 余剰の `harness/hooks` があり、仕様外です。これは `harness/policies/runtime_pipeline.py` に吸収して消すべきです。
 - Layer 5 `platform`
-  - 仕様上の `platform/` がなく、`control_plane/` で代替しているため非準拠です。
+- 仕様上の `platform/` がなく、`control_plane/` で代替しているため非準拠という当時の評価です。
   - `api/`, `ui/`, `deploy/` が未作成です。
   - `config_center/`, `dashboards/`, `environments/`, `governance_console/`, `operations/`, `publish/`, `tenants/` は placeholder のみです。
-  - `control_plane` は tests からしか使われておらず、実運用には未接続です。
-  - 実装本体はまだ `apps/platform/{services,routers,schemas,db,frontend,agents}` に残っています。
+- `control_plane` は tests からしか使われておらず、実運用には未接続という当時の評価です。
+- 実装本体はまだ `apps/platform/{services,routers,schemas,db,frontend,agents}` に残っている、という旧構成前提で書かれています。
 - Layer 6 `apps`
-  - Domain App 群は存在しますが、`apps/platform` と `apps/auth_service` は Layer 6 に置くべきではありません。
+- Domain App 群は存在する一方、`apps/platform` と `apps/auth_service` は Layer 6 に置くべきではない、という当時の整理です。
   - `apps/platform` は Layer 5 へ再配置、`apps/auth_service` は `shared/access` と `platform/tenants` へ分解すべきです。
 - `tests`
   - `tests/contracts/`, `tests/eval/` が未作成です。
   - 余剰の `tests/layers/` があり、ここは `tests/contracts/` と `tests/integration/boundary/` と `tests/eval/` に再配置して消すべきです。
 
 ## 先に直す構造
+
 - `control_plane/` を廃止し、仕様どおり top-level `platform/` を作る。
   - `apps/platform/routers` -> `platform/api`
   - `apps/platform/frontend` -> `platform/ui`
@@ -74,6 +81,7 @@
   - `tests/layers/`
 
 ## 削除・深度統合・暫定互換の判断
+
 - すぐ削除対象
   - `control_plane/`
   - `contracts/runtime/`
@@ -91,6 +99,7 @@
 - 最終的に `agentflow/` は「互換 facade 専用」に縮退し、実装本体を置かない形にする。
 
 ## 境界とモジュール化の完了条件
+
 - `contracts / infrastructure / shared / kernel / harness / platform / apps / tests` 以外に六層本体ディレクトリを増やさない。
 - 新層から `agentflow.*` への import を全面禁止する。許可するのは旧互換側が新層を import する向きだけです。
 - `platform` から `apps/*` 内部ロジック直接 import を禁止する。利用は manifest と管理 API のみ。
@@ -102,6 +111,7 @@
 - boundary test は `agentflow` 旧実装依存も違反として検知するように更新する。
 
 ## テスト計画
+
 - `tests/contracts/`
   - 全必須契約の schema snapshot
   - 旧 payload 互換
@@ -122,6 +132,7 @@
 ## 追加指摘：コード重複と不整合
 
 ### 1. `contracts/runtime` と `shared/registry` の完全重複
+
 - `contracts/runtime/{base,components,registry}.py` と `shared/registry/{components,factory_registry}.py` は **同一クラス群** (`ContractModel`, `ComponentToggle`, `ComponentSpec`, `LayerName`, `ToggleableFactoryRegistry`) を二重定義しています。
 - 実際の使用先（`infrastructure/llm/registry.py`, `infrastructure/observability/registry.py`, `harness/*`）はすべて `shared.registry` から import しており、`contracts/runtime` 側は **死んだコード** です。
 - `contracts/runtime` の `LayerName` は `CONTROL_PLANE = "control_plane"` だが、`shared/registry` の `LayerName` は `PLATFORM = "platform"` で **enum 値が不一致** です。
@@ -133,26 +144,29 @@
   - `LayerName` の enum 値は仕様準拠で `PLATFORM = "platform"` へ統一する。
 
 ### 2. `contracts/evolution` の空虚
+
 - `contracts/evolution/` にはファイルが1つも存在しません（`__init__.py` すらなし）。
 - 仕様外ディレクトリかつ空なので、即時削除可能です。
 
 ### 3. `platform/` の `__init__.py` 欠落
+
 - `platform/` に `__init__.py` が存在しないため、Python パッケージとして認識されません。
 - `platform/discovery/service.py` 等は `from shared import load_app_manifest` しており動作しますが、`platform.*` としての import は不可能です。
 - 修正：`platform/__init__.py` を追加し、パッケージ化する。
 
 ### 4. `agentflow.*` 逆依存の詳細
+
 - 以下のファイルが旧 `agentflow.*` に直接依存しており、六層分離の境界規約に違反しています：
 
-| 層 | ファイル | 依存先 |
-|---|---|---|
-| L1 | `infrastructure/llm/adapters.py` | `agentflow.providers.llm_provider` |
-| L1 | `infrastructure/storage/adapters.py` | `agentflow.storage.memory_backend` |
-| L3 | `kernel/tools/executor.py` (TYPE_CHECKING) | `agentflow.providers.tool_provider` |
-| L3 | `kernel/runtime/__init__.py` | `agentflow.runtime` (re-export facade) |
-| L3 | `kernel/flow/__init__.py` | `agentflow.flow` (re-export facade) |
-| L4 | `harness/gating/tool_gate.py` | `agentflow.governance`, `agentflow.providers.tool_provider` |
-| L4 | `harness/hooks/runtime.py` (TYPE_CHECKING) | `agentflow.governance`, `agentflow.providers.tool_provider` |
+| 層  | ファイル                                   | 依存先                                                      |
+| --- | ------------------------------------------ | ----------------------------------------------------------- |
+| L1  | `infrastructure/llm/adapters.py`           | `agentflow.providers.llm_provider`                          |
+| L1  | `infrastructure/storage/adapters.py`       | `agentflow.storage.memory_backend`                          |
+| L3  | `kernel/tools/executor.py` (TYPE_CHECKING) | `agentflow.providers.tool_provider`                         |
+| L3  | `kernel/runtime/__init__.py`               | `agentflow.runtime` (re-export facade)                      |
+| L3  | `kernel/flow/__init__.py`                  | `agentflow.flow` (re-export facade)                         |
+| L4  | `harness/gating/tool_gate.py`              | `agentflow.governance`, `agentflow.providers.tool_provider` |
+| L4  | `harness/hooks/runtime.py` (TYPE_CHECKING) | `agentflow.governance`, `agentflow.providers.tool_provider` |
 
 - `kernel/runtime/__init__.py` と `kernel/flow/__init__.py` は旧モジュールの **丸ごと re-export** であり、facade パターンにすぎません。これは「抽出」ではなく「名前空間エイリアス」です。
 - 修正方針：
@@ -162,35 +176,38 @@
   - `kernel/flow/__init__.py`, `kernel/runtime/__init__.py` → 旧 facade を廃止し、実ロジックを抽出移動。
 
 ### 5. L2→L1 依存の妥当性
+
 - `shared/trace/service.py` → `infrastructure.observability.get_trace_exporter` は **正しい依存方向** です（L2→L1 は許可）。
 - `shared/gateway/llm/service.py` → `infrastructure.llm.get_llm_backend` も正方向です。
 - これらは問題ありません。
 
 ### 6. 実装済み差し替え口の棚卸し
+
 - 仕様で要求した差し替え口（default/noop/mock/provider-specific）の達成状況：
 
-| 対象 | 仕様要求 | ports.py | adapters.py | registry.py | 判定 |
-|---|---|---|---|---|---|
-| `infrastructure/llm` | ✅ | ✅ | ✅ (noop,mock,agentflow) | ✅ | **済** |
-| `infrastructure/observability` | ✅ | ✅ | ✅ (noop,logging,memory) | ✅ | **済** |
-| `infrastructure/storage` | ✅ | ✅ | ✅ (noop,memory) | ❌ registry なし | **部分** |
-| `infrastructure/embeddings` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/rerank` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/vector` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/cache` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/queue` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/sandbox` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/browser` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `infrastructure/secrets` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `shared/rag` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `shared/artifacts` | ✅ | ❌ | ❌ | ❌ | **未着手** |
-| `shared/trace` | ✅ | - | - | - | **済**（exporter 経由） |
-| `shared/audit` | ✅ | - | - | - | **済**（ログ出力） |
-| `platform/discovery` | ✅ | - | - | - | **済**（service 実装あり） |
-| `platform/lifecycle` | ✅ | - | - | - | **済**（service 実装あり） |
-| `kernel/protocols` | ✅ | ❌ | ❌ | ❌ | **未着手** |
+| 対象                           | 仕様要求 | ports.py | adapters.py              | registry.py      | 判定                       |
+| ------------------------------ | -------- | -------- | ------------------------ | ---------------- | -------------------------- |
+| `infrastructure/llm`           | ✅       | ✅       | ✅ (noop,mock,agentflow) | ✅               | **済**                     |
+| `infrastructure/observability` | ✅       | ✅       | ✅ (noop,logging,memory) | ✅               | **済**                     |
+| `infrastructure/storage`       | ✅       | ✅       | ✅ (noop,memory)         | ❌ registry なし | **部分**                   |
+| `infrastructure/embeddings`    | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/rerank`        | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/vector`        | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/cache`         | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/queue`         | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/sandbox`       | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/browser`       | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `infrastructure/secrets`       | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `shared/rag`                   | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `shared/artifacts`             | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
+| `shared/trace`                 | ✅       | -        | -                        | -                | **済**（exporter 経由）    |
+| `shared/audit`                 | ✅       | -        | -                        | -                | **済**（ログ出力）         |
+| `platform/discovery`           | ✅       | -        | -                        | -                | **済**（service 実装あり） |
+| `platform/lifecycle`           | ✅       | -        | -                        | -                | **済**（service 実装あり） |
+| `kernel/protocols`             | ✅       | ❌       | ❌                       | ❌               | **未着手**                 |
 
 ### 7. Harness 層の実装品質
+
 - `harness/approval/service.py`, `harness/evaluation/service.py` は ComponentToggle 付きのサービスとして実装済みです。
 - `harness/gating/tool_gate.py` は `agentflow.governance.GovernanceEngine` に直接依存しているため、境界違反です。
 - `harness/hooks/runtime.py` は `HarnessedToolRuntime` として Layer 3 と Layer 4 を接合する唯一のモジュールですが、仕様外の `hooks/` に配置されています。`harness/policies/runtime_pipeline.py` へ移動すべきです。
@@ -199,6 +216,7 @@
 ## 優先度付き是正ロードマップ
 
 ### P0: 構造整合（即時）
+
 1. `contracts/runtime/` を削除し、`contracts/base.py` と `shared/registry/` に統合。`LayerName` を `PLATFORM` に統一。
 2. `contracts/evolution/` を削除。
 3. `platform/__init__.py` を追加。
@@ -206,6 +224,7 @@
 5. `tests/layers/` の `.py` ファイルを `tests/integration/boundary/` と `tests/eval/` に移動して削除。
 
 ### P1: 境界浄化（短期）
+
 6. `kernel/flow/__init__.py` と `kernel/runtime/__init__.py` の re-export facade を廃止し、実ロジックを `agentflow/` から抽出移動。
 7. `infrastructure/llm/adapters.py` の `AgentFlowLLMBackend` を `agentflow.providers` 非依存にする（`contracts/` の Protocol 経由に変更）。
 8. `infrastructure/storage/adapters.py` の `agentflow.storage` 依存を外す。
@@ -213,6 +232,7 @@
 10. `infrastructure/storage/` に `registry.py` を追加し、差し替えパターンを完成させる。
 
 ### P2: 未着手モジュールの最低限実装（中期）
+
 11. `infrastructure/{embeddings,rerank,vector,cache,queue,sandbox,browser,secrets}` に ports/adapters/registry の三点セットを追加。
 12. `shared/{rag,artifacts}` の基本サービスを実装。
 13. `kernel/{state,planner,executor,reporter}` の最低限の Protocol + NoOp 実装。
@@ -220,12 +240,14 @@
 15. `kernel/protocols/{mcp,a2a,agui,a2ui}` の分割。
 
 ### P3: Platform 層完成（中〜長期）
+
 16. `apps/platform/` の routers/services/schemas/db を `platform/` へ移動。
 17. `apps/platform/` を shell（`main.py` + `app_config.json` のみ）に縮退。
 18. `apps/auth_service/` を `shared/access` と `platform/tenants` へ分解。
 19. `control_plane/` を完全削除。
 
 ## 前提と既定値
+
 - 仕様書のディレクトリ名を優先し、`platform/` を採用します。標準ライブラリ `platform` との衝突は repo 内 import 監査で解消します。
 - 仕様書中の `config-center` などの表記は、実パッケージ名では `config_center` など Python 互換の underscore 名に固定します。
 - `apps/*` の studio 名は例示扱いとし、既存 product 名は維持してよいです。ただし `apps/platform` と `apps/auth_service` は Layer 6 から外します。

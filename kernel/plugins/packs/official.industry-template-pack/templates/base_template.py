@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class IndustryType(str, Enum):
+class IndustryType(StrEnum):
     """業界タイプ."""
 
     FINANCE = "finance"
@@ -34,7 +34,7 @@ class IndustryType(str, Enum):
     GENERAL = "general"
 
 
-class TemplateCategory(str, Enum):
+class TemplateCategory(StrEnum):
     """テンプレートカテゴリ."""
 
     # 金融
@@ -54,7 +54,7 @@ class TemplateCategory(str, Enum):
     GENERAL = "general"
 
 
-class ValidationRuleType(str, Enum):
+class ValidationRuleType(StrEnum):
     """バリデーションルールタイプ."""
 
     REQUIRED = "required"

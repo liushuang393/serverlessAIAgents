@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class KnowledgeSource(str, Enum):
+class KnowledgeSource(StrEnum):
     """知識エントリのソース種別."""
 
     DOCUMENT = "document"
@@ -22,7 +22,7 @@ class KnowledgeSource(str, Enum):
     MANUAL = "manual"
 
 
-class SearchType(str, Enum):
+class SearchType(StrEnum):
     """検索タイプ."""
 
     SEMANTIC = "semantic"

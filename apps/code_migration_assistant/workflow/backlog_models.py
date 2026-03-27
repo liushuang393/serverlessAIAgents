@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class BacklogTaskStatus(str, Enum):
+class BacklogTaskStatus(StrEnum):
     """Backlog task lifecycle states."""
 
     PENDING = "pending"
@@ -79,7 +79,7 @@ class BacklogState(BaseModel):
         return None
 
 
-class SessionStatus(str, Enum):
+class SessionStatus(StrEnum):
     """Session status contract for cli run output."""
 
     DONE = "done"

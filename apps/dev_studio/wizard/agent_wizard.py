@@ -15,9 +15,11 @@
 
 from __future__ import annotations
 
+import ast
 import logging
 import time
 import uuid
+from pathlib import Path
 from typing import Any, cast
 
 from apps.dev_studio.wizard.models import (
@@ -444,7 +446,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from kernel.core.agent_block import AgentBlock
+from kernel.agents.agent_block import AgentBlock
 
 
 class {name}(AgentBlock):
@@ -482,6 +484,8 @@ __all__ = ["{name}"]
     ) -> TestSuiteResult:
         """テストを実行.
 
+        生成コードのシンタックス検証・構造チェック・仕様整合性検証を行う。
+
         Args:
             agent_spec: Agent 仕様
             generated_code: 生成されたコード
@@ -489,30 +493,89 @@ __all__ = ["{name}"]
         Returns:
             テスト結果
         """
-        # テストケースを合成
-        test_cases = await self._test_synthesizer.synthesize(agent_spec)
+        from apps.dev_studio.wizard.models import TestResult
 
-        # テストを実行（シミュレーション）
-        results: list[dict[str, Any]] = []
+        test_cases = await self._test_synthesizer.synthesize(agent_spec)
+        results: list[TestResult] = []
+        start_all = time.time()
+
+        # テスト 1: 構文検証（AST パース）
+        t_start = time.time()
+        syntax_ok = True
+        syntax_error: str | None = None
+        try:
+            ast.parse(generated_code)
+        except SyntaxError as e:
+            syntax_ok = False
+            syntax_error = str(e)
+        results.append(
+            TestResult(
+                test_name="syntax_check",
+                passed=syntax_ok,
+                duration_ms=(time.time() - t_start) * 1000,
+                error=syntax_error,
+                assertions_passed=1 if syntax_ok else 0,
+                assertions_failed=0 if syntax_ok else 1,
+            )
+        )
+
+        # テスト 2: クラス定義の存在チェック
+        t_start = time.time()
+        has_class = f"class {agent_spec.name}" in generated_code
+        results.append(
+            TestResult(
+                test_name="class_definition_check",
+                passed=has_class,
+                duration_ms=(time.time() - t_start) * 1000,
+                error=f"class {agent_spec.name} が見つかりません" if not has_class else None,
+                assertions_passed=1 if has_class else 0,
+                assertions_failed=0 if has_class else 1,
+            )
+        )
+
+        # テスト 3: run メソッドの存在チェック
+        t_start = time.time()
+        has_run = "async def run" in generated_code
+        results.append(
+            TestResult(
+                test_name="run_method_check",
+                passed=has_run,
+                duration_ms=(time.time() - t_start) * 1000,
+                error="async def run メソッドが見つかりません" if not has_run else None,
+                assertions_passed=1 if has_run else 0,
+                assertions_failed=0 if has_run else 1,
+            )
+        )
+
+        # テスト 4: 合成テストケースを文字列検証
         for test_case in test_cases:
-            # TODO: 実際のテスト実行
+            t_start = time.time()
+            # キーワードが code に含まれるかを検証
+            keywords = list(test_case.input_data.keys())
+            found = all(kw in generated_code for kw in keywords) if keywords else True
             results.append(
-                {
-                    "test_name": test_case.name,
-                    "passed": True,  # シミュレーション
-                    "duration_ms": 100.0,
-                }
+                TestResult(
+                    test_name=test_case.name,
+                    passed=found,
+                    duration_ms=(time.time() - t_start) * 1000,
+                    error=None if found else f"キーワード不足: {keywords}",
+                    assertions_passed=1 if found else 0,
+                    assertions_failed=0 if found else 1,
+                    details={"description": test_case.description},
+                )
             )
 
-        passed = sum(1 for r in results if r["passed"])
+        passed = sum(1 for r in results if r.passed)
         failed = len(results) - passed
+        coverage = passed / len(results) if results else 0.0
 
         return TestSuiteResult(
             total_tests=len(results),
             passed_tests=passed,
             failed_tests=failed,
-            coverage=0.8,  # シミュレーション
-            duration_ms=sum(float(r["duration_ms"]) for r in results),
+            results=results,
+            coverage=coverage,
+            duration_ms=(time.time() - start_all) * 1000,
         )
 
     async def _validate(
@@ -597,6 +660,9 @@ __all__ = ["{name}"]
     ) -> str | None:
         """Agent を発布.
 
+        生成されたコードをローカルの出力ディレクトリに書き出し発布IDを返す。
+        出力先: {WIZARD_PUBLISH_DIR 環境変数} または /tmp/agentflow_published/
+
         Args:
             agent_spec: Agent 仕様
             generated_code: 生成されたコード
@@ -604,9 +670,27 @@ __all__ = ["{name}"]
         Returns:
             発布ID（失敗時は None）
         """
-        # TODO: 実際の発布処理
+        import os
+
         publish_id = f"pub_{uuid.uuid4().hex[:12]}"
-        self._logger.info(f"Published agent: {agent_spec.name} (ID: {publish_id})")
+        base_dir_str = os.environ.get("WIZARD_PUBLISH_DIR", "/tmp/agentflow_published")
+        out_dir = Path(base_dir_str) / publish_id
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Agent コードを書き出し
+        agent_file = out_dir / f"{agent_spec.name.lower()}.py"
+        agent_file.write_text(generated_code, encoding="utf-8")
+
+        # メタデータを書き出し
+        import json
+
+        meta_file = out_dir / "agent_spec.json"
+        meta_file.write_text(
+            json.dumps(agent_spec.to_dict(), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        self._logger.info(f"Agent 発布完了: {agent_spec.name} → {out_dir} (ID: {publish_id})")
         return publish_id
 
 

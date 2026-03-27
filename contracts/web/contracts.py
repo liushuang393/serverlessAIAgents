@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import Field, model_validator
@@ -10,7 +10,7 @@ from pydantic import Field, model_validator
 from contracts.base import ContractModel
 
 
-class WebIntentType(str, Enum):
+class WebIntentType(StrEnum):
     """Web 要求の意図種別."""
 
     SEARCH = "search"
@@ -22,7 +22,7 @@ class WebIntentType(str, Enum):
     CRAWL = "crawl"
 
 
-class AccuracyLevel(str, Enum):
+class AccuracyLevel(StrEnum):
     """精度要求."""
 
     HIGH = "high"
@@ -30,7 +30,7 @@ class AccuracyLevel(str, Enum):
     LOW = "low"
 
 
-class LatencyLevel(str, Enum):
+class LatencyLevel(StrEnum):
     """遅延要求."""
 
     LOW = "low"
@@ -38,7 +38,7 @@ class LatencyLevel(str, Enum):
     RELAXED = "relaxed"
 
 
-class BudgetLevel(str, Enum):
+class BudgetLevel(StrEnum):
     """コスト要求."""
 
     LOW = "low"
@@ -46,7 +46,7 @@ class BudgetLevel(str, Enum):
     HIGH = "high"
 
 
-class FreshnessLevel(str, Enum):
+class FreshnessLevel(StrEnum):
     """鮮度要求."""
 
     REALTIME = "realtime"
@@ -54,7 +54,7 @@ class FreshnessLevel(str, Enum):
     STABLE = "stable"
 
 
-class WebRetrievalMode(str, Enum):
+class WebRetrievalMode(StrEnum):
     """取得モード."""
 
     DIRECT_MARKDOWN = "direct_markdown"
@@ -65,7 +65,7 @@ class WebRetrievalMode(str, Enum):
     CRAWL_MODE = "crawl_mode"
 
 
-class EstimatedCostLevel(str, Enum):
+class EstimatedCostLevel(StrEnum):
     """推定コストレベル."""
 
     LOW = "low"

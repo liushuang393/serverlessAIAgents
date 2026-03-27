@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -63,7 +63,7 @@ _LOW_NEED_KEYWORDS: list[str] = [
 ]
 
 
-class MemoryNeedLevel(str, Enum):
+class MemoryNeedLevel(StrEnum):
     """記憶必要度レベル."""
 
     NONE = "none"  # 0件: 単純な一問一答

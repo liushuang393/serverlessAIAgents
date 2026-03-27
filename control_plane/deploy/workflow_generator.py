@@ -186,8 +186,8 @@ class WorkflowCodeGenerator:
         """
         agent_types = {node.agent_type for node in self.workflow.nodes}
         imports = [
-            "from kernel import create_flow",
-            "from kernel.core.agent_block import AgentBlock",
+            "from kernel.flow import create_flow",
+            "from kernel.agents.agent_block import AgentBlock",
         ]
 
         for agent_type in sorted(agent_types):

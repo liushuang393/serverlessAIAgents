@@ -25,14 +25,14 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol
 
 
 _logger = logging.getLogger(__name__)
 
 
-class NoteImportance(str, Enum):
+class NoteImportance(StrEnum):
     """重要度レベル."""
 
     CRITICAL = "critical"  # 絶対保持（ユーザー名、設定等）
@@ -41,7 +41,7 @@ class NoteImportance(str, Enum):
     LOW = "low"  # 低優先度（補足情報）
 
 
-class NoteCategory(str, Enum):
+class NoteCategory(StrEnum):
     """Noteカテゴリ."""
 
     USER_INFO = "user_info"  # ユーザー情報

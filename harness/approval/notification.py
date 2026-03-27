@@ -10,7 +10,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class NotificationChannel(str, Enum):
+class NotificationChannel(StrEnum):
     """通知チャンネルタイプ."""
 
     EMAIL = "email"

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime  # noqa: TC003 — Pydanticがランタイムで型評価に必要
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class ComponentType(str, Enum):
+class ComponentType(StrEnum):
     """コンポーネントタイプ."""
 
     AGENT = "agent"
@@ -20,7 +20,7 @@ class ComponentType(str, Enum):
     TEMPLATE = "template"
 
 
-class ComponentVisibility(str, Enum):
+class ComponentVisibility(StrEnum):
     """コンポーネント可視性."""
 
     PRIVATE = "private"  # 所有者のみ

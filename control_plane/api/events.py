@@ -13,13 +13,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class SSEEventType(str, Enum):
+class SSEEventType(StrEnum):
     """SSE イベントタイプ（標準定義）.
 
     全アプリケーションはこの列挙型のみを使用すること。

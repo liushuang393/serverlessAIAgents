@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -24,7 +24,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class DependencyType(str, Enum):
+class DependencyType(StrEnum):
     """依存タイプ."""
 
     INTERNAL = "internal"  # 内部モジュール
@@ -33,7 +33,7 @@ class DependencyType(str, Enum):
     DEV = "dev"  # 開発用依存
 
 
-class DependencyHealth(str, Enum):
+class DependencyHealth(StrEnum):
     """依存の健全性."""
 
     HEALTHY = "healthy"

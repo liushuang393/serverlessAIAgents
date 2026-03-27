@@ -22,7 +22,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import Field, model_validator
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 
-class ApprovalStatus(str, Enum):
+class ApprovalStatus(StrEnum):
     """承認状態."""
 
     PENDING = "pending"

@@ -15,13 +15,13 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class StepType(str, Enum):
+class StepType(StrEnum):
     """ステップ種別."""
 
     TOOL_CALL = "tool_call"
@@ -33,7 +33,7 @@ class StepType(str, Enum):
     SUB_PLAN = "sub_plan"
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     """ステップ状態."""
 
     PENDING = "pending"

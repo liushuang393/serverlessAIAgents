@@ -52,7 +52,7 @@ class ExternalIdentity:
             ExternalIdentity インスタンス。
         """
         email: str = token_info.get("email", "")
-        username = email.split("@")[0] if email else token_info.get("sub", "")
+        username = email.split("@", maxsplit=1)[0] if email else token_info.get("sub", "")
         return cls(
             provider="google",
             username=username,
@@ -72,7 +72,7 @@ class ExternalIdentity:
             ExternalIdentity インスタンス。
         """
         email: str = token_info.get("email", token_info.get("upn", ""))
-        username = email.split("@")[0] if email else token_info.get("oid", "")
+        username = email.split("@", maxsplit=1)[0] if email else token_info.get("oid", "")
         return cls(
             provider="azure_ad",
             username=username,

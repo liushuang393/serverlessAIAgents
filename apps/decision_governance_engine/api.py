@@ -21,13 +21,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import json
 import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +47,7 @@ from apps.decision_governance_engine.routers.report import router as report_rout
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
 from apps.decision_governance_engine.startup import log_startup_info
 from infrastructure.observability.logging import LogLevel, setup_logging
+from kernel.runtime import resolve_app_runtime
 
 
 logger = logging.getLogger("decision_api")
@@ -198,19 +197,16 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    config_path = Path(__file__).resolve().parent / "app_config.json"
-    config_raw: dict[str, Any] = {}
-    if config_path.is_file():
-        try:
-            loaded_config = json.loads(config_path.read_text("utf-8"))
-            if isinstance(loaded_config, dict):
-                config_raw = loaded_config
-        except json.JSONDecodeError:
-            config_raw = {}
-
-    _default_port = config_raw.get("ports", {}).get("api", 8001)
-    _host = args.host or os.getenv("DGE_HOST", "0.0.0.0")
-    _port = args.port or int(os.getenv("DGE_PORT", str(_default_port)))
+    runtime = resolve_app_runtime(
+        Path(__file__).resolve().parent / "app_config.json",
+        env=os.environ,
+        backend_host_env="DGE_HOST",
+        backend_port_env="DGE_PORT",
+    )
+    _default_host = runtime.hosts.backend or "0.0.0.0"
+    _default_port = runtime.ports.api or 8001
+    _host = args.host or _default_host
+    _port = args.port or _default_port
 
     print(f"[DGE] Starting on {_host}:{_port} (reload={args.reload})")
 

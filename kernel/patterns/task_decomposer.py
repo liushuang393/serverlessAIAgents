@@ -35,7 +35,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class TaskGranularity(str, Enum):
+class TaskGranularity(StrEnum):
     """タスク粒度."""
 
     COARSE = "coarse"  # 粗い（さらに分解可能）
@@ -57,7 +57,7 @@ class TaskGranularity(str, Enum):
     ATOMIC = "atomic"  # 原子的（分解不可）
 
 
-class TaskPriority(str, Enum):
+class TaskPriority(StrEnum):
     """タスク優先度."""
 
     CRITICAL = "critical"  # 最優先

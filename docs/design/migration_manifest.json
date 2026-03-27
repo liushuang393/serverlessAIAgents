@@ -1,4 +1,5 @@
 {
+  "_historical_note": "この文書は旧 migration plan の記録です。`apps/platform` や top-level `platform/` への言及は当時計画上の名称であり、現行の control plane 実装は `control_plane/` にあります。",
   "version": "1.0",
   "created": "2026-03-17",
   "description": "agentflow/ 六層分離 移行マニフェスト",
@@ -16,34 +17,118 @@
       "target_layer": "infrastructure",
       "description": "低レベルプロバイダー・セキュリティ・メモリバックエンド・OS/ブラウザスキルの移行",
       "moves": [
-        {"source": "agentflow/providers/llm_provider.py", "destination": "infrastructure/llm/providers/llm_provider.py"},
-        {"source": "agentflow/providers/llm/", "destination": "infrastructure/llm/providers/"},
-        {"source": "agentflow/providers/embedding_provider.py", "destination": "infrastructure/embeddings/provider.py"},
-        {"source": "agentflow/providers/vectordb_provider.py", "destination": "infrastructure/vector/provider.py"},
-        {"source": "agentflow/providers/db_provider.py", "destination": "infrastructure/database/provider.py"},
-        {"source": "agentflow/providers/data_provider.py", "destination": "infrastructure/storage/data_provider.py"},
-        {"source": "agentflow/providers/event_provider.py", "destination": "infrastructure/queue/event_provider.py"},
-        {"source": "agentflow/providers/tool_executor.py", "destination": "infrastructure/sandbox/tool_executor.py"},
-        {"source": "agentflow/providers/tool_provider.py", "destination": "infrastructure/sandbox/tool_provider.py"},
-        {"source": "agentflow/providers/unified_tool.py", "destination": "infrastructure/sandbox/unified_tool.py"},
-        {"source": "agentflow/security/api_key.py", "destination": "infrastructure/secrets/api_key.py"},
-        {"source": "agentflow/security/local_first.py", "destination": "infrastructure/secrets/local_first.py"},
-        {"source": "agentflow/security/mfa.py", "destination": "infrastructure/security/mfa.py"},
-        {"source": "agentflow/security/oauth2_provider.py", "destination": "infrastructure/security/oauth2_provider.py"},
-        {"source": "agentflow/security/saml.py", "destination": "infrastructure/security/saml.py"},
-        {"source": "agentflow/security/rbac.py", "destination": "infrastructure/security/rbac.py"},
-        {"source": "agentflow/security/rate_limiter.py", "destination": "infrastructure/security/rate_limiter.py"},
-        {"source": "agentflow/security/providers/", "destination": "infrastructure/security/providers/"},
-        {"source": "agentflow/security/auth_client/", "destination": "infrastructure/security/auth_client/"},
-        {"source": "agentflow/security/auth_middleware.py", "destination": "infrastructure/security/auth_middleware.py"},
-        {"source": "agentflow/memory/vector_db/", "destination": "infrastructure/vector/vector_db/"},
-        {"source": "agentflow/memory/vector_store.py", "destination": "infrastructure/vector/vector_store.py"},
-        {"source": "agentflow/memory/vector_search.py", "destination": "infrastructure/vector/vector_search.py"},
-        {"source": "agentflow/memory/embeddings/", "destination": "infrastructure/embeddings/"},
-        {"source": "agentflow/memory/distributed/", "destination": "infrastructure/memory/distributed/"},
-        {"source": "agentflow/memory/types.py", "destination": "infrastructure/memory/types.py"},
-        {"source": "agentflow/skills/os/", "destination": "infrastructure/os/"},
-        {"source": "agentflow/skills/browser/", "destination": "infrastructure/browser/"}
+        {
+          "source": "agentflow/providers/llm_provider.py",
+          "destination": "infrastructure/llm/providers/llm_provider.py"
+        },
+        {
+          "source": "agentflow/providers/llm/",
+          "destination": "infrastructure/llm/providers/"
+        },
+        {
+          "source": "agentflow/providers/embedding_provider.py",
+          "destination": "infrastructure/embeddings/provider.py"
+        },
+        {
+          "source": "agentflow/providers/vectordb_provider.py",
+          "destination": "infrastructure/vector/provider.py"
+        },
+        {
+          "source": "agentflow/providers/db_provider.py",
+          "destination": "infrastructure/database/provider.py"
+        },
+        {
+          "source": "agentflow/providers/data_provider.py",
+          "destination": "infrastructure/storage/data_provider.py"
+        },
+        {
+          "source": "agentflow/providers/event_provider.py",
+          "destination": "infrastructure/queue/event_provider.py"
+        },
+        {
+          "source": "agentflow/providers/tool_executor.py",
+          "destination": "infrastructure/sandbox/tool_executor.py"
+        },
+        {
+          "source": "agentflow/providers/tool_provider.py",
+          "destination": "infrastructure/sandbox/tool_provider.py"
+        },
+        {
+          "source": "agentflow/providers/unified_tool.py",
+          "destination": "infrastructure/sandbox/unified_tool.py"
+        },
+        {
+          "source": "agentflow/security/api_key.py",
+          "destination": "infrastructure/secrets/api_key.py"
+        },
+        {
+          "source": "agentflow/security/local_first.py",
+          "destination": "infrastructure/secrets/local_first.py"
+        },
+        {
+          "source": "agentflow/security/mfa.py",
+          "destination": "infrastructure/security/mfa.py"
+        },
+        {
+          "source": "agentflow/security/oauth2_provider.py",
+          "destination": "infrastructure/security/oauth2_provider.py"
+        },
+        {
+          "source": "agentflow/security/saml.py",
+          "destination": "infrastructure/security/saml.py"
+        },
+        {
+          "source": "agentflow/security/rbac.py",
+          "destination": "infrastructure/security/rbac.py"
+        },
+        {
+          "source": "agentflow/security/rate_limiter.py",
+          "destination": "infrastructure/security/rate_limiter.py"
+        },
+        {
+          "source": "agentflow/security/providers/",
+          "destination": "infrastructure/security/providers/"
+        },
+        {
+          "source": "agentflow/security/auth_client/",
+          "destination": "infrastructure/security/auth_client/"
+        },
+        {
+          "source": "agentflow/security/auth_middleware.py",
+          "destination": "infrastructure/security/auth_middleware.py"
+        },
+        {
+          "source": "agentflow/memory/vector_db/",
+          "destination": "infrastructure/vector/vector_db/"
+        },
+        {
+          "source": "agentflow/memory/vector_store.py",
+          "destination": "infrastructure/vector/vector_store.py"
+        },
+        {
+          "source": "agentflow/memory/vector_search.py",
+          "destination": "infrastructure/vector/vector_search.py"
+        },
+        {
+          "source": "agentflow/memory/embeddings/",
+          "destination": "infrastructure/embeddings/"
+        },
+        {
+          "source": "agentflow/memory/distributed/",
+          "destination": "infrastructure/memory/distributed/"
+        },
+        {
+          "source": "agentflow/memory/types.py",
+          "destination": "infrastructure/memory/types.py"
+        },
+        {
+          "source": "agentflow/skills/os/",
+          "destination": "infrastructure/os/"
+        },
+        {
+          "source": "agentflow/skills/browser/",
+          "destination": "infrastructure/browser/"
+        }
       ]
     },
     {
@@ -51,24 +136,65 @@
       "target_layer": "shared",
       "description": "ドメイン共有ライブラリ（RAG、設定、商取引、ユーティリティ、高レベルメモリ）の移行",
       "moves": [
-        {"source": "agentflow/knowledge/", "destination": "shared/rag/", "note": "RAG・ドキュメントローダー・チャンキング・リランカー等"},
-        {"source": "agentflow/knowledge/rag_access_control.py", "destination": "shared/access/rag_access_control.py"},
-        {"source": "agentflow/knowledge/resource_manager.py", "destination": "shared/resources/resource_manager.py"},
-        {"source": "agentflow/knowledge/scope_resolver.py", "destination": "shared/scope/scope_resolver.py"},
-        {"source": "agentflow/config/", "destination": "shared/config/"},
-        {"source": "agentflow/commerce/", "destination": "shared/commerce/"},
-        {"source": "agentflow/datalake/", "destination": "shared/datalake/"},
-        {"source": "agentflow/evolution/", "destination": "shared/evolution/"},
-        {"source": "agentflow/world_model/", "destination": "shared/world_model/"},
-        {"source": "agentflow/channels/", "destination": "shared/channels/"},
-        {"source": "agentflow/integrations/", "destination": "shared/integrations/"},
-        {"source": "agentflow/utils/", "destination": "shared/utils/"},
-        {"source": "agentflow/memory/memory_manager.py", "destination": "shared/memory/memory_manager.py", "note": "高レベルメモリマネージャー"},
-        {"source": "agentflow/memory/episodic/", "destination": "shared/memory/episodic/"},
-        {"source": "agentflow/memory/long_term/", "destination": "shared/memory/long_term/"},
-        {"source": "agentflow/memory/short_term/", "destination": "shared/memory/short_term/"},
-        {"source": "agentflow/memory/sensory/", "destination": "shared/memory/sensory/"},
-        {"source": "agentflow/memory/knowledge/", "destination": "shared/memory/knowledge/"}
+        {
+          "source": "agentflow/knowledge/",
+          "destination": "shared/rag/",
+          "note": "RAG・ドキュメントローダー・チャンキング・リランカー等"
+        },
+        {
+          "source": "agentflow/knowledge/rag_access_control.py",
+          "destination": "shared/access/rag_access_control.py"
+        },
+        {
+          "source": "agentflow/knowledge/resource_manager.py",
+          "destination": "shared/resources/resource_manager.py"
+        },
+        {
+          "source": "agentflow/knowledge/scope_resolver.py",
+          "destination": "shared/scope/scope_resolver.py"
+        },
+        { "source": "agentflow/config/", "destination": "shared/config/" },
+        { "source": "agentflow/commerce/", "destination": "shared/commerce/" },
+        { "source": "agentflow/datalake/", "destination": "shared/datalake/" },
+        {
+          "source": "agentflow/evolution/",
+          "destination": "shared/evolution/"
+        },
+        {
+          "source": "agentflow/world_model/",
+          "destination": "shared/world_model/"
+        },
+        { "source": "agentflow/channels/", "destination": "shared/channels/" },
+        {
+          "source": "agentflow/integrations/",
+          "destination": "shared/integrations/"
+        },
+        { "source": "agentflow/utils/", "destination": "shared/utils/" },
+        {
+          "source": "agentflow/memory/memory_manager.py",
+          "destination": "shared/memory/memory_manager.py",
+          "note": "高レベルメモリマネージャー"
+        },
+        {
+          "source": "agentflow/memory/episodic/",
+          "destination": "shared/memory/episodic/"
+        },
+        {
+          "source": "agentflow/memory/long_term/",
+          "destination": "shared/memory/long_term/"
+        },
+        {
+          "source": "agentflow/memory/short_term/",
+          "destination": "shared/memory/short_term/"
+        },
+        {
+          "source": "agentflow/memory/sensory/",
+          "destination": "shared/memory/sensory/"
+        },
+        {
+          "source": "agentflow/memory/knowledge/",
+          "destination": "shared/memory/knowledge/"
+        }
       ]
     },
     {
@@ -76,29 +202,74 @@
       "target_layer": "kernel",
       "description": "コアエージェント・エンジン・オーケストレーション・スキル・プロトコルの移行",
       "moves": [
-        {"source": "agentflow/core/", "destination": "kernel/agents/", "note": "agent_block, agent_factory, registry 等; exceptions.py は kernel/exceptions.py へ"},
-        {"source": "agentflow/agents/", "destination": "kernel/agents/specialized/"},
-        {"source": "agentflow/patterns/", "destination": "kernel/patterns/"},
-        {"source": "agentflow/engines/", "destination": "kernel/engines/"},
-        {"source": "agentflow/orchestration/", "destination": "kernel/planner/", "note": "プランナー部分は planner/、実行部分は executor/ へ分割"},
-        {"source": "agentflow/routing/", "destination": "kernel/router/"},
-        {"source": "agentflow/task/", "destination": "kernel/task/"},
-        {"source": "agentflow/run/", "destination": "kernel/runtime/"},
-        {"source": "agentflow/reasoner/", "destination": "kernel/reasoner/"},
-        {"source": "agentflow/perception/", "destination": "kernel/perception/"},
-        {"source": "agentflow/multi_tenant/", "destination": "kernel/runtime/multi_tenant/"},
-        {"source": "agentflow/skills/core/", "destination": "kernel/skills/core/"},
-        {"source": "agentflow/skills/builtin/", "destination": "kernel/skills/builtin/"},
-        {"source": "agentflow/skills/versioning/", "destination": "kernel/skills/versioning/"},
-        {"source": "agentflow/skills/__init__.py", "destination": "kernel/skills/__init__.py", "note": "スキルトップレベルモジュール"},
-        {"source": "agentflow/tools/cli/", "destination": "kernel/tools/cli/"},
-        {"source": "agentflow/adapters/", "destination": "kernel/protocols/"},
-        {"source": "agentflow/mcp/connectors/", "destination": "kernel/protocols/mcp/connectors/"},
-        {"source": "agentflow/decorators.py", "destination": "kernel/decorators.py"},
-        {"source": "agentflow/agent_decorator.py", "destination": "kernel/agent_decorator.py"},
-        {"source": "agentflow/pev/", "destination": "kernel/planner/pev/"},
-        {"source": "agentflow/templates/", "destination": "kernel/templates/"},
-        {"source": "agentflow/flow/", "destination": "kernel/flow/"}
+        {
+          "source": "agentflow/core/",
+          "destination": "kernel/agents/",
+          "note": "agent_block, agent_factory, registry 等; exceptions.py は kernel/exceptions.py へ"
+        },
+        {
+          "source": "agentflow/agents/",
+          "destination": "kernel/agents/specialized/"
+        },
+        { "source": "agentflow/patterns/", "destination": "kernel/patterns/" },
+        { "source": "agentflow/engines/", "destination": "kernel/engines/" },
+        {
+          "source": "agentflow/orchestration/",
+          "destination": "kernel/planner/",
+          "note": "プランナー部分は planner/、実行部分は executor/ へ分割"
+        },
+        { "source": "agentflow/routing/", "destination": "kernel/router/" },
+        { "source": "agentflow/task/", "destination": "kernel/task/" },
+        { "source": "agentflow/run/", "destination": "kernel/runtime/" },
+        { "source": "agentflow/reasoner/", "destination": "kernel/reasoner/" },
+        {
+          "source": "agentflow/perception/",
+          "destination": "kernel/perception/"
+        },
+        {
+          "source": "agentflow/multi_tenant/",
+          "destination": "kernel/runtime/multi_tenant/"
+        },
+        {
+          "source": "agentflow/skills/core/",
+          "destination": "kernel/skills/core/"
+        },
+        {
+          "source": "agentflow/skills/builtin/",
+          "destination": "kernel/skills/builtin/"
+        },
+        {
+          "source": "agentflow/skills/versioning/",
+          "destination": "kernel/skills/versioning/"
+        },
+        {
+          "source": "agentflow/skills/__init__.py",
+          "destination": "kernel/skills/__init__.py",
+          "note": "スキルトップレベルモジュール"
+        },
+        {
+          "source": "agentflow/tools/cli/",
+          "destination": "kernel/tools/cli/"
+        },
+        { "source": "agentflow/adapters/", "destination": "kernel/protocols/" },
+        {
+          "source": "agentflow/mcp/connectors/",
+          "destination": "kernel/protocols/mcp/connectors/"
+        },
+        {
+          "source": "agentflow/decorators.py",
+          "destination": "kernel/decorators.py"
+        },
+        {
+          "source": "agentflow/agent_decorator.py",
+          "destination": "kernel/agent_decorator.py"
+        },
+        { "source": "agentflow/pev/", "destination": "kernel/planner/pev/" },
+        {
+          "source": "agentflow/templates/",
+          "destination": "kernel/templates/"
+        },
+        { "source": "agentflow/flow/", "destination": "kernel/flow/" }
       ]
     },
     {
@@ -106,20 +277,57 @@
       "target_layer": "harness",
       "description": "ガバナンス・HITL・安全ガード・テスト・バリデーションの移行",
       "moves": [
-        {"source": "agentflow/governance/", "destination": "harness/governance/"},
-        {"source": "agentflow/hitl/", "destination": "harness/approval/"},
-        {"source": "agentflow/context/", "destination": "harness/context/", "note": "budget_manager.py は harness/budget/ へ分離"},
-        {"source": "agentflow/context/budget_manager.py", "destination": "harness/budget/budget_manager.py"},
-        {"source": "agentflow/security/policy_engine.py", "destination": "harness/policies/policy_engine.py"},
-        {"source": "agentflow/security/ai_safety_guard.py", "destination": "harness/guardrails/ai_safety_guard.py"},
-        {"source": "agentflow/security/data_sanitizer.py", "destination": "harness/guardrails/data_sanitizer.py"},
-        {"source": "agentflow/security/hallucination_detector.py", "destination": "harness/guardrails/hallucination_detector.py"},
-        {"source": "agentflow/security/reasoning_monitor.py", "destination": "harness/guardrails/reasoning_monitor.py"},
-        {"source": "agentflow/security/safety_mixin.py", "destination": "harness/guardrails/safety_mixin.py"},
-        {"source": "agentflow/security/contract_auth_guard.py", "destination": "harness/gating/contract_auth_guard.py"},
-        {"source": "agentflow/security/evidence_collector.py", "destination": "harness/validation/evidence_collector.py"},
-        {"source": "agentflow/security/output_contracts.py", "destination": "harness/validation/output_contracts.py"},
-        {"source": "agentflow/testing/", "destination": "harness/testing/"}
+        {
+          "source": "agentflow/governance/",
+          "destination": "harness/governance/"
+        },
+        { "source": "agentflow/hitl/", "destination": "harness/approval/" },
+        {
+          "source": "agentflow/context/",
+          "destination": "harness/context/",
+          "note": "budget_manager.py は harness/budget/ へ分離"
+        },
+        {
+          "source": "agentflow/context/budget_manager.py",
+          "destination": "harness/budget/budget_manager.py"
+        },
+        {
+          "source": "agentflow/security/policy_engine.py",
+          "destination": "harness/policies/policy_engine.py"
+        },
+        {
+          "source": "agentflow/security/ai_safety_guard.py",
+          "destination": "harness/guardrails/ai_safety_guard.py"
+        },
+        {
+          "source": "agentflow/security/data_sanitizer.py",
+          "destination": "harness/guardrails/data_sanitizer.py"
+        },
+        {
+          "source": "agentflow/security/hallucination_detector.py",
+          "destination": "harness/guardrails/hallucination_detector.py"
+        },
+        {
+          "source": "agentflow/security/reasoning_monitor.py",
+          "destination": "harness/guardrails/reasoning_monitor.py"
+        },
+        {
+          "source": "agentflow/security/safety_mixin.py",
+          "destination": "harness/guardrails/safety_mixin.py"
+        },
+        {
+          "source": "agentflow/security/contract_auth_guard.py",
+          "destination": "harness/gating/contract_auth_guard.py"
+        },
+        {
+          "source": "agentflow/security/evidence_collector.py",
+          "destination": "harness/validation/evidence_collector.py"
+        },
+        {
+          "source": "agentflow/security/output_contracts.py",
+          "destination": "harness/validation/output_contracts.py"
+        },
+        { "source": "agentflow/testing/", "destination": "harness/testing/" }
       ]
     },
     {
@@ -127,26 +335,53 @@
       "target_layer": "platform",
       "description": "UI・デプロイ・CLI・SDK・API 等のプラットフォーム層の移行",
       "moves": [
-        {"source": "agentflow/studio/", "destination": "platform/ui/studio/"},
-        {"source": "agentflow/deploy/", "destination": "platform/deploy/"},
-        {"source": "agentflow/discovery/", "destination": "platform/discovery/"},
-        {"source": "agentflow/cli/", "destination": "platform/cli/"},
-        {"source": "agentflow/codegen/", "destination": "platform/codegen/"},
-        {"source": "agentflow/marketplace/", "destination": "platform/marketplace/"},
-        {"source": "agentflow/wizard/", "destination": "platform/wizard/"},
-        {"source": "agentflow/i18n/", "destination": "platform/i18n/"},
-        {"source": "agentflow/code_intelligence/", "destination": "platform/code_intelligence/"},
-        {"source": "agentflow/services/", "destination": "platform/services/"},
-        {"source": "agentflow/sdk/", "destination": "platform/sdk/"},
-        {"source": "agentflow/api/", "destination": "platform/api/"},
-        {"source": "agentflow/bootstrap/", "destination": "platform/bootstrap/"}
+        { "source": "agentflow/studio/", "destination": "platform/ui/studio/" },
+        { "source": "agentflow/deploy/", "destination": "platform/deploy/" },
+        {
+          "source": "agentflow/discovery/",
+          "destination": "platform/discovery/"
+        },
+        { "source": "agentflow/cli/", "destination": "platform/cli/" },
+        { "source": "agentflow/codegen/", "destination": "platform/codegen/" },
+        {
+          "source": "agentflow/marketplace/",
+          "destination": "platform/marketplace/"
+        },
+        { "source": "agentflow/wizard/", "destination": "platform/wizard/" },
+        { "source": "agentflow/i18n/", "destination": "platform/i18n/" },
+        {
+          "source": "agentflow/code_intelligence/",
+          "destination": "platform/code_intelligence/"
+        },
+        {
+          "source": "agentflow/services/",
+          "destination": "platform/services/"
+        },
+        { "source": "agentflow/sdk/", "destination": "platform/sdk/" },
+        { "source": "agentflow/api/", "destination": "platform/api/" },
+        {
+          "source": "agentflow/bootstrap/",
+          "destination": "platform/bootstrap/"
+        }
       ]
     }
   ],
   "top_level_moves": [
-    {"source": "control_plane/", "destination": "platform/", "note": "コントロールプレーン全体を platform 層へ統合"},
-    {"source": "studio/", "destination": "platform/ui/frontend/", "note": "React フロントエンドを platform UI へ移行"},
-    {"source": "plugins/", "destination": "kernel/plugins/packs/", "note": "プラグインパックを kernel 層へ移行"}
+    {
+      "source": "control_plane/",
+      "destination": "platform/",
+      "note": "コントロールプレーン全体を platform 層へ統合"
+    },
+    {
+      "source": "studio/",
+      "destination": "platform/ui/frontend/",
+      "note": "React フロントエンドを platform UI へ移行"
+    },
+    {
+      "source": "plugins/",
+      "destination": "kernel/plugins/packs/",
+      "note": "プラグインパックを kernel 層へ移行"
+    }
   ],
   "dependency_rules": {
     "allowed_imports": {
@@ -155,7 +390,13 @@
       "shared (L2)": ["contracts", "infrastructure"],
       "kernel (L3)": ["contracts", "infrastructure", "shared"],
       "harness (L4)": ["contracts", "infrastructure", "shared", "kernel"],
-      "platform (L5)": ["contracts", "infrastructure", "shared", "kernel", "harness"]
+      "platform (L5)": [
+        "contracts",
+        "infrastructure",
+        "shared",
+        "kernel",
+        "harness"
+      ]
     },
     "forbidden": "上位層から下位層への逆依存は禁止。同一層内の横断依存は明示的インターフェース経由のみ許可。"
   }

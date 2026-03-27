@@ -34,7 +34,7 @@ import logging
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -45,7 +45,7 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
-class ReflectionType(str, Enum):
+class ReflectionType(StrEnum):
     """反省タイプ."""
 
     FAILURE_ANALYSIS = "failure_analysis"  # 失敗原因分析
@@ -55,7 +55,7 @@ class ReflectionType(str, Enum):
     PROCESS_IMPROVEMENT = "process_improvement"  # プロセス改善
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """深刻度."""
 
     LOW = "low"

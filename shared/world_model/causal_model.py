@@ -28,7 +28,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class RelationType(str, Enum):
+class RelationType(StrEnum):
     """因果関係のタイプ."""
 
     INCREASES = "increases"  # 原因が増えると結果が増える

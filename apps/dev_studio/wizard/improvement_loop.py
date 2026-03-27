@@ -16,7 +16,7 @@ import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from apps.dev_studio.wizard.gap_detector import CapabilityGapDetector
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     )
 
 
-class LoopPhase(str, Enum):
+class LoopPhase(StrEnum):
     """ループフェーズ."""
 
     IDLE = "idle"

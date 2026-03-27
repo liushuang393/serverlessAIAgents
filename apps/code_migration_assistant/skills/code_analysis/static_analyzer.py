@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -24,7 +24,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class IssueSeverity(str, Enum):
+class IssueSeverity(StrEnum):
     """問題の重要度."""
 
     CRITICAL = "critical"
@@ -34,7 +34,7 @@ class IssueSeverity(str, Enum):
     INFO = "info"
 
 
-class IssueCategory(str, Enum):
+class IssueCategory(StrEnum):
     """問題のカテゴリ."""
 
     BUG = "bug"  # バグ

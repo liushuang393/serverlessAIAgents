@@ -7,7 +7,7 @@ Google Gemini の意図広告に対応した購買意図データ構造。
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ def _default_price_range() -> dict[str, float | None]:
     return {"min": None, "max": None}
 
 
-class IntentType(str, Enum):
+class IntentType(StrEnum):
     """意図タイプ."""
 
     BROWSE = "browse"  # 閲覧
@@ -30,7 +30,7 @@ class IntentType(str, Enum):
     BARGAIN_HUNT = "bargain_hunt"  # お得探し
 
 
-class IntentConfidence(str, Enum):
+class IntentConfidence(StrEnum):
     """意図確度レベル."""
 
     LOW = "low"  # 低（0.0-0.3）

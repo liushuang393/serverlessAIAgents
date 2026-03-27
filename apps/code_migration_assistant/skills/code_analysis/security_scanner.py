@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -24,7 +24,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class VulnerabilitySeverity(str, Enum):
+class VulnerabilitySeverity(StrEnum):
     """脆弱性の重要度."""
 
     CRITICAL = "critical"  # CVSS 9.0-10.0
@@ -34,7 +34,7 @@ class VulnerabilitySeverity(str, Enum):
     INFO = "info"
 
 
-class VulnerabilityType(str, Enum):
+class VulnerabilityType(StrEnum):
     """脆弱性のタイプ."""
 
     INJECTION = "injection"  # SQLインジェクション等

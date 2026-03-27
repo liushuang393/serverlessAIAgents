@@ -38,7 +38,7 @@ from __future__ import annotations
 import traceback
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """統一エラーコード.
 
     フォーマット: DOMAIN_ERROR_TYPE

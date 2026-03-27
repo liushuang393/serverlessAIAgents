@@ -24,7 +24,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.services.base import (
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class ChartType(str, Enum):
+class ChartType(StrEnum):
     """チャートタイプ."""
 
     BAR = "bar"
@@ -66,7 +66,7 @@ class ChartType(str, Enum):
     COMBO = "combo"  # 棒グラフ + 折れ線グラフ
 
 
-class ChartFormat(str, Enum):
+class ChartFormat(StrEnum):
     """出力フォーマット."""
 
     ECHARTS = "echarts"

@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class GapType(str, Enum):
+class GapType(StrEnum):
     """能力缺口タイプ."""
 
     SKILL = "skill"  # 技能缺口
@@ -21,7 +21,7 @@ class GapType(str, Enum):
     KNOWLEDGE = "knowledge"  # 知识缺口
 
 
-class EngineType(str, Enum):
+class EngineType(StrEnum):
     """Engine タイプ."""
 
     SIMPLE = "simple"  # SimpleEngine
@@ -30,7 +30,7 @@ class EngineType(str, Enum):
     RAG = "rag"  # RAGEngine
 
 
-class ValidationStatus(str, Enum):
+class ValidationStatus(StrEnum):
     """検証ステータス."""
 
     PENDING = "pending"
@@ -212,6 +212,8 @@ class TestCase:
         tags: タグ
     """
 
+    __test__ = False
+
     name: str
     description: str = ""
     input_data: dict[str, Any] = field(default_factory=dict)
@@ -234,6 +236,8 @@ class TestResult:
         assertions_passed: 通過したアサーション数
         assertions_failed: 失敗したアサーション数
     """
+
+    __test__ = False
 
     test_name: str
     passed: bool
@@ -260,16 +264,9 @@ class TestResult:
 
 @dataclass
 class TestSuiteResult:
-    """テストスイート結果.
+    """テストスイート結果."""
 
-    Attributes:
-        total_tests: 総テスト数
-        passed_tests: 合格テスト数
-        failed_tests: 失敗テスト数
-        results: 個別テスト結果
-        coverage: カバレッジ率
-        duration_ms: 総実行時間
-    """
+    __test__ = False
 
     total_tests: int = 0
     passed_tests: int = 0

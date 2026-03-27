@@ -32,7 +32,7 @@ import logging
 import math
 import uuid
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -118,7 +118,7 @@ class SearchResult(BaseModel):
     node: Node | None = Field(default=None)
 
 
-class SearchType(str, Enum):
+class SearchType(StrEnum):
     """検索タイプ."""
 
     SIMILARITY = "similarity"  # コサイン類似度

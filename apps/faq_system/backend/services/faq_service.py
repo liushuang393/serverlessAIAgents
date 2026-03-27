@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class QueryType(str, Enum):
+class QueryType(StrEnum):
     """クエリタイプ."""
 
     FAQ = "faq"
@@ -55,7 +55,7 @@ class QueryType(str, Enum):
     HYBRID = "hybrid"
 
 
-class ChartType(str, Enum):
+class ChartType(StrEnum):
     """チャートタイプ."""
 
     BAR = "bar"

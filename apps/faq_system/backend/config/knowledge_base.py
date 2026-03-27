@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ from apps.faq_system.backend.db.session import (
 )
 
 
-class KnowledgeBaseType(str, Enum):
+class KnowledgeBaseType(StrEnum):
     """知識ベース種別."""
 
     INTERNAL = "internal"

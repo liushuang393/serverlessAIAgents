@@ -1,39 +1,41 @@
 #!/usr/bin/env python3
-"""Messaging Hub - Multi-Platform AI Chatbot.
+"""Messaging Hub の FastAPI エントリポイント。
 
-统一消息平台网关，支持 Telegram、Slack、Discord 等多平台集成。
+複数のメッセージプラットフォームを単一ゲートウェイに統合し、
+Telegram・Slack・Discord などを横断して扱う。
 
-特性：
-- 多平台消息路由（Telegram/Slack/Discord）
-- 统一会话管理
-- WebSocket 实时同步
-- AI Agent 集成
-- 富文本界面（Live Canvas）
+主な特徴:
+- マルチプラットフォームのメッセージルーティング
+- 統一セッション管理
+- WebSocket によるリアルタイム同期
+- AI Agent / Skill の統合
+- リッチ UI（Live Canvas）
 
-架构：
+アーキテクチャ:
     Message Platforms → Gateway → ChatBot → Agent/Coordinator
                             ↓
                       WebSocket Hub → Frontend
 
-运行方式：
-    # 开发模式
-    python apps/messaging_hub/main.py
+起動方法:
+    # 開発モード
+    uvicorn apps.messaging_hub.main:app --reload --host 0.0.0.0 --port 8004
 
-    # 生产模式
-    uvicorn apps.messaging_hub.main:app --host 0.0.0.0 --port 8000
+    # 本番モード
+    uvicorn apps.messaging_hub.main:app --host 0.0.0.0 --port 8004
 
-环境变量：
+環境変数:
     TELEGRAM_BOT_TOKEN: Telegram Bot Token
     SLACK_BOT_TOKEN: Slack Bot Token
     SLACK_SIGNING_SECRET: Slack Signing Secret
     DISCORD_BOT_TOKEN: Discord Bot Token
-    OPENAI_API_KEY: OpenAI API Key（或其他 LLM provider）
+    MSGHUB_HOST: backend bind host override
+    MSGHUB_PORT: backend bind port override
+    OPENAI_API_KEY: OpenAI API Key（または他の LLM provider）
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import re
@@ -61,7 +63,6 @@ from apps.messaging_hub.storage import SQLiteMessagingHubStore
 from harness.budget.service import BudgetConfig, TokenBudgetManager
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension, ScoringResult
-from infrastructure.llm.providers import get_llm
 from kernel.runtime import WebSocketHub
 from kernel.skills import (
     ChatBotSkill,
@@ -87,7 +88,7 @@ if TYPE_CHECKING:
     from shared.channels.base import MessageChannelAdapter
 
 
-# 配置日志
+# ログ設定
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -96,22 +97,22 @@ logger = logging.getLogger("messaging_hub")
 
 
 # =========================================================================
-# 全局实例
+# グローバルインスタンス
 # =========================================================================
 
 # WebSocket Hub
 hub = WebSocketHub()
 
-# ChatBot Skill（复用现有、assistantと連携）
+# ChatBot Skill（既存実装を再利用し、assistant と連携）
 chatbot = ChatBotSkill(
-    # 可以在这里添加 coordinator 或 rag_skill
+    # coordinator や rag_skill は必要に応じて追加する
     temperature=0.7,
 )
 
 # Message Gateway
 gateway = MessageGateway(hub, chatbot)
 
-# 后台任务列表
+# バックグラウンドタスク一覧
 background_tasks: list[asyncio.Task[None]] = []
 _cli_runtime = CLIRuntimeManager()
 _assistant_cli_proposals: dict[str, dict[str, Any]] = {}
@@ -145,7 +146,7 @@ _auth_guard = ContractAuthGuard(
     ),
 )
 
-# Token予算管理 - メッセージ履歴・入力のコンテキスト予算を管理
+# Token 予算管理: メッセージ履歴・入力のコンテキスト予算を管理
 _budget_manager = TokenBudgetManager(
     config=BudgetConfig(
         system_prompt_budget=500,
@@ -154,7 +155,7 @@ _budget_manager = TokenBudgetManager(
     )
 )
 
-# 実行品質スコアラー - アシスタント応答を多次元評価
+# 実行品質スコアラー: アシスタント応答を多次元評価
 _scorer = ExecutionScorer()
 
 
@@ -304,7 +305,7 @@ from kernel.protocols.a2a_hub import get_hub as _get_a2a_hub
 
 
 _a2a_hub = _get_a2a_hub()
-if _a2a_hub.discover("FileOrganizer") is None:
+if _a2a_hub.discover(_file_organizer_agent.name) is None:
     _a2a_hub.register(_file_organizer_agent)
 
 _active_step_events: dict[str, str] = {}
@@ -887,7 +888,7 @@ assistant = PersonalAssistantCoordinator(
     lazy_tool_loader=_lazy_tool_loader,
 )
 
-if _a2a_hub.discover("PersonalAssistantCoordinator") is None:
+if _a2a_hub.discover(assistant.name) is None:
     _a2a_hub.register(assistant)
 
 
@@ -998,13 +999,13 @@ async def _execute_skill_with_tracking(
 
 
 # =========================================================================
-# 生命周期管理
+# ライフサイクル管理
 # =========================================================================
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    """应用生命周期管理."""
+    """アプリケーションのライフサイクルを管理する。"""
     logger.info("Starting Messaging Hub...")
 
     # 1. 永続化層の初期化と復元
@@ -1024,13 +1025,13 @@ async def lifespan(app: FastAPI) -> Any:
     restored_events = [ExecutionEvent.from_dict(row) for row in execution_rows]
     _execution_tracker.restore_events(restored_events)
 
-    # 2. 注册平台适配器
+    # 2. プラットフォームアダプターを登録
     await setup_platforms()
 
-    # 3. ツールインデックスの構築（懒加載）
+    # 3. ツールインデックスの構築（遅延ロード）
     await _lazy_tool_loader.build_index()
 
-    # 4. 启动后台任务（Discord bot）
+    # 4. バックグラウンドタスクを開始（Discord bot）
     await start_background_tasks()
 
     logger.info("Messaging Hub started successfully")
@@ -1038,15 +1039,15 @@ async def lifespan(app: FastAPI) -> Any:
 
     yield
 
-    # 清理资源
+    # リソースを解放
     logger.info("Shutting down Messaging Hub...")
 
-    # 停止后台任务
+    # バックグラウンドタスクを停止
     for task in background_tasks:
         task.cancel()
     await asyncio.gather(*background_tasks, return_exceptions=True)
 
-    # 关闭网关
+    # ゲートウェイを停止
     await gateway.shutdown()
 
     logger.info("Messaging Hub shut down")
@@ -1063,10 +1064,10 @@ async def setup_platforms() -> None:
 
 
 async def start_background_tasks() -> None:
-    """启动后台任务."""
+    """バックグラウンドタスクを開始する。"""
     await _ensure_discord_runtime_task()
 
-    # 可以添加其他后台任务（如定期清理会话）
+    # 必要に応じて他のバックグラウンドタスクも追加する
 
 
 async def _ensure_discord_runtime_task() -> None:
@@ -1171,7 +1172,7 @@ async def _get_platform_bot_info(adapter: MessageChannelAdapter) -> dict[str, An
 
 
 # =========================================================================
-# FastAPI 应用
+# FastAPI アプリケーション
 # =========================================================================
 
 app = FastAPI(
@@ -1189,15 +1190,15 @@ async def auth_middleware(request: Request, call_next: Any) -> Any:
 
 
 # =========================================================================
-# WebSocket 端点
+# WebSocket エンドポイント
 # =========================================================================
 
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
-    """WebSocket 连接端点.
+    """WebSocket 接続エンドポイント。
 
-    前端可以通过此端点接收实时消息更新。
+    フロントエンドはこのエンドポイントからリアルタイム更新を受信できる。
     """
     if not await _require_ws_api_key(websocket):
         return
@@ -1208,13 +1209,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         await hub.connect(websocket, client_id=client_id)
         logger.info(f"WebSocket client connected: {client_id}")
 
-        # 保持连接
+        # 接続を維持
         while True:
-            # 接收客户端消息（可选）
+            # クライアントメッセージを受信（任意）
             data = await websocket.receive_json()
             logger.debug(f"Received from {client_id}: {data}")
 
-            # 处理客户端消息（可扩展）
+            # クライアントメッセージ処理は必要に応じて拡張する
             # ...
 
     except WebSocketDisconnect:
@@ -1224,19 +1225,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
 
 # =========================================================================
-# Webhook 端点
+# Webhook エンドポイント
 # =========================================================================
 
 
 @app.post("/webhook/telegram")
 async def telegram_webhook(request: Request) -> JSONResponse:
-    """Telegram Webhook 端点.
-
-    配置步骤：
-    1. 设置 webhook: curl -X POST https://api.telegram.org/bot<TOKEN>/setWebhook \
-                      -d url=https://your-domain.com/webhook/telegram
-    2. 接收消息更新
-    """
+    """Telegram Webhook エンドポイント。"""
     try:
         update_data = await request.json()
 
@@ -1253,14 +1248,7 @@ async def telegram_webhook(request: Request) -> JSONResponse:
 
 @app.post("/webhook/slack")
 async def slack_webhook(request: Request) -> JSONResponse:
-    """Slack Webhook 端点.
-
-    配置步骤：
-    1. 创建 Slack App: https://api.slack.com/apps
-    2. 启用 Event Subscriptions
-    3. 设置 Request URL: https://your-domain.com/webhook/slack
-    4. 订阅 Bot Events: message.channels, message.im
-    """
+    """Slack Webhook エンドポイント。"""
     try:
         body = await request.body()
         headers = dict(request.headers)
@@ -1279,7 +1267,7 @@ async def slack_webhook(request: Request) -> JSONResponse:
 
 @app.post("/webhook/teams")
 async def teams_webhook(request: Request) -> JSONResponse:
-    """Microsoft Teams Webhook 端点."""
+    """Microsoft Teams Webhook エンドポイント。"""
     try:
         activity_data = await request.json()
         auth_header = request.headers.get("Authorization", "")
@@ -1296,9 +1284,9 @@ async def teams_webhook(request: Request) -> JSONResponse:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
-@app.api_route("/webhook/whatsapp", methods=["GET", "POST"])
+@app.api_route("/webhook/whatsapp", methods=["GET", "POST"], response_model=None)
 async def whatsapp_webhook(request: Request) -> JSONResponse | PlainTextResponse:
-    """WhatsApp Webhook 端点（検証とメッセージ両方対応）."""
+    """WhatsApp Webhook エンドポイント（検証とメッセージ処理の両方に対応）。"""
     try:
         whatsapp_adapter = gateway.get_channel("whatsapp")
         if not isinstance(whatsapp_adapter, WhatsAppAdapter):
@@ -1327,7 +1315,7 @@ async def whatsapp_webhook(request: Request) -> JSONResponse | PlainTextResponse
 
 @app.post("/webhook/signal")
 async def signal_webhook(request: Request) -> JSONResponse:
-    """Signal Webhook 端点（signal-cli-rest-api callback モード）."""
+    """Signal Webhook エンドポイント（signal-cli-rest-api callback モード）。"""
     try:
         payload = await request.json()
 
@@ -1344,13 +1332,13 @@ async def signal_webhook(request: Request) -> JSONResponse:
 
 
 # =========================================================================
-# API 端点
+# API エンドポイント
 # =========================================================================
 
 
 @app.get("/")
 async def root() -> dict[str, Any]:
-    """根端点."""
+    """ルートエンドポイント。"""
     return {
         "service": "Messaging Hub",
         "version": "1.0.0",
@@ -1362,7 +1350,7 @@ async def root() -> dict[str, Any]:
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    """健康检查."""
+    """ヘルスチェック。"""
     stats = gateway.get_statistics()
     return {
         "status": "healthy",
@@ -1399,7 +1387,7 @@ async def list_a2a_agents() -> list[dict[str, Any]]:
 
 @app.get("/platforms")
 async def list_platforms() -> dict[str, Any]:
-    """列出已注册平台."""
+    """登録済みプラットフォームを一覧する。"""
     platforms = []
 
     for platform_name in gateway.list_channels():
@@ -1430,15 +1418,15 @@ async def send_message(
     channel_id: str,
     text: str,
 ) -> JSONResponse:
-    """直接发送消息到平台（管理接口）.
+    """プラットフォームへ直接メッセージを送信する（管理 API）。
 
     Args:
-        platform: 平台名称（telegram, slack, discord）
-        channel_id: 频道/用户 ID
-        text: 消息文本
+        platform: プラットフォーム名（telegram, slack, discord）
+        channel_id: チャンネルまたはユーザー ID
+        text: 送信メッセージ本文
 
     Returns:
-        消息 ID
+        メッセージ ID
     """
     try:
         message_id = await gateway.send_message_to_platform(
@@ -1458,7 +1446,7 @@ async def send_message(
 
 @app.get("/sessions")
 async def list_sessions() -> dict[str, Any]:
-    """列出所有活跃会话."""
+    """アクティブなセッションを一覧する。"""
     sessions = chatbot.list_sessions()
     return {"sessions": sessions, "total": len(sessions)}
 
@@ -2087,7 +2075,7 @@ class MCPInstallAPIRequest(BaseModel):
 
 
 class MCPLazyLoadingPatchRequest(BaseModel):
-    """MCP 懒加載設定更新リクエスト."""
+    """MCP 遅延ロード設定更新リクエスト."""
 
     enabled: bool | None = None
     threshold: int | None = Field(default=None, ge=1)
@@ -2167,7 +2155,7 @@ async def api_mcp_delete_server(server_name: str) -> dict[str, Any]:
 
 @app.get("/api/mcp/lazy-loading")
 async def api_mcp_get_lazy_loading() -> dict[str, Any]:
-    """懒加載設定取得."""
+    """遅延ロード設定を取得する."""
     return {"lazy_loading": _mcp_manager.get_lazy_loading_config()}
 
 
@@ -2175,7 +2163,7 @@ async def api_mcp_get_lazy_loading() -> dict[str, Any]:
 async def api_mcp_patch_lazy_loading(
     request: MCPLazyLoadingPatchRequest,
 ) -> dict[str, Any]:
-    """懒加載設定更新."""
+    """遅延ロード設定を更新する."""
     patch_data = request.model_dump(exclude_none=True)
     updated = _mcp_manager.update_lazy_loading_config(patch_data)
     return {"lazy_loading": updated}
@@ -2661,79 +2649,3 @@ async def list_assistant_templates() -> dict[str, Any]:
             {"template": "report", "example": "「週次レポート」を作成して"},
         ],
     }
-
-
-# =========================================================================
-# 启动入口
-# =========================================================================
-
-if __name__ == "__main__":
-    import argparse
-
-    import uvicorn
-
-    parser = argparse.ArgumentParser(description="Messaging Hub - Multi-Platform Chatbot")
-    parser.add_argument(
-        "--reload",
-        action="store_true",
-        help="開発モード（ホットリロード有効）",
-    )
-    parser.add_argument(
-        "--host",
-        default=None,
-        help="ホスト（省略時: 環境変数 MSGHUB_HOST / デフォルト 0.0.0.0）",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=None,
-        help="ポート（省略時: 環境変数 MSGHUB_PORT / app_config.json）",
-    )
-    args = parser.parse_args()
-
-    # 检查环境变量
-    if not any(
-        [
-            os.getenv("TELEGRAM_BOT_TOKEN"),
-            os.getenv("SLACK_BOT_TOKEN"),
-            os.getenv("DISCORD_BOT_TOKEN"),
-        ]
-    ):
-        logger.warning(
-            "⚠️  No platform tokens configured! Set TELEGRAM_BOT_TOKEN, SLACK_BOT_TOKEN, or DISCORD_BOT_TOKEN"
-        )
-
-    # 检查 LLM provider
-    try:
-        get_llm()
-        logger.info("✓ LLM Provider initialized")
-    except Exception as e:
-        logger.exception("✗ Failed to initialize LLM: %s", e)
-        logger.exception("Please set OPENAI_API_KEY or other LLM provider keys")
-
-    # 启动服务
-    config_path = Path(__file__).resolve().parent / "app_config.json"
-    config_raw: dict[str, Any] = {}
-    if config_path.is_file():
-        try:
-            config_raw = json.loads(config_path.read_text("utf-8"))
-        except json.JSONDecodeError:
-            config_raw = {}
-
-    _default_port = config_raw.get("ports", {}).get("api", 8004)
-    _host = args.host or os.getenv("MSGHUB_HOST", "0.0.0.0")
-    _port = args.port or int(os.getenv("MSGHUB_PORT", str(_default_port)))
-
-    print(f"[Messaging Hub] Starting on {_host}:{_port} (reload={args.reload})")
-
-    if args.reload:
-        uvicorn.run(
-            "apps.messaging_hub.main:app",
-            host=_host,
-            port=_port,
-            reload=True,
-            reload_dirs=["apps/messaging_hub", "shared", "kernel", "harness", "control_plane"],
-            log_level="info",
-        )
-    else:
-        uvicorn.run(app, host=_host, port=_port, log_level="info")

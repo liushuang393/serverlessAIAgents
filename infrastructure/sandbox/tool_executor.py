@@ -30,7 +30,7 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
@@ -49,7 +49,7 @@ _approval_interrupt_module = importlib.import_module("harness.approval.interrupt
 _approval_types_module = importlib.import_module("harness.approval.types")
 
 
-class _GovernanceDecisionValue(str, Enum):
+class _GovernanceDecisionValue(StrEnum):
     """ガバナンス判定値."""
 
     ALLOW = "allow"

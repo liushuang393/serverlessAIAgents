@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -37,7 +37,7 @@ def _execution_mode_cls() -> Any:
     return _execution_mode_cls._cached  # type: ignore[attr-defined]
 
 
-class SwitchDirection(str, Enum):
+class SwitchDirection(StrEnum):
     """切替方向."""
 
     TO_ISOLATED = "to_isolated"  # 安全方向（即時可）

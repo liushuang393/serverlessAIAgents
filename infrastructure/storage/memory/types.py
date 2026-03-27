@@ -17,11 +17,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class MemoryType(str, Enum):
+class MemoryType(StrEnum):
     """記憶タイプ.
 
     - SENSORY: 感覚記憶（一時的、圧縮済み）
@@ -34,7 +34,7 @@ class MemoryType(str, Enum):
     LONG_TERM = "long_term"
 
 
-class MemorySemanticLevel(str, Enum):
+class MemorySemanticLevel(StrEnum):
     """記憶の意味レベル（HOPE風アーキテクチャ）.
 
     人間の記憶モデルに基づく3段階分類:
@@ -48,7 +48,7 @@ class MemorySemanticLevel(str, Enum):
     PROCEDURAL = "procedural"
 
 
-class MemoryStability(str, Enum):
+class MemoryStability(StrEnum):
     """記憶の安定性レベル.
 
     記憶の固定度合いを示す:
@@ -62,7 +62,7 @@ class MemoryStability(str, Enum):
     CRYSTALLIZED = "crystallized"
 
 
-class MemoryScope(str, Enum):
+class MemoryScope(StrEnum):
     """記憶スコープ（MemOS風マルチテナント対応）.
 
     metadata["scope"] に格納する。

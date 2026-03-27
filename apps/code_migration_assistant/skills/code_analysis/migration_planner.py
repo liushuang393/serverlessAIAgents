@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -25,7 +25,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class MigrationStrategy(str, Enum):
+class MigrationStrategy(StrEnum):
     """移行戦略."""
 
     BIG_BANG = "big_bang"  # 一括移行
@@ -34,7 +34,7 @@ class MigrationStrategy(str, Enum):
     PARALLEL = "parallel"  # 並行運用
 
 
-class MigrationRisk(str, Enum):
+class MigrationRisk(StrEnum):
     """移行リスク."""
 
     LOW = "low"

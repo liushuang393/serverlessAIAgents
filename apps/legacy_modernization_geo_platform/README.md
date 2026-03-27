@@ -34,10 +34,10 @@ GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE=1
 ### 2. バックエンドを起動する
 
 ```bash
-python  apps/legacy_modernization_geo_platform/scripts/dev.py
+conda run -n agentflow python apps/legacy_modernization_geo_platform/scripts/dev.py --reload
 ```
 
-既定では API は `http://localhost:8100` で起動します。
+`scripts/dev.py` は `app_config.json` を既定値とし、`GEO_PLATFORM_HOST` / `GEO_PLATFORM_PORT` があればそれを優先して `uvicorn` を起動します。既定では API は `http://localhost:8100` です。
 
 ### 3. フロントエンドを起動する
 
@@ -61,13 +61,13 @@ npm run dev
 ## Docker で起動する
 
 ```bash
-python apps/legacy_modernization_geo_platform/scripts/compose.py publish
+conda run -n agentflow python apps/legacy_modernization_geo_platform/scripts/compose.py publish
 ```
 
 停止:
 
 ```bash
-python apps/legacy_modernization_geo_platform/scripts/compose.py stop
+conda run -n agentflow python apps/legacy_modernization_geo_platform/scripts/compose.py stop
 ```
 
 ## テスト

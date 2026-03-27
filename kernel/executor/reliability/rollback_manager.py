@@ -34,7 +34,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any, TypeVar
 
 
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class CheckpointStatus(str, Enum):
+class CheckpointStatus(StrEnum):
     """检查点状态."""
 
     ACTIVE = "active"  # 活跃（可回滚）

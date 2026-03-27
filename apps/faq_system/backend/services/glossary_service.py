@@ -22,14 +22,14 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class TermType(str, Enum):
+class TermType(StrEnum):
     """用語タイプ."""
 
     OFFICIAL = "official"  # 正式名称

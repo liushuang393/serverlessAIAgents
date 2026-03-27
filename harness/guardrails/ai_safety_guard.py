@@ -29,7 +29,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -50,7 +50,7 @@ from harness.guardrails.reasoning_monitor import (
 )
 
 
-class SafetyLevel(str, Enum):
+class SafetyLevel(StrEnum):
     """安全级别."""
 
     SAFE = "safe"  # 安全

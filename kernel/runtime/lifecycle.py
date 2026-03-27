@@ -16,7 +16,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class LifecyclePhase(str, Enum):
+class LifecyclePhase(StrEnum):
     """ライフサイクルフェーズ."""
 
     STARTUP = "startup"

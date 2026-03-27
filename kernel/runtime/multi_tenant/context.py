@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class IsolationLevel(str, Enum):
+class IsolationLevel(StrEnum):
     """テナント分離レベル.
 
     - SHARED: 共有インフラ、論理的分離

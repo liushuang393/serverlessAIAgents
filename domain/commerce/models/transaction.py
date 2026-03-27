@@ -7,13 +7,13 @@ UCP（Universal Commerce Protocol）互換。
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class TransactionStatus(str, Enum):
+class TransactionStatus(StrEnum):
     """取引ステータス."""
 
     PENDING = "pending"  # 保留中
@@ -25,7 +25,7 @@ class TransactionStatus(str, Enum):
     PARTIALLY_REFUNDED = "partially_refunded"  # 一部返金
 
 
-class PaymentMethod(str, Enum):
+class PaymentMethod(StrEnum):
     """支払い方法."""
 
     CREDIT_CARD = "credit_card"

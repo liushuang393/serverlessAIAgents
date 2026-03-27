@@ -24,7 +24,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
@@ -39,7 +39,7 @@ def _feedback_sort_key(item: dict[str, Any]) -> float:
     return 0.0
 
 
-class FeedbackType(str, Enum):
+class FeedbackType(StrEnum):
     """フィードバックタイプ."""
 
     HELPFUL = "helpful"  # 有用
@@ -50,7 +50,7 @@ class FeedbackType(str, Enum):
     MISSING = "missing"  # 情報不足
 
 
-class FeedbackStatus(str, Enum):
+class FeedbackStatus(StrEnum):
     """フィードバックステータス."""
 
     NEW = "new"

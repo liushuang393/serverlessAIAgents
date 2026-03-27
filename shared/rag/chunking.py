@@ -21,14 +21,14 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class ChunkStrategy(str, Enum):
+class ChunkStrategy(StrEnum):
     """チャンキング戦略."""
 
     FIXED = "fixed"  # 固定サイズ

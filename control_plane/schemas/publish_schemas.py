@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime  # noqa: TC003 — Pydanticがランタイムで型評価に必要
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class PublishTarget(str, Enum):
+class PublishTarget(StrEnum):
     """発布ターゲット."""
 
     DOCKER = "docker"
@@ -20,7 +20,7 @@ class PublishTarget(str, Enum):
     GALLERY = "gallery"
 
 
-class PublishStatus(str, Enum):
+class PublishStatus(StrEnum):
     """発布ステータス."""
 
     PENDING = "pending"
@@ -33,7 +33,7 @@ class PublishStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class PublishMode(str, Enum):
+class PublishMode(StrEnum):
     """発布モード."""
 
     STUDIO = "studio"  # Studio UI から

@@ -14,8 +14,8 @@ import os
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from enum import Enum
-from typing import TYPE_CHECKING, Any
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 from sqlalchemy import delete, select, update
@@ -51,7 +51,7 @@ def _build_jwt_config() -> JWTConfig:
     )
 
 
-class AuthProvider(str, Enum):
+class AuthProvider(StrEnum):
     """認証プロバイダー."""
 
     LOCAL_DB = "local_db"
@@ -330,9 +330,8 @@ class AuthService:
                 audience=self._jwt_config.audience,
                 issuer=self._jwt_config.issuer,
             )
-            if isinstance(decoded, dict):
-                return decoded
-            return None
+            # PyJWT 2.0+ decode returns dict (verified by MyPy reachable code)
+            return cast("dict[str, Any]", decoded)
         except Exception:
             return None
 

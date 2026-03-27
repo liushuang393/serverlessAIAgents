@@ -14,8 +14,8 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from agentflow import create_flow
-from agentflow.core.agent_block import AgentBlock
+from kernel.flow import create_flow
+from kernel.agents.agent_block import AgentBlock
 
 
 # ============================================================

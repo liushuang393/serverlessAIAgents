@@ -101,7 +101,7 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 "source_code": source_code,
                 "task_spec": task_spec.model_dump(mode="json"),
             },
-            native_runner=lambda payload: engine._legacy_analysis_agent.process(payload),
+            native_runner=engine._legacy_analysis_agent.process,
         )
         engine._append_capability_trace(analysis_execution.trace)
         analysis = analysis_execution.output
@@ -143,7 +143,7 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 "business_context": execution_options.business_context or {},
                 "human_facts": engine._human_facts,
             },
-            native_runner=lambda payload: engine._business_semantics_agent.process(payload),
+            native_runner=engine._business_semantics_agent.process,
         )
         engine._append_capability_trace(semantics_execution.trace)
         business_semantics = semantics_execution.output
@@ -637,7 +637,7 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 "quality": final_quality.model_dump(mode="json"),
                 "fix": fix_artifact.model_dump(mode="json"),
             },
-            native_runner=lambda payload: engine._compliance_reporter_agent.process(payload),
+            native_runner=engine._compliance_reporter_agent.process,
         )
         engine._append_capability_trace(report_execution.trace)
         report = report_execution.output

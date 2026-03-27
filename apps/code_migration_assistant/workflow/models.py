@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -106,7 +106,7 @@ class DifferentialVerificationArtifact(ArtifactBase):
     evidence: dict[str, Any] = Field(default_factory=dict)
 
 
-class QualityDecision(str, Enum):
+class QualityDecision(StrEnum):
     """品質裁定結果."""
 
     PASSED = "PASSED"

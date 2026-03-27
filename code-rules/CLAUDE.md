@@ -384,6 +384,8 @@ npm run dev
 - 既定値フォールバック経路はテストで担保する（「設定欠落時でも安全に起動・動作する」こと）
 - LLM プロバイダーは `LLM_PROVIDER` で明示指定する（`auto` 常用を避ける）
 - `app_config.json` を持つ App のポートは `app_config.json` を単一定義元とし、`<APP>_HOST/PORT` は一時上書き用途に限定する
+- `app_config.json` を持つ App の起動優先順位は `明示指定（CLI 引数 / compose 注入 env） > app_config.json` とし、その後ろにコード側の第3既定値を置かない
+- `scripts/dev.py` / `scripts/compose.py` / `docker-compose*.yml` / `vite.config.*` / 起動 shell は、未指定時に `app_config.json` から host / port を読み、追加の数値 fallback を持たない
 - 詳細: [開発原則 - 環境設定管理](global/principles.md#環境設定管理environment-configuration)
 
 ## モジュラー設計ルール

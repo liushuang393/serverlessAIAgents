@@ -39,7 +39,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class WSEventType(str, Enum):
+class WSEventType(StrEnum):
     """WebSocket イベントタイプ."""
 
     # 接続管理

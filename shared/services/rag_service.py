@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class ChunkStrategy(str, Enum):
+class ChunkStrategy(StrEnum):
     """チャンキング戦略."""
 
     RECURSIVE = "recursive"
@@ -57,7 +57,7 @@ class ChunkStrategy(str, Enum):
     MARKDOWN = "markdown"
 
 
-class RerankerType(str, Enum):
+class RerankerType(StrEnum):
     """リランカータイプ."""
 
     COHERE = "cohere"

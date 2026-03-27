@@ -16,13 +16,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
 
-class PhaseStatus(str, Enum):
+class PhaseStatus(StrEnum):
     """フェーズステータス."""
 
     PENDING = "pending"
@@ -32,7 +32,7 @@ class PhaseStatus(str, Enum):
     SKIPPED = "skipped"
 
 
-class FileStatus(str, Enum):
+class FileStatus(StrEnum):
     """ファイルステータス."""
 
     PENDING = "pending"
@@ -46,7 +46,7 @@ class FileStatus(str, Enum):
     SKIPPED = "skipped"
 
 
-class MigrationPhase(str, Enum):
+class MigrationPhase(StrEnum):
     """迁移阶段."""
 
     DISCOVERY = "discovery"  # 发现和盘点

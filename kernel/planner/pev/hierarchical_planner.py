@@ -23,13 +23,13 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class GoalStatus(str, Enum):
+class GoalStatus(StrEnum):
     """目標状態."""
 
     PENDING = "pending"

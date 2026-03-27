@@ -17,13 +17,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """タスク状態."""
 
     PENDING = "pending"
@@ -33,7 +33,7 @@ class TaskStatus(str, Enum):
     BLOCKED = "blocked"
 
 
-class AgentType(str, Enum):
+class AgentType(StrEnum):
     """通用Agent種別（5-6個の基本Agent）.
 
     DeepAgentsフレームワークで定義された基本的なAgent役割:
@@ -124,7 +124,7 @@ class CognitiveAnalysis(BaseModel):
     suggested_agents: list[str] = Field(default_factory=list, description="推薦Agent")
 
 
-class QualityDimension(str, Enum):
+class QualityDimension(StrEnum):
     """品質評審次元.
 
     多次元品質評価の各軸を定義:
@@ -175,7 +175,7 @@ class EvolutionRecord(BaseModel):
     applied: bool = Field(default=False, description="適用済みか")
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     """Agent間メッセージ種別."""
 
     RESULT = "result"
@@ -213,7 +213,7 @@ class ParallelGroup(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.PENDING)
 
 
-class CompactionStrategy(str, Enum):
+class CompactionStrategy(StrEnum):
     """圧縮戦略."""
 
     SELECTIVE = "selective"

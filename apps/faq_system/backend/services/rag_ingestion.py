@@ -16,7 +16,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlparse
 
 from sqlalchemy import Select, select
@@ -28,40 +28,50 @@ from infrastructure.providers.db_provider import SQLAlchemyDBProvider
 from shared.rag.document_loader import UniversalLoader
 
 
+# Optional dependencies - use Any for module variables to satisfy MyPy
+# Optional dependencies - use Any for module variables to satisfy MyPy
+sqlglot: Any = None
+sql_exp: Any = None
+trafilatura: Any = None
+boto3: Any = None
+
 try:
     import sqlglot
     from sqlglot import exp as sql_exp
-except ImportError:  # pragma: no cover - optional dependency
-    sqlglot = None
-    sql_exp = None
+except ImportError:  # pragma: no cover
+    pass
 
 try:
     import trafilatura
-except ImportError:  # pragma: no cover - optional dependency
-    trafilatura = None
+except ImportError:  # pragma: no cover
+    pass
 
-_httpx_module: Any | None
+_httpx_module: Any = None
 try:
     _httpx_module = importlib.import_module("httpx")
-except ImportError:  # pragma: no cover - optional dependency
-    _httpx_module = None
+except ImportError:  # pragma: no cover
+    pass
 
 try:
     import boto3
-except ImportError:  # pragma: no cover - optional dependency
-    boto3 = None
+except ImportError:  # pragma: no cover
+    pass
 
-_tenacity_module: Any | None
+_tenacity_module: Any = None
 try:
     _tenacity_module = importlib.import_module("tenacity")
-except ImportError:  # pragma: no cover - optional dependency
-    _tenacity_module = None
+except ImportError:  # pragma: no cover
+    pass
+
+_tenacity_module: Any = None
+try:
+    _tenacity_module = importlib.import_module("tenacity")
+except ImportError:  # pragma: no cover
+    pass
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
-
-    from sqlalchemy.sql.elements import ClauseElement
 
     from apps.faq_system.backend.services.rag_runtime_config import RAGDataSourceConfig, RAGRuntimeConfig
 else:
@@ -2026,16 +2036,23 @@ def _guard_select_sql(sql: str, *, dialect: str) -> dict[str, Any]:
         return {"ok": False, "message": "multi-statement SQL is not allowed", "sql": ""}
 
     stmt = parsed[0]
-    forbidden_nodes: tuple[type[ClauseElement], ...] = (
+    if stmt is None:
+        return {"ok": False, "message": "invalid SQL", "sql": ""}
+
+    # sqlglot expression types for forbidden operations
+    forbidden_nodes: tuple[type[Any], ...] = (
         sql_exp.Delete,
         sql_exp.Update,
         sql_exp.Insert,
         sql_exp.Create,
         sql_exp.Drop,
         sql_exp.Alter,
-        sql_exp.Truncate,
         sql_exp.Command,
     )
+    # Truncate might not exist in all sqlglot versions
+    if hasattr(sql_exp, "Truncate"):
+        forbidden_nodes += (sql_exp.Truncate,)
+
     for node in forbidden_nodes:
         if stmt.find(node) is not None:
             return {"ok": False, "message": "only SELECT/CTE queries are allowed", "sql": ""}
@@ -2044,7 +2061,7 @@ def _guard_select_sql(sql: str, *, dialect: str) -> dict[str, Any]:
     if not has_select:
         return {"ok": False, "message": "only SELECT/CTE queries are allowed", "sql": ""}
 
-    normalized_sql = stmt.sql(dialect=_sqlglot_dialect(dialect) or "")
+    normalized_sql = cast("str", stmt.sql(dialect=_sqlglot_dialect(dialect) or ""))
     return {"ok": True, "message": "", "sql": normalized_sql}
 
 

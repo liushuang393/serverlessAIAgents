@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -35,7 +35,7 @@ def _get_llm(**kwargs: Any) -> Any:
     return get_llm(**kwargs)
 
 
-class DocumentFormat(str, Enum):
+class DocumentFormat(StrEnum):
     """ドキュメント形式."""
 
     MARKDOWN = "md"
@@ -43,7 +43,7 @@ class DocumentFormat(str, Enum):
     HTML = "html"
 
 
-class SummaryStyle(str, Enum):
+class SummaryStyle(StrEnum):
     """要約スタイル."""
 
     EXECUTIVE = "executive"  # 経営層向け簡潔サマリー

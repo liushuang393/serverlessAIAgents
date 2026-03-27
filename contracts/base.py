@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -24,7 +24,7 @@ class ContractModel(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class LayerName(str, Enum):
+class LayerName(StrEnum):
     """Logical names for the seven core layers plus the apps outer layer."""
 
     CONTRACTS = "contracts"

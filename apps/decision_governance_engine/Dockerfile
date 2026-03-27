@@ -52,9 +52,8 @@ RUN pip install --no-cache-dir reportlab
 # ---------------------------------------------------------------------------
 FROM base AS production
 
-# ポート設定（コンテナ内部ポートは常に 8000 で統一。ホスト側は docker-compose の API_PORT で制御）
-ARG PORT=8000
-ENV PORT=${PORT}
+ENV DGE_HOST=0.0.0.0 \
+    DGE_PORT=8000
 
 # 非 root ユーザー作成
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
@@ -81,12 +80,12 @@ ENV PYTHONPATH=/app
 RUN chown -R appuser:appgroup /app
 USER appuser
 
-# ヘルスチェック（${PORT} は実行時 ENV から展開される）
+# ヘルスチェック（${DGE_PORT} は実行時 ENV から展開される）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/api/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${DGE_PORT}/api/health')" || exit 1
 
-# ポート公開（ARG PORT のビルド時値を使用）
-EXPOSE ${PORT}
+# ポート公開
+EXPOSE ${DGE_PORT}
 
-# 起動コマンド（sh -c 経由で ${PORT} を実行時に展開）
-CMD ["sh", "-c", "exec uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port ${PORT}"]
+# 起動コマンド（sh -c 経由で実行時 ENV を展開）
+CMD ["sh", "-c", "exec uvicorn apps.decision_governance_engine.api:app --host ${DGE_HOST} --port ${DGE_PORT}"]

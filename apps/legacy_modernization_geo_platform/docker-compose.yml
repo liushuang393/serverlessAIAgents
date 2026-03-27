@@ -5,12 +5,12 @@ services:
       dockerfile: apps/legacy_modernization_geo_platform/Dockerfile
     container_name: geo-platform
     ports:
-      - "${GEO_PLATFORM_PORT:-8100}:8100"
+      - "${GEO_PLATFORM_PORT}:${GEO_PLATFORM_PORT}"
     environment:
-      - GEO_PLATFORM_HOST=0.0.0.0
-      - GEO_PLATFORM_PORT=${GEO_PLATFORM_PORT:-8100}
+      - GEO_PLATFORM_HOST=${GEO_PLATFORM_HOST}
+      - GEO_PLATFORM_PORT=${GEO_PLATFORM_PORT}
       - GEO_PLATFORM_API_KEY=${GEO_PLATFORM_API_KEY:-}
-      - GEO_PLATFORM_PUBLIC_BASE_URL=${GEO_PLATFORM_PUBLIC_BASE_URL:-http://localhost:8100}
+      - GEO_PLATFORM_PUBLIC_BASE_URL=${GEO_PLATFORM_PUBLIC_BASE_URL}
       - SERPAPI_API_KEY=${SERPAPI_API_KEY:-}
       - BING_SEARCH_API_KEY=${BING_SEARCH_API_KEY:-}
       - BING_SEARCH_ENDPOINT=${BING_SEARCH_ENDPOINT:-https://api.bing.microsoft.com/v7.0/search}

@@ -77,8 +77,8 @@ class LocalA2AHub:
         """
         name = getattr(agent_instance, "name", None) or type(agent_instance).__name__
         if name in self._agents and not replace:
-            msg = f"Agent already registered: {name}"
-            raise ValueError(msg)
+            self._logger.warning(f"Agent already registered: {name}. Skipping.")
+            return self._cards[name]
 
         if card is None:
             card = self._build_card(agent_instance)

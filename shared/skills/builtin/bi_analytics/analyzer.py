@@ -9,7 +9,7 @@ import logging
 import math
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class AnalysisType(str, Enum):
+class AnalysisType(StrEnum):
     """分析種別."""
 
     STATISTICAL = "statistical"  # 基本統計

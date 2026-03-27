@@ -124,7 +124,7 @@ class AzureADProvider(AuthProvider):
 
         email = str(userinfo.get("mail") or userinfo.get("userPrincipalName") or "")
         display_name = str(userinfo.get("displayName") or email)
-        username = email.split("@")[0] if email else str(userinfo.get("id", ""))
+        username = email.split("@", maxsplit=1)[0] if email else str(userinfo.get("id", ""))
         department = str(userinfo.get("officeLocation") or "")
         position = str(userinfo.get("jobTitle") or "")
 

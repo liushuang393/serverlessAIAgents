@@ -51,7 +51,7 @@ class PythonParser(CodeParser):
         return "python"
 
     @property
-    def supported_extensions(self) -> list[str]:
+    def file_extensions(self) -> list[str]:
         return [".py", ".pyi"]
 
     def parse(

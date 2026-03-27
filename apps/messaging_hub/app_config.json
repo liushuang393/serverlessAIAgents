@@ -75,6 +75,10 @@
       "health": "http://localhost:8004/health",
       "database": null
     },
+    "hosts": {
+      "backend": "0.0.0.0",
+      "frontend": "0.0.0.0"
+    },
     "database": {
       "kind": null,
       "url": null,
@@ -87,11 +91,11 @@
       "note": null
     },
     "commands": {
-      "backend_dev": "python apps/messaging_hub/scripts/dev.py",
+      "backend_dev": "python apps/messaging_hub/scripts/dev.py --reload",
       "frontend_dev": "cd apps/messaging_hub/admin_ui && npm run dev",
-      "publish": "docker compose -f docker-compose.yml up -d --build",
-      "start": "docker compose -f docker-compose.yml up -d",
-      "stop": "docker compose -f docker-compose.yml down"
+      "publish": "python apps/messaging_hub/scripts/compose.py publish",
+      "start": "python apps/messaging_hub/scripts/compose.py start",
+      "stop": "python apps/messaging_hub/scripts/compose.py stop"
     },
     "cli": {
       "preferred": ["codex", "claude"],
@@ -165,11 +169,7 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "speech_to_text",
-        "text",
-        "text_to_speech"
-      ],
+      "allowed_modalities": ["speech_to_text", "text", "text_to_speech"],
       "extra_model_refs": []
     },
     "rag": {

@@ -22,13 +22,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class VerificationStrategy(str, Enum):
+class VerificationStrategy(StrEnum):
     """検証戦略."""
 
     EXACT_MATCH = "exact_match"  # 完全一致

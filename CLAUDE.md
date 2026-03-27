@@ -36,7 +36,7 @@
 
 - **言語**: 回答は日本語、コードコメントも日本語
 - **Python 実行環境**: `conda run -n agentflow <command>` を使用（`conda activate` ではなく）
-- **環境依存値ハードコード禁止**: host / port / API URL は `.env` で管理
+- **環境依存値ハードコード禁止**: host / port / API URL は、App が `app_config.json` を持つ場合は `app_config.json` を正本にし、環境変数は一時 override のみに使う
 - **ファイルサイズ上限**: 1000行（推奨 300行、500行超で分割計画必須）
 - **AI の役割**: 補助的意思決定者。不確実な場合は明示し、推測・捏造禁止
 

@@ -21,14 +21,14 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-class PIIType(str, Enum):
+class PIIType(StrEnum):
     """個人情報タイプ."""
 
     # 特定個人情報（厳格管理）
@@ -53,7 +53,7 @@ class PIIType(str, Enum):
     BANK_ACCOUNT = "bank_account"  # 銀行口座
 
 
-class PIISeverity(str, Enum):
+class PIISeverity(StrEnum):
     """PII 深刻度."""
 
     CRITICAL = "critical"  # 特定個人情報

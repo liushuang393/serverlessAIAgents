@@ -2,7 +2,7 @@
 
 ## Preconditions
 
-- Backend: `python -m apps.messaging_hub.main --reload`
+- Backend: `uvicorn apps.messaging_hub.main:app --reload --host 0.0.0.0 --port 8004`
 - Frontend: `cd apps/messaging_hub/admin_ui && npm run dev`
 - Access: `http://localhost:3001/conversations`
 

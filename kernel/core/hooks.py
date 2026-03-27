@@ -5,7 +5,7 @@ legacy core surface/hooks.py から移行。
 """
 
 from collections.abc import Awaitable, Callable
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from kernel.core.types import ExecutionContext
 
 
-class HookType(str, Enum):
+class HookType(StrEnum):
     """ライフサイクルフックタイプ."""
 
     ON_START = "on_start"

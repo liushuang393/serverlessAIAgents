@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class DecisionVerdict(str, Enum):
+class DecisionVerdict(StrEnum):
     """決定判定結果."""
 
     GO = "GO"

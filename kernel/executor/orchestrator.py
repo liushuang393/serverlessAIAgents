@@ -28,7 +28,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 
-class ExecutionPhase(str, Enum):
+class ExecutionPhase(StrEnum):
     """実行フェーズ."""
 
     PLANNING = "planning"  # 計画中
@@ -63,7 +63,7 @@ class ExecutionPhase(str, Enum):
     CANCELLED = "cancelled"  # キャンセル
 
 
-class ExecutionStatus(str, Enum):
+class ExecutionStatus(StrEnum):
     """実行状態."""
 
     PENDING = "pending"

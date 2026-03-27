@@ -9,7 +9,7 @@ from __future__ import annotations
 
 # SQLAlchemy の Mapped 型解決に必要なため runtime import する（ruff TC003 を意図的に無効化）
 from datetime import datetime  # noqa: TC003
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import DateTime, Float, Integer, String, Text, func
@@ -24,7 +24,7 @@ class Base(DeclarativeBase):
     """
 
 
-class DocumentStatus(str, Enum):
+class DocumentStatus(StrEnum):
     """ドキュメント処理ステータス."""
 
     UPLOADED = "uploaded"

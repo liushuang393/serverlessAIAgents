@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Protocol
 
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class ScoringStrategy(str, Enum):
+class ScoringStrategy(StrEnum):
     """スコアリング戦略."""
 
     KEYWORD = "keyword"  # キーワードマッチングのみ（高速）

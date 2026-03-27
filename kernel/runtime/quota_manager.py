@@ -15,14 +15,14 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
 _logger = logging.getLogger(__name__)
 
 
-class QuotaType(str, Enum):
+class QuotaType(StrEnum):
     """配额类型."""
 
     REQUESTS = "requests"  # 请求数
@@ -31,7 +31,7 @@ class QuotaType(str, Enum):
     BANDWIDTH = "bandwidth"  # 带宽
 
 
-class QuotaPeriod(str, Enum):
+class QuotaPeriod(StrEnum):
     """配额周期."""
 
     MINUTE = "minute"

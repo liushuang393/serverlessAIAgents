@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import importlib
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
@@ -54,7 +54,7 @@ def _get_auth_context_type() -> type:
     return AuthContext
 
 
-class GovernanceDecision(str, Enum):
+class GovernanceDecision(StrEnum):
     """ガバナンス判定."""
 
     ALLOW = "allow"

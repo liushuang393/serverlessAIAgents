@@ -24,9 +24,4 @@ COPY apps/messaging_hub /app/apps/messaging_hub
 
 RUN pip install --no-cache-dir -e ".[apps]"
 
-EXPOSE 8004
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')" || exit 1
-
-CMD ["python", "-m", "apps.messaging_hub.main"]
+CMD ["sh", "-c", "exec uvicorn apps.messaging_hub.main:app --host ${MSGHUB_HOST} --port ${MSGHUB_PORT}"]

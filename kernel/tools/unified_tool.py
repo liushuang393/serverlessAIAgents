@@ -32,7 +32,7 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class ToolType(str, Enum):
+class ToolType(StrEnum):
     """ツール種別."""
 
     SKILL = "skill"  # Skills (SKILL.md)
@@ -54,7 +54,7 @@ class ToolType(str, Enum):
     CUSTOM = "custom"  # カスタムツール
 
 
-class ToolStatus(str, Enum):
+class ToolStatus(StrEnum):
     """ツール実行状態."""
 
     SUCCESS = "success"
@@ -190,7 +190,6 @@ class UnifiedToolDefinition(BaseModel):
 
 # 後方互換エイリアス: 旧名 ToolDefinition を維持
 ToolDefinition = UnifiedToolDefinition
-ToolResult = UnifiedToolResult
 
 
 def _legacy_status_from_contract(status: CanonicalToolCallStatus) -> ToolStatus:

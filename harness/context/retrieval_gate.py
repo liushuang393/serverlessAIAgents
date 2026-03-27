@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from shared.evolution.types import RetrievalDecisionInput, RetrievalMode, StalenessRisk
@@ -14,7 +14,7 @@ from shared.evolution.types import RetrievalDecisionInput, RetrievalMode, Stalen
 _logger = logging.getLogger(__name__)
 
 
-class RetrievalReason(str, Enum):
+class RetrievalReason(StrEnum):
     """Primary reason label for retrieval decision."""
 
     EXPLICIT_REQUEST = "explicit_request"

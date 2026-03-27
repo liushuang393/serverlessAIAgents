@@ -7,7 +7,7 @@ Universal Commerce Protocolのメッセージ構造を定義。
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ def _default_price_range() -> dict[str, float | None]:
     return {"min": None, "max": None}
 
 
-class UCPMessageType(str, Enum):
+class UCPMessageType(StrEnum):
     """UCPメッセージタイプ."""
 
     # 意図分析

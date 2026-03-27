@@ -141,13 +141,6 @@ Message Platforms
 
 ## 🛠️ 開発環境（インストール: 統一手順）
 
-この app 単体ではなく、リポジトリ全体の開発環境をセットアップします。
-
-```bash
-cd <repo-root>
-bash setup_dev.sh
-```
-
 手動で行う場合:
 
 ```bash
@@ -160,8 +153,6 @@ pip install -e ".[dev,apps]"
 ### 1. 依存関係のインストール
 
 ```bash
-# 基本依存関係
-pip install -e ".[dev]"
 
 # プラットフォーム依存関係（必要に応じてインストール）
 pip install python-telegram-bot>=20.0  # Telegram
@@ -193,12 +184,11 @@ vim apps/messaging_hub/.env
 
 ```bash
 # ローカル開発（ホットリロード有効）
-# ポートは app_config.json から自動読み込み（8004）
-conda activate agentflow
-python -m apps.messaging_hub.main --reload
+# host / port は app_config.json を既定とし、scripts/dev.py が uvicorn に引き渡す
+conda run -n agentflow python apps/messaging_hub/scripts/dev.py --reload
 
 # 本番起動（リロードなし）
-python -m apps.messaging_hub.main
+conda run -n agentflow uvicorn apps.messaging_hub.main:app --host "${MSGHUB_HOST:-0.0.0.0}" --port "${MSGHUB_PORT:-8004}"
 ```
 
 起動後のアクセス先：
@@ -246,14 +236,14 @@ PWA（インストール）手順:
 ## 📦 本番ビルド/発布（Platform に統一）
 
 ```bash
-conda activate agentflow
-python -m control_plane.main publish ./apps/messaging_hub --target docker
+conda run -n agentflow python -m control_plane.main publish ./apps/messaging_hub --target docker
 ```
 
 発布時の補足（PWA）:
 
 - `admin_ui` のビルド成果物に `manifest.webmanifest` / `sw.js` / `public/icons/*` が含まれる。
 - 追加の publish 手順は不要（既存の `control_plane.main publish` で同梱される）。
+- Docker 起動時の backend port は `app_config.json` を正本にし、`apps/messaging_hub/scripts/compose.py` が `MSGHUB_HOST` / `MSGHUB_PORT` へ反映する。
 
 ## 🤖 プラットフォーム設定
 
@@ -552,8 +542,8 @@ COPY . .
 RUN pip install -e ".[dev]" && \
     pip install python-telegram-bot slack-sdk discord.py
 
-# app_config.json のポート（8004）を自動使用
-CMD ["python", "-m", "apps.messaging_hub.main"]
+# host / port の既定値は app_config.json を使用
+CMD ["sh", "-c", "exec uvicorn apps.messaging_hub.main:app --host ${MSGHUB_HOST} --port ${MSGHUB_PORT}"]
 ```
 
 ### 環境変数（本番環境）

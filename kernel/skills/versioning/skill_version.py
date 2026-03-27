@@ -14,12 +14,12 @@ import hashlib
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
 
-class VersionStatus(str, Enum):
+class VersionStatus(StrEnum):
     """版本状态."""
 
     DRAFT = "draft"  # 草稿

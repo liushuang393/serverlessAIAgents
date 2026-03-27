@@ -18,11 +18,11 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class EventStatus(str, Enum):
+class EventStatus(StrEnum):
     """イベントステータス."""
 
     CONFIRMED = "confirmed"
@@ -30,7 +30,7 @@ class EventStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class RecurrenceType(str, Enum):
+class RecurrenceType(StrEnum):
     """繰り返しタイプ."""
 
     NONE = "none"

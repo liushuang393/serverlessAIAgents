@@ -19,7 +19,7 @@ import uuid
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Callable
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 # =============================================================================
 
 
-class ServiceEventType(str, Enum):
+class ServiceEventType(StrEnum):
     """サービスイベントタイプ.
 
     API/CLI/Studio 全てで共通のイベント種別。
@@ -62,7 +62,7 @@ class ServiceEventType(str, Enum):
     INPUT_REQUIRED = "input.required"
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     """ログレベル."""
 
     DEBUG = "debug"

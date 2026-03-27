@@ -29,10 +29,8 @@ from fastapi.responses import StreamingResponse
 from control_plane.services.rag_config_store import RagConfigStore, get_rag_config_store
 
 
-from control_plane.schemas.rag_schemas import RAGConfigPatchRequest
-
-
 if TYPE_CHECKING:
+    from control_plane.schemas.rag_schemas import RAGConfigPatchRequest
     from control_plane.services.rag_overview import RAGOverviewService
 
 

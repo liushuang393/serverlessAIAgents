@@ -23,11 +23,11 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class ExecutionStatus(str, Enum):
+class ExecutionStatus(StrEnum):
     """実行ステータス."""
 
     PENDING = "pending"

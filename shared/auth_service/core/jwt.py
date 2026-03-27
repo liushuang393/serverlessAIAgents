@@ -260,17 +260,14 @@ class JWTManager:
         try:
             import jwt
 
-            decoded = jwt.decode(
+            return jwt.decode(
                 token,
                 self._secret_key,
                 algorithms=[self._algorithm],
                 issuer=self._issuer,
                 audience=self._audience,
             )
-            if isinstance(decoded, dict):
-                return decoded
-            logger.debug("JWT デコード結果が dict ではありません: %s", type(decoded).__name__)
-            return None
+            # PyJWT 2.0+ decode returns dict (verified by MyPy reachable code)
         except ImportError:
             logger.exception("PyJWT がインストールされていません")
             return None

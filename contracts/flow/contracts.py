@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import Field
@@ -10,7 +10,7 @@ from pydantic import Field
 from contracts.base import ContractModel
 
 
-class FlowStatus(str, Enum):
+class FlowStatus(StrEnum):
     """フロー実行状態."""
 
     PENDING = "pending"

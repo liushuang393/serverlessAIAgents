@@ -124,7 +124,7 @@ class GoogleOAuth2Provider(AuthProvider):
         sub = str(userinfo.get("sub", ""))
         email = str(userinfo.get("email", ""))
         name = str(userinfo.get("name", email or sub))
-        username = email.split("@")[0] if email else sub
+        username = email.split("@", maxsplit=1)[0] if email else sub
 
         return ExternalIdentity(
             username=username,

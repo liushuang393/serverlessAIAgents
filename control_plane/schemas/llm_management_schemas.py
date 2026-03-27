@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class LLMProviderKind(str, Enum):
+class LLMProviderKind(StrEnum):
     """Supported provider identifiers for management APIs."""
 
     OPENAI = "openai"
@@ -23,13 +23,23 @@ class LLMProviderKind(str, Enum):
     LOCAL = "local"
 
 
-class LLMBackendKind(str, Enum):
+class LLMBackendKind(StrEnum):
     """Supported backend identifiers for management APIs."""
 
     NONE = "none"
     VLLM = "vllm"
     SGLANG = "sglang"
     TGI = "tgi"
+
+
+class LLMProviderSecretStatusPayload(BaseModel):
+    """Provider secret の表示状態."""
+
+    configured: bool = False
+    masked: str | None = None
+    source: str = "unavailable"
+    available: bool = False
+    last_error: str | None = None
 
 
 class LLMProviderConfigPayload(BaseModel):
@@ -40,7 +50,7 @@ class LLMProviderConfigPayload(BaseModel):
     api_key_env: str | None = None
     models: list[str] = Field(default_factory=list)
     enabled: bool = True
-    secret_status: LLMProviderSecretStatusPayload = Field(default_factory=lambda: LLMProviderSecretStatusPayload())
+    secret_status: LLMProviderSecretStatusPayload = Field(default_factory=LLMProviderSecretStatusPayload)
 
     @field_validator("name")
     @classmethod
@@ -56,16 +66,6 @@ class LLMProviderRuntimeStatusPayload(BaseModel):
     api_key_env: str | None = None
     source: str | None = None
     masked: str | None = None
-    last_error: str | None = None
-
-
-class LLMProviderSecretStatusPayload(BaseModel):
-    """Provider secret の表示状態."""
-
-    configured: bool = False
-    masked: str | None = None
-    source: str = "unavailable"
-    available: bool = False
     last_error: str | None = None
 
 

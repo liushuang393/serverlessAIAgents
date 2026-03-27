@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class FlowStepType(str, Enum):
+class FlowStepType(StrEnum):
     """commerce フローステップ種別."""
 
     INTENT_ANALYSIS = "intent_analysis"
@@ -26,7 +26,7 @@ class FlowStepType(str, Enum):
     CLARIFICATION = "clarification"
 
 
-class CommerceFlowStatus(str, Enum):
+class CommerceFlowStatus(StrEnum):
     """commerce フロー実行状態."""
 
     NOT_STARTED = "not_started"

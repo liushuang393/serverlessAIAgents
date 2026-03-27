@@ -13,11 +13,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class FlowStepType(str, Enum):
+class FlowStepType(StrEnum):
     """フローステップタイプ."""
 
     INTENT_ANALYSIS = "intent_analysis"  # 意図分析
@@ -32,7 +32,7 @@ class FlowStepType(str, Enum):
     CLARIFICATION = "clarification"  # 確認対話
 
 
-class FlowStatus(str, Enum):
+class FlowStatus(StrEnum):
     """フローステータス."""
 
     NOT_STARTED = "not_started"

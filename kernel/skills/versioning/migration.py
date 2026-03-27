@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from kernel.skills.versioning.diff_engine import DiffEngine, DiffResult
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class MigrationStatus(str, Enum):
+class MigrationStatus(StrEnum):
     """迁移状态."""
 
     PENDING = "pending"

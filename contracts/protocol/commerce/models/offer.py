@@ -11,13 +11,13 @@ Google Gemini の意図広告に対応したオファーデータ構造。
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class OfferType(str, Enum):
+class OfferType(StrEnum):
     """オファータイプ."""
 
     DISCOUNT = "discount"  # 割引

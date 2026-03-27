@@ -25,7 +25,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from shared.services.base import (
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class ExportFormat(str, Enum):
+class ExportFormat(StrEnum):
     """エクスポートフォーマット."""
 
     PDF = "pdf"
@@ -50,7 +50,7 @@ class ExportFormat(str, Enum):
     JSON = "json"
 
 
-class TemplateType(str, Enum):
+class TemplateType(StrEnum):
     """テンプレートタイプ."""
 
     REPORT = "report"

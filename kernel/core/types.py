@@ -6,13 +6,13 @@ legacy core surface/types.py から移行。
 
 from collections.abc import Awaitable, Callable
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class ProtocolType(str, Enum):
+class ProtocolType(StrEnum):
     """サポートされるプロトコルタイプ."""
 
     MCP = "mcp"

@@ -29,7 +29,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -40,7 +40,7 @@ from infrastructure.sandbox.base import SandboxConfig, SandboxProvider
 logger = logging.getLogger(__name__)
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """操作类型."""
 
     CODE_EXECUTE = "code_execute"  # 直接代码执行
@@ -51,7 +51,7 @@ class ActionType(str, Enum):
     CUSTOM = "custom"  # 自定义操作
 
 
-class ExecutionStatus(str, Enum):
+class ExecutionStatus(StrEnum):
     """执行状态."""
 
     PENDING = "pending"

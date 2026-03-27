@@ -26,7 +26,12 @@ services:
   backend:
     # 容器内ポートは 8000 のまま（docker-compose.yml と統一）
     # ホスト側は .env の API_PORT=8001 で自動切替（docker-compose.yml の ports 設定を継承）
-    command: ["sh", "-c", "exec uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port ${PORT:-8000} --reload"]
+    command:
+      [
+        "sh",
+        "-c",
+        "exec uvicorn apps.decision_governance_engine.api:app --host ${DGE_HOST:-0.0.0.0} --port ${DGE_PORT:-8000} --reload",
+      ]
     volumes:
       # ソースコードをマウント（リアルタイム反映、読み書き可能）
       - ../../contracts:/app/contracts
@@ -78,7 +83,15 @@ services:
       - PROXY_TARGET=http://backend:8000
     healthcheck:
       # 開発モードは Vite dev server（5174）に対してヘルスチェックする
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5174/"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:5174/",
+        ]
       interval: 30s
       timeout: 3s
       retries: 3

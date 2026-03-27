@@ -388,7 +388,7 @@ class OllamaEmbeddingProvider:
         self._model = model
         self._base_url = base_url.rstrip("/")
         # タグ（:latest 等）を除いた名前で次元数を解決
-        base_name = model.split(":")[0]
+        base_name = model.split(":", maxsplit=1)[0]
         self._dimension = self._DIMENSION_MAP.get(base_name, 768)
         # None: 未判定, True: /api/embed 利用可, False: legacy /api/embeddings を使用
         self._supports_modern_endpoint: bool | None = None
