@@ -21,6 +21,7 @@
 ## 🎯 基本フォーマット原則
 
 ### 行長制限
+
 - **最大100文字**: 可読性を確保
 - **柔軟な改行**: 論理的な単位で分割
 
@@ -40,6 +41,7 @@ async def process_workflow_data(workflow_id: str, input_data: dict[str, Any], va
 ```
 
 ### インデント
+
 - **4スペース**: Python 標準
 - **継続行**: 8スペース（括弧内）
 - **揃え**: 演算子揃えを推奨
@@ -66,6 +68,7 @@ def calculate_metrics(
 ## 📦 インポート管理
 
 ### インポート順序
+
 1. **標準ライブラリ**
 2. **サードパーティ**
 3. **ローカルモジュール**
@@ -86,6 +89,7 @@ from .utils import validate_workflow
 ```
 
 ### インポートグループ化
+
 - **空行で分離**: 各グループ間に1行空行
 - **アルファベット順**: 各グループ内でソート
 
@@ -107,6 +111,7 @@ from agentflow.services import PreviewService
 ```
 
 ### インポート文スタイル
+
 - **絶対インポート**を優先
 - **相対インポート**: 同じパッケージ内のみ
 - **ワイルドカード禁止**: `from module import *`
@@ -129,6 +134,7 @@ from agentflow.services import *
 ## 🔧 関数・メソッド定義
 
 ### 関数シグネチャ
+
 - **型アノテーション必須**
 - **キーワード専用引数**: `*` で分離
 - **デフォルト引数**: 変更不可オブジェクト
@@ -156,6 +162,7 @@ async def generate_code(
 ```
 
 ### パラメータ順序
+
 1. **必須パラメータ**
 2. **デフォルトパラメータ**
 3. **`*` 区切り**
@@ -178,6 +185,7 @@ def create_flow(
 ## 🏗️ クラス定義
 
 ### クラス構造
+
 - **基底クラス**: 明確に指定
 - **メソッド順序**: `__init__` → プロパティ → 公開メソッド → プライベートメソッド
 
@@ -210,6 +218,7 @@ class CodeGenerator:
 ```
 
 ### Protocol 定義
+
 - **Protocol 継承**: `Protocol` を明示
 - **メソッドシグネチャ**: 実装を強制
 
@@ -241,6 +250,7 @@ class ICodeGenerator(Protocol):
 ## 🎛️ 制御構造
 
 ### 条件分岐
+
 - **早期リターン**: ネストを避ける
 - **条件の明確化**: 複雑な条件は変数化
 
@@ -268,6 +278,7 @@ if is_valid_config:
 ```
 
 ### ループ
+
 - **async for**: 非同期イテレーション
 - **リスト内包表記**: 単純な変換のみ
 
@@ -289,6 +300,7 @@ agent_names = [agent.name for agent in agents if agent.is_active]
 ## 🧬 型アノテーション
 
 ### 基本型ヒント
+
 - **全てのパラメータ**: 型を明示
 - **戻り値**: 型を明示
 - **複雑な型**: `typing` モジュール使用
@@ -314,6 +326,7 @@ async def process_data(
 ```
 
 ### Generic 型
+
 - **TypeVar**: ジェネリック型変数
 - **具体的な型**: 可能な限り具体的に
 
@@ -333,6 +346,7 @@ class Result(Generic[T]):
 ```
 
 ### Union 型
+
 - **`|` 記法**: Python 3.10+
 - **Optional**: `T | None` 形式
 
@@ -358,11 +372,12 @@ def find_agent(
 ## 📝 コメント・ドキュメント
 
 ### Docstring
+
 - **必須**: 全ての公開API
 - **Google スタイル**: 標準フォーマット
 - **Args/Returns**: 詳細に記述
 
-```python
+````python
 # ✅ Google スタイル Docstring
 def deploy_to_vercel(
     code: GeneratedCode,
@@ -391,9 +406,10 @@ def deploy_to_vercel(
         print(f"Deployed to: {result.url}")
         ```
     """
-```
+````
 
 ### インラインコメント
+
 - **必要な場合のみ**: コードが自明でない場合
 - **なぜ**: 何をするのかではなく、なぜそうするのか
 
@@ -420,6 +436,7 @@ return result
 ## ⚙️ Ruff設定
 
 ### pyproject.toml 設定
+
 ```toml
 [tool.ruff]
 line-length = 100
@@ -455,6 +472,7 @@ line-ending = "auto"
 ## ✅ 自動化チェック
 
 ### フォーマットチェック
+
 ```bash
 # フォーマット適用
 ruff format .
@@ -464,6 +482,7 @@ ruff format . --check
 ```
 
 ### リントチェック
+
 ```bash
 # リント実行
 ruff check .
@@ -473,6 +492,7 @@ ruff check . --fix
 ```
 
 ### CI/CD 統合
+
 ```yaml
 - name: Check formatting and linting
   run: |
@@ -482,6 +502,7 @@ ruff check . --fix
 ```
 
 ### プリコミット設定
+
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -497,15 +518,15 @@ repos:
 
 ## 📋 スタイルチートシート
 
-| 要素 | スタイル | 例 |
-|------|----------|-----|
-| **行長** | 最大100文字 | 適宜改行 |
-| **インデント** | 4スペース | Python標準 |
-| **インポート** | グループ化+ソート | std → 3rd → local |
-| **関数** | 型アノテーション必須 | `def func(arg: Type) -> Return:` |
-| **クラス** | PascalCase | `class MyClass:` |
-| **変数** | snake_case | `my_variable` |
-| **定数** | UPPER_SNAKE | `MY_CONSTANT` |
-| **プライベート** | `_` 接頭語 | `_private_method` |
+| 要素             | スタイル             | 例                               |
+| ---------------- | -------------------- | -------------------------------- |
+| **行長**         | 最大100文字          | 適宜改行                         |
+| **インデント**   | 4スペース            | Python標準                       |
+| **インポート**   | グループ化+ソート    | std → 3rd → local                |
+| **関数**         | 型アノテーション必須 | `def func(arg: Type) -> Return:` |
+| **クラス**       | PascalCase           | `class MyClass:`                 |
+| **変数**         | snake_case           | `my_variable`                    |
+| **定数**         | UPPER_SNAKE          | `MY_CONSTANT`                    |
+| **プライベート** | `_` 接頭語           | `_private_method`                |
 
-*最終更新: 2026-01-19 | Ruff + mypy 対応*
+_最終更新: 2026-01-19 | Ruff + mypy 対応_

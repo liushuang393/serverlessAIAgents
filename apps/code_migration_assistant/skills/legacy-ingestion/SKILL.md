@@ -64,14 +64,14 @@ Legacy-to-Agent プラットフォームの入口レイヤー。
 
 ## 対応言語 & 摂取対象
 
-| 対象 | アダプター | 出力 |
-|------|-----------|------|
-| COBOL | `adapters/source/cobol_adapter.py` | AST + 変数 + 制御構造 |
-| RPG (AS/400) | `adapters/source/rpg_adapter.py` | AST + Spec 解析 |
-| PL/I | `adapters/source/pli_adapter.py` | AST + データフロー |
-| Fortran | `adapters/source/fortran_adapter.py` | AST + サブルーチン |
-| JCL | （新規追加予定） | ジョブフロー + データセット |
-| DB Schema | （新規追加予定） | テーブル定義 + 関連 |
+| 対象         | アダプター                           | 出力                        |
+| ------------ | ------------------------------------ | --------------------------- |
+| COBOL        | `adapters/source/cobol_adapter.py`   | AST + 変数 + 制御構造       |
+| RPG (AS/400) | `adapters/source/rpg_adapter.py`     | AST + Spec 解析             |
+| PL/I         | `adapters/source/pli_adapter.py`     | AST + データフロー          |
+| Fortran      | `adapters/source/fortran_adapter.py` | AST + サブルーチン          |
+| JCL          | （新規追加予定）                     | ジョブフロー + データセット |
+| DB Schema    | （新規追加予定）                     | テーブル定義 + 関連         |
 
 ## 処理フロー
 

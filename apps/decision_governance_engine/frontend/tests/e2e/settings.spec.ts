@@ -21,7 +21,9 @@ test.describe("設定モーダル", () => {
   test("RAG設定の切替ができる", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Decision Agent" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Decision Agent" }),
+    ).toBeVisible();
 
     await page.getByPlaceholder("ユーザー名を入力").fill("admin");
     await page.getByPlaceholder("パスワードを入力").fill("admin123");
@@ -30,16 +32,24 @@ test.describe("設定モーダル", () => {
     await expect(page.getByText("解決したい問題・意思決定事項")).toBeVisible();
 
     await page.getByTitle("設定").click();
-    await expect(page.getByRole("heading", { name: "⚙️ RAG設定" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "⚙️ RAG設定" }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "器" }).click();
 
-    const ragToggle = page.getByText("RAGを使用").locator("..").locator("..").getByRole("button");
+    const ragToggle = page
+      .getByText("RAGを使用")
+      .locator("..")
+      .locator("..")
+      .getByRole("button");
     await ragToggle.click();
 
     await expect(page.getByText("検索件数 (Top K)")).toBeVisible();
 
     await page.getByRole("button", { name: "閉じる" }).click();
-    await expect(page.getByRole("heading", { name: "⚙️ RAG設定" })).not.toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "⚙️ RAG設定" }),
+    ).not.toBeVisible();
   });
 });

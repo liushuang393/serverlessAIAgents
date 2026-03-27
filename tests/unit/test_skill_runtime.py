@@ -116,7 +116,7 @@ class TestExecuteShellScript:
         runtime = SkillRuntime()
         result = await runtime._execute_shell_script(
             skill,
-            skill.path / "scripts" / "echo_json.sh",  # type: ignore[union-attr]
+            skill.path / "scripts" / "echo_json.sh",
             {"input": "test"},
         )
         assert result.success is True
@@ -130,7 +130,7 @@ class TestExecuteShellScript:
         input_data = {"key": "value"}
         result = await runtime._execute_shell_script(
             skill,
-            skill.path / "scripts" / "passthrough.sh",  # type: ignore[union-attr]
+            skill.path / "scripts" / "passthrough.sh",
             input_data,
         )
         assert result.success is True
@@ -147,7 +147,7 @@ class TestExecuteShellScript:
         runtime = SkillRuntime()
         result = await runtime._execute_shell_script(
             skill,
-            skill.path / "scripts" / "fail.sh",  # type: ignore[union-attr]
+            skill.path / "scripts" / "fail.sh",
             {},
         )
         assert result.success is False
@@ -165,7 +165,7 @@ class TestExecuteShellScript:
         runtime = SkillRuntime()
         result = await runtime._execute_shell_script(
             skill,
-            skill.path / "scripts" / "text.sh",  # type: ignore[union-attr]
+            skill.path / "scripts" / "text.sh",
             {},
         )
         assert result.success is True

@@ -70,23 +70,23 @@ COBOL から Java/C# への移行を支援する専門 Skill。
 
 ### データ型マッピング
 
-| COBOL PIC句 | Java型 | 備考 |
-|-------------|--------|------|
-| PIC 9(n) | int/long | n≤9: int, n>9: long |
-| PIC 9(n)V9(m) | BigDecimal | 小数点あり |
-| PIC X(n) | String | 文字列 |
-| PIC S9(n) | int/long | 符号付き |
-| COMP-3 | BigDecimal | パック10進数 |
+| COBOL PIC句   | Java型     | 備考                |
+| ------------- | ---------- | ------------------- |
+| PIC 9(n)      | int/long   | n≤9: int, n>9: long |
+| PIC 9(n)V9(m) | BigDecimal | 小数点あり          |
+| PIC X(n)      | String     | 文字列              |
+| PIC S9(n)     | int/long   | 符号付き            |
+| COMP-3        | BigDecimal | パック10進数        |
 
 ### 制御構造マッピング
 
-| COBOL | Java |
-|-------|------|
-| PERFORM ... UNTIL | while (!condition) { } |
-| PERFORM ... TIMES | for (int i=0; i<n; i++) { } |
-| IF ... ELSE ... END-IF | if ... else ... |
-| EVALUATE ... WHEN | switch ... case |
-| GO TO | // 非推奨: メソッド呼び出しに変換 |
+| COBOL                  | Java                              |
+| ---------------------- | --------------------------------- |
+| PERFORM ... UNTIL      | while (!condition) { }            |
+| PERFORM ... TIMES      | for (int i=0; i<n; i++) { }       |
+| IF ... ELSE ... END-IF | if ... else ...                   |
+| EVALUATE ... WHEN      | switch ... case                   |
+| GO TO                  | // 非推奨: メソッド呼び出しに変換 |
 
 ### 命名規則
 
@@ -127,9 +127,9 @@ import java.math.RoundingMode;
  */
 public class {ClassName} {
     // フィールド（WORKING-STORAGE から）
-    
+
     // メソッド（PROCEDURE DIVISION から）
-    
+
     // main メソッド
 }
 ```

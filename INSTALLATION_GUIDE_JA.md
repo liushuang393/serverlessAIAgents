@@ -25,13 +25,13 @@
 
 ### 必要なソフトウェア
 
-| ソフトウェア | バージョン | 説明 |
-|------------|----------|------|
-| **Docker Desktop** | 最新版 | コンテナ実行環境（推奨デプロイ方法） |
-| **Python** | 3.13+ | Python プログラミング言語（手動起動時） |
-| **Node.js** | 22+ | フロントエンド開発用（手動起動時） |
-| **npm** または **pnpm** | 最新版 | Node.js パッケージマネージャー |
-| **Git** | 最新版 | コードの取得用 |
+| ソフトウェア            | バージョン | 説明                                    |
+| ----------------------- | ---------- | --------------------------------------- |
+| **Docker Desktop**      | 最新版     | コンテナ実行環境（推奨デプロイ方法）    |
+| **Python**              | 3.13+      | Python プログラミング言語（手動起動時） |
+| **Node.js**             | 22+        | フロントエンド開発用（手動起動時）      |
+| **npm** または **pnpm** | 最新版     | Node.js パッケージマネージャー          |
+| **Git**                 | 最新版     | コードの取得用                          |
 
 ### インストール確認
 
@@ -50,6 +50,7 @@ node --version
 ```
 
 **注意**:
+
 - Docker Desktop は [公式サイト](https://www.docker.com/products/docker-desktop/) からインストールし、起動してから作業を行ってください。
 - WSL2 環境の場合は、Docker Desktop の「Settings → Resources → WSL Integration」で対象ディストリビューションを有効化してください。
 
@@ -72,6 +73,7 @@ cd serverlessAIAgents
 ### ステップ 2: Python 仮想環境の作成（推奨）
 
 **Windows:**
+
 ```bash
 # 仮想環境を作成
 python -m venv venv
@@ -81,6 +83,7 @@ venv\Scripts\activate
 ```
 
 **macOS / Linux:**
+
 ```bash
 # 仮想環境を作成
 python3 -m venv venv
@@ -102,6 +105,7 @@ pip install -e ".[apps,dev]"
 ```
 
 **インストール確認:**
+
 ```bash
 # BizCore 配布パッケージがインストールされたか確認
 pip show bizcore
@@ -174,18 +178,21 @@ GOOGLE_API_KEY=
 ```
 
 **重要**:
+
 - API キーは必ず `.env` ファイルに設定してください
 - `.env` ファイルは Git にコミットしないでください（既に `.gitignore` に含まれています）
 
 ### ステップ 3: 環境変数の取得方法
 
 #### OpenAI API キー
+
 1. [OpenAI Platform](https://platform.openai.com/) にアクセス
 2. アカウント作成・ログイン
 3. 「API Keys」→「Create new secret key」
 4. キーをコピーして `.env` に貼り付け
 
 #### Anthropic API キー
+
 1. [Anthropic Console](https://console.anthropic.com/) にアクセス
 2. アカウント作成・ログイン
 3. 「API Keys」→「Create Key」
@@ -199,18 +206,18 @@ GOOGLE_API_KEY=
 
 ### ポート一覧
 
-| サービス | コンポーネント | ホストポート | 説明 |
-|---------|-------------|------------|------|
-| **auth_service** | API | 8010 | 認証 API (JWT/OAuth2/LDAP) |
-| **auth_service** | Admin UI | 3010 | 管理画面 (Nginx) |
-| **auth_service** | PostgreSQL | 5438 | DB (コンテナ内 5432) |
-| **decision_governance_engine** | API | 8001 | 意思決定 API |
-| **decision_governance_engine** | Frontend | 5174 | React Dev Server |
-| **decision_governance_engine** | PostgreSQL | 5432 | DB |
-| **decision_governance_engine** | Redis | 6379 | キャッシュ |
-| **market_trend_monitor** | API | 8002 | 市場トレンド API |
-| **market_trend_monitor** | Frontend | 3002 | React (Nginx) |
-| **market_trend_monitor** | SQLite | — | ボリューム内永続化 |
+| サービス                       | コンポーネント | ホストポート | 説明                       |
+| ------------------------------ | -------------- | ------------ | -------------------------- |
+| **auth_service**               | API            | 8010         | 認証 API (JWT/OAuth2/LDAP) |
+| **auth_service**               | Admin UI       | 3010         | 管理画面 (Nginx)           |
+| **auth_service**               | PostgreSQL     | 5438         | DB (コンテナ内 5432)       |
+| **decision_governance_engine** | API            | 8001         | 意思決定 API               |
+| **decision_governance_engine** | Frontend       | 5174         | React Dev Server           |
+| **decision_governance_engine** | PostgreSQL     | 5432         | DB                         |
+| **decision_governance_engine** | Redis          | 6379         | キャッシュ                 |
+| **market_trend_monitor**       | API            | 8002         | 市場トレンド API           |
+| **market_trend_monitor**       | Frontend       | 3002         | React (Nginx)              |
+| **market_trend_monitor**       | SQLite         | —            | ボリューム内永続化         |
 
 ---
 
@@ -234,6 +241,7 @@ docker compose down
 ```
 
 **アクセス先:**
+
 - API: `http://localhost:8010/health`
 - API Docs: `http://localhost:8010/docs`
 - Admin UI: `http://localhost:3010`
@@ -285,6 +293,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
 ```
 
 **アクセス先:**
+
 - API: `http://localhost:8001/api/health`
 - API Docs: `http://localhost:8001/docs`
 - Frontend: `http://localhost:5174`
@@ -326,6 +335,7 @@ docker compose down
 ```
 
 **アクセス先:**
+
 - API: `http://localhost:8002/health`
 - API Docs: `http://localhost:8002/docs`
 - Frontend: `http://localhost:3002`
@@ -347,6 +357,7 @@ LOG_LEVEL=INFO
 `dev_studio` は **Python ライブラリ**として設計されており、スタンドアロンの Docker サービスではありません。
 
 提供機能:
+
 - `apps/dev_studio/code_intelligence/` — AST 解析・コード品質・CI/CD インテグレーション
 - `apps/dev_studio/codegen/` — コード生成エンジン
 - `apps/dev_studio/wizard/` — AI エージェントウィザード（SkillForge, Synthesizer 等）
@@ -440,18 +451,18 @@ curl http://localhost:8002/health
 
 ### フロントエンドへのアクセス
 
-| サービス | URL |
-|---------|-----|
+| サービス              | URL                   |
+| --------------------- | --------------------- |
 | auth_service 管理画面 | http://localhost:3010 |
-| DGE フロントエンド | http://localhost:5174 |
-| market_trend_monitor | http://localhost:3002 |
+| DGE フロントエンド    | http://localhost:5174 |
+| market_trend_monitor  | http://localhost:3002 |
 
 ### API ドキュメント（Swagger UI）
 
-| サービス | URL |
-|---------|-----|
-| auth_service | http://localhost:8010/docs |
-| DGE | http://localhost:8001/docs |
+| サービス             | URL                        |
+| -------------------- | -------------------------- |
+| auth_service         | http://localhost:8010/docs |
+| DGE                  | http://localhost:8001/docs |
 | market_trend_monitor | http://localhost:8002/docs |
 
 ### CLI モードの確認（DGE）
@@ -468,11 +479,13 @@ python -m apps.decision_governance_engine.main --interactive
 ### 問題 0: Docker が見つからない / 接続できない（WSL2）
 
 **エラー:**
+
 ```
 The command 'docker' could not be found in this WSL 2 distro.
 ```
 
 **解決方法:**
+
 1. Docker Desktop を起動する（Windows タスクバーのクジラアイコンが「Running」になるまで待つ）
 2. Docker Desktop → Settings → Resources → WSL Integration で対象ディストリビューションを有効化
 3. WSL2 ターミナルを再起動して確認:
@@ -485,6 +498,7 @@ The command 'docker' could not be found in this WSL 2 distro.
 ### 問題 0b: nginx が起動しない（upstream host not found）
 
 **エラー:**
+
 ```
 [emerg] host not found in upstream "auth-service" in /etc/nginx/conf.d/default.conf:9
 nginx: [emerg] host not found in upstream "auth-service"
@@ -516,12 +530,12 @@ location /auth/ {
 
 **対応環境:**
 
-| 実行環境 | DNS | 動作 |
-|---------|-----|------|
-| Docker Compose（ローカル） | `127.0.0.11` | ✅ 自動取得 |
-| Docker Compose（本番サーバー） | `127.0.0.11` | ✅ 自動取得 |
-| Kubernetes | `10.96.0.10`（CoreDNS 等） | ✅ 自動取得 |
-| Podman / その他 | `/etc/resolv.conf` に準拠 | ✅ 自動取得 |
+| 実行環境                       | DNS                        | 動作        |
+| ------------------------------ | -------------------------- | ----------- |
+| Docker Compose（ローカル）     | `127.0.0.11`               | ✅ 自動取得 |
+| Docker Compose（本番サーバー） | `127.0.0.11`               | ✅ 自動取得 |
+| Kubernetes                     | `10.96.0.10`（CoreDNS 等） | ✅ 自動取得 |
+| Podman / その他                | `/etc/resolv.conf` に準拠  | ✅ 自動取得 |
 
 > **注意**: 本実装は `nginx:alpine` の公式テンプレート機能（`/etc/nginx/templates/`）と `.envsh` sourcing 機能を利用しています。他のサービスで nginx を使う場合も同じパターンで実装してください。
 
@@ -530,12 +544,15 @@ location /auth/ {
 ### 問題 0c: Docker ビルドが失敗する（build context エラー）
 
 **エラー:**
+
 ```
 ERROR: unable to prepare context: path not found
 ```
 
 **解決方法:**
+
 - 各サービスのディレクトリから実行する（リポジトリルートではなく）:
+
   ```bash
   # auth_service の場合
   cd shared/auth_service && docker compose up --build -d
@@ -553,11 +570,13 @@ ERROR: unable to prepare context: path not found
 ### 問題 1: Python のバージョンエラー
 
 **エラー:**
+
 ```
 Python 3.13+ required, but you have Python 3.10
 ```
 
 **解決方法:**
+
 1. [Python 公式サイト](https://www.python.org/downloads/)から Python 3.13+ をインストール
 2. 仮想環境を再作成:
    ```bash
@@ -570,11 +589,13 @@ Python 3.13+ required, but you have Python 3.10
 ### 問題 2: API キーが見つからない
 
 **エラー:**
+
 ```
 AgentFlowError: LLM API key not found
 ```
 
 **解決方法:**
+
 1. `.env` ファイルがプロジェクトルートにあるか確認
 2. `.env` ファイルに正しい API キーが設定されているか確認
 3. 環境変数が読み込まれているか確認:
@@ -585,21 +606,24 @@ AgentFlowError: LLM API key not found
 ### 問題 3: ポートが既に使用されている
 
 **エラー:**
+
 ```
 Address already in use: 8000
 ```
 
 **解決方法:**
+
 1. 別のポートを指定:
    ```bash
    python -m uvicorn api:app --reload --port 8001
    ```
 2. または、使用中のプロセスを終了:
+
    ```bash
    # Windows
    netstat -ano | findstr :8000
    taskkill /PID <PID番号> /F
-   
+
    # macOS / Linux
    lsof -ti:8000 | xargs kill -9
    ```
@@ -607,11 +631,13 @@ Address already in use: 8000
 ### 問題 4: npm install が失敗する
 
 **エラー:**
+
 ```
 npm ERR! code ERESOLVE
 ```
 
 **解決方法:**
+
 1. `package-lock.json` を削除して再インストール:
    ```bash
    rm package-lock.json
@@ -625,11 +651,13 @@ npm ERR! code ERESOLVE
 ### 問題 5: フロントエンドがバックエンドに接続できない
 
 **エラー:**
+
 ```
 Failed to fetch: http://localhost:8000/api/...
 ```
 
 **解決方法:**
+
 1. バックエンドが起動しているか確認
 2. CORS 設定を確認（`api.py` の `allow_origins`）
 3. フロントエンドの API クライアント設定を確認:
@@ -641,11 +669,13 @@ Failed to fetch: http://localhost:8000/api/...
 ### 問題 6: モジュールが見つからない
 
 **エラー:**
+
 ```
 ModuleNotFoundError: No module named 'kernel'
 ```
 
 **解決方法:**
+
 1. 仮想環境が有効化されているか確認
 2. BizCore 配布パッケージがインストールされているか確認:
    ```bash
@@ -664,11 +694,11 @@ ModuleNotFoundError: No module named 'kernel'
 
 **A:** プロジェクトの要件に応じて選択してください：
 
-| プロバイダー | 特徴 | 推奨用途 |
-|------------|------|---------|
-| **OpenAI** | 最も一般的、安定 | 汎用的な用途 |
+| プロバイダー  | 特徴             | 推奨用途               |
+| ------------- | ---------------- | ---------------------- |
+| **OpenAI**    | 最も一般的、安定 | 汎用的な用途           |
 | **Anthropic** | 高品質、長文対応 | 複雑な分析が必要な場合 |
-| **Google** | コスト効率 | 大量処理が必要な場合 |
+| **Google**    | コスト効率       | 大量処理が必要な場合   |
 
 `.env` ファイルで API キーを設定すれば、自動的に検出されます。
 
@@ -682,7 +712,8 @@ python -m apps.decision_governance_engine.main --interactive
 
 ### Q3: 本番環境でのデプロイ方法は？
 
-**A:** 
+**A:**
+
 1. **バックエンド**: Docker コンテナまたはサーバーレス（AWS Lambda、Vercel など）
 2. **フロントエンド**: `npm run build` でビルド後、静的ホスティング（Vercel、Netlify など）
 

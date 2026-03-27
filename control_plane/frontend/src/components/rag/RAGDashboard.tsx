@@ -5,16 +5,16 @@
  * 全アプリの RAG 設定を読み取り専用で表示し、
  * 編集操作は各アプリの管理 UI へ誘導する。
  */
-import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '../../i18n';
+import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "../../i18n";
 
-import { fetchAppRAGConfigs } from '@/api/client';
-import { useAppStore } from '@/store/useAppStore';
-import type { AppRAGConfig } from '@/types';
+import { fetchAppRAGConfigs } from "@/api/client";
+import { useAppStore } from "@/store/useAppStore";
+import type { AppRAGConfig } from "@/types";
 
-import { RAGAppDetailModal } from './RAGAppDetailModal';
-import { RAGAppGrid } from './RAGAppGrid';
-import { RAGStatsRow } from './RAGStatsRow';
+import { RAGAppDetailModal } from "./RAGAppDetailModal";
+import { RAGAppGrid } from "./RAGAppGrid";
+import { RAGStatsRow } from "./RAGStatsRow";
 
 /** RAG 読み取り専用ダッシュボード */
 export function RAGDashboard() {
@@ -55,10 +55,10 @@ export function RAGDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-100">
-            {t('rag_dashboard.title')}
+            {t("rag_dashboard.title")}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            {t('rag_dashboard.subtitle')}
+            {t("rag_dashboard.subtitle")}
           </p>
         </div>
         <button
@@ -69,7 +69,7 @@ export function RAGDashboard() {
           disabled={loading || configLoading}
           className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs disabled:opacity-50 transition-colors"
         >
-          {t('rag_dashboard.reload')}
+          {t("rag_dashboard.reload")}
         </button>
       </div>
 
@@ -90,7 +90,7 @@ export function RAGDashboard() {
       {(loading || configLoading) && !ragOverview && (
         <div className="flex items-center justify-center py-12 text-slate-400">
           <span className="animate-spin mr-2">&#9696;</span>
-          {t('rag_dashboard.loading')}
+          {t("rag_dashboard.loading")}
         </div>
       )}
 
@@ -105,7 +105,7 @@ export function RAGDashboard() {
       {/* アプリグリッド */}
       <section>
         <h2 className="text-sm font-semibold text-slate-300 mb-3">
-          {t('rag_dashboard.app_configs')}
+          {t("rag_dashboard.app_configs")}
         </h2>
         <RAGAppGrid configs={configs} onSelect={setSelectedApp} />
       </section>
@@ -116,7 +116,7 @@ export function RAGDashboard() {
           {/* チャンキング戦略 */}
           <div className="rounded-xl bg-slate-800/40 border border-slate-700/50 p-4">
             <h3 className="text-xs font-semibold text-slate-400 uppercase mb-3">
-              {t('rag_dashboard.available_strategies')}
+              {t("rag_dashboard.available_strategies")}
             </h3>
             <div className="space-y-1.5">
               {ragOverview.chunk_strategies.map((s) => (
@@ -131,7 +131,7 @@ export function RAGDashboard() {
           {/* リランカー */}
           <div className="rounded-xl bg-slate-800/40 border border-slate-700/50 p-4">
             <h3 className="text-xs font-semibold text-slate-400 uppercase mb-3">
-              {t('rag_dashboard.available_rerankers')}
+              {t("rag_dashboard.available_rerankers")}
             </h3>
             <div className="space-y-1.5">
               {ragOverview.rerankers.map((r) => (

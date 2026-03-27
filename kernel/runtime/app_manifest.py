@@ -119,13 +119,11 @@ def resolve_app_runtime(
                 manifest.runtime.hosts.backend,
                 env=resolved_env,
                 env_key=backend_host_env,
-                default="0.0.0.0" if api_port is not None else None,
             ),
             frontend=_resolve_host(
                 manifest.runtime.hosts.frontend,
                 env=resolved_env,
                 env_key=frontend_host_env,
-                default="0.0.0.0" if frontend_port is not None else None,
             ),
         ),
         urls=AppRuntimeUrls(
@@ -142,14 +140,12 @@ def _resolve_host(
     *,
     env: Mapping[str, str],
     env_key: str | None,
-    default: str | None,
 ) -> str | None:
     if env_key:
         overridden = _clean_text(env.get(env_key))
         if overridden is not None:
             return overridden
-    resolved = _clean_text(value)
-    return resolved or default
+    return _clean_text(value)
 
 
 def _resolve_port(value: object, *, env: Mapping[str, str], env_key: str | None) -> int | None:

@@ -56,4 +56,3 @@ visual:
   ports:
     input: [100, 50]
     output: [300, 50]
-

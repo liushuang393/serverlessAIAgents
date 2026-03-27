@@ -40,16 +40,16 @@ BizCore AI is organized into seven core layers, with `apps/` as the outer produc
 └─────────────────────────────────────────────┘
 ```
 
-| Layer | Directory | Responsibility |
-|---|---|---|
-| **Contracts** | `contracts/` | Cross-layer protocol, type, and interface definitions (Versioned) |
-| **Infrastructure** | `infrastructure/` | LLM Providers, Storage, Cache, Queue, Sandbox, and other low-level foundations |
-| **Shared** | `shared/` | LLM Gateway, RAG, Access Control, Trace, Audit, and other shared services |
-| **BizCore Kernel** | `kernel/` | Agent Runtime, Flow Engine, Orchestration, Protocol implementations |
-| **BizCore Harness** | `harness/` | Governance, Policy, Approval, Budget, Evaluation, Guardrails |
-| **BizCore Domain** | `domain/` | Industry and business-domain models, interfaces, templates, and rules |
-| **BizCore Control Plane** | `control_plane/` | The platform control plane for discovery, lifecycle, delivery, and operator UI/API |
-| **BizCore Studios** | `apps/*/` | Product layer for Migration / FAQ / Assistant / custom apps |
+| Layer                     | Directory         | Responsibility                                                                     |
+| ------------------------- | ----------------- | ---------------------------------------------------------------------------------- |
+| **Contracts**             | `contracts/`      | Cross-layer protocol, type, and interface definitions (Versioned)                  |
+| **Infrastructure**        | `infrastructure/` | LLM Providers, Storage, Cache, Queue, Sandbox, and other low-level foundations     |
+| **Shared**                | `shared/`         | LLM Gateway, RAG, Access Control, Trace, Audit, and other shared services          |
+| **BizCore Kernel**        | `kernel/`         | Agent Runtime, Flow Engine, Orchestration, Protocol implementations                |
+| **BizCore Harness**       | `harness/`        | Governance, Policy, Approval, Budget, Evaluation, Guardrails                       |
+| **BizCore Domain**        | `domain/`         | Industry and business-domain models, interfaces, templates, and rules              |
+| **BizCore Control Plane** | `control_plane/`  | The platform control plane for discovery, lifecycle, delivery, and operator UI/API |
+| **BizCore Studios**       | `apps/*/`         | Product layer for Migration / FAQ / Assistant / custom apps                        |
 
 > **Design Principle**: `contracts / infrastructure / shared / kernel / harness / domain` must not depend on `apps/`. `domain` must not depend on `control_plane`. `control_plane` can orchestrate lower layers but is not their source of truth.
 
@@ -129,6 +129,7 @@ INFRA --> PROVIDER
 ## Repository Structure
 
 ### Seven Core Layers
+
 - `contracts/`: Protocol and interface definitions (Versioned)
 - `infrastructure/`: Low-level foundation (LLM Provider / Storage / Cache / Queue)
 - `shared/`: Shared services (Gateway / RAG / Access / Trace / Audit)
@@ -138,12 +139,15 @@ INFRA --> PROVIDER
 - `control_plane/`: Canonical BizCore control-plane implementation
 
 ### Product Layer
+
 - `apps/`: BizCore Studios and custom apps, assembled on top of the seven core layers
 
 ### Transition Notes
+
 - Some legacy import and config names may remain during migration, but the canonical implementation is consolidated under `contracts/`, `infrastructure/`, `shared/`, `kernel/`, `harness/`, `domain/`, and `control_plane/`
 
 ### Development & Operations
+
 - `plugins/`: Extensions (Blocks / Tools / Providers)
 - `docs/`: External/internal documentation and design materials
 - `tests/`: Automated test suite (Unit / Integration / E2E)
@@ -154,13 +158,13 @@ INFRA --> PROVIDER
 
 ## Tech Stack
 
-| Area | Technologies |
-|---|---|
-| **Backend** | Python 3.13+, FastAPI, Pydantic, Uvicorn |
-| **Frontend** | React, Vite, TypeScript, ESLint, Prettier |
-| **AI Protocols** | MCP, A2A, AG-UI, A2UI |
+| Area               | Technologies                                            |
+| ------------------ | ------------------------------------------------------- |
+| **Backend**        | Python 3.13+, FastAPI, Pydantic, Uvicorn                |
+| **Frontend**       | React, Vite, TypeScript, ESLint, Prettier               |
+| **AI Protocols**   | MCP, A2A, AG-UI, A2UI                                   |
 | **Infrastructure** | Supabase / PostgreSQL / Turso, Pinecone / Qdrant, Redis |
-| **Quality** | Ruff, mypy, pytest (80%+ coverage), ESLint, tsc |
+| **Quality**        | Ruff, mypy, pytest (80%+ coverage), ESLint, tsc         |
 
 ---
 
@@ -171,12 +175,12 @@ INFRA --> PROVIDER
 
 ### Prerequisites
 
-| Tool | Version | Purpose |
-|---|---|---|
-| Python | 3.13+ | Backend runtime |
-| conda | Any | Recommended virtual environment (`agentflow`) |
-| Docker + Docker Compose | Latest | DB and container startup |
-| Node.js | 18+ | Frontend development |
+| Tool                    | Version | Purpose                                       |
+| ----------------------- | ------- | --------------------------------------------- |
+| Python                  | 3.13+   | Backend runtime                               |
+| conda                   | Any     | Recommended virtual environment (`agentflow`) |
+| Docker + Docker Compose | Latest  | DB and container startup                      |
+| Node.js                 | 18+     | Frontend development                          |
 
 ### 1. Environment Setup
 
@@ -234,18 +238,18 @@ cd control_plane/frontend && npm install && npm run dev
 
 ### Service Overview
 
-| Service | Backend | Frontend | Description |
-|---|---|---|---|
-| auth_service | http://localhost:8010 | http://localhost:3000 | Authentication & user management |
-| control_plane | http://localhost:8900 | http://localhost:3200 | Platform management |
+| Service       | Backend               | Frontend              | Description                      |
+| ------------- | --------------------- | --------------------- | -------------------------------- |
+| auth_service  | http://localhost:8010 | http://localhost:3000 | Authentication & user management |
+| control_plane | http://localhost:8900 | http://localhost:3200 | Platform management              |
 
 ### App-specific READMEs
 
-| App | README | Description |
-|---|---|---|
-| FAQ System | [apps/faq_system/README.md](apps/faq_system/README.md) | RAG-based FAQ & knowledge management |
-| Decision Governance Engine | [apps/decision_governance_engine/README.md](apps/decision_governance_engine/README.md) | Decision support system |
-| Code Migration Assistant | [apps/code_migration_assistant/README.md](apps/code_migration_assistant/README.md) | Code migration support |
+| App                        | README                                                                                 | Description                          |
+| -------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------ |
+| FAQ System                 | [apps/faq_system/README.md](apps/faq_system/README.md)                                 | RAG-based FAQ & knowledge management |
+| Decision Governance Engine | [apps/decision_governance_engine/README.md](apps/decision_governance_engine/README.md) | Decision support system              |
+| Code Migration Assistant   | [apps/code_migration_assistant/README.md](apps/code_migration_assistant/README.md)     | Code migration support               |
 
 ---
 

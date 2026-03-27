@@ -1,12 +1,12 @@
-import { spawn } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
-import { fileURLToPath } from 'node:url';
-import { GEO_E2E_BASE_URL, GEO_E2E_PORT } from './playwright.runtime';
+import { spawn } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
+import { GEO_E2E_BASE_URL, GEO_E2E_PORT } from "./playwright.runtime";
 
 const frontendDir = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(frontendDir, '../../..');
-const pythonBin = resolve(repoRoot, '.venv/bin/python');
+const repoRoot = resolve(frontendDir, "../../..");
+const pythonBin = resolve(repoRoot, ".venv/bin/python");
 
 async function isHealthy(): Promise<boolean> {
   try {
@@ -22,27 +22,34 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     return async () => {};
   }
 
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   const child = spawn(
     pythonBin,
-    ['-m', 'apps.legacy_modernization_geo_platform.main', '--host', '127.0.0.1', '--port', String(GEO_E2E_PORT)],
+    [
+      "-m",
+      "apps.legacy_modernization_geo_platform.main",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(GEO_E2E_PORT),
+    ],
     {
       cwd: repoRoot,
       env: {
         ...process.env,
         GEO_PLATFORM_PORT: String(GEO_E2E_PORT),
         GEO_PLATFORM_PUBLIC_BASE_URL: GEO_E2E_BASE_URL,
-        GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE: '1',
+        GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE: "1",
       },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     },
   );
 
-  child.stdout?.on('data', (chunk: Buffer) => {
+  child.stdout?.on("data", (chunk: Buffer) => {
     stdout += chunk.toString();
   });
-  child.stderr?.on('data', (chunk: Buffer) => {
+  child.stderr?.on("data", (chunk: Buffer) => {
     stderr += chunk.toString();
   });
 
@@ -51,7 +58,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     if (await isHealthy()) {
       return async () => {
         if (child.exitCode === null) {
-          child.kill('SIGTERM');
+          child.kill("SIGTERM");
           await delay(500);
         }
       };
@@ -65,7 +72,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   }
 
   if (child.exitCode === null) {
-    child.kill('SIGTERM');
+    child.kill("SIGTERM");
   }
   throw new Error(
     `Timed out waiting for GEO backend health check.\nstdout:\n${stdout}\nstderr:\n${stderr}`,

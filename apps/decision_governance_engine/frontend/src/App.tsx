@@ -7,16 +7,16 @@
  *   - ErrorBoundary: グローバルエラーキャッチ（app 内実装）
  */
 
-import React, { useEffect } from 'react';
-import { useDecisionStore } from './store/useDecisionStore';
-import { useAuthStore } from './store/useAuthStore';
-import { DecisionInputPage } from './components/DecisionInputPage';
-import { ProcessingPage } from './components/ProcessingPage';
-import { ReportPage } from './components/ReportPage';
-import { HistoryPage } from './components/HistoryPage';
-import { LoginPage } from './components/LoginPage';
-import { KnowledgePage } from './components/KnowledgePage';
-import { KnowledgeLayout } from './components/knowledge/KnowledgeLayout';
+import React, { useEffect } from "react";
+import { useDecisionStore } from "./store/useDecisionStore";
+import { useAuthStore } from "./store/useAuthStore";
+import { DecisionInputPage } from "./components/DecisionInputPage";
+import { ProcessingPage } from "./components/ProcessingPage";
+import { ReportPage } from "./components/ReportPage";
+import { HistoryPage } from "./components/HistoryPage";
+import { LoginPage } from "./components/LoginPage";
+import { KnowledgePage } from "./components/KnowledgePage";
+import { KnowledgeLayout } from "./components/knowledge/KnowledgeLayout";
 
 // ========================================
 // エラーフォールバック UI
@@ -122,19 +122,19 @@ const AppContent: React.FC = () => {
 
   // 認証済み: メインコンテンツ
   switch (currentPage) {
-    case 'input':
+    case "input":
       return <DecisionInputPage />;
-    case 'processing':
+    case "processing":
       return <ProcessingPage />;
-    case 'report':
+    case "report":
       return <ReportPage />;
-    case 'history':
+    case "history":
       return <HistoryPage />;
-    case 'knowledge-shu':
+    case "knowledge-shu":
       return <KnowledgePage agentType="shu" />;
-    case 'knowledge-qi':
+    case "knowledge-qi":
       return <KnowledgePage agentType="qi" />;
-    case 'knowledge':
+    case "knowledge":
       return <KnowledgeLayout />;
     default:
       return <DecisionInputPage />;
@@ -149,4 +149,3 @@ const App: React.FC = () => (
 );
 
 export default App;
-

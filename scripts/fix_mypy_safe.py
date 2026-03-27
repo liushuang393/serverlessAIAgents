@@ -40,7 +40,7 @@ def run_mypy() -> str:
     """mypy を --no-pretty で実行し、1行1エラーの標準出力を返す。"""
     r = subprocess.run(
         [
-            "mypy",
+            "/home/liush/miniconda3/envs/agentflow/bin/mypy",
             *MYPY_TARGETS,
             "--strict",
             "--ignore-missing-imports",

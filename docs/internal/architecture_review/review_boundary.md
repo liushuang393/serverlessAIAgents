@@ -92,16 +92,16 @@
 
 ## 建议的允许依赖矩阵
 
-| Source | Allowed | Avoid / Suspicious | Violation |
-| --- | --- | --- | --- |
-| `contracts` | none | - | any outward dependency |
-| `infrastructure` | `contracts` | `shared`, `harness`, `kernel` only via adapters | `apps`, `control_plane` runtime knowledge |
-| `shared` | `contracts`, `infrastructure` | `kernel`, `harness` | `control_plane`, `apps` |
-| `kernel` | `contracts` | `shared`, `infrastructure`, `harness` via ports | `control_plane` |
-| `harness` | `contracts`, `shared`, `kernel`, `infrastructure` | deep product knowledge | `apps` direct governance knowledge |
-| `control_plane` | `contracts`, `shared`, `kernel`, `harness`, `infrastructure` | `apps` only for tooling/scaffolding | app runtime internals |
-| `domain` | `contracts` | `shared` helper use | `control_plane`; direct executable runtime inheritance |
-| `apps` | core layers through stable facades | `control_plane` | control plane internals in runtime path |
+| Source           | Allowed                                                      | Avoid / Suspicious                              | Violation                                              |
+| ---------------- | ------------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
+| `contracts`      | none                                                         | -                                               | any outward dependency                                 |
+| `infrastructure` | `contracts`                                                  | `shared`, `harness`, `kernel` only via adapters | `apps`, `control_plane` runtime knowledge              |
+| `shared`         | `contracts`, `infrastructure`                                | `kernel`, `harness`                             | `control_plane`, `apps`                                |
+| `kernel`         | `contracts`                                                  | `shared`, `infrastructure`, `harness` via ports | `control_plane`                                        |
+| `harness`        | `contracts`, `shared`, `kernel`, `infrastructure`            | deep product knowledge                          | `apps` direct governance knowledge                     |
+| `control_plane`  | `contracts`, `shared`, `kernel`, `harness`, `infrastructure` | `apps` only for tooling/scaffolding             | app runtime internals                                  |
+| `domain`         | `contracts`                                                  | `shared` helper use                             | `control_plane`; direct executable runtime inheritance |
+| `apps`           | core layers through stable facades                           | `control_plane`                                 | control plane internals in runtime path                |
 
 ## 边界评审结论
 

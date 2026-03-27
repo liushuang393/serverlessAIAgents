@@ -1,4 +1,5 @@
 """agent_decorator が infrastructure を直接 import していないことを確認."""
+
 import ast
 from pathlib import Path
 

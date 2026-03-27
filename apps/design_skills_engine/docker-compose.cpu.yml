@@ -21,7 +21,13 @@ services:
     environment:
       - COMFYUI_EXTRA_ARGS=--cpu
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8188/prompt')"]
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8188/prompt')",
+        ]
       interval: 15s
       timeout: 10s
       retries: 20

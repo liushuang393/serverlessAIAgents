@@ -9,6 +9,7 @@
 ## 🎯 プロンプト実行フロー
 
 ### ステップ1: プロジェクト分析
+
 ```
 プロジェクトの README.md または index_ja.md を分析し、以下の情報を抽出：
 - プロジェクト名と概要
@@ -20,6 +21,7 @@
 ```
 
 ### ステップ2: ルール体系設計
+
 ```
 抽出した情報に基づき、以下の階層化されたルール体系を設計：
 
@@ -49,6 +51,7 @@ code-rules/
 ```
 
 ### ステップ3: ルール生成
+
 ```
 各層に対して詳細なルール文書を生成：
 - 実用的価値のある具体例
@@ -67,10 +70,12 @@ code-rules/
 あなたはプロジェクトの README.md または index_ja.md を分析し、そのプロジェクトに最適化された包括的なルール体系を生成する専門家です。生成するルール体系は以下の構造に従ってください：
 
 #### 1. ルール体系インデックス（CLAUDE.md - 簡潔版）
+
 ```markdown
 # 📌 Clause Code Rules インデックス
 
 ## 🧠 全体方針（Global）
+
 - [開発原則](global/principles.md)
 - [命名規則](global/naming-guidelines.md)
 - [スタイル & フォーマット](global/style-formatting.md)
@@ -78,26 +83,31 @@ code-rules/
 - [AI弱点補強](global/ai-weakness.md)
 
 ## 🧠 言語別ルール
+
 - [Pythonルール](languages/python-rules.md)
 - [Javaルール](languages/java-rules.md)
 - [Node.jsルール](languages/nodejs-rules.md)
 
 ## 🧠 プロジェクト固有
+
 - [アーキテクチャ設計](project/architecture.md)
 - [リポジトリ構造](project/repo-structure.md)
 - [CI/CDガイドライン](project/ci-cd-guidelines.md)
 
 ## 🧠 会社固有指針
+
 - [[会社名] Python](company-specific/[会社名]-python.md)
 - [[会社名] Java](company-specific/[会社名]-java.md)
 - [[会社名] Node.js](company-specific/[会社名]-nodejs.md)
 
 ## 🧠 使用ツール
+
 - [リンター & フォーマッター](tools/lint-format.md)
 - [テスト方針](tools/testing.md)
 ```
 
 #### 2. フォルダ構造（階層化アーキテクチャ）
+
 ```plaintext
 code-rules/
 ├── CLAUDE.md                    # インデックス & ナビゲーション
@@ -125,24 +135,30 @@ code-rules/
 ```
 
 #### 3. AI弱点補強ルール（ai-weakness.md）
+
 ```markdown
 # 🤖 AI弱点補強ルール
 
 ## ■ 脆弱性
+
 AI生成コードは**曖昧な意図のまま書かれる**傾向あり。
 → 生成前に**仕様明文化テンプレート**を必ず作成。
 
 ## ■ 自動テスト要求
+
 AI生成部分は **必ずユニット/統合テストを 100% カバレッジ**で補強。
 
 ## ■ コードレビュー補助
+
 以下をBotに追加:
+
 - 命名意図検証
 - 成果物仕様と実装一致チェック
 - エラー処理の完全性確認
 ```
 
 #### 4. CLI抽出コマンド（自動化メンテナンス）
+
 ```bash
 # 📌 Pythonコードからルール抽出
 ai-extract --source ./src --filter "def|class" --target rules/languages/python-rules.md
@@ -162,7 +178,8 @@ mkdir clause-code-rules && cp -r code-rules/* clause-code-rules/ && zip -r claus
 各ルールカテゴリに対して以下のテンプレートを使用：
 
 **コーディング規約テンプレート**:
-```markdown
+
+````markdown
 # コーディング規約
 
 > **バージョン**: 1.0.0
@@ -183,13 +200,16 @@ mkdir clause-code-rules && cp -r code-rules/* clause-code-rules/ && zip -r claus
 ## 🐍 [言語] バージョン要件
 
 ### サポートバージョン
+
 ```python
 # 最小バージョン: [言語] [バージョン]+
 # 理由: [プロジェクト固有の理由]
 requires-[言語] = ">=[バージョン]"
 ```
+````
 
 ### バージョン互換性
+
 - **[バージョン]+**: 完全サポート（推奨）
 - **[バージョン]**: 限定的サポート（レガシー環境のみ）
 - **[バージョン] 以下**: 非サポート
@@ -199,6 +219,7 @@ requires-[言語] = ">=[バージョン]"
 ## 🎨 コードフォーマッティング
 
 ### [フォーマッタ] 設定
+
 [フォーマッタ] を統一的な linter および formatter として使用：
 
 ```toml
@@ -209,6 +230,7 @@ requires-[言語] = ">=[バージョン]"
 ### フォーマットルール
 
 #### 基本フォーマット
+
 ```python
 # ✅ 正しい: [文字数]以内で適切な改行
 def process_data(
@@ -224,7 +246,8 @@ def process_data(user_id: str, data: dict[str, Any], validate: bool = True) -> d
 ```
 
 [残りのテンプレートはプロジェクト固有にカスタマイズ]
-```
+
+````
 
 ---
 
@@ -299,9 +322,10 @@ def process_data(user_id: str, data: dict[str, Any], validate: bool = True) -> d
 ```bash
 # 既存コードからパターンを抽出
 ai-extract --source ./src --lang python --patterns "db.session|with context" --target company-specific/[会社名]-python.md
-```
+````
 
 #### コーディング傾向分析:
+
 - **DB接続**: コンテキストマネージャー使用パターン
 - **例外処理**: ラップして再スローする傾向
 - **ログ**: 構造化ログ使用パターン
@@ -314,6 +338,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
 ### ステップバイステップガイド
 
 1. **プロジェクト分析**:
+
    ```bash
    # README.md を読み込み、プロジェクト特性を分析
    - 技術スタック: [言語、フレームワーク、インフラ]
@@ -324,6 +349,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
    ```
 
 2. **階層化フォルダ構造設計**:
+
    ```bash
    # Clause Code Rules パターンでフォルダ構造を設計
    code-rules/
@@ -336,6 +362,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
    ```
 
 3. **ルール文書生成**:
+
    ```bash
    # 各フォルダに対して詳細な文書を生成
    - CLAUDE.md: ナビゲーション用インデックス
@@ -346,6 +373,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
    ```
 
 4. **AI弱点補強ルール生成**:
+
    ```bash
    # AI生成コードの品質向上ルールを追加
    - global/ai-weakness.md: AI特有の弱点補強
@@ -355,6 +383,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
    ```
 
 5. **CLI自動化スクリプト生成**:
+
    ```bash
    # メンテナンス自動化スクリプト
    - ai-extract コマンド: コードからルール抽出
@@ -376,6 +405,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
 ## 📋 チェックリスト: ルール体系生成完了確認
 
 ### 必須項目
+
 - [ ] プロジェクト特性の正確な分析
 - [ ] 技術スタックに適したルール設計
 - [ ] チーム規模に合ったプロセス設計
@@ -383,6 +413,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
 - [ ] 自動化可能なチェック項目の設定
 
 ### 品質項目
+
 - [ ] 実用的価値のある具体例の記載
 - [ ] 明確な優先度設定（高/中/低）
 - [ ] 段階的導入プラン
@@ -390,6 +421,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
 - [ ] 包括的なドキュメント
 
 ### 自動化項目
+
 - [ ] 品質チェックスクリプトの生成
 - [ ] CI/CDワークフローの設定
 - [ ] Pre-commitフックの設定
@@ -400,12 +432,14 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
 ## 🎯 使用方法
 
 ### 基本的な使用:
+
 ```
 @README.md または @index_ja.md を添付し、本プロンプトを実行してください。
 AIがプロジェクトを分析し、最適化されたルール体系を生成します。
 ```
 
 ### 高度なカスタマイズ:
+
 ```
 特定の技術スタックやチーム規模を指定する場合:
 - Python + AI/ML プロジェクト
@@ -415,6 +449,7 @@ AIがプロジェクトを分析し、最適化されたルール体系を生成
 ```
 
 ### AI弱点補強機能:
+
 ```
 AI生成コード品質向上のための専用ルール:
 - 仕様明文化テンプレート強制
@@ -424,6 +459,7 @@ AI生成コード品質向上のための専用ルール:
 ```
 
 ### 自動メンテナンス機能:
+
 ```
 継続的なルール更新のためのCLIツール:
 - ai-extract: 既存コードからルール抽出
@@ -438,12 +474,14 @@ AI生成コード品質向上のための専用ルール:
 ## 🎯 あなたのルール体系との統合メリット
 
 ### 構造的優位性:
+
 - **階層化フォルダ**: global/、languages/、company-specific/ の明確分離
 - **AI特化ルール**: ai-weakness.md でAI生成コードの品質保証
 - **自動抽出機能**: CLIコマンドで既存コードからルール生成
 - **ZIP配布**: 自動生成スクリプトで配布パッケージ作成
 
 ### 実用的優位性:
+
 - **保守性向上**: フォルダ構造によるルールの分類管理
 - **拡張性確保**: 会社固有ルールの独立管理
 - **自動化推進**: メンテナンス作業の自動化

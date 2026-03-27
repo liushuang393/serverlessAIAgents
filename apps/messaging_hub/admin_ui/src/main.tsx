@@ -100,7 +100,9 @@ const SW_CACHE_PREFIX = "messaging-hub-shell-";
 
 async function unregisterServiceWorkersForDev(): Promise<void> {
   const registrations = await navigator.serviceWorker.getRegistrations();
-  await Promise.all(registrations.map((registration) => registration.unregister()));
+  await Promise.all(
+    registrations.map((registration) => registration.unregister()),
+  );
   if (!("caches" in window)) {
     return;
   }
@@ -122,10 +124,9 @@ function setupServiceWorker(): void {
   const moduleScriptSources = bootstrapModules.map(
     (script) => script.getAttribute("src") ?? "",
   );
-  const isDevServerRuntime =
-    moduleScriptSources.some(
-      (src) => src.startsWith("/@vite/client") || src.startsWith("/src/"),
-    );
+  const isDevServerRuntime = moduleScriptSources.some(
+    (src) => src.startsWith("/@vite/client") || src.startsWith("/src/"),
+  );
 
   window.addEventListener("load", () => {
     if (!isDevServerRuntime) {

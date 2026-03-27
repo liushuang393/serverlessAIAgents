@@ -217,7 +217,9 @@ export function RolesPage() {
       setAllPerms(permsData);
     } catch (err) {
       const msg =
-        err instanceof ApiError ? err.message : "ロール情報の取得に失敗しました";
+        err instanceof ApiError
+          ? err.message
+          : "ロール情報の取得に失敗しました";
       setAlert({ type: "error", msg });
     } finally {
       setLoading(false);
@@ -276,8 +278,7 @@ export function RolesPage() {
       setModalMode(null);
       void loadRoles();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : "保存に失敗しました";
+      const msg = err instanceof ApiError ? err.message : "保存に失敗しました";
       setAlert({ type: "error", msg });
     }
   }
@@ -291,8 +292,7 @@ export function RolesPage() {
       setAlert({ type: "success", msg: "ロールを削除しました" });
       void loadRoles();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : "削除に失敗しました";
+      const msg = err instanceof ApiError ? err.message : "削除に失敗しました";
       setAlert({ type: "error", msg });
     }
   }

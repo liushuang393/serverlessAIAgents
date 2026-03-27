@@ -4,11 +4,11 @@
  * 選択されたアプリの RAG 設定を読み取り専用で表示。
  * 編集機能は各アプリの管理 UI にリンクする。
  */
-import { useCallback, useEffect, useState } from 'react';
-import { useI18n } from '../../i18n';
+import { useCallback, useEffect, useState } from "react";
+import { useI18n } from "../../i18n";
 
-import { fetchAppRAGIngestRuns } from '@/api/client';
-import type { AppRAGConfig, RAGIngestRunSummary } from '@/types';
+import { fetchAppRAGIngestRuns } from "@/api/client";
+import type { AppRAGConfig, RAGIngestRunSummary } from "@/types";
 
 interface Props {
   config: AppRAGConfig;
@@ -36,7 +36,7 @@ function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between py-1.5 border-b border-slate-800/50">
       <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-xs text-slate-200">{value ?? '-'}</span>
+      <span className="text-xs text-slate-200">{value ?? "-"}</span>
     </div>
   );
 }
@@ -71,7 +71,7 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
         {/* ヘッダー */}
         <div className="sticky top-0 z-10 flex items-center justify-between bg-slate-900 border-b border-slate-800 px-6 py-4">
           <div className="flex items-center gap-3">
-            <span className="text-xl">{config.icon || '📱'}</span>
+            <span className="text-xl">{config.icon || "📱"}</span>
             <div>
               <h2 className="text-base font-semibold text-slate-100">
                 {config.display_name}
@@ -92,13 +92,13 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
           <div className="flex items-center gap-2">
             <span
               className={`h-2.5 w-2.5 rounded-full ${
-                r.enabled ? 'bg-emerald-400' : 'bg-slate-500'
+                r.enabled ? "bg-emerald-400" : "bg-slate-500"
               }`}
             />
             <span className="text-sm text-slate-200">
               {r.enabled
-                ? t('rag_dashboard.rag_enabled')
-                : t('rag_dashboard.rag_disabled')}
+                ? t("rag_dashboard.rag_enabled")
+                : t("rag_dashboard.rag_disabled")}
             </span>
           </div>
 
@@ -106,9 +106,7 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
             <>
               {/* チャンキング設定 */}
               <section>
-                <SectionTitle>
-                  {t('rag_dashboard.chunk_settings')}
-                </SectionTitle>
+                <SectionTitle>{t("rag_dashboard.chunk_settings")}</SectionTitle>
                 <KV label="Strategy" value={r.chunk_strategy} />
                 <KV label="Chunk Size" value={r.chunk_size} />
                 <KV label="Chunk Overlap" value={r.chunk_overlap} />
@@ -117,34 +115,31 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
               {/* 検索設定 */}
               <section>
                 <SectionTitle>
-                  {t('rag_dashboard.retrieval_settings')}
+                  {t("rag_dashboard.retrieval_settings")}
                 </SectionTitle>
                 <KV label="Retrieval Method" value={r.retrieval_method} />
-                <KV label="Reranker" value={r.reranker || 'なし'} />
+                <KV label="Reranker" value={r.reranker || "なし"} />
                 <KV label="Top-K" value={r.top_k} />
                 <KV
                   label="Score Threshold"
-                  value={r.score_threshold != null ? r.score_threshold : '-'}
+                  value={r.score_threshold != null ? r.score_threshold : "-"}
                 />
               </section>
 
               {/* ベクトル DB */}
               <section>
-                <SectionTitle>
-                  {t('rag_dashboard.vector_db')}
-                </SectionTitle>
-                <KV label="Provider" value={r.vector_provider || '-'} />
-                <KV label="URL" value={r.vector_url || '-'} />
-                <KV label="Collection" value={r.vector_collection || '-'} />
-                <KV label="Embedding Model" value={r.embedding_model || '-'} />
+                <SectionTitle>{t("rag_dashboard.vector_db")}</SectionTitle>
+                <KV label="Provider" value={r.vector_provider || "-"} />
+                <KV label="URL" value={r.vector_url || "-"} />
+                <KV label="Collection" value={r.vector_collection || "-"} />
+                <KV label="Embedding Model" value={r.embedding_model || "-"} />
               </section>
 
               {/* データソース */}
               {r.data_sources.length > 0 && (
                 <section>
                   <SectionTitle>
-                    {t('rag_dashboard.data_sources')}{' '}
-                    ({r.data_sources.length})
+                    {t("rag_dashboard.data_sources")} ({r.data_sources.length})
                   </SectionTitle>
                   <div className="space-y-1.5">
                     {r.data_sources.map((ds) => (
@@ -155,15 +150,15 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
                         <span
                           className={`h-1.5 w-1.5 rounded-full ${
                             ds.enabled !== false
-                              ? 'bg-emerald-400'
-                              : 'bg-slate-500'
+                              ? "bg-emerald-400"
+                              : "bg-slate-500"
                           }`}
                         />
                         <span className="text-slate-300 font-mono">
                           {ds.type}
                         </span>
                         <span className="text-slate-500 truncate flex-1">
-                          {ds.uri || ds.label || '-'}
+                          {ds.uri || ds.label || "-"}
                         </span>
                       </div>
                     ))}
@@ -173,9 +168,7 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
 
               {/* インジェスト履歴 */}
               <section>
-                <SectionTitle>
-                  {t('rag_dashboard.ingest_history')}
-                </SectionTitle>
+                <SectionTitle>{t("rag_dashboard.ingest_history")}</SectionTitle>
                 {ingestLoading ? (
                   <p className="text-xs text-slate-500">読み込み中...</p>
                 ) : ingestRuns.length === 0 ? (
@@ -190,13 +183,13 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
                         <div className="flex items-center gap-2">
                           <span
                             className={`px-1.5 py-0.5 rounded-full ${
-                              run.status === 'completed'
-                                ? 'text-emerald-400 bg-emerald-500/10'
-                                : run.status === 'failed'
-                                  ? 'text-rose-400 bg-rose-500/10'
-                                  : run.status === 'running'
-                                    ? 'text-blue-400 bg-blue-500/10'
-                                    : 'text-slate-400 bg-slate-500/10'
+                              run.status === "completed"
+                                ? "text-emerald-400 bg-emerald-500/10"
+                                : run.status === "failed"
+                                  ? "text-rose-400 bg-rose-500/10"
+                                  : run.status === "running"
+                                    ? "text-blue-400 bg-blue-500/10"
+                                    : "text-slate-400 bg-slate-500/10"
                             }`}
                           >
                             {run.status}
@@ -209,7 +202,7 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
                           <span>{fmtDuration(run.duration_ms)}</span>
                           {run.started_at && (
                             <span>
-                              {new Date(run.started_at).toLocaleString('ja-JP')}
+                              {new Date(run.started_at).toLocaleString("ja-JP")}
                             </span>
                           )}
                         </div>
@@ -224,22 +217,15 @@ export function RAGAppDetailModal({ config, onClose }: Props) {
           {/* 認証情報 */}
           {config.auth && (
             <section>
-              <SectionTitle>
-                {t('rag_dashboard.auth_info')}
-              </SectionTitle>
-              <KV
-                label="Auth Mode"
-                value={config.auth.mode || 'legacy'}
-              />
+              <SectionTitle>{t("rag_dashboard.auth_info")}</SectionTitle>
+              <KV label="Auth Mode" value={config.auth.mode || "legacy"} />
               <KV
                 label="Tenant Claim Key"
-                value={config.auth.tenant_claim_key || '-'}
+                value={config.auth.tenant_claim_key || "-"}
               />
               <KV
                 label="SSO"
-                value={
-                  config.auth.allow_same_tenant_sso ? '有効' : '無効'
-                }
+                value={config.auth.allow_same_tenant_sso ? "有効" : "無効"}
               />
             </section>
           )}

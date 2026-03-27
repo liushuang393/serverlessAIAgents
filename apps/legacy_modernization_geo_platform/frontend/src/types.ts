@@ -1,10 +1,10 @@
 export type TaskStatus =
-  | 'queued'
-  | 'running'
-  | 'waiting_approval'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  | "queued"
+  | "running"
+  | "waiting_approval"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface GeoExecuteRequest {
   campaign_name: string;
@@ -44,7 +44,7 @@ export interface ApprovalRecord {
   object_id: string;
   risk_level: string;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected' | 'rewrite';
+  status: "pending" | "approved" | "rejected" | "rewrite";
   actions: string[];
   comment?: string | null;
   reviewer_name?: string | null;
@@ -108,13 +108,22 @@ export interface GeoQAReport {
 
 export interface AccountSignalArtifact {
   company: string;
-  signals: { type: string; description: string; source: string; confidence: number }[];
+  signals: {
+    type: string;
+    description: string;
+    source: string;
+    confidence: number;
+  }[];
   urgency_hypothesis: string;
   modernization_fit_score: number;
 }
 
 export interface QuestionGraphArtifact {
-  personas: { role: string; questions: string[]; high_intent_questions: string[] }[];
+  personas: {
+    role: string;
+    questions: string[];
+    high_intent_questions: string[];
+  }[];
 }
 
 export interface EvidenceMatrixArtifact {

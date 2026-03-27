@@ -5,7 +5,11 @@ export type AuthState = "authenticated" | "unauthenticated";
 export interface EventSourceMockController {
   getUrls: () => Promise<string[]>;
   emitMessage: (data: unknown, target?: string | number) => Promise<void>;
-  emitEvent: (name: string, data: unknown, target?: string | number) => Promise<void>;
+  emitEvent: (
+    name: string,
+    data: unknown,
+    target?: string | number,
+  ) => Promise<void>;
   emitError: (target?: string | number) => Promise<void>;
   close: (target?: string | number) => Promise<void>;
 }
@@ -87,7 +91,11 @@ declare global {
     __mockEventSource?: {
       getUrls: () => string[];
       emitMessage: (data: unknown, target?: string | number) => void;
-      emitEvent: (name: string, data: unknown, target?: string | number) => void;
+      emitEvent: (
+        name: string,
+        data: unknown,
+        target?: string | number,
+      ) => void;
       emitError: (target?: string | number) => void;
       close: (target?: string | number) => void;
     };
@@ -173,10 +181,14 @@ const defaultKnowledgeDocs: Record<"shu" | "qi", KnowledgeDoc[]> = {
 };
 
 const buildKnowledgeDocs = (
-  override: KnowledgeMockOptions = {}
+  override: KnowledgeMockOptions = {},
 ): Record<"shu" | "qi", KnowledgeDoc[]> => ({
-  shu: override.shu ? override.shu.map((doc) => ({ ...doc })) : [...defaultKnowledgeDocs.shu],
-  qi: override.qi ? override.qi.map((doc) => ({ ...doc })) : [...defaultKnowledgeDocs.qi],
+  shu: override.shu
+    ? override.shu.map((doc) => ({ ...doc }))
+    : [...defaultKnowledgeDocs.shu],
+  qi: override.qi
+    ? override.qi.map((doc) => ({ ...doc }))
+    : [...defaultKnowledgeDocs.qi],
 });
 
 const defaultHistoryItems: ServerHistoryItem[] = [
@@ -200,42 +212,47 @@ const defaultHistoryItems: ServerHistoryItem[] = [
   },
 ];
 
-const buildHistoryItems = (override?: ServerHistoryItem[]): ServerHistoryItem[] =>
+const buildHistoryItems = (
+  override?: ServerHistoryItem[],
+): ServerHistoryItem[] =>
   override && override.length > 0
     ? override.map((item) => ({ ...item }))
     : defaultHistoryItems.map((item) => ({ ...item }));
 
 const buildHistoryDetails = (
   items: ServerHistoryItem[],
-  override: Record<string, HistoryDetailData> = {}
+  override: Record<string, HistoryDetailData> = {},
 ): Record<string, HistoryDetailData> => {
-  const baseDetails = items.reduce<Record<string, HistoryDetailData>>((acc, item) => {
-    acc[item.request_id] = {
-      id: item.id,
-      request_id: item.request_id,
-      question: item.question,
-      decision_role: item.decision_role,
-      confidence: item.confidence,
-      mode: item.mode,
-      dao_result: null,
-      fa_result: null,
-      shu_result: null,
-      qi_result: null,
-      review_result: null,
-      summary_bullets: null,
-      warnings: null,
-      processing_time_ms: null,
-      created_at: item.created_at,
-    };
-    return acc;
-  }, {});
+  const baseDetails = items.reduce<Record<string, HistoryDetailData>>(
+    (acc, item) => {
+      acc[item.request_id] = {
+        id: item.id,
+        request_id: item.request_id,
+        question: item.question,
+        decision_role: item.decision_role,
+        confidence: item.confidence,
+        mode: item.mode,
+        dao_result: null,
+        fa_result: null,
+        shu_result: null,
+        qi_result: null,
+        review_result: null,
+        summary_bullets: null,
+        warnings: null,
+        processing_time_ms: null,
+        created_at: item.created_at,
+      };
+      return acc;
+    },
+    {},
+  );
 
   return { ...baseDetails, ...override };
 };
 
 export const setupAuthMocks = async (
   page: Page,
-  options: AuthMockOptions = {}
+  options: AuthMockOptions = {},
 ): Promise<AuthMockController> => {
   let isAuthenticated = options.initialState === "authenticated";
   let currentUser = buildUser(options.user);
@@ -258,7 +275,11 @@ export const setupAuthMocks = async (
 
   await page.route("**/api/auth/login", async (route) => {
     isAuthenticated = true;
-    const response = { success: true, message: "ログイン成功", user: currentUser };
+    const response = {
+      success: true,
+      message: "ログイン成功",
+      user: currentUser,
+    };
 
     await route.fulfill({
       status: 200,
@@ -280,7 +301,7 @@ export const setupAuthMocks = async (
 
 export const setupConfigMocks = async (
   page: Page,
-  options: ConfigMockOptions = {}
+  options: ConfigMockOptions = {},
 ): Promise<void> => {
   let configs = buildConfigs(options.configs);
 
@@ -303,7 +324,7 @@ export const setupConfigMocks = async (
             ...config,
             ...(payload ?? {}),
           }
-        : config
+        : config,
     );
 
     const updated = configs.find((config) => config.agent_id === agentId);
@@ -318,7 +339,7 @@ export const setupConfigMocks = async (
 
 export const setupKnowledgeMocks = async (
   page: Page,
-  options: KnowledgeMockOptions = {}
+  options: KnowledgeMockOptions = {},
 ): Promise<void> => {
   const docsByAgent = buildKnowledgeDocs(options);
 
@@ -338,7 +359,10 @@ export const setupKnowledgeMocks = async (
     }
 
     if (method === "POST") {
-      const payload = request.postDataJSON() as { content?: string; topic?: string } | null;
+      const payload = request.postDataJSON() as {
+        content?: string;
+        topic?: string;
+      } | null;
       const newDoc: KnowledgeDoc = {
         id: `${agentType}-${Date.now()}`,
         content: payload?.content ?? "",
@@ -356,7 +380,9 @@ export const setupKnowledgeMocks = async (
 
     if (method === "DELETE") {
       const docId = url.split(`/api/knowledge/${agentType}/`)[1] || "";
-      docsByAgent[agentType] = docsByAgent[agentType].filter((doc) => doc.id !== docId);
+      docsByAgent[agentType] = docsByAgent[agentType].filter(
+        (doc) => doc.id !== docId,
+      );
 
       await route.fulfill({
         status: 200,
@@ -376,7 +402,7 @@ export const setupKnowledgeMocks = async (
 
 export const setupHistoryMocks = async (
   page: Page,
-  options: HistoryMockOptions = {}
+  options: HistoryMockOptions = {},
 ): Promise<void> => {
   let items = buildHistoryItems(options.items);
   let details = buildHistoryDetails(items, options.details);
@@ -432,7 +458,7 @@ export const setupHistoryMocks = async (
 
 export const setupReportMocks = async (
   page: Page,
-  options: ReportMockOptions = {}
+  options: ReportMockOptions = {},
 ): Promise<void> => {
   const signed = options.signature?.signed ?? false;
   const forceUnauthorized = options.signature?.forceUnauthorized ?? false;
@@ -448,13 +474,10 @@ export const setupReportMocks = async (
   };
 
   const pdfBytes = new Uint8Array([
-    0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x33, 0x0a,
-    0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a,
-    0x31, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a,
-    0x3c, 0x3c, 0x3e, 0x3e, 0x0a,
-    0x65, 0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a,
-    0x74, 0x72, 0x61, 0x69, 0x6c, 0x65, 0x72, 0x0a,
-    0x3c, 0x3c, 0x3e, 0x3e, 0x0a,
+    0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x33, 0x0a, 0x25, 0xe2, 0xe3,
+    0xcf, 0xd3, 0x0a, 0x31, 0x20, 0x30, 0x20, 0x6f, 0x62, 0x6a, 0x0a, 0x3c,
+    0x3c, 0x3e, 0x3e, 0x0a, 0x65, 0x6e, 0x64, 0x6f, 0x62, 0x6a, 0x0a, 0x74,
+    0x72, 0x61, 0x69, 0x6c, 0x65, 0x72, 0x0a, 0x3c, 0x3c, 0x3e, 0x3e, 0x0a,
     0x25, 0x25, 0x45, 0x4f, 0x46,
   ]);
 
@@ -500,7 +523,7 @@ export const setupReportMocks = async (
 };
 
 export const installMockEventSource = async (
-  page: Page
+  page: Page,
 ): Promise<EventSourceMockController> => {
   await page.addInitScript(() => {
     if (window.__mockEventSource) {
@@ -519,10 +542,14 @@ export const installMockEventSource = async (
       getUrls: () => [...controller._urls],
       _resolveTargets: (target?: string | number) => {
         if (typeof target === "number") {
-          return controller._instances[target] ? [controller._instances[target]] : [];
+          return controller._instances[target]
+            ? [controller._instances[target]]
+            : [];
         }
         if (typeof target === "string") {
-          return controller._instances.filter((instance) => instance.url === target);
+          return controller._instances.filter(
+            (instance) => instance.url === target,
+          );
         }
         return controller._instances;
       },
@@ -539,10 +566,14 @@ export const installMockEventSource = async (
           .forEach((instance) => instance._emitMessage(name, payload));
       },
       emitError: (target?: string | number) => {
-        controller._resolveTargets(target).forEach((instance) => instance._emitError());
+        controller
+          ._resolveTargets(target)
+          .forEach((instance) => instance._emitError());
       },
       close: (target?: string | number) => {
-        controller._resolveTargets(target).forEach((instance) => instance.close());
+        controller
+          ._resolveTargets(target)
+          .forEach((instance) => instance.close());
       },
     };
 
@@ -555,7 +586,10 @@ export const installMockEventSource = async (
       onopen: ((event: Event) => void) | null = null;
       onmessage: ((event: MessageEvent) => void) | null = null;
       onerror: ((event: Event) => void) | null = null;
-      private listeners: Record<string, Set<(event: Event | MessageEvent) => void>> = {};
+      private listeners: Record<
+        string,
+        Set<(event: Event | MessageEvent) => void>
+      > = {};
 
       constructor(public url: string) {
         controller._instances.push(this);
@@ -572,14 +606,20 @@ export const installMockEventSource = async (
         }, 0);
       }
 
-      addEventListener(type: string, handler: (event: Event | MessageEvent) => void): void {
+      addEventListener(
+        type: string,
+        handler: (event: Event | MessageEvent) => void,
+      ): void {
         if (!this.listeners[type]) {
           this.listeners[type] = new Set();
         }
         this.listeners[type].add(handler);
       }
 
-      removeEventListener(type: string, handler: (event: Event | MessageEvent) => void): void {
+      removeEventListener(
+        type: string,
+        handler: (event: Event | MessageEvent) => void,
+      ): void {
         this.listeners[type]?.delete(handler);
       }
 
@@ -618,15 +658,22 @@ export const installMockEventSource = async (
   });
 
   return {
-    getUrls: () => page.evaluate(() => window.__mockEventSource?.getUrls() ?? []),
+    getUrls: () =>
+      page.evaluate(() => window.__mockEventSource?.getUrls() ?? []),
     emitMessage: (data, target) =>
-      page.evaluate(({ data, target }) => {
-        window.__mockEventSource?.emitMessage(data, target);
-      }, { data, target }),
+      page.evaluate(
+        ({ data, target }) => {
+          window.__mockEventSource?.emitMessage(data, target);
+        },
+        { data, target },
+      ),
     emitEvent: (name, data, target) =>
-      page.evaluate(({ name, data, target }) => {
-        window.__mockEventSource?.emitEvent(name, data, target);
-      }, { name, data, target }),
+      page.evaluate(
+        ({ name, data, target }) => {
+          window.__mockEventSource?.emitEvent(name, data, target);
+        },
+        { name, data, target },
+      ),
     emitError: (target) =>
       page.evaluate((targetArg) => {
         window.__mockEventSource?.emitError(targetArg);

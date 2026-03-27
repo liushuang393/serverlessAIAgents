@@ -9,7 +9,8 @@ import {
 
 test.describe("レポート画面", () => {
   let errorMonitor: ReturnType<typeof installErrorMonitor> | null = null;
-  let eventSource: Awaited<ReturnType<typeof installMockEventSource>> | null = null;
+  let eventSource: Awaited<ReturnType<typeof installMockEventSource>> | null =
+    null;
 
   test.beforeEach(async ({ page }) => {
     errorMonitor = installErrorMonitor(page);
@@ -31,7 +32,9 @@ test.describe("レポート画面", () => {
 
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Decision Agent" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Decision Agent" }),
+    ).toBeVisible();
 
     await page.getByPlaceholder("ユーザー名を入力").fill("admin");
     await page.getByPlaceholder("パスワードを入力").fill("admin123");
@@ -49,7 +52,9 @@ test.describe("レポート画面", () => {
 
     await expect
       .poll(async () =>
-        (await eventSource.getUrls()).some((url) => url.includes("/api/decision/stream"))
+        (await eventSource.getUrls()).some((url) =>
+          url.includes("/api/decision/stream"),
+        ),
       )
       .toBeTruthy();
 
@@ -129,11 +134,15 @@ test.describe("レポート画面", () => {
       result: reportPayload as unknown as Record<string, unknown>,
     });
 
-    const viewReportButton = page.getByRole("button", { name: "📄 決策レポートを表示" });
+    const viewReportButton = page.getByRole("button", {
+      name: "📄 決策レポートを表示",
+    });
     await expect(viewReportButton).toBeVisible();
     await viewReportButton.click();
 
-    await expect(page.getByRole("heading", { name: "提案書", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "提案書", exact: true }),
+    ).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "📄 PDF出力" }).click();
@@ -147,7 +156,9 @@ test.describe("レポート画面", () => {
     await expect(page.getByText("署名")).toBeVisible();
   });
 
-  test("checkbox+補足メモで再計算し、40%閾値で署名可否が切り替わる", async ({ page }) => {
+  test("checkbox+補足メモで再計算し、40%閾値で署名可否が切り替わる", async ({
+    page,
+  }) => {
     if (!eventSource) {
       throw new Error("EventSourceモックが初期化されていません");
     }
@@ -233,7 +244,11 @@ test.describe("レポート画面", () => {
     await page.getByRole("button", { name: "決策分析を開始する" }).click();
 
     await expect
-      .poll(async () => (await eventSource.getUrls()).some((url) => url.includes("/api/decision/stream")))
+      .poll(async () =>
+        (await eventSource.getUrls()).some((url) =>
+          url.includes("/api/decision/stream"),
+        ),
+      )
       .toBeTruthy();
 
     const timestamp = Date.now();
@@ -302,7 +317,14 @@ test.describe("レポート画面", () => {
               annotation_hint: "担当者を記入",
               default_value: "",
             },
-            score_improvements: [{ target_score: "input", current_estimate: 35, improved_estimate: 37, delta: 2 }],
+            score_improvements: [
+              {
+                target_score: "input",
+                current_estimate: 35,
+                improved_estimate: 37,
+                delta: 2,
+              },
+            ],
           },
         ],
         final_warnings: [],
@@ -335,14 +357,20 @@ test.describe("レポート画面", () => {
     });
 
     await page.getByRole("button", { name: "📄 決策レポートを表示" }).click();
-    await expect(page.getByRole("heading", { name: "提案書", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "提案書", exact: true }),
+    ).toBeVisible();
 
     await expect(page.getByText("40%未満 署名不可")).toBeVisible();
     await expect(page.getByRole("button", { name: "電子署名" })).toHaveCount(0);
 
     await page.getByRole("button", { name: "検証", exact: true }).click();
     await page.getByLabel("この対策案を確認した").check();
-    await page.getByPlaceholder("メモ（任意）").fill("POを責任者に設定。3月末までに承認フローを確定し、監査ログで検証。");
+    await page
+      .getByPlaceholder("メモ（任意）")
+      .fill(
+        "POを責任者に設定。3月末までに承認フローを確定し、監査ログで検証。",
+      );
     await page.getByLabel("承認者（ロール）確認済み").check();
     await page.getByRole("button", { name: /重新算分/ }).click();
 

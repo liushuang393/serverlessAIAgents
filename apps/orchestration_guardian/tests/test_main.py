@@ -6,7 +6,6 @@ from typing import Any
 
 import httpx
 import pytest
-
 from apps.orchestration_guardian.main import _build_verify_result, app
 
 

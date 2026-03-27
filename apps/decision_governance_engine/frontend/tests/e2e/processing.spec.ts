@@ -5,7 +5,8 @@ import { installMockEventSource, setupAuthMocks } from "./helpers/mocks";
 
 test.describe("進捗画面SSE", () => {
   let errorMonitor: ReturnType<typeof installErrorMonitor> | null = null;
-  let eventSource: Awaited<ReturnType<typeof installMockEventSource>> | null = null;
+  let eventSource: Awaited<ReturnType<typeof installMockEventSource>> | null =
+    null;
 
   test.beforeEach(async ({ page }) => {
     errorMonitor = installErrorMonitor(page);
@@ -26,7 +27,9 @@ test.describe("進捗画面SSE", () => {
 
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Decision Agent" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Decision Agent" }),
+    ).toBeVisible();
 
     await page.getByPlaceholder("ユーザー名を入力").fill("admin");
     await page.getByPlaceholder("パスワードを入力").fill("admin123");
@@ -44,7 +47,9 @@ test.describe("進捗画面SSE", () => {
 
     await expect
       .poll(async () =>
-        (await eventSource?.getUrls() ?? []).some((url) => url.includes("/api/decision/stream"))
+        ((await eventSource?.getUrls()) ?? []).some((url) =>
+          url.includes("/api/decision/stream"),
+        ),
       )
       .toBeTruthy();
 
@@ -145,14 +150,20 @@ test.describe("進捗画面SSE", () => {
       result: reportPayload as unknown as Record<string, unknown>,
     });
 
-    const viewReportButton = page.getByRole("button", { name: "📄 決策レポートを表示" });
+    const viewReportButton = page.getByRole("button", {
+      name: "📄 決策レポートを表示",
+    });
     await expect(viewReportButton).toBeVisible();
     await viewReportButton.click();
 
-    await expect(page.getByRole("heading", { name: "提案書", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "提案書", exact: true }),
+    ).toBeVisible();
   });
 
-  test("COACH/REVISE判定でもフローが中断せずレポート表示まで到達する", async ({ page }) => {
+  test("COACH/REVISE判定でもフローが中断せずレポート表示まで到達する", async ({
+    page,
+  }) => {
     if (!eventSource) {
       throw new Error("EventSourceモックが初期化されていません");
     }
@@ -170,7 +181,11 @@ test.describe("進捗画面SSE", () => {
 
     await page.getByRole("button", { name: "決策分析を開始する" }).click();
     await expect
-      .poll(async () => (await eventSource.getUrls()).some((url) => url.includes("/api/decision/stream")))
+      .poll(async () =>
+        (await eventSource.getUrls()).some((url) =>
+          url.includes("/api/decision/stream"),
+        ),
+      )
       .toBeTruthy();
 
     const timestamp = Date.now();
@@ -197,10 +212,20 @@ test.describe("進捗画面SSE", () => {
       report_id: "report-003",
       created_at: "2026-02-03T00:00:00Z",
       version: "v3.1",
-      dao: { problem_type: "投資判断", essence: "責任分担の明確化", immutable_constraints: [], hidden_assumptions: [] },
+      dao: {
+        problem_type: "投資判断",
+        essence: "責任分担の明確化",
+        immutable_constraints: [],
+        hidden_assumptions: [],
+      },
       fa: { recommended_paths: [], rejected_paths: [], decision_criteria: [] },
       shu: { phases: [], first_action: "責任者を確定", dependencies: [] },
-      qi: { implementations: [], tool_recommendations: [], integration_points: [], technical_debt_warnings: [] },
+      qi: {
+        implementations: [],
+        tool_recommendations: [],
+        integration_points: [],
+        technical_debt_warnings: [],
+      },
       review: {
         overall_verdict: "COACH",
         confidence_score: 0.36,
@@ -231,9 +256,13 @@ test.describe("進捗画面SSE", () => {
       result: reportPayload as unknown as Record<string, unknown>,
     });
 
-    await expect(page.getByRole("button", { name: "📄 決策レポートを表示" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "📄 決策レポートを表示" }),
+    ).toBeVisible();
     await expect(page.getByText("エラーが発生しました")).toHaveCount(0);
     await page.getByRole("button", { name: "📄 決策レポートを表示" }).click();
-    await expect(page.getByRole("heading", { name: "提案書", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "提案書", exact: true }),
+    ).toBeVisible();
   });
 });

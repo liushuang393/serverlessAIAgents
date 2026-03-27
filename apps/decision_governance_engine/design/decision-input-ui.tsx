@@ -1,47 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const DecisionInputPage = () => {
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState("");
   const [constraints, setConstraints] = useState({
-    budget: '',
-    timeline: '',
-    team: '',
+    budget: "",
+    timeline: "",
+    team: "",
     technical: [],
-    regulatory: []
+    regulatory: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [techInput, setTechInput] = useState('');
-  const [regInput, setRegInput] = useState('');
+  const [techInput, setTechInput] = useState("");
+  const [regInput, setRegInput] = useState("");
   const [rejection, setRejection] = useState(null);
 
   const addTag = (type, value) => {
     if (value.trim()) {
-      setConstraints(prev => ({
+      setConstraints((prev) => ({
         ...prev,
-        [type]: [...prev[type], value.trim()]
+        [type]: [...prev[type], value.trim()],
       }));
-      if (type === 'technical') setTechInput('');
-      if (type === 'regulatory') setRegInput('');
+      if (type === "technical") setTechInput("");
+      if (type === "regulatory") setRegInput("");
     }
   };
 
   const removeTag = (type, index) => {
-    setConstraints(prev => ({
+    setConstraints((prev) => ({
       ...prev,
-      [type]: prev[type].filter((_, i) => i !== index)
+      [type]: prev[type].filter((_, i) => i !== index),
     }));
   };
 
   // 模拟即时拒否检查
   const checkInstantReject = (text) => {
     const patterns = [
-      { regex: /(天気|気温|weather|何時)/i, message: '天気や時刻の情報にはお答えできません。', category: '事実確認' },
-      { regex: /(このシステム|このAI|どうやって作|仕組み)/i, message: 'システム自体への質問にはお答えできません。', category: 'システム質問' },
-      { regex: /(.+)(とは何|って何|とは？)/i, message: '用語や概念の説明にはお答えできません。', category: '定義質問' },
-      { regex: /^(こんにちは|hello|hi|ありがとう)/i, message: '雑談には対応していません。', category: '雑談' },
-      { regex: /(コード.*書いて|プログラム.*作)/i, message: 'コード生成には対応していません。', category: '技術実装' },
+      {
+        regex: /(天気|気温|weather|何時)/i,
+        message: "天気や時刻の情報にはお答えできません。",
+        category: "事実確認",
+      },
+      {
+        regex: /(このシステム|このAI|どうやって作|仕組み)/i,
+        message: "システム自体への質問にはお答えできません。",
+        category: "システム質問",
+      },
+      {
+        regex: /(.+)(とは何|って何|とは？)/i,
+        message: "用語や概念の説明にはお答えできません。",
+        category: "定義質問",
+      },
+      {
+        regex: /^(こんにちは|hello|hi|ありがとう)/i,
+        message: "雑談には対応していません。",
+        category: "雑談",
+      },
+      {
+        regex: /(コード.*書いて|プログラム.*作)/i,
+        message: "コード生成には対応していません。",
+        category: "技術実装",
+      },
     ];
-    
+
     for (const p of patterns) {
       if (p.regex.test(text)) {
         return { category: p.category, message: p.message };
@@ -52,14 +72,14 @@ const DecisionInputPage = () => {
 
   const handleSubmit = () => {
     if (question.length < 10) return;
-    
+
     // 即时拒否检查
     const rejectResult = checkInstantReject(question);
     if (rejectResult) {
       setRejection(rejectResult);
       return;
     }
-    
+
     setRejection(null);
     setIsSubmitting(true);
     setTimeout(() => setIsSubmitting(false), 2000);
@@ -76,7 +96,9 @@ const DecisionInputPage = () => {
             </div>
             <div>
               <h1 className="font-semibold text-lg">Decision Agent</h1>
-              <p className="text-xs text-slate-500">Enterprise Decision Platform</p>
+              <p className="text-xs text-slate-500">
+                Enterprise Decision Platform
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -99,7 +121,8 @@ const DecisionInputPage = () => {
           </h2>
           <p className="text-slate-400">
             複雑な問題を「道・法・術・器」のフレームワークで分析し、
-            <br />署名可能な決策レポートを生成します
+            <br />
+            署名可能な決策レポートを生成します
           </p>
         </div>
 
@@ -114,12 +137,20 @@ const DecisionInputPage = () => {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-red-400 font-medium">この質問には対応できません</span>
-                    <span className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">{rejection.category}</span>
+                    <span className="text-red-400 font-medium">
+                      この質問には対応できません
+                    </span>
+                    <span className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">
+                      {rejection.category}
+                    </span>
                   </div>
-                  <p className="text-sm text-slate-400 mb-3">{rejection.message}</p>
+                  <p className="text-sm text-slate-400 mb-3">
+                    {rejection.message}
+                  </p>
                   <div className="bg-[#0a0a0f] rounded-lg p-3">
-                    <div className="text-xs text-slate-500 mb-2">✅ 受理可能な質問例：</div>
+                    <div className="text-xs text-slate-500 mb-2">
+                      ✅ 受理可能な質問例：
+                    </div>
                     <ul className="text-xs text-slate-400 space-y-1">
                       <li>• 新規事業AとBのどちらに投資すべきか</li>
                       <li>• このプロジェクトを続行すべきか中止すべきか</li>
@@ -127,7 +158,7 @@ const DecisionInputPage = () => {
                     </ul>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setRejection(null)}
                   className="text-slate-500 hover:text-white"
                 >
@@ -150,19 +181,25 @@ const DecisionInputPage = () => {
             />
             <div className="flex justify-between mt-2">
               <span className="text-xs text-slate-600">
-                {question.length < 10 ? '最低10文字以上入力してください' : '✓ 入力OK'}
+                {question.length < 10
+                  ? "最低10文字以上入力してください"
+                  : "✓ 入力OK"}
               </span>
-              <span className="text-xs text-slate-600">{question.length} 文字</span>
+              <span className="text-xs text-slate-600">
+                {question.length} 文字
+              </span>
             </div>
           </div>
 
           {/* Constraints Section */}
           <div className="mb-8">
             <h3 className="text-sm font-medium text-slate-300 mb-4 flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-xs">⚙️</span>
+              <span className="w-5 h-5 rounded bg-slate-800 flex items-center justify-center text-xs">
+                ⚙️
+              </span>
               制約条件（任意）
             </h3>
-            
+
             {/* Primary Constraints */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-[#0a0a0f] rounded-xl p-4 border border-white/5">
@@ -175,7 +212,12 @@ const DecisionInputPage = () => {
                   <input
                     type="text"
                     value={constraints.budget}
-                    onChange={(e) => setConstraints(prev => ({ ...prev, budget: e.target.value }))}
+                    onChange={(e) =>
+                      setConstraints((prev) => ({
+                        ...prev,
+                        budget: e.target.value,
+                      }))
+                    }
                     placeholder="500"
                     className="w-full bg-transparent text-white text-lg font-medium focus:outline-none"
                   />
@@ -192,7 +234,12 @@ const DecisionInputPage = () => {
                   <input
                     type="text"
                     value={constraints.timeline}
-                    onChange={(e) => setConstraints(prev => ({ ...prev, timeline: e.target.value }))}
+                    onChange={(e) =>
+                      setConstraints((prev) => ({
+                        ...prev,
+                        timeline: e.target.value,
+                      }))
+                    }
                     placeholder="6"
                     className="w-full bg-transparent text-white text-lg font-medium focus:outline-none"
                   />
@@ -209,7 +256,12 @@ const DecisionInputPage = () => {
                   <input
                     type="text"
                     value={constraints.team}
-                    onChange={(e) => setConstraints(prev => ({ ...prev, team: e.target.value }))}
+                    onChange={(e) =>
+                      setConstraints((prev) => ({
+                        ...prev,
+                        team: e.target.value,
+                      }))
+                    }
                     placeholder="5"
                     className="w-full bg-transparent text-white text-lg font-medium focus:outline-none"
                   />
@@ -227,9 +279,17 @@ const DecisionInputPage = () => {
                 </div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {constraints.technical.map((tag, i) => (
-                    <span key={i} className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs flex items-center gap-1">
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-lg text-xs flex items-center gap-1"
+                    >
                       {tag}
-                      <button onClick={() => removeTag('technical', i)} className="hover:text-white">×</button>
+                      <button
+                        onClick={() => removeTag("technical", i)}
+                        className="hover:text-white"
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -237,7 +297,9 @@ const DecisionInputPage = () => {
                   type="text"
                   value={techInput}
                   onChange={(e) => setTechInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTag('technical', techInput)}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && addTag("technical", techInput)
+                  }
                   placeholder="例: AWS, Python..."
                   className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
                 />
@@ -246,13 +308,23 @@ const DecisionInputPage = () => {
               <div className="bg-[#0a0a0f] rounded-xl p-4 border border-white/5">
                 <div className="flex items-center gap-2 mb-3">
                   <span>📋</span>
-                  <span className="text-xs text-slate-400">規制・コンプライアンス</span>
+                  <span className="text-xs text-slate-400">
+                    規制・コンプライアンス
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {constraints.regulatory.map((tag, i) => (
-                    <span key={i} className="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-xs flex items-center gap-1">
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-lg text-xs flex items-center gap-1"
+                    >
                       {tag}
-                      <button onClick={() => removeTag('regulatory', i)} className="hover:text-white">×</button>
+                      <button
+                        onClick={() => removeTag("regulatory", i)}
+                        className="hover:text-white"
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -260,7 +332,9 @@ const DecisionInputPage = () => {
                   type="text"
                   value={regInput}
                   onChange={(e) => setRegInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTag('regulatory', regInput)}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && addTag("regulatory", regInput)
+                  }
                   placeholder="例: GDPR, 金融規制..."
                   className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
                 />
@@ -274,8 +348,8 @@ const DecisionInputPage = () => {
             disabled={question.length < 10 || isSubmitting}
             className={`w-full py-4 rounded-xl font-medium text-lg transition-all flex items-center justify-center gap-3 ${
               question.length >= 10 && !isSubmitting
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/25'
-                : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                ? "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-500/25"
+                : "bg-slate-800 text-slate-500 cursor-not-allowed"
             }`}
           >
             {isSubmitting ? (
@@ -300,12 +374,15 @@ const DecisionInputPage = () => {
         {/* Features */}
         <div className="grid grid-cols-4 gap-4 mt-8">
           {[
-            { icon: '🎯', label: '道', desc: '本質抽出' },
-            { icon: '🛤️', label: '法', desc: '戦略選定' },
-            { icon: '📋', label: '術', desc: '実行計画' },
-            { icon: '🔧', label: '器', desc: '技術実装' },
+            { icon: "🎯", label: "道", desc: "本質抽出" },
+            { icon: "🛤️", label: "法", desc: "戦略選定" },
+            { icon: "📋", label: "術", desc: "実行計画" },
+            { icon: "🔧", label: "器", desc: "技術実装" },
           ].map((item, i) => (
-            <div key={i} className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5">
+            <div
+              key={i}
+              className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5"
+            >
               <span className="text-2xl">{item.icon}</span>
               <div className="text-sm font-medium mt-2">{item.label}</div>
               <div className="text-xs text-slate-500">{item.desc}</div>

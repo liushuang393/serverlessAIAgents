@@ -5,8 +5,8 @@
  * @note 本番環境では react-markdown + remark-gfm を使用推奨
  */
 
-import React, { useMemo } from 'react';
-import type { RichComponent } from '../types';
+import React, { useMemo } from "react";
+import type { RichComponent } from "../types";
 
 /**
  * シンプルな Markdown パーサー（依存ライブラリなし）
@@ -17,7 +17,7 @@ function parseMarkdown(text: string): string {
 
   // コードブロック ```
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang, code) => {
-    const langAttr = lang ? ` data-language="${lang}"` : '';
+    const langAttr = lang ? ` data-language="${lang}"` : "";
     return `<pre class="code-block"${langAttr}><code>${escapeHtml(code.trim())}</code></pre>`;
   });
 
@@ -25,13 +25,22 @@ function parseMarkdown(text: string): string {
   html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
 
   // 見出し
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-5 mb-3">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>');
+  html = html.replace(
+    /^### (.+)$/gm,
+    '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>',
+  );
+  html = html.replace(
+    /^## (.+)$/gm,
+    '<h2 class="text-xl font-bold mt-5 mb-3">$1</h2>',
+  );
+  html = html.replace(
+    /^# (.+)$/gm,
+    '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>',
+  );
 
   // 太字・斜体
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
 
   // リンク
   html = html.replace(
@@ -41,7 +50,10 @@ function parseMarkdown(text: string): string {
 
   // リスト
   html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>');
-  html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal">$2</li>');
+  html = html.replace(
+    /^(\d+)\. (.+)$/gm,
+    '<li class="ml-4 list-decimal">$2</li>',
+  );
 
   // 引用
   html = html.replace(
@@ -50,7 +62,10 @@ function parseMarkdown(text: string): string {
   );
 
   // 水平線
-  html = html.replace(/^---$/gm, '<hr class="my-4 border-gray-300 dark:border-gray-600" />');
+  html = html.replace(
+    /^---$/gm,
+    '<hr class="my-4 border-gray-300 dark:border-gray-600" />',
+  );
 
   // 改行を <br> に変換（段落内）
   html = html.replace(/\n\n/g, '</p><p class="mb-3">');
@@ -64,11 +79,11 @@ function parseMarkdown(text: string): string {
  */
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
   };
   return text.replace(/[&<>"']/g, (m) => map[m] ?? m);
 }
@@ -84,8 +99,10 @@ interface MarkdownRendererProps {
  * @param props - MarkdownRendererProps
  * @returns JSX.Element
  */
-export function MarkdownRenderer({ component }: MarkdownRendererProps): React.JSX.Element {
-  const { content = '' } = component.props;
+export function MarkdownRenderer({
+  component,
+}: MarkdownRendererProps): React.JSX.Element {
+  const { content = "" } = component.props;
 
   const htmlContent = useMemo(() => {
     return parseMarkdown(String(content));

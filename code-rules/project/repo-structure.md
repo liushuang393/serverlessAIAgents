@@ -20,6 +20,7 @@
 ## 🗂️ ディレクトリ構造原則
 
 ### ルートレベル構造
+
 ```
 agentflow/
 ├── 📁 agentflow/           # コアパッケージ
@@ -36,6 +37,7 @@ agentflow/
 ```
 
 ### パッケージ構造
+
 ```
 agentflow/
 ├── 📁 core/                # 核心インターフェース
@@ -57,9 +59,11 @@ agentflow/
 ## 📦 モジュール組織化
 
 ### 7コア層 + Apps外層の反映
+
 `contracts / infrastructure / shared / kernel / harness / control_plane / domain` をコア層、`apps/` を製品層として組織化します。
 
 #### Core層（安定インターフェース）
+
 ```
 agentflow/core/
 ├── interfaces/
@@ -75,6 +79,7 @@ agentflow/core/
 ```
 
 #### 各機能層
+
 ```
 agentflow/agents/
 ├── __init__.py
@@ -99,6 +104,7 @@ agentflow/tools/
 ```
 
 ### プロトコル層の組織化
+
 ```
 agentflow/protocols/
 ├── __init__.py
@@ -122,6 +128,7 @@ agentflow/protocols/
 ```
 
 ### Provider層の統一アクセス
+
 ```
 agentflow/providers/
 ├── __init__.py               # 統一APIエクスポート
@@ -147,6 +154,7 @@ agentflow/providers/
 ## 📄 ファイル命名規則
 
 ### Python モジュール
+
 - **snake_case**: 全て小文字、アンダースコア区切り
 - **役割反映**: ファイル名で何をするかがわかる
 
@@ -166,6 +174,7 @@ agentflow/
 ```
 
 ### 設定ファイル
+
 - **kebab-case**: 設定ファイルのみ
 - **拡張子**: `.toml`, `.yaml`, `.json`
 
@@ -182,6 +191,7 @@ agentflow/
 ```
 
 ### ドキュメントファイル
+
 - **snake_case**: 全て小文字、アンダースコア区切り
 - **接頭語**: 種類を表す接頭語
 
@@ -200,6 +210,7 @@ docs/
 ## ⚙️ 設定ファイル管理
 
 ### pyproject.toml 構造
+
 ```toml
 [build-system]
 requires = ["hatchling"]
@@ -281,6 +292,7 @@ exclude_lines = [
 ```
 
 ### 環境設定ファイル
+
 ```bash
 # .env.example - 環境変数テンプレート
 # LLM Providers
@@ -310,6 +322,7 @@ LOG_LEVEL=INFO
 ## 📚 ドキュメント構造
 
 ### docs/ ディレクトリ構造
+
 ```
 docs/
 ├── 📁 rules/                 # ルール体系
@@ -333,16 +346,18 @@ docs/
 ```
 
 ### ドキュメント命名規則
-- **guide-*.md**: 操作ガイド
-- **api-*.md**: API リファレンス
-- ***-standards*.md**: 開発標準
-- ***-guide.md**: ガイドドキュメント
+
+- **guide-\*.md**: 操作ガイド
+- **api-\*.md**: API リファレンス
+- **_-standards_.md**: 開発標準
+- **\*-guide.md**: ガイドドキュメント
 
 ---
 
 ## 🧪 テスト構造
 
 ### tests/ ディレクトリ構造
+
 ```
 tests/
 ├── 📁 unit/                  # ユニットテスト
@@ -361,10 +376,11 @@ tests/
 ```
 
 ### テストファイル命名
-- **test_*.py**: テストモジュール
-- ***_test.py**: テストファイル
-- **Test***: テストクラス
-- **test_***: テスト関数
+
+- **test\_\*.py**: テストモジュール
+- **\*\_test.py**: テストファイル
+- **Test\***: テストクラス
+- **test\_\***: テスト関数
 
 ```python
 # ✅ 正しいテスト構造
@@ -390,6 +406,7 @@ tests/
 ## 🔄 CI/CD構造
 
 ### .github/workflows/ 構造
+
 ```
 .github/
 ├── workflows/
@@ -406,15 +423,16 @@ tests/
 ```
 
 ### CI パイプライン設計
+
 ```yaml
 # .github/workflows/ci.yml
 name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
@@ -424,29 +442,29 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
-    - name: Lint with Ruff
-      run: ruff check .
+      - name: Lint with Ruff
+        run: ruff check .
 
-    - name: Type check with mypy
-      run: mypy agentflow
+      - name: Type check with mypy
+        run: mypy agentflow
 
-    - name: Test with pytest
-      run: pytest --cov=agentflow --cov-report=xml
+      - name: Test with pytest
+        run: pytest --cov=agentflow --cov-report=xml
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
 ```
 
 ---
@@ -454,6 +472,7 @@ jobs:
 ## ✅ 自動化チェック
 
 ### リポジトリ構造検証スクリプト
+
 ```python
 #!/usr/bin/env python3
 # scripts/validate_repo_structure.py
@@ -589,6 +608,7 @@ if __name__ == "__main__":
 ```
 
 ### インポート順序検証スクリプト
+
 ```python
 #!/usr/bin/env python3
 # scripts/check_import_order.py
@@ -702,13 +722,13 @@ if __name__ == "__main__":
 
 ## 📋 リポジトリ構造 チートシート
 
-| 要素 | 規則 | 例 | 説明 |
-|------|------|-----|------|
-| **ディレクトリ** | snake_case | `agentflow/core/` | 機能グループ化 |
-| **Pythonファイル** | snake_case | `code_generator.py` | 役割を反映 |
-| **設定ファイル** | kebab-case | `pyproject.toml` | 設定ファイルのみ |
-| **ドキュメント** | snake_case | `architecture.md` | 内容を反映 |
-| **テスト** | test_*.py | `test_agent_block.py` | pytest 慣習 |
-| **パッケージ** | __init__.py | `agents/__init__.py` | Python パッケージ |
+| 要素               | 規則        | 例                    | 説明              |
+| ------------------ | ----------- | --------------------- | ----------------- |
+| **ディレクトリ**   | snake_case  | `agentflow/core/`     | 機能グループ化    |
+| **Pythonファイル** | snake_case  | `code_generator.py`   | 役割を反映        |
+| **設定ファイル**   | kebab-case  | `pyproject.toml`      | 設定ファイルのみ  |
+| **ドキュメント**   | snake_case  | `architecture.md`     | 内容を反映        |
+| **テスト**         | test\_\*.py | `test_agent_block.py` | pytest 慣習       |
+| **パッケージ**     | **init**.py | `agents/__init__.py`  | Python パッケージ |
 
-*最終更新: 2026-01-19 | AgentFlow リポジトリ構造標準*
+_最終更新: 2026-01-19 | AgentFlow リポジトリ構造標準_

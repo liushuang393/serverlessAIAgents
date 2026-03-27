@@ -246,11 +246,13 @@ export function ResourcesPage() {
         permission_level: form.permission_level,
       });
       setShowCreate(false);
-      setAlert({ type: "success", msg: "リソースパーミッションを作成しました" });
+      setAlert({
+        type: "success",
+        msg: "リソースパーミッションを作成しました",
+      });
       void loadData();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : "作成に失敗しました";
+      const msg = err instanceof ApiError ? err.message : "作成に失敗しました";
       setAlert({ type: "error", msg });
     }
   }
@@ -263,11 +265,13 @@ export function ResourcesPage() {
       return;
     try {
       await deleteResourcePermission(item.id);
-      setAlert({ type: "success", msg: "リソースパーミッションを削除しました" });
+      setAlert({
+        type: "success",
+        msg: "リソースパーミッションを削除しました",
+      });
       void loadData();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : "削除に失敗しました";
+      const msg = err instanceof ApiError ? err.message : "削除に失敗しました";
       setAlert({ type: "error", msg });
     }
   }

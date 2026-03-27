@@ -17,11 +17,13 @@
 ## 🎯 ドキュメント原則
 
 ### 必須原則
+
 - **100% カバレッジ**: すべての公開 API にドキュメント必須
 - **継続的更新**: コード変更時にドキュメントを同期
 - **実用的価値**: ドキュメントが開発者の役に立つ
 
 ### 品質基準
+
 ```python
 # ✅ 良いドキュメント
 def process_user_data(user_id: str, data: dict) -> dict:
@@ -65,6 +67,7 @@ def process_user_data(user_id: str, data: dict) -> dict:
 ## 📝 Docstring 規約
 
 ### Google スタイル（必須）
+
 ```python
 def function_name(
     param1: Type,
@@ -101,6 +104,7 @@ def function_name(
 ```
 
 ### クラス Docstring
+
 ```python
 class UserManager:
     """
@@ -131,6 +135,7 @@ class UserManager:
 ```
 
 ### モジュール Docstring
+
 ```python
 """
 ユーザー管理モジュール。
@@ -170,6 +175,7 @@ MAX_LOGIN_ATTEMPTS = 5
 ## 💬 コメント規約
 
 ### インラインコメント
+
 ```python
 # ✅ 良いコメント: なぜそうするのかを説明
 user_count = len(users)  # アクティブユーザーのみをカウントするため len() を使用
@@ -189,6 +195,7 @@ if user.is_active:  # 非アクティブユーザーのみ処理 ❌
 ```
 
 ### ブロックコメント
+
 ```python
 # 複数行のロジックを説明する場合
 #
@@ -215,6 +222,7 @@ def migrate_user_data():
 ```
 
 ### TODO コメント
+
 ```python
 # TODO(#123): パフォーマンス最適化 - バッチ処理を実装
 # この関数は現在 O(n) の複雑度だが、データ量増加により
@@ -242,6 +250,7 @@ class BaseProcessor:
 ## 📚 ドキュメント生成
 
 ### Sphinx ドキュメント
+
 ```python
 # conf.py 設定
 extensions = [
@@ -267,6 +276,7 @@ napoleon_include_private_with_doc = False
 ```
 
 ### MkDocs 設定（README ドキュメント）
+
 ```yaml
 # mkdocs.yml
 site_name: AgentFlow Documentation
@@ -298,6 +308,7 @@ nav:
 ## 📝 例とテンプレート
 
 ### 関数ドキュメントテンプレート
+
 ```python
 async def execute_workflow(
     workflow_id: str,
@@ -365,6 +376,7 @@ async def execute_workflow(
 ```
 
 ### クラスドキュメントテンプレート
+
 ```python
 class AgentCoordinator:
     """
@@ -412,6 +424,7 @@ class AgentCoordinator:
 ```
 
 ### モジュールドキュメントテンプレート
+
 ```python
 """
 ワークフロー実行エンジンモジュール。
@@ -472,6 +485,7 @@ SUPPORTED_WORKFLOW_VERSIONS = ["1.0", "1.1"]
 ## 🔍 ドキュメント品質チェック
 
 ### 必須チェックリスト
+
 - [ ] すべての公開関数/クラス/メソッドに Docstring がある
 - [ ] Docstring が Google スタイルに従っている
 - [ ] Args, Returns, Raises が適切に記述されている
@@ -481,6 +495,7 @@ SUPPORTED_WORKFLOW_VERSIONS = ["1.0", "1.1"]
 - [ ] コード変更時にドキュメントが同期されている
 
 ### 自動化チェック
+
 ```bash
 # Docstring カバレッジチェック
 interrogate -v --fail-under=100 agentflow/
@@ -505,4 +520,4 @@ sphinx-build -b linkcheck docs/ _build/linkcheck
 
 **優れたドキュメントはコードの価値を最大化します。** 📚
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+_最終更新: 2025-01-19 | バージョン: 1.0.0_

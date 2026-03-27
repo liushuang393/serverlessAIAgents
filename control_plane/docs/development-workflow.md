@@ -28,14 +28,14 @@ flowchart LR
 
 App の基本情報を決定する。
 
-| 項目 | 例 | 備考 |
-|------|-----|------|
-| App 名 | `inventory_manager` | snake_case 必須 |
-| 表示名 | `在庫管理システム` | UI 表示用 |
-| Agent 数 | 3 | 初期見込み |
-| DB 種別 | `postgresql` | postgresql / sqlite / none |
-| Redis | `true` | キャッシュ利用有無 |
-| Frontend | `true` | React UI 有無 |
+| 項目     | 例                  | 備考                       |
+| -------- | ------------------- | -------------------------- |
+| App 名   | `inventory_manager` | snake_case 必須            |
+| 表示名   | `在庫管理システム`  | UI 表示用                  |
+| Agent 数 | 3                   | 初期見込み                 |
+| DB 種別  | `postgresql`        | postgresql / sqlite / none |
+| Redis    | `true`              | キャッシュ利用有無         |
+| Frontend | `true`              | React UI 有無              |
 
 ### ② テンプレート生成
 
@@ -69,6 +69,7 @@ curl -X POST http://localhost:8000/api/studios/framework/apps/ports/rebalance \
 ```
 
 **自動検出対象**:
+
 - システム使用中ポート（socket テスト）
 - Docker コンテナ使用中ポート
 - 既存 `apps/*/.env` の設定ポート
@@ -174,13 +175,13 @@ flowchart LR
     AW --> AC
 ```
 
-| ステップ | 使用ツール | 状態 |
-|----------|-----------|------|
+| ステップ           | 使用ツール              | 状態    |
+| ------------------ | ----------------------- | ------- |
 | ② テンプレート生成 | `TemplateManager` + CLI | ✅ 既存 |
-| ③ ポート割り当て | `PortManager` | ✅ 既存 |
-| ④ app_config.json | 手動 → 将来自動生成 | 🔴 新規 |
-| ⑥ Platform 確認 | `AppDiscoveryService` | 🔴 新規 |
-| ⑦ デプロイ | `PublishOrchestrator` | ✅ 既存 |
+| ③ ポート割り当て   | `PortManager`           | ✅ 既存 |
+| ④ app_config.json  | 手動 → 将来自動生成     | 🔴 新規 |
+| ⑥ Platform 確認    | `AppDiscoveryService`   | 🔴 新規 |
+| ⑦ デプロイ         | `PublishOrchestrator`   | ✅ 既存 |
 
 ---
 

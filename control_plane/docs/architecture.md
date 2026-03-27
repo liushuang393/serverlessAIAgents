@@ -53,12 +53,12 @@ graph TB
 
 ### 原則
 
-| 原則 | 説明 |
-|------|------|
-| **App 独立性** | 各 App は Platform なしでも単独起動・動作可能 |
-| **マニフェスト駆動** | `app_config.json` が唯一の契約。Platform はこれを読むだけ |
+| 原則                     | 説明                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| **App 独立性**           | 各 App は Platform なしでも単独起動・動作可能                                      |
+| **マニフェスト駆動**     | `app_config.json` が唯一の契約。Platform はこれを読むだけ                          |
 | **フレームワーク層共有** | 共通機能は `kernel/` `shared/` `infrastructure/` に実装。App が責務に応じて import |
-| **Platform は可視化** | 管理・監視・操作の UI を提供。ビジネスロジックは持たない |
+| **Platform は可視化**    | 管理・監視・操作の UI を提供。ビジネスロジックは持たない                           |
 
 ---
 
@@ -167,13 +167,13 @@ sequenceDiagram
 
 ## 5. 技術スタック
 
-| 層 | 技術 | 備考 |
-|----|------|------|
-| Frontend | React 18 + TypeScript 5 + Vite + Tailwind CSS | Phase 2 で実装 |
-| Backend | FastAPI + Pydantic v2 + Python 3.13+ | 既存基盤を拡張 |
-| 通信 | REST + SSE | 既存パターンを踏襲 |
-| 保存 | ファイルシステム (`app_config.json`) | DB 不要。軽量設計 |
-| 監視 | HTTP ヘルスチェック | 各 App の `/health` を定期ポーリング |
+| 層       | 技術                                          | 備考                                 |
+| -------- | --------------------------------------------- | ------------------------------------ |
+| Frontend | React 18 + TypeScript 5 + Vite + Tailwind CSS | Phase 2 で実装                       |
+| Backend  | FastAPI + Pydantic v2 + Python 3.13+          | 既存基盤を拡張                       |
+| 通信     | REST + SSE                                    | 既存パターンを踏襲                   |
+| 保存     | ファイルシステム (`app_config.json`)          | DB 不要。軽量設計                    |
+| 監視     | HTTP ヘルスチェック                           | 各 App の `/health` を定期ポーリング |
 
 ---
 

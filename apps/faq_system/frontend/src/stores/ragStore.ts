@@ -3,16 +3,22 @@
  *
  * コレクション・ドキュメント・インジェスト状態を管理する Zustand ストア。
  */
-import { create } from 'zustand';
+import { create } from "zustand";
 import {
   ragApi,
   type CollectionInfo,
   type DocumentInfo,
   type IngestRunSummary,
   type ChunkPreview,
-} from '../api/rag';
+} from "../api/rag";
 
-export type RAGTab = 'dashboard' | 'collections' | 'documents' | 'retrieval' | 'ingest' | 'access';
+export type RAGTab =
+  | "dashboard"
+  | "collections"
+  | "documents"
+  | "retrieval"
+  | "ingest"
+  | "access";
 
 interface RAGState {
   // タブ
@@ -26,14 +32,21 @@ interface RAGState {
   fetchCollections: () => Promise<void>;
   selectCollection: (name: string | null) => void;
   createCollection: (data: Partial<CollectionInfo>) => Promise<CollectionInfo>;
-  updateCollection: (name: string, data: Partial<CollectionInfo>) => Promise<CollectionInfo>;
+  updateCollection: (
+    name: string,
+    data: Partial<CollectionInfo>,
+  ) => Promise<CollectionInfo>;
   deleteCollection: (name: string) => Promise<void>;
 
   // ドキュメント
   documents: DocumentInfo[];
   documentsLoading: boolean;
   fetchDocuments: (collection: string) => Promise<void>;
-  uploadDocument: (collection: string, file: File, autoIndex?: boolean) => Promise<DocumentInfo>;
+  uploadDocument: (
+    collection: string,
+    file: File,
+    autoIndex?: boolean,
+  ) => Promise<DocumentInfo>;
   deleteDocument: (collection: string, docId: string) => Promise<void>;
   indexDocument: (collection: string, docId: string) => Promise<void>;
   reindexDocument: (collection: string, docId: string) => Promise<void>;
@@ -56,7 +69,7 @@ interface RAGState {
 
 export const useRAGStore = create<RAGState>((set, get) => ({
   // タブ
-  activeTab: 'dashboard',
+  activeTab: "dashboard",
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   // コレクション

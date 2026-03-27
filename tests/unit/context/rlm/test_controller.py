@@ -138,7 +138,7 @@ class TestRLMController:
         await controller.run(
             query="Test query",
             long_inputs=["Test content"],
-            event_callback=lambda e: events.append(e),
+            event_callback=events.append,
         )
 
         # Should have at least start and complete events

@@ -37,7 +37,11 @@ services:
     volumes:
       - faq-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${FAQ_DB_USER:-faq} -d ${FAQ_DB_NAME:-faq_system}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${FAQ_DB_USER:-faq} -d ${FAQ_DB_NAME:-faq_system}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -117,7 +121,13 @@ services:
       qdrant:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/api/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8005/api/health')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

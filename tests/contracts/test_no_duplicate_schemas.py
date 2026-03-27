@@ -9,26 +9,31 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+
 # contracts/ 外での再定義を禁止するコアスキーマ型
-CORE_TYPES: frozenset[str] = frozenset({
-    "ToolResult",
-    "ToolRequest",
-    "ToolCallStatus",
-    "FlowDefinition",
-    "FlowExecutionState",
-    "AppManifest",
-})
+CORE_TYPES: frozenset[str] = frozenset(
+    {
+        "ToolResult",
+        "ToolRequest",
+        "ToolCallStatus",
+        "FlowDefinition",
+        "FlowExecutionState",
+        "AppManifest",
+    }
+)
 
 # 検索から除外するディレクトリ
-EXCLUDE_DIRS: frozenset[str] = frozenset({
-    "__pycache__",
-    ".venv",
-    "node_modules",
-    "tests",
-    ".git",
-    ".mypy_cache",
-    ".ruff_cache",
-})
+EXCLUDE_DIRS: frozenset[str] = frozenset(
+    {
+        "__pycache__",
+        ".venv",
+        "node_modules",
+        "tests",
+        ".git",
+        ".mypy_cache",
+        ".ruff_cache",
+    }
+)
 
 # プロジェクトルート
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -68,15 +73,10 @@ def test_no_duplicate_core_schemas() -> None:
 
     if violations:
         # 現時点では警告として記録。完全解消後に assert に切り替える。
-        msg = (
-            f"\n[監査] contracts/ 外でのコアスキーマ定義 ({len(violations)} 箇所):\n"
-        )
+        msg = f"\n[監査] contracts/ 外でのコアスキーマ定義 ({len(violations)} 箇所):\n"
         for v in violations:
             msg += f"  - {v}\n"
-        msg += (
-            "\n上記の定義は contracts/ の canonical schema へ統合し、"
-            "re-export または import に置き換えてください。"
-        )
+        msg += "\n上記の定義は contracts/ の canonical schema へ統合し、re-export または import に置き換えてください。"
         print(msg)
 
     # --- 段階的解消 → 厳格化完了 ---

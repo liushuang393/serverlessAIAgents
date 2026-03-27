@@ -24,11 +24,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.supervisor_agent",
       "class_name": "SupervisorAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "routing",
-        "task_control",
-        "approval"
-      ],
+      "capabilities": ["routing", "task_control", "approval"],
       "business_base": "growth",
       "pattern": "coordinator",
       "agent_type": "planner"
@@ -38,10 +34,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.brand_memory_agent",
       "class_name": "BrandMemoryAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "positioning",
-        "brand_memory"
-      ],
+      "capabilities": ["positioning", "brand_memory"],
       "business_base": "growth",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -51,10 +44,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.demand_signal_agent",
       "class_name": "DemandSignalAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "live_search",
-        "signal_detection"
-      ],
+      "capabilities": ["live_search", "signal_detection"],
       "business_base": "growth",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -64,10 +54,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.account_score_agent",
       "class_name": "AccountScoreAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "scoring",
-        "prioritization"
-      ],
+      "capabilities": ["scoring", "prioritization"],
       "business_base": "growth",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -77,10 +64,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.question_graph_agent",
       "class_name": "QuestionGraphAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "question_mapping",
-        "persona_planning"
-      ],
+      "capabilities": ["question_mapping", "persona_planning"],
       "business_base": "growth",
       "pattern": "planner",
       "agent_type": "planner"
@@ -90,10 +74,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.evidence_matrix_agent",
       "class_name": "EvidenceMatrixAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "evidence_collection",
-        "citation"
-      ],
+      "capabilities": ["evidence_collection", "citation"],
       "business_base": "governance",
       "pattern": "collector",
       "agent_type": "executor"
@@ -103,10 +84,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent",
       "class_name": "LegacySemanticsAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "business_semantics",
-        "modernization_strategy"
-      ],
+      "capabilities": ["business_semantics", "modernization_strategy"],
       "business_base": "operations",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -116,10 +94,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.content_blueprint_agent",
       "class_name": "ContentBlueprintAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "content_strategy",
-        "page_blueprint"
-      ],
+      "capabilities": ["content_strategy", "page_blueprint"],
       "business_base": "growth",
       "pattern": "planner",
       "agent_type": "planner"
@@ -129,10 +104,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.content_draft_agent",
       "class_name": "ContentDraftAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "content_generation",
-        "json_ld"
-      ],
+      "capabilities": ["content_generation", "json_ld"],
       "business_base": "growth",
       "pattern": "executor",
       "agent_type": "executor"
@@ -142,11 +114,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.geo_qa_agent",
       "class_name": "GeoQAAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "quality_gate",
-        "citation_checks",
-        "risk_scoring"
-      ],
+      "capabilities": ["quality_gate", "citation_checks", "risk_scoring"],
       "business_base": "governance",
       "pattern": "gatekeeper",
       "agent_type": "gatekeeper"
@@ -156,11 +124,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.publishing_agent",
       "class_name": "PublishingAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "static_publish",
-        "sitemap",
-        "ai_feed"
-      ],
+      "capabilities": ["static_publish", "sitemap", "ai_feed"],
       "business_base": "growth",
       "pattern": "executor",
       "agent_type": "executor"
@@ -170,10 +134,7 @@
       "module": "apps.legacy_modernization_geo_platform.agents.report_assembler_agent",
       "class_name": "ReportAssemblerAgent",
       "init_kwargs": {},
-      "capabilities": [
-        "reporting",
-        "summaries"
-      ],
+      "capabilities": ["reporting", "summaries"],
       "business_base": "governance",
       "pattern": "reporter",
       "agent_type": "reporter"
@@ -181,11 +142,7 @@
   ],
   "services": {
     "intelligence": {
-      "providers": [
-        "serpapi",
-        "bing",
-        "duckduckgo_search"
-      ],
+      "providers": ["serpapi", "bing", "duckduckgo_search"],
       "enabled": true
     },
     "publish": {
@@ -200,10 +157,7 @@
   "dependencies": {
     "database": "sqlite",
     "redis": false,
-    "external": [
-      "serpapi",
-      "bing_search"
-    ]
+    "external": ["serpapi", "bing_search"]
   },
   "runtime": {
     "urls": {
@@ -235,23 +189,13 @@
       "stop": "python apps/legacy_modernization_geo_platform/scripts/compose.py stop"
     }
   },
-  "tags": [
-    "geo",
-    "legacy-modernization",
-    "growth",
-    "publishing",
-    "approval"
-  ],
+  "tags": ["geo", "legacy-modernization", "growth", "publishing", "approval"],
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": [
-        "auth_service"
-      ],
+      "providers": ["auth_service"],
       "allow_anonymous": false,
-      "required_scopes": [
-        "geo.operator"
-      ],
+      "required_scopes": ["geo.operator"],
       "mode": "tenant_sso",
       "tenant_claim_key": "tenant_id",
       "token_policy": {
@@ -270,12 +214,8 @@
     },
     "release": {
       "strategy": "manual",
-      "targets": [
-        "docker"
-      ],
-      "environments": [
-        "dev"
-      ],
+      "targets": ["docker"],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

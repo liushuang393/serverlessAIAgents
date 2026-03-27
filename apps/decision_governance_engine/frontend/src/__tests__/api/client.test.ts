@@ -4,16 +4,18 @@
  * 目的: API クライアントのロジック検証
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DecisionApiClient, DecisionApiError } from '../../api/client';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DecisionApiClient, DecisionApiError } from "../../api/client";
 
-describe('DecisionApiClient', () => {
+const TEST_API_BASE_URL = "http://api.test.local";
+
+describe("DecisionApiClient", () => {
   let client: DecisionApiClient;
 
   beforeEach(() => {
     // Fake timers を使用してリトライの遅延をスキップ
     vi.useFakeTimers();
-    client = new DecisionApiClient('http://localhost:8000');
+    client = new DecisionApiClient(TEST_API_BASE_URL);
     vi.clearAllMocks();
   });
 
@@ -22,12 +24,12 @@ describe('DecisionApiClient', () => {
     vi.useRealTimers();
   });
 
-  describe('processDecision', () => {
-    it('成功時にレスポンスを返す', async () => {
+  describe("processDecision", () => {
+    it("成功時にレスポンスを返す", async () => {
       const mockResponse = {
-        status: 'success',
-        request_id: 'uuid-123',
-        report_id: 'test-123',
+        status: "success",
+        request_id: "uuid-123",
+        report_id: "test-123",
         data: { dao: {}, fa: {}, shu: {}, qi: {}, review: {} },
       };
 
@@ -37,7 +39,7 @@ describe('DecisionApiClient', () => {
       });
 
       const result = await client.processDecision({
-        question: 'テスト質問です。これは十分な長さです。',
+        question: "テスト質問です。これは十分な長さです。",
         technical_constraints: [],
         regulatory_constraints: [],
         human_resources: [],
@@ -46,21 +48,21 @@ describe('DecisionApiClient', () => {
       expect(result).toEqual(mockResponse);
     });
 
-    it('400エラー時に適切なエラーメッセージを返す', async () => {
+    it("400エラー時に適切なエラーメッセージを返す", async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
-        statusText: 'Bad Request',
+        statusText: "Bad Request",
       });
 
       const rejection = expect(
         client.processDecision({
-          question: 'テスト',
+          question: "テスト",
           technical_constraints: [],
           regulatory_constraints: [],
           human_resources: [],
-        })
-      ).rejects.toThrow('リクエストが不正です');
+        }),
+      ).rejects.toThrow("リクエストが不正です");
 
       // タイマーを進めてリトライ遅延をスキップ
       await vi.runAllTimersAsync();
@@ -68,8 +70,8 @@ describe('DecisionApiClient', () => {
       await rejection;
     });
 
-    it('500エラー時にリトライする', async () => {
-      const mockResponse = { status: 'success' };
+    it("500エラー時にリトライする", async () => {
+      const mockResponse = { status: "success" };
       let callCount = 0;
 
       // モック: 最初の2回は500エラー、3回目は成功
@@ -79,7 +81,7 @@ describe('DecisionApiClient', () => {
           return Promise.resolve({
             ok: false,
             status: 500,
-            statusText: 'Internal Server Error',
+            statusText: "Internal Server Error",
           });
         }
         return Promise.resolve({
@@ -91,7 +93,7 @@ describe('DecisionApiClient', () => {
 
       // リクエスト開始
       const resultPromise = client.processDecision({
-        question: 'テスト質問です。',
+        question: "テスト質問です。",
         technical_constraints: [],
         regulatory_constraints: [],
         human_resources: [],
@@ -109,39 +111,41 @@ describe('DecisionApiClient', () => {
     });
   });
 
-  describe('cancelRequest', () => {
-    it('リクエストをキャンセルできる', async () => {
+  describe("cancelRequest", () => {
+    it("リクエストをキャンセルできる", async () => {
       // AbortError をシミュレート
-      const abortError = new Error('AbortError');
-      abortError.name = 'AbortError';
+      const abortError = new Error("AbortError");
+      abortError.name = "AbortError";
 
-      const mockFetch = vi.fn().mockImplementation((_url: string, options: RequestInit) => {
-        return new Promise((_, reject) => {
-          // signal が abort されたら即座に reject
-          if (options.signal) {
-            options.signal.addEventListener('abort', () => {
-              reject(abortError);
-            });
-          }
-          // タイムアウト（通常は abort が先に発生）
-          setTimeout(() => reject(new Error('Timeout')), 10000);
+      const mockFetch = vi
+        .fn()
+        .mockImplementation((_url: string, options: RequestInit) => {
+          return new Promise((_, reject) => {
+            // signal が abort されたら即座に reject
+            if (options.signal) {
+              options.signal.addEventListener("abort", () => {
+                reject(abortError);
+              });
+            }
+            // タイムアウト（通常は abort が先に発生）
+            setTimeout(() => reject(new Error("Timeout")), 10000);
+          });
         });
-      });
       globalThis.fetch = mockFetch;
 
       const promise = client.processDecision(
         {
-          question: 'テスト',
+          question: "テスト",
           technical_constraints: [],
           regulatory_constraints: [],
           human_resources: [],
         },
-        'test-request-id'
+        "test-request-id",
       );
       const rejection = expect(promise).rejects.toThrow();
 
       // キャンセル実行
-      client.cancelRequest('test-request-id');
+      client.cancelRequest("test-request-id");
 
       // タイマーを進める
       await vi.runAllTimersAsync();
@@ -150,16 +154,16 @@ describe('DecisionApiClient', () => {
     });
   });
 
-  describe('applyCheckpoints', () => {
-    it('チェックポイント反映APIのレスポンスを返す', async () => {
+  describe("applyCheckpoints", () => {
+    it("チェックポイント反映APIのレスポンスを返す", async () => {
       const mockResponse = {
         success: true,
-        message: 'チェック項目を反映して信頼度と戦略可行度を再計算しました。',
+        message: "チェック項目を反映して信頼度と戦略可行度を再計算しました。",
         base_confidence_pct: 28,
         checkpoint_boost_pct: 3,
         finding_boost_pct: 2,
         llm_bonus_pct: 1,
-        bonus_reasons: ['補足メモの具体性により加点しました。'],
+        bonus_reasons: ["補足メモの具体性により加点しました。"],
         recalculated_confidence_pct: 40,
         base_feasibility_pct: 52,
         checkpoint_feasibility_boost_pct: 2,
@@ -170,17 +174,17 @@ describe('DecisionApiClient', () => {
         signature_eligible: true,
         applied_contributions: [
           {
-            source: 'checkpoint',
-            item_key: 'approver_confirmed',
-            label: '承認者（ロール）確認済み',
-            target_metric: 'confidence',
+            source: "checkpoint",
+            item_key: "approver_confirmed",
+            label: "承認者（ロール）確認済み",
+            target_metric: "confidence",
             confidence_boost_pct: 3,
             feasibility_boost_pct: 0,
-            note: 'PO 承認',
+            note: "PO 承認",
           },
         ],
         updated_review: {
-          overall_verdict: 'PASS',
+          overall_verdict: "PASS",
           confidence_score: 0.4,
           findings: [],
           final_warnings: [],
@@ -195,52 +199,58 @@ describe('DecisionApiClient', () => {
       });
 
       const result = await client.applyCheckpoints({
-        report_id: 'PROP-TEST-001',
-        request_id: '00000000-0000-0000-0000-000000000001',
-        reviewer_name: 'tester',
+        report_id: "PROP-TEST-001",
+        request_id: "00000000-0000-0000-0000-000000000001",
+        reviewer_name: "tester",
         items: [
-          { item_id: 'approver_confirmed', checked: true, annotation: 'PO 承認' },
+          {
+            item_id: "approver_confirmed",
+            checked: true,
+            annotation: "PO 承認",
+          },
         ],
       });
 
       expect(result).toEqual(mockResponse);
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/human-review/apply-checkpoints',
+        `${TEST_API_BASE_URL}/api/human-review/apply-checkpoints`,
         expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }),
       );
     });
   });
 
-  describe('DecisionApiError', () => {
-    it('fromResponse で適切なエラーを生成する', () => {
+  describe("DecisionApiError", () => {
+    it("fromResponse で適切なエラーを生成する", () => {
       const mockResponse = {
         status: 429,
-        statusText: 'Too Many Requests',
+        statusText: "Too Many Requests",
       } as Response;
 
       const error = DecisionApiError.fromResponse(mockResponse);
 
-      expect(error.message).toBe('リクエストが多すぎます。しばらく待ってから再試行してください');
+      expect(error.message).toBe(
+        "リクエストが多すぎます。しばらく待ってから再試行してください",
+      );
       expect(error.statusCode).toBe(429);
       expect(error.isRetryable).toBe(true);
     });
 
-    it('5xx エラーはリトライ可能', () => {
+    it("5xx エラーはリトライ可能", () => {
       const error = DecisionApiError.fromResponse({
         status: 502,
-        statusText: 'Bad Gateway',
+        statusText: "Bad Gateway",
       } as Response);
 
       expect(error.isRetryable).toBe(true);
     });
 
-    it('4xx エラーはリトライ不可（429除く）', () => {
+    it("4xx エラーはリトライ不可（429除く）", () => {
       const error = DecisionApiError.fromResponse({
         status: 404,
-        statusText: 'Not Found',
+        statusText: "Not Found",
       } as Response);
 
       expect(error.isRetryable).toBe(false);

@@ -15,7 +15,7 @@ inputs:
     type: string
     description: Path to the PDF invoice file
     required: true
-  
+
   - name: output_format
     type: string
     description: Output format (json, csv, database)
@@ -44,7 +44,7 @@ tools:
   - name: pdf_reader
     description: Read PDF files
     type: builtin
-  
+
   {% if enable_ocr %}
   - name: ocr_engine
     description: OCR engine for text extraction
@@ -52,11 +52,11 @@ tools:
     config:
       languages: {{ supported_languages }}
   {% endif %}
-  
+
   - name: data_extractor
     description: Extract structured data from text
     type: builtin
-  
+
   - name: database_writer
     description: Write data to database
     type: external
@@ -67,4 +67,3 @@ config:
   timeout: 300
   max_retries: 3
   enable_logging: true
-

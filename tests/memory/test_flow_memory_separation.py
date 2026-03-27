@@ -51,7 +51,7 @@ class TestFlowMemorySeparation:
         from kernel.flow.builder import FlowBuilder
 
         class DummyAgent(AgentBlock):
-            async def run(self, input_data: dict) -> dict:  # type: ignore[override]
+            async def run(self, input_data: dict) -> dict:
                 return {"result": "ok"}
 
         flow = FlowBuilder("test-ltm-flow").then(DummyAgent).build()
@@ -70,7 +70,7 @@ class TestFlowMemorySeparation:
         from kernel.flow.builder import FlowBuilder
 
         class DummyAgent(AgentBlock):
-            async def run(self, input_data: dict) -> dict:  # type: ignore[override]
+            async def run(self, input_data: dict) -> dict:
                 return {"result": "ok"}
 
         flow = FlowBuilder("test-scratchpad").then(DummyAgent).build()
@@ -91,7 +91,7 @@ class TestFlowMemorySeparation:
         from kernel.flow.builder import FlowBuilder
 
         class DummyAgent(AgentBlock):
-            async def run(self, input_data: dict) -> dict:  # type: ignore[override]
+            async def run(self, input_data: dict) -> dict:
                 return {"result": "ok"}
 
         flow = FlowBuilder("test-ltm-persistence").then(DummyAgent).build()

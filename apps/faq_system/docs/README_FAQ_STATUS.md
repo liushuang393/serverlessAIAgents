@@ -3,10 +3,12 @@
 ## 结论
 
 ### Q1: 现在是用 agentflow 的认证体系吗？
+
 是。`apps/faq_system/backend/auth/service.py` 使用了 `agentflow/security/auth_middleware.py` 的 `AuthMiddleware` 来做 JWT 发行与校验。  
 另外，`AuthMiddleware` 现已支持 `external_authenticator`，可用于接客户 SSO/OIDC/SAML 网关。
 
 ### Q2: 登录、改密、忘记密码、个人属性都支持了吗？
+
 已支持，接口如下：
 
 - `POST /api/auth/login`
@@ -54,7 +56,6 @@
 
 ## 企业认证系统快速接入建议
 
-1. 若有认证网关（OAuth2 Proxy / APIM / IAP）：配置 `FAQ_TRUST_PROXY_AUTH=true`，注入 `X-Auth-*` 头。  
-2. 若需定制验签/票据交换：在 `AuthMiddleware(external_authenticator=...)` 中接企业身份系统。  
-3. 最终生产建议替换 demo 用户存储为 DB/LDAP/IdP。  
-
+1. 若有认证网关（OAuth2 Proxy / APIM / IAP）：配置 `FAQ_TRUST_PROXY_AUTH=true`，注入 `X-Auth-*` 头。
+2. 若需定制验签/票据交换：在 `AuthMiddleware(external_authenticator=...)` 中接企业身份系统。
+3. 最终生产建议替换 demo 用户存储为 DB/LDAP/IdP。

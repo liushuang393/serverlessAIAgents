@@ -9,29 +9,29 @@ on:
   workflow_dispatch:
     inputs:
       run_tests:
-        description: 'テストを実行する'
+        description: "テストを実行する"
         required: true
-        default: 'true'
+        default: "true"
         type: choice
         options:
-          - 'true'
-          - 'false'
+          - "true"
+          - "false"
       run_lint:
-        description: 'Lintを実行する'
+        description: "Lintを実行する"
         required: true
-        default: 'true'
+        default: "true"
         type: choice
         options:
-          - 'true'
-          - 'false'
+          - "true"
+          - "false"
       deploy_enabled:
-        description: 'デプロイを実行する（本番環境）'
+        description: "デプロイを実行する（本番環境）"
         required: true
-        default: 'false'
+        default: "false"
         type: choice
         options:
-          - 'true'
-          - 'false'
+          - "true"
+          - "false"
 
 env:
   PYTHON_VERSION: "3.13"
@@ -42,16 +42,16 @@ jobs:
     name: Lint and Type Check
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.run_lint == 'true' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Cache pip dependencies
         uses: actions/cache@v3
         with:
@@ -59,20 +59,20 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[apps,dev]"
-      
+
       - name: Run Ruff (format check)
         run: |
           ruff format --check .
-      
+
       - name: Run Ruff (lint)
         run: |
           ruff check .
-      
+
       - name: Run mypy (type check)
         run: |
           mypy contracts infrastructure shared kernel harness control_plane domain apps tests
@@ -82,21 +82,21 @@ jobs:
     name: Test Suite
     runs-on: ${{ matrix.os }}
     if: ${{ github.event.inputs.run_tests == 'true' }}
-    
+
     strategy:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.13"]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Cache pip dependencies
         uses: actions/cache@v3
         with:
@@ -104,12 +104,12 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[apps,dev]"
-      
+
       - name: Run memory system tests
         run: |
           pytest tests/memory/ -v --cov=shared.memory --cov=infrastructure.memory --cov-report=xml --cov-report=term-missing
@@ -117,7 +117,7 @@ jobs:
       - name: Run distributed memory tests
         run: |
           pytest tests/memory/distributed/ -v --no-cov
-      
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
@@ -131,31 +131,31 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.run_tests == 'true' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Install security tools
         run: |
           python -m pip install --upgrade pip
           pip install pip-audit bandit safety
-      
+
       - name: Run pip-audit (dependency vulnerability scan)
         run: |
           pip-audit
         continue-on-error: true
-      
+
       - name: Run bandit (code security scan)
         run: |
           bandit -r shared infrastructure -f json -o bandit-report.json
         continue-on-error: true
-      
+
       - name: Upload bandit report
         uses: actions/upload-artifact@v3
         with:
@@ -169,15 +169,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, test, security]
     if: ${{ github.event.inputs.deploy_enabled == 'true' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Deploy notification
         run: |
           echo "🚀 デプロイを開始します..."
           echo "注意: 実際のデプロイロジックはここに実装してください"
-      
+
       # 実際のデプロイステップはここに追加
       # 例: SSH接続、Docker push、Kubernetes apply など

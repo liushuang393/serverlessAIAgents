@@ -307,24 +307,24 @@ pip install -e ".[dev,apps]"
 # プロジェクトルートで実行
 cd apps/decision_governance_engine
 
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
+conda run -n agentflow python scripts/compose.py publish
 
 # 開発モードで起動（ホットリロード有効）
 # バックグラウンドで起動
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+conda run -n agentflow python scripts/compose.py start
 
 # ログ確認
 docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f backend
 
 # 停止
-docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+conda run -n agentflow python scripts/compose.py stop
 ```
 
 **サービス構成:**
 
 - `postgres-main`: PostgreSQL データベース（ポート 5432）
 - `redis`: Redis キャッシュ（ポート 6379）
-- `backend`: FastAPI バックエンド（ポート 8000、ホットリロード有効）
+- `backend`: FastAPI バックエンド（ポート 8001、ホットリロード有効）
 - `frontend`: Vite 開発サーバー（ポート 5174）
 
 **ブラウザでアクセス**
@@ -349,11 +349,12 @@ http://localhost:5174
 pip install -e ".[dev]"
 
 # ローカル開発（ホットリロード有効）
-# scripts/dev.py が app_config.json と環境変数を解決して uvicorn を起動する
+# scripts/dev.py が 明示指定 > app_config.json の順で host / port を解決し、
+# 共通 launcher 経由で uvicorn を起動する
 conda run -n agentflow python apps/decision_governance_engine/scripts/dev.py --reload
 
-# 本番起動（リロードなし）
-conda run -n agentflow uvicorn apps.decision_governance_engine.api:app --host "${DGE_HOST:-0.0.0.0}" --port "${DGE_PORT:-8001}"
+# 本番相当のローカル起動（リロードなし）
+conda run -n agentflow python apps/decision_governance_engine/scripts/dev.py --no-reload --workers 2
 ```
 
 **ターミナル2: フロントエンド起動**
@@ -456,7 +457,7 @@ conda activate agentflow
 python -m control_plane.main publish ./apps/decision_governance_engine --target docker
 ```
 
-（この app は `apps/decision_governance_engine/app_config.json` の `runtime.commands.publish` に docker compose の発布手順を保持しています）
+（この app は `apps/decision_governance_engine/app_config.json` の `runtime.commands.publish` に compose wrapper の発布手順を保持しています）
 
 ### 7.1 ビルド
 
@@ -468,35 +469,18 @@ npm run build
 # 静的ファイルは dist/ に出力される
 ```
 
-### 7.2 本番起動
+### 7.2 本番相当の単体起動
 
 ```bash
-# Gunicorn + Uvicorn（推奨）
-gunicorn apps.decision_governance_engine.api:app \
-  -w 4 \
-  -k uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000
-
-# または Uvicorn 単体
-uvicorn apps.decision_governance_engine.api:app \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --workers 4
+conda run -n agentflow python apps/decision_governance_engine/scripts/dev.py --no-reload --workers 4
 ```
 
 ### 7.3 Docker（推奨）
 
 ```bash
-# イメージビルド
-docker build -t decision-engine:latest -f Dockerfile.decision .
-
-# コンテナ起動
-# Platform 未設定時のみ Provider fallback key を渡す
-docker run -d \
-  -p 8000:8000 \
-  -e OPENAI_API_KEY=${OPENAI_API_KEY} \
-  --name decision-engine \
-  decision-engine:latest
+# app_config.json の host / port を使って compose wrapper から起動
+cd apps/decision_governance_engine
+conda run -n agentflow python scripts/compose.py publish
 ```
 
 ### 7.4 本番チェックリスト
@@ -572,8 +556,8 @@ cat .env
 **Q: ポート8000が使用中**
 
 ```bash
-# 別ポートを指定
-uvicorn apps.decision_governance_engine.api:app --port 8001
+# app_config.json の値を使って起動する
+conda run -n agentflow python apps/decision_governance_engine/scripts/dev.py --reload
 ```
 
 ---

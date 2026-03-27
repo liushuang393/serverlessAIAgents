@@ -5,9 +5,9 @@
  * 技術: Zustand
  */
 
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import type { UserInfo, AuthResponse } from '../types';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { UserInfo, AuthResponse } from "../types";
 
 /** 認証ストア状態 */
 interface AuthState {
@@ -30,7 +30,7 @@ interface AuthState {
 }
 
 // 开发环境使用相对路径（通过 Vite 代理），生产环境使用环境变量
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 /**
  * 認証ストア.
@@ -72,7 +72,7 @@ export const useAuthStore = create<AuthState>()(
         }
         try {
           const response = await fetch(`${API_BASE}/api/auth/me`, {
-            credentials: 'include',
+            credentials: "include",
           });
           const data: AuthResponse = await response.json();
 
@@ -94,9 +94,10 @@ export const useAuthStore = create<AuthState>()(
           }
         } catch (err) {
           // 認証チェック失敗時はエラー詳細を含める
-          const errorMessage = err instanceof Error
-            ? `認証状態の確認に失敗しました: ${err.message}`
-            : '認証状態の確認に失敗しました';
+          const errorMessage =
+            err instanceof Error
+              ? `認証状態の確認に失敗しました: ${err.message}`
+              : "認証状態の確認に失敗しました";
           set({
             user: null,
             isAuthenticated: false,
@@ -112,9 +113,9 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await fetch(`${API_BASE}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ username, password }),
           });
           const data: AuthResponse = await response.json();
@@ -129,12 +130,13 @@ export const useAuthStore = create<AuthState>()(
           } else {
             set({
               isLoading: false,
-              error: data.message || 'ログインに失敗しました',
+              error: data.message || "ログインに失敗しました",
             });
           }
           return data;
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'ログインに失敗しました';
+          const message =
+            err instanceof Error ? err.message : "ログインに失敗しました";
           set({ isLoading: false, error: message });
           return { success: false, message };
         }
@@ -145,15 +147,16 @@ export const useAuthStore = create<AuthState>()(
         let logoutError: string | null = null;
         try {
           await fetch(`${API_BASE}/api/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
+            method: "POST",
+            credentials: "include",
           });
         } catch (err) {
           // ログアウトAPIが失敗しても、ローカル状態はクリアする
           // ただし、ユーザーにはサーバー側の問題を通知
-          logoutError = err instanceof Error
-            ? `ログアウト通信エラー（ローカルセッションはクリア済み）: ${err.message}`
-            : 'ログアウト通信エラー（ローカルセッションはクリア済み）';
+          logoutError =
+            err instanceof Error
+              ? `ログアウト通信エラー（ローカルセッションはクリア済み）: ${err.message}`
+              : "ログアウト通信エラー（ローカルセッションはクリア済み）";
         }
         set({
           user: null,
@@ -163,13 +166,12 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );
-

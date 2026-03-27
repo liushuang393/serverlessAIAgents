@@ -8,7 +8,7 @@
 #   （リポジトリルートから BizCore コア層を含める）
 #
 # 実行:
-#   docker run -p 8001:8000 dge-backend
+#   docker run -p 8001:8001 -e DGE_HOST=0.0.0.0 -e DGE_PORT=8001 dge-backend
 # ==============================================================================
 
 FROM python:3.12-slim AS base
@@ -52,9 +52,6 @@ RUN pip install --no-cache-dir reportlab
 # ---------------------------------------------------------------------------
 FROM base AS production
 
-ENV DGE_HOST=0.0.0.0 \
-    DGE_PORT=8000
-
 # 非 root ユーザー作成
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
@@ -80,12 +77,8 @@ ENV PYTHONPATH=/app
 RUN chown -R appuser:appgroup /app
 USER appuser
 
-# ヘルスチェック（${DGE_PORT} は実行時 ENV から展開される）
+# ヘルスチェック（port は実行時 ENV または app_config.json から決まる）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${DGE_PORT}/api/health')" || exit 1
+    CMD python -c "import os, urllib.request; port = os.environ.get('DGE_PORT', '8001'); urllib.request.urlopen(f'http://localhost:{port}/api/health')" || exit 1
 
-# ポート公開
-EXPOSE ${DGE_PORT}
-
-# 起動コマンド（sh -c 経由で実行時 ENV を展開）
-CMD ["sh", "-c", "exec uvicorn apps.decision_governance_engine.api:app --host ${DGE_HOST} --port ${DGE_PORT}"]
+CMD ["python", "-m", "kernel.runtime.uvicorn_launcher", "--config", "apps/decision_governance_engine/app_config.json", "--app", "apps.decision_governance_engine.api:app", "--host-env", "DGE_HOST", "--port-env", "DGE_PORT"]

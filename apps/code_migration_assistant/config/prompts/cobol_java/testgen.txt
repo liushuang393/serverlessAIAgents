@@ -78,4 +78,3 @@ class {ClassName}Test {
 - COBOL の動作を正確に再現するテストを生成
 - BigDecimal の比較には compareTo を使用
 - 文字列の末尾スペースに注意
-

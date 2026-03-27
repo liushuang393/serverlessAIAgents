@@ -109,4 +109,3 @@ jobs:
             --function-name ${{ inputs.function-name }} \
             --memory-size ${{ inputs.memory-size }} \
             --timeout ${{ inputs.timeout }}
-

@@ -5,23 +5,43 @@
  * 設計: モダンなグラデーション背景、アニメーション、フォームバリデーション
  */
 
-import React, { useState, useCallback } from 'react';
-import { useAuthStore } from '../store/useAuthStore';
-import { LocaleSwitcher, useI18n } from '../i18n';
+import React, { useState, useCallback } from "react";
+import { useAuthStore } from "../store/useAuthStore";
+import { LocaleSwitcher, useI18n } from "../i18n";
 
 /** デモユーザー情報（ログインヒント用） */
 const DEMO_USERS = [
-  { username: 'admin', password: 'admin123', name: '管理者 太郎', dept: '経営企画部' },
-  { username: 'tanaka', password: 'tanaka123', name: '田中 一郎', dept: '技術開発本部' },
-  { username: 'suzuki', password: 'suzuki123', name: '鈴木 花子', dept: '事業戦略室' },
-  { username: 'yamamoto', password: 'yamamoto123', name: '山本 健太', dept: 'DX推進部' },
+  {
+    username: "admin",
+    password: "admin123",
+    name: "管理者 太郎",
+    dept: "経営企画部",
+  },
+  {
+    username: "tanaka",
+    password: "tanaka123",
+    name: "田中 一郎",
+    dept: "技術開発本部",
+  },
+  {
+    username: "suzuki",
+    password: "suzuki123",
+    name: "鈴木 花子",
+    dept: "事業戦略室",
+  },
+  {
+    username: "yamamoto",
+    password: "yamamoto123",
+    name: "山本 健太",
+    dept: "DX推進部",
+  },
 ];
 
 export const LoginPage: React.FC = () => {
   const { t } = useI18n();
   const { login, isLoading, error } = useAuthStore();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoHint, setShowDemoHint] = useState(false);
 
@@ -31,16 +51,16 @@ export const LoginPage: React.FC = () => {
       if (!username.trim() || !password.trim()) return;
       await login(username, password);
     },
-    [username, password, login]
+    [username, password, login],
   );
 
   const handleDemoLogin = useCallback(
-    async (user: typeof DEMO_USERS[number]) => {
+    async (user: (typeof DEMO_USERS)[number]) => {
       setUsername(user.username);
       setPassword(user.password);
       await login(user.username, user.password);
     },
-    [login]
+    [login],
   );
 
   return (
@@ -53,15 +73,21 @@ export const LoginPage: React.FC = () => {
       <div className="absolute inset-0 overflow-hidden">
         {/* グラデーションオーブ */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-[128px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-500/20 rounded-full blur-[128px] animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
-        
+        <div
+          className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-violet-500/20 rounded-full blur-[128px] animate-pulse"
+          style={{ animationDelay: "1s" }}
+        />
+        <div
+          className="absolute top-1/2 right-1/3 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] animate-pulse"
+          style={{ animationDelay: "2s" }}
+        />
+
         {/* グリッドパターン */}
-        <div 
+        <div
           className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px',
+            backgroundSize: "50px 50px",
           }}
         />
       </div>
@@ -94,11 +120,17 @@ export const LoginPage: React.FC = () => {
 
             {/* ユーザー名 */}
             <div>
-              <label htmlFor="dge-username" className="block text-sm text-slate-400 mb-2">
-                {t('login.username')}
+              <label
+                htmlFor="dge-username"
+                className="block text-sm text-slate-400 mb-2"
+              >
+                {t("login.username")}
               </label>
               <div className="relative">
-                <span aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                <span
+                  aria-hidden="true"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                >
                   👤
                 </span>
                 <input
@@ -107,7 +139,7 @@ export const LoginPage: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-[#0a0a0f] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  placeholder={t('login.username_placeholder')}
+                  placeholder={t("login.username_placeholder")}
                   disabled={isLoading}
                   autoComplete="username"
                 />
@@ -116,20 +148,26 @@ export const LoginPage: React.FC = () => {
 
             {/* パスワード */}
             <div>
-              <label htmlFor="dge-password" className="block text-sm text-slate-400 mb-2">
-                {t('login.password')}
+              <label
+                htmlFor="dge-password"
+                className="block text-sm text-slate-400 mb-2"
+              >
+                {t("login.password")}
               </label>
               <div className="relative">
-                <span aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                <span
+                  aria-hidden="true"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                >
                   🔐
                 </span>
                 <input
                   id="dge-password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[#0a0a0f] border border-white/10 rounded-xl pl-12 pr-12 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  placeholder={t('login.password_placeholder')}
+                  placeholder={t("login.password_placeholder")}
                   disabled={isLoading}
                   autoComplete="current-password"
                 />
@@ -138,7 +176,7 @@ export const LoginPage: React.FC = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? "🙈" : "👁️"}
                 </button>
               </div>
             </div>
@@ -152,11 +190,11 @@ export const LoginPage: React.FC = () => {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {t('login.authenticating')}
+                  {t("login.authenticating")}
                 </>
               ) : (
                 <>
-                  <span aria-hidden="true">🚀</span>{' '}{t('login.submit')}
+                  <span aria-hidden="true">🚀</span> {t("login.submit")}
                 </>
               )}
             </button>
@@ -168,8 +206,12 @@ export const LoginPage: React.FC = () => {
               onClick={() => setShowDemoHint(!showDemoHint)}
               className="w-full text-sm text-slate-500 hover:text-slate-400 flex items-center justify-center gap-2 transition-colors"
             >
-              <span aria-hidden="true">💡</span>{' '}{t('login.demo_hint')}
-              <span className={`transition-transform ${showDemoHint ? 'rotate-180' : ''}`}>▼</span>
+              <span aria-hidden="true">💡</span> {t("login.demo_hint")}
+              <span
+                className={`transition-transform ${showDemoHint ? "rotate-180" : ""}`}
+              >
+                ▼
+              </span>
             </button>
 
             {showDemoHint && (
@@ -186,8 +228,12 @@ export const LoginPage: React.FC = () => {
                         {user.name.charAt(0)}
                       </div>
                       <div className="text-left">
-                        <div className="text-sm text-white font-medium">{user.name}</div>
-                        <div className="text-xs text-slate-500">{user.dept}</div>
+                        <div className="text-sm text-white font-medium">
+                          {user.name}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {user.dept}
+                        </div>
                       </div>
                     </div>
                     <span className="text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -228,4 +274,3 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
-

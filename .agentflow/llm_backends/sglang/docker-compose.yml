@@ -3,23 +3,23 @@ services:
     image: lmsysorg/sglang:v0.4.9.post4-cu126
     container_name: llm-sglang
     ports:
-    - 18002:30000
+      - 18002:30000
     restart: unless-stopped
     gpus: all
     ipc: host
     shm_size: 16g
     environment:
       HF_HOME: /root/.cache/huggingface
-      CUDA_VISIBLE_DEVICES: '0'
+      CUDA_VISIBLE_DEVICES: "0"
     volumes:
-    - /home/liush/.cache/huggingface:/root/.cache/huggingface
+      - /home/liush/.cache/huggingface:/root/.cache/huggingface
     command:
-    - python3
-    - -m
-    - sglang.launch_server
-    - --model-path
-    - Qwen/Qwen2.5-0.5B-Instruct
-    - --host
-    - 0.0.0.0
-    - --port
-    - '30000'
+      - python3
+      - -m
+      - sglang.launch_server
+      - --model-path
+      - Qwen/Qwen2.5-0.5B-Instruct
+      - --host
+      - 0.0.0.0
+      - --port
+      - "30000"

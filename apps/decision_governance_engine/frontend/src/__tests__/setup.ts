@@ -4,7 +4,7 @@
  * 目的: テスト環境の初期化とグローバルモックの設定
  */
 
-import { vi, afterEach } from 'vitest';
+import { vi, afterEach } from "vitest";
 
 // ========================================
 // グローバルモック
@@ -28,7 +28,7 @@ class MockEventSource {
     // 接続をシミュレート
     setTimeout(() => {
       this.readyState = MockEventSource.OPEN;
-      this.onopen?.(new Event('open'));
+      this.onopen?.(new Event("open"));
     }, 0);
   }
 
@@ -57,4 +57,3 @@ globalThis.localStorage = localStorageMock as unknown as Storage;
 afterEach(() => {
   vi.clearAllMocks();
 });
-

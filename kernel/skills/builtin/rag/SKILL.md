@@ -19,4 +19,3 @@ triggers:
 
 RAG（Retrieval-Augmented Generation）スキルは、
 ベクトルストアからの文書検索と、検索結果を活用した回答生成を提供します。
-

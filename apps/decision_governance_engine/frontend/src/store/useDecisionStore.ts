@@ -3,20 +3,36 @@
  *
  * 目的: 画面間の状態共有・永続化
  * 技術: Zustand
- * 
+ *
  * 機能:
  *   - 入力データの永続化
  *   - 履歴管理（最大10件）
  *   - レポートの永続化
  */
 
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import type { DecisionRequest, DecisionReport, StakeholderInfo, DaoOutput, FaOutput, ShuOutput, QiOutput, ReviewOutput } from '../types';
-import { decisionApi } from '../api/client';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type {
+  DecisionRequest,
+  DecisionReport,
+  StakeholderInfo,
+  DaoOutput,
+  FaOutput,
+  ShuOutput,
+  QiOutput,
+  ReviewOutput,
+} from "../types";
+import { decisionApi } from "../api/client";
 
 /** 画面状態 */
-export type PageState = 'input' | 'processing' | 'report' | 'history' | 'knowledge-shu' | 'knowledge-qi' | 'knowledge';
+export type PageState =
+  | "input"
+  | "processing"
+  | "report"
+  | "history"
+  | "knowledge-shu"
+  | "knowledge-qi"
+  | "knowledge";
 
 /** 履歴アイテム */
 export interface HistoryItem {
@@ -26,7 +42,7 @@ export interface HistoryItem {
   reportId: string | null;
   /** resume用のリクエストID */
   requestId: string | null;
-  status: 'completed' | 'failed' | 'signed';
+  status: "completed" | "failed" | "signed";
 }
 
 /** 最大履歴数 */
@@ -65,7 +81,7 @@ interface DecisionState {
 
   // アクション
   setQuestion: (q: string) => void;
-  setConstraints: (c: Partial<DecisionState['constraints']>) => void;
+  setConstraints: (c: Partial<DecisionState["constraints"]>) => void;
   setStakeholders: (s: Partial<StakeholderInfo>) => void;
   setPage: (p: PageState) => void;
   loadHistoryReport: (requestId: string) => Promise<void>;
@@ -76,8 +92,8 @@ interface DecisionState {
   reset: () => void;
 
   // 履歴アクション
-  addToHistory: (item: Omit<HistoryItem, 'id' | 'createdAt'>) => void;
-  updateHistoryStatus: (id: string, status: HistoryItem['status']) => void;
+  addToHistory: (item: Omit<HistoryItem, "id" | "createdAt">) => void;
+  updateHistoryStatus: (id: string, status: HistoryItem["status"]) => void;
   clearHistory: () => void;
   loadFromHistory: (id: string) => void;
 
@@ -87,19 +103,19 @@ interface DecisionState {
 
 /** 初期制約 */
 const initialConstraints = {
-  budget: '',
-  timeline: '',
-  team: '',
+  budget: "",
+  timeline: "",
+  team: "",
   technical: [] as string[],
   regulatory: [] as string[],
 };
 
 /** 初期ステークホルダー */
 const initialStakeholders: StakeholderInfo = {
-  product_owner: '',
-  tech_lead: '',
-  business_owner: '',
-  legal_reviewer: '',
+  product_owner: "",
+  tech_lead: "",
+  business_owner: "",
+  legal_reviewer: "",
 };
 
 /**
@@ -109,9 +125,9 @@ export const useDecisionStore = create<DecisionState>()(
   persist(
     (set, get) => ({
       // 初期状態
-      currentPage: 'input',
+      currentPage: "input",
       previousPage: null,
-      question: '',
+      question: "",
       constraints: { ...initialConstraints },
       stakeholders: { ...initialStakeholders },
       reportId: null,
@@ -133,7 +149,8 @@ export const useDecisionStore = create<DecisionState>()(
           stakeholders: { ...state.stakeholders, ...s },
         })),
 
-      setPage: (p) => set((state) => ({ previousPage: state.currentPage, currentPage: p })),
+      setPage: (p) =>
+        set((state) => ({ previousPage: state.currentPage, currentPage: p })),
 
       setRequestId: (id) => set({ requestId: id }),
 
@@ -145,8 +162,8 @@ export const useDecisionStore = create<DecisionState>()(
 
       reset: () =>
         set({
-          currentPage: 'input',
-          question: '',
+          currentPage: "input",
+          question: "",
           constraints: { ...initialConstraints },
           stakeholders: { ...initialStakeholders },
           reportId: null,
@@ -163,14 +180,17 @@ export const useDecisionStore = create<DecisionState>()(
             id: `history-${Date.now()}`,
             createdAt: new Date().toISOString(),
           };
-          const newHistory = [newItem, ...state.history].slice(0, MAX_HISTORY_ITEMS);
+          const newHistory = [newItem, ...state.history].slice(
+            0,
+            MAX_HISTORY_ITEMS,
+          );
           return { history: newHistory };
         }),
 
       updateHistoryStatus: (id, status) =>
         set((state) => ({
           history: state.history.map((item) =>
-            item.id === id ? { ...item, status } : item
+            item.id === id ? { ...item, status } : item,
           ),
         })),
 
@@ -183,7 +203,7 @@ export const useDecisionStore = create<DecisionState>()(
           set({
             question: item.question,
             requestId: item.requestId ?? null,
-            currentPage: 'input',
+            currentPage: "input",
           });
         }
       },
@@ -192,28 +212,68 @@ export const useDecisionStore = create<DecisionState>()(
       loadHistoryReport: async (requestId: string) => {
         try {
           const response = await decisionApi.getHistoryDetail(requestId);
-          if (response.status !== 'success' && response.status !== 'fallback') return;
+          if (response.status !== "success" && response.status !== "fallback")
+            return;
           const d = response.data;
 
-          const dao = (d.dao_result ?? { problem_type: 'UNKNOWN', essence: '', immutable_constraints: [], hidden_assumptions: [] }) as unknown as DaoOutput;
-          const fa = (d.fa_result ?? { recommended_paths: [], rejected_paths: [], decision_criteria: [] }) as unknown as FaOutput;
-          const shu = (d.shu_result ?? { phases: [], first_action: '', dependencies: [] }) as unknown as ShuOutput;
-          const qi = (d.qi_result ?? { implementations: [], tool_recommendations: [], integration_points: [], technical_debt_warnings: [] }) as unknown as QiOutput;
-          const review = (d.review_result ?? { overall_verdict: 'PASS' as const, confidence_score: d.confidence ?? 0, findings: [], final_warnings: [] }) as unknown as ReviewOutput;
+          const dao = (d.dao_result ?? {
+            problem_type: "UNKNOWN",
+            essence: "",
+            immutable_constraints: [],
+            hidden_assumptions: [],
+          }) as unknown as DaoOutput;
+          const fa = (d.fa_result ?? {
+            recommended_paths: [],
+            rejected_paths: [],
+            decision_criteria: [],
+          }) as unknown as FaOutput;
+          const shu = (d.shu_result ?? {
+            phases: [],
+            first_action: "",
+            dependencies: [],
+          }) as unknown as ShuOutput;
+          const qi = (d.qi_result ?? {
+            implementations: [],
+            tool_recommendations: [],
+            integration_points: [],
+            technical_debt_warnings: [],
+          }) as unknown as QiOutput;
+          const review = (d.review_result ?? {
+            overall_verdict: "PASS" as const,
+            confidence_score: d.confidence ?? 0,
+            findings: [],
+            final_warnings: [],
+          }) as unknown as ReviewOutput;
 
-          const topPath = (fa as { recommended_paths?: { name?: string; description?: string; time_to_value?: string }[] }).recommended_paths?.[0];
+          const topPath = (
+            fa as {
+              recommended_paths?: {
+                name?: string;
+                description?: string;
+                time_to_value?: string;
+              }[];
+            }
+          ).recommended_paths?.[0];
           const executive_summary = {
-            one_line_decision: topPath?.name ?? (dao as { essence?: string }).essence ?? '',
-            recommended_action: topPath?.description ?? '',
-            key_risks: (review as { findings?: { severity?: string; description?: string }[] }).findings?.filter((f) => f.severity === 'CRITICAL').map((f) => f.description ?? '') ?? [],
-            first_step: (shu as { first_action?: string }).first_action ?? '',
-            estimated_impact: topPath?.time_to_value ?? '',
+            one_line_decision:
+              topPath?.name ?? (dao as { essence?: string }).essence ?? "",
+            recommended_action: topPath?.description ?? "",
+            key_risks:
+              (
+                review as {
+                  findings?: { severity?: string; description?: string }[];
+                }
+              ).findings
+                ?.filter((f) => f.severity === "CRITICAL")
+                .map((f) => f.description ?? "") ?? [],
+            first_step: (shu as { first_action?: string }).first_action ?? "",
+            estimated_impact: topPath?.time_to_value ?? "",
           };
 
           const report: DecisionReport = {
             report_id: d.report_case_id ?? d.request_id,
             created_at: d.created_at,
-            version: '3.1',
+            version: "3.1",
             dao,
             fa,
             shu,
@@ -228,11 +288,14 @@ export const useDecisionStore = create<DecisionState>()(
             reportId: d.report_case_id ?? null,
             requestId: d.request_id,
             question: d.question,
-            previousPage: 'history',
-            currentPage: 'report',
+            previousPage: "history",
+            currentPage: "report",
           });
         } catch (err) {
-          const message = err instanceof Error ? err.message : '履歴レポートの読み込みに失敗しました';
+          const message =
+            err instanceof Error
+              ? err.message
+              : "履歴レポートの読み込みに失敗しました";
           set({ error: message });
         }
       },
@@ -263,14 +326,16 @@ export const useDecisionStore = create<DecisionState>()(
         const sh = state.stakeholders;
         if (sh.product_owner) req.stakeholder_product_owner = sh.product_owner;
         if (sh.tech_lead) req.stakeholder_tech_lead = sh.tech_lead;
-        if (sh.business_owner) req.stakeholder_business_owner = sh.business_owner;
-        if (sh.legal_reviewer) req.stakeholder_legal_reviewer = sh.legal_reviewer;
+        if (sh.business_owner)
+          req.stakeholder_business_owner = sh.business_owner;
+        if (sh.legal_reviewer)
+          req.stakeholder_legal_reviewer = sh.legal_reviewer;
 
         return req;
       },
     }),
     {
-      name: 'decision-storage',
+      name: "decision-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         question: state.question,
@@ -283,7 +348,6 @@ export const useDecisionStore = create<DecisionState>()(
         report: state.report,
         // previousPage は永続化しない（セッション内のみ有効）
       }),
-    }
-  )
+    },
+  ),
 );
-

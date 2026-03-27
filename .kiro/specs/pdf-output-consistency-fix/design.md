@@ -64,6 +64,7 @@ Users report that PDF exports are missing content and have different styling com
 ### Component Responsibilities
 
 **PDFGeneratorService**:
+
 - Check ReportLab availability
 - Generate PDF using ReportLab (if available)
 - Generate HTML fallback (if ReportLab unavailable)
@@ -71,6 +72,7 @@ Users report that PDF exports are missing content and have different styling com
 - Handle errors and log failures
 
 **Section Builder Methods**:
+
 - `_build_summary_html()`: Executive summary section
 - `_build_dao_html()`: 道 (essence analysis) section
 - `_build_fa_html()`: 法 (strategy selection) section
@@ -85,40 +87,40 @@ Users report that PDF exports are missing content and have different styling com
 ```python
 class PDFGeneratorService:
     """Decision レポート PDF 生成サービス v3.0."""
-    
+
     def __init__(self) -> None:
         """初期化."""
-        
+
     def _check_reportlab(self) -> bool:
         """ReportLabが利用可能か確認."""
-        
+
     def generate_pdf(self, report: DecisionReport) -> bytes:
         """PDFを生成."""
-        
+
     def _to_dict(self, obj: Any) -> dict:
         """Pydanticオブジェクトまたはdictをdictに変換."""
-        
+
     def _generate_with_reportlab(self, report: DecisionReport) -> bytes:
         """ReportLabでPDF生成 v3.0（CJK対応・全フィールド出力）."""
-        
+
     def _generate_html_fallback(self, report: DecisionReport) -> bytes:
         """HTML形式での提案書出力 v3.1."""
-        
+
     def _build_summary_html(self, summary: Any) -> str:
         """エグゼクティブサマリーHTMLを構築."""
-        
+
     def _build_dao_html(self, dao: dict) -> str:
         """道セクションHTMLを構築 v3.0."""
-        
+
     def _build_fa_html(self, fa: dict) -> str:
         """法セクションHTMLを構築 v3.0."""
-        
+
     def _build_shu_html(self, shu: dict) -> str:
         """術セクションHTMLを構築 v3.0."""
-        
+
     def _build_qi_html(self, qi: dict) -> str:
         """器セクションHTMLを構築 v3.0."""
-        
+
     def _build_review_html(self, review: dict) -> str:
         """検証セクションHTMLを構築."""
 ```
@@ -126,15 +128,18 @@ class PDFGeneratorService:
 ### Key Interfaces
 
 **Input**: `DecisionReport` (Pydantic model)
+
 - Contains all sections: dao, fa, shu, qi, review, executive_summary
 - Includes v3.0 fields: essence_derivation, strategic_prohibitions, exit_criteria
 - Includes v3.1 fields: proposal_title, signature_block
 
 **Output**: `bytes`
+
 - PDF binary data (ReportLab mode)
 - HTML UTF-8 encoded bytes (fallback mode)
 
 **Error Handling**:
+
 - `ValueError`: Invalid input (report is None)
 - `RuntimeError`: PDF generation failure
 - Logging: All errors logged with context
@@ -162,6 +167,7 @@ DecisionReport:
 ### Section Data Models
 
 **DaoOutput** (道 - Essence Analysis):
+
 - problem_type: str
 - problem_nature: str
 - essence: str
@@ -178,6 +184,7 @@ DecisionReport:
 - death_traps: list[dict]
 
 **FaOutput** (法 - Strategy Selection):
+
 - recommended_paths: list[dict]
 - rejected_paths: list[dict]
 - decision_criteria: list[str]
@@ -187,6 +194,7 @@ DecisionReport:
 - why_existing_fails: str (v3.0)
 
 **ShuOutput** (術 - Execution Plan):
+
 - phases: list[dict]
 - first_action: str
 - dependencies: list[str]
@@ -197,6 +205,7 @@ DecisionReport:
 - exit_criteria: dict (v3.0)
 
 **QiOutput** (器 - Technical Implementation):
+
 - implementations: list[dict]
 - tool_recommendations: list[str]
 - integration_points: list[str]
@@ -206,6 +215,7 @@ DecisionReport:
 - geographic_considerations: list[dict] (v3.0)
 
 **ReviewOutput** (検証 - Verification):
+
 - overall_verdict: str (PASS/REVISE/REJECT)
 - confidence_score: float
 - findings: list[dict]
@@ -240,60 +250,59 @@ The HTML fallback mode generates a complete business proposal document with:
 
 ## Correctness Properties
 
-
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Complete Section Field Coverage
 
-*For any* DecisionReport object with populated section data, generating a PDF (in either ReportLab or HTML mode) should produce output that contains all specified fields from each section (executive_summary, dao, fa, shu, qi, review), including v3.0 fields (essence_derivation, strategic_prohibitions, cut_list, context_specific_actions, single_validation_point, exit_criteria, domain_technologies, regulatory_considerations, geographic_considerations).
+_For any_ DecisionReport object with populated section data, generating a PDF (in either ReportLab or HTML mode) should produce output that contains all specified fields from each section (executive_summary, dao, fa, shu, qi, review), including v3.0 fields (essence_derivation, strategic_prohibitions, cut_list, context_specific_actions, single_validation_point, exit_criteria, domain_technologies, regulatory_considerations, geographic_considerations).
 
 **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.1, 2.2**
 
 ### Property 2: Graceful Null Handling
 
-*For any* DecisionReport object with null or undefined fields, generating a PDF should complete successfully without exceptions, and the output should contain appropriate fallback text (e.g., "N/A", "未設定", empty string) for missing fields rather than error messages or broken formatting.
+_For any_ DecisionReport object with null or undefined fields, generating a PDF should complete successfully without exceptions, and the output should contain appropriate fallback text (e.g., "N/A", "未設定", empty string) for missing fields rather than error messages or broken formatting.
 
 **Validates: Requirements 2.3**
 
 ### Property 3: V3.0 Field Inclusion
 
-*For any* DecisionReport object containing v3.0 fields (essence_statement in executive_summary, strategic_prohibition_summary in executive_summary, exit_criteria_summary in executive_summary, essence_derivation in dao, strategic_prohibitions in fa, cut_list in shu, context_specific_actions in shu, single_validation_point in shu, exit_criteria in shu, domain_technologies in qi, regulatory_considerations in qi, geographic_considerations in qi), generating a PDF should include these fields in the output with their values rendered.
+_For any_ DecisionReport object containing v3.0 fields (essence_statement in executive_summary, strategic_prohibition_summary in executive_summary, exit_criteria_summary in executive_summary, essence_derivation in dao, strategic_prohibitions in fa, cut_list in shu, context_specific_actions in shu, single_validation_point in shu, exit_criteria in shu, domain_technologies in qi, regulatory_considerations in qi, geographic_considerations in qi), generating a PDF should include these fields in the output with their values rendered.
 
 **Validates: Requirements 2.4, 8.4**
 
 ### Property 4: HTML Builder Method Completeness
 
-*For any* valid section data (dao, fa, shu, qi, review), calling the corresponding builder method (_build_dao_html, _build_fa_html, _build_shu_html, _build_qi_html, _build_review_html) should return a complete HTML string that contains properly closed tags, includes all expected section markers (h2, h3 headings), and does not end prematurely or with syntax errors.
+_For any_ valid section data (dao, fa, shu, qi, review), calling the corresponding builder method (\_build_dao_html, \_build_fa_html, \_build_shu_html, \_build_qi_html, \_build_review_html) should return a complete HTML string that contains properly closed tags, includes all expected section markers (h2, h3 headings), and does not end prematurely or with syntax errors.
 
 **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
 ### Property 5: Styling Consistency
 
-*For any* DecisionReport object, the generated PDF output should apply equivalent styling for status indicators (success/emerald, warning/amber, prohibition/red CSS classes or color codes), preserve hierarchical structure (nested divs, lists, tables), include visual indicators (emoji icons like 🎯, ⚠️, ✅), and render tables with proper HTML table structure (<table>, <tr>, <td> tags).
+_For any_ DecisionReport object, the generated PDF output should apply equivalent styling for status indicators (success/emerald, warning/amber, prohibition/red CSS classes or color codes), preserve hierarchical structure (nested divs, lists, tables), include visual indicators (emoji icons like 🎯, ⚠️, ✅), and render tables with proper HTML table structure (<table>, <tr>, <td> tags).
 
 **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
 
 ### Property 6: ReportLab Mode Completeness
 
-*For any* DecisionReport object, when ReportLab is available and ReportLab mode is used, generating a PDF should produce a valid PDF binary that contains all section content (executive summary, dao, fa, shu, qi, review), properly renders CJK characters using registered fonts, and includes page breaks at appropriate section boundaries.
+_For any_ DecisionReport object, when ReportLab is available and ReportLab mode is used, generating a PDF should produce a valid PDF binary that contains all section content (executive summary, dao, fa, shu, qi, review), properly renders CJK characters using registered fonts, and includes page breaks at appropriate section boundaries.
 
 **Validates: Requirements 5.1, 5.2, 5.4**
 
 ### Property 7: Error Logging with Context
 
-*For any* error that occurs during PDF generation (ValueError for invalid input, RuntimeError for generation failure, exceptions in builder methods), the PDF_Generator should log the error with contextual information including report_id, section name (if applicable), error type, and error message, and should raise a descriptive exception that can be caught by the caller.
+_For any_ error that occurs during PDF generation (ValueError for invalid input, RuntimeError for generation failure, exceptions in builder methods), the PDF_Generator should log the error with contextual information including report_id, section name (if applicable), error type, and error message, and should raise a descriptive exception that can be caught by the caller.
 
 **Validates: Requirements 6.1, 6.2, 6.3**
 
 ### Property 8: ReportLab Fallback Behavior
 
-*For any* DecisionReport object, when ReportLab is not available (ImportError on reportlab.lib.pagesizes), the PDF_Generator should log a warning message indicating fallback to HTML mode, set _has_reportlab to False, and successfully generate HTML output instead of raising an exception.
+_For any_ DecisionReport object, when ReportLab is not available (ImportError on reportlab.lib.pagesizes), the PDF_Generator should log a warning message indicating fallback to HTML mode, set \_has_reportlab to False, and successfully generate HTML output instead of raising an exception.
 
 **Validates: Requirements 6.4**
 
 ### Property 9: Round-Trip Information Preservation
 
-*For any* DecisionReport object with key fields populated (report_id, executive_summary.one_line_decision, dao.essence, fa.recommended_paths, shu.first_action, qi.implementations, review.overall_verdict), generating a PDF and extracting its text content (for HTML mode) or inspecting the generated elements (for ReportLab mode) should preserve all these key information fields in a human-readable format.
+_For any_ DecisionReport object with key fields populated (report_id, executive_summary.one_line_decision, dao.essence, fa.recommended_paths, shu.first_action, qi.implementations, review.overall_verdict), generating a PDF and extracting its text content (for HTML mode) or inspecting the generated elements (for ReportLab mode) should preserve all these key information fields in a human-readable format.
 
 **Validates: Requirements 8.1**
 
@@ -328,7 +337,7 @@ def generate_pdf(self, report: DecisionReport) -> bytes:
     # Input validation
     if report is None:
         raise ValueError("report cannot be None")
-    
+
     try:
         # Attempt generation
         if self._has_reportlab:
@@ -347,12 +356,14 @@ def generate_pdf(self, report: DecisionReport) -> bytes:
 ### Logging Standards
 
 All error logs must include:
+
 - Error type (`type(e).__name__`)
 - Error message (`str(e)`)
 - Context (report_id, section name if applicable)
 - Full traceback (`exc_info=True`)
 
 Example:
+
 ```python
 self._logger.error(
     f"Section builder failed: section=shu, report_id={report.report_id}, error={type(e).__name__}: {e}",
@@ -367,6 +378,7 @@ self._logger.error(
 This bugfix requires both unit testing and property-based testing to ensure comprehensive coverage:
 
 **Unit Tests**: Verify specific examples, edge cases, and error conditions
+
 - Test with sample DecisionReport objects
 - Test null/undefined field handling
 - Test error conditions (None input, missing sections)
@@ -374,6 +386,7 @@ This bugfix requires both unit testing and property-based testing to ensure comp
 - Test fallback behavior
 
 **Property Tests**: Verify universal properties across all inputs
+
 - Generate random DecisionReport objects with various field combinations
 - Verify all properties hold for generated reports
 - Test with 100+ iterations per property
@@ -384,11 +397,13 @@ This bugfix requires both unit testing and property-based testing to ensure comp
 **Library**: Use `hypothesis` for Python property-based testing
 
 **Test Configuration**:
+
 - Minimum 100 iterations per property test
 - Use `@given` decorator with custom strategies
 - Tag each test with feature and property reference
 
 **Example Test Structure**:
+
 ```python
 from hypothesis import given, strategies as st
 import pytest
@@ -399,7 +414,7 @@ def test_complete_section_field_coverage(report):
     """全セクションのフィールドがPDF出力に含まれることを検証."""
     generator = PDFGeneratorService()
     pdf_bytes = generator.generate_pdf(report)
-    
+
     # HTML mode: check text content
     if not generator._has_reportlab:
         html_content = pdf_bytes.decode('utf-8')
@@ -442,6 +457,7 @@ def dao_output_strategy(draw):
 ### Unit Test Coverage
 
 **Specific Examples**:
+
 1. Test with complete DecisionReport (all fields populated)
 2. Test with minimal DecisionReport (only required fields)
 3. Test with v3.0 fields present
@@ -450,12 +466,14 @@ def dao_output_strategy(draw):
 6. Test with empty lists and empty strings
 
 **Edge Cases**:
+
 1. Very long text fields (>1000 characters)
 2. Special characters in text (CJK, emoji, HTML entities)
 3. Empty sections (empty lists, empty dicts)
 4. Missing optional fields
 
 **Error Conditions**:
+
 1. None input → ValueError
 2. Invalid report structure → RuntimeError
 3. ReportLab unavailable → HTML fallback
@@ -493,16 +511,16 @@ pytest --no-cov -m integration tests/integration/test_pdf_export.py
 
 The primary fix is to ensure all builder methods are complete:
 
-1. **_build_shu_html**: Complete the method implementation
+1. **\_build_shu_html**: Complete the method implementation
    - Add all missing HTML generation code
    - Ensure proper tag closing
    - Include all v3.0 fields (cut_list, context_specific_actions, single_validation_point, exit_criteria)
 
-2. **_build_qi_html**: Verify completeness
+2. **\_build_qi_html**: Verify completeness
    - Ensure all fields are rendered
    - Include v3.0 fields (domain_technologies, regulatory_considerations, geographic_considerations)
 
-3. **_build_review_html**: Verify completeness
+3. **\_build_review_html**: Verify completeness
    - Ensure verdict, confidence, findings, warnings are all rendered
 
 ### ReportLab Mode Enhancements

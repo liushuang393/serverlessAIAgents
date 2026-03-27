@@ -19,16 +19,19 @@
 ## 🎯 一般原則
 
 ### 明確性優先
+
 - **意図が明確**: 名前から用途と役割がわかる
 - **英語使用**: すべて英語で記述（日本語禁止）
 - **一貫性**: プロジェクト全体で統一された命名
 
 ### 長さのバランス
+
 - **適切な長さ**: 短すぎず長すぎない
 - **略語の制限**: 一般的な略語のみ使用
 - **完全スペル優先**: 略語より完全スペル
 
 ### 構造的一貫性
+
 ```python
 # ✅ 良い例: 関連する概念の命名パターン
 class UserService:
@@ -48,6 +51,7 @@ class UserSvc:
 ## 🐍 変数と関数
 
 ### 変数命名
+
 ```python
 # ✅ 正しい: snake_case
 user_name = "john_doe"
@@ -66,6 +70,7 @@ __version__ = "1.0.0"      # 特殊メソッド/属性
 ```
 
 ### 関数命名
+
 ```python
 # ✅ 正しい: snake_case、動詞 + 目的語
 def get_user(user_id: str) -> User:
@@ -87,6 +92,7 @@ def processData(items: list) -> list:     # ❌ PascalCase
 ```
 
 ### ブール変数と関数
+
 ```python
 # ✅ 正しい: is/has/can/should で始まる
 is_active = True
@@ -109,6 +115,7 @@ def can_process_request(request: dict) -> bool:
 ## 🏗️ クラスと型
 
 ### クラス命名
+
 ```python
 # ✅ 正しい: PascalCase、各単語の先頭大文字
 class UserService:
@@ -130,6 +137,7 @@ class agentCoord:         # ❌ 略語 + 混在
 ```
 
 ### 抽象基底クラス
+
 ```python
 # ✅ 正しい: Abstract/Base で始まる
 class AbstractAgent:
@@ -143,6 +151,7 @@ class AbstractWorkflowProcessor:
 ```
 
 ### 例外クラス
+
 ```python
 # ✅ 正しい: Error/Exception で終わる
 class ValidationError(Exception):
@@ -156,6 +165,7 @@ class AgentExecutionError(Exception):
 ```
 
 ### プロトコルとインターフェース
+
 ```python
 # ✅ 正しい: Protocol で終わる
 from typing import Protocol
@@ -175,6 +185,7 @@ class MessageHandlerProtocol(Protocol):
 ## 📦 モジュールとパッケージ
 
 ### モジュール命名
+
 ```python
 # ✅ 正しい: snake_case、機能名
 agentflow/
@@ -201,6 +212,7 @@ agentflow/
 ```
 
 ### パッケージ命名
+
 ```python
 # ✅ 正しい: 小文字、機能グループ
 agentflow/
@@ -212,6 +224,7 @@ agentflow/
 ```
 
 ### テストモジュール
+
 ```python
 # ✅ 正しい: test_ で始まる
 tests/
@@ -230,6 +243,7 @@ tests/
 ## 🔢 定数
 
 ### 定数命名
+
 ```python
 # ✅ 正しい: UPPER_SNAKE_CASE
 MAX_RETRIES = 3
@@ -250,6 +264,7 @@ database_url = "..."      # ❌ 小文字
 ```
 
 ### 列挙型
+
 ```python
 from enum import Enum
 
@@ -271,6 +286,7 @@ class AgentType(Enum):
 ## 🎭 特殊パターン
 
 ### 非公開メンバー
+
 ```python
 class AgentCoordinator:
     def __init__(self) -> None:
@@ -287,6 +303,7 @@ class AgentCoordinator:
 ```
 
 ### ファクトリー関数
+
 ```python
 # ✅ 正しい: create/make で始まる
 def create_agent(agent_type: str, config: dict) -> Agent:
@@ -301,6 +318,7 @@ def Agent(agent_type: str, config: dict) -> Agent:  # ❌
 ```
 
 ### コールバックとハンドラー
+
 ```python
 # ✅ 正しい: 目的 + Handler/Callback/Listener
 def workflow_complete_handler(workflow_id: str, result: dict) -> None:
@@ -314,6 +332,7 @@ def message_listener(message: dict, sender: str) -> None:
 ```
 
 ### 型変数
+
 ```python
 from typing import TypeVar, Generic
 
@@ -332,6 +351,7 @@ class Repository(Generic[T]):
 ## 📝 命名例
 
 ### サービスクラス
+
 ```python
 class UserManagementService:
     """ユーザー管理サービス。"""
@@ -366,6 +386,7 @@ class UserManagementService:
 ```
 
 ### 設定クラス
+
 ```python
 class ApplicationConfig:
     """アプリケーション設定。"""
@@ -396,6 +417,7 @@ class ApplicationConfig:
 ```
 
 ### エージェント実装
+
 ```python
 class DocumentAnalysisAgent:
     """文書分析エージェント。"""
@@ -445,6 +467,7 @@ class DocumentAnalysisAgent:
 ## 🚫 禁止パターン
 
 ### 一般的な間違い
+
 ```python
 # ❌ 略語の乱用
 usr_mgr = UserManager()        # ❌
@@ -460,6 +483,7 @@ user_list = get_single_user()  # ❌
 ```
 
 ### 言語混在禁止
+
 ```python
 # ❌ 日本語変数名（完全に禁止）
 ユーザー名 = "john_doe"         # ❌
@@ -482,4 +506,4 @@ def get_user(): pass           # ❌（英語コメント必須）
 
 **明確で一貫性のある命名により、コードの可読性と保守性を向上させます。** 🎯
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+_最終更新: 2025-01-19 | バージョン: 1.0.0_

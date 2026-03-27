@@ -13,4 +13,3 @@
 
 各スキルは `SKILL.md` ファイルで定義されます。
 Claude Code Skills フォーマットと互換性があります。
-

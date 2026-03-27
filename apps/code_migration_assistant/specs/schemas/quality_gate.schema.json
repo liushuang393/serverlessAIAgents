@@ -13,14 +13,14 @@
     "extensions"
   ],
   "properties": {
-    "meta": {"type": "object"},
-    "decision": {"type": "string"},
-    "target_agent": {"type": "string"},
-    "reason": {"type": "string"},
-    "severity": {"type": "string"},
-    "evidence": {"type": "object"},
-    "unknowns": {"type": "array"},
-    "extensions": {"type": "object"}
+    "meta": { "type": "object" },
+    "decision": { "type": "string" },
+    "target_agent": { "type": "string" },
+    "reason": { "type": "string" },
+    "severity": { "type": "string" },
+    "evidence": { "type": "object" },
+    "unknowns": { "type": "array" },
+    "extensions": { "type": "object" }
   },
   "additionalProperties": true
 }

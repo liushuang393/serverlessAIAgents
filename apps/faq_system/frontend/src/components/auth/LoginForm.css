@@ -35,7 +35,7 @@
 .login-shell__blob--two {
   width: 420px;
   height: 420px;
-  background: rgba(99, 102, 241, 0.10);
+  background: rgba(99, 102, 241, 0.1);
   bottom: -100px;
   right: -120px;
 }
@@ -167,8 +167,8 @@
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: rgba(94, 234, 212, 0.10);
-  border: 1px solid rgba(94, 234, 212, 0.20);
+  background: rgba(94, 234, 212, 0.1);
+  border: 1px solid rgba(94, 234, 212, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,7 +213,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(239, 68, 68, 0.10);
+  background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.25);
   border-radius: 10px;
   padding: 10px 14px;
@@ -281,8 +281,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(94, 234, 212, 0.10);
-  border: 1px solid rgba(94, 234, 212, 0.20);
+  background: rgba(94, 234, 212, 0.1);
+  border: 1px solid rgba(94, 234, 212, 0.2);
   border-radius: 999px;
   padding: 5px 12px;
   font-size: 12px;
@@ -356,7 +356,7 @@
 }
 .login-divider::before,
 .login-divider::after {
-  content: '';
+  content: "";
   flex: 1;
   height: 1px;
   background: var(--border);
@@ -403,4 +403,3 @@
     padding: 28px 20px;
   }
 }
-

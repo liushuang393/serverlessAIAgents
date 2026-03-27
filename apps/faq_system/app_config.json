@@ -22,13 +22,7 @@
     {
       "name": "FAQAgent",
       "module": "apps.faq_system.backend.agents.faq_agent",
-      "capabilities": [
-        "faq",
-        "rag",
-        "sql",
-        "chart",
-        "suggestion"
-      ],
+      "capabilities": ["faq", "rag", "sql", "chart", "suggestion"],
       "business_base": "knowledge",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -36,11 +30,7 @@
     {
       "name": "SalesAgent",
       "module": "shared.agents.sales_agent",
-      "capabilities": [
-        "sales",
-        "design_skills",
-        "image_generation"
-      ],
+      "capabilities": ["sales", "design_skills", "image_generation"],
       "business_base": "interaction",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -48,13 +38,7 @@
     {
       "name": "EnhancedFAQAgent",
       "module": "apps.faq_system.backend.agents.enhanced_faq_agent",
-      "capabilities": [
-        "faq",
-        "rag",
-        "sql",
-        "rich_response",
-        "citation"
-      ],
+      "capabilities": ["faq", "rag", "sql", "rich_response", "citation"],
       "business_base": "knowledge",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -62,13 +46,7 @@
     {
       "name": "InternalKBAgent",
       "module": "apps.faq_system.backend.agents.internal_kb_agent",
-      "capabilities": [
-        "faq",
-        "rag",
-        "rbac",
-        "conservative_mode",
-        "ticket"
-      ],
+      "capabilities": ["faq", "rag", "rbac", "conservative_mode", "ticket"],
       "business_base": "knowledge",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -76,11 +54,7 @@
     {
       "name": "ExternalKBAgent",
       "module": "apps.faq_system.backend.agents.external_kb_agent",
-      "capabilities": [
-        "faq",
-        "rag",
-        "external_kb"
-      ],
+      "capabilities": ["faq", "rag", "external_kb"],
       "business_base": "knowledge",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -88,11 +62,7 @@
     {
       "name": "MaintenanceAgent",
       "module": "apps.faq_system.backend.agents.maintenance_agent",
-      "capabilities": [
-        "maintenance",
-        "impact_analysis",
-        "documentation"
-      ],
+      "capabilities": ["maintenance", "impact_analysis", "documentation"],
       "business_base": "operations",
       "pattern": "specialist",
       "agent_type": "specialist"
@@ -100,12 +70,7 @@
     {
       "name": "AnalyticsAgent",
       "module": "apps.faq_system.backend.agents.analytics_agent",
-      "capabilities": [
-        "sql",
-        "chart",
-        "analysis",
-        "trend"
-      ],
+      "capabilities": ["sql", "chart", "analysis", "trend"],
       "business_base": "reasoning",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -113,9 +78,7 @@
   ],
   "services": {
     "rag": {
-      "collections": [
-        "faq_knowledge"
-      ],
+      "collections": ["faq_knowledge"],
       "enabled": true,
       "pattern": "faq_precision",
       "chunking": {
@@ -161,11 +124,7 @@
   "dependencies": {
     "database": "postgresql",
     "redis": false,
-    "external": [
-      "comfyui",
-      "qdrant",
-      "vector_store"
-    ]
+    "external": ["comfyui", "qdrant", "vector_store"]
   },
   "runtime": {
     "urls": {
@@ -193,26 +152,13 @@
       "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
     }
   },
-  "tags": [
-    "chat",
-    "faq",
-    "rag",
-    "sales",
-    "text2sql"
-  ],
+  "tags": ["chat", "faq", "rag", "sales", "text2sql"],
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": [
-        "jwt",
-        "oauth2",
-        "saml",
-        "ldap"
-      ],
+      "providers": ["jwt", "oauth2", "saml", "ldap"],
       "allow_anonymous": false,
-      "required_scopes": [
-        "faq.access"
-      ],
+      "required_scopes": ["faq.access"],
       "mode": "tenant_sso",
       "tenant_claim_key": "tenant_id",
       "allow_same_tenant_sso": true,
@@ -236,19 +182,14 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "embedding",
-        "text"
-      ],
+      "allowed_modalities": ["embedding", "text"],
       "extra_model_refs": []
     },
     "rag": {
       "enabled": true,
       "pattern": "faq_precision",
       "provider": "qdrant",
-      "collections": [
-        "faq_knowledge"
-      ],
+      "collections": ["faq_knowledge"],
       "data_sources": [
         {
           "type": "database",
@@ -283,9 +224,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -294,10 +233,7 @@
       "id": "official.enterprise-connector-pack",
       "version": "1.0.0",
       "config": {
-        "connectors": [
-          "confluence",
-          "sharepoint"
-        ]
+        "connectors": ["confluence", "sharepoint"]
       }
     },
     {
@@ -339,11 +275,7 @@
       "consumer_group": "evolution-validator-v1",
       "max_retries": 5
     },
-    "scope_policy": [
-      "tenant_app",
-      "tenant_product_line",
-      "global_verified"
-    ],
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
       "high_complexity_threshold": 0.7,

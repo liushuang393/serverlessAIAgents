@@ -1,16 +1,33 @@
 """scripts/check_encoding.py — ファイルエンコーディングチェッカー."""
+
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
+
 
 UTF8_BOM = b"\xef\xbb\xbf"
 BOM_ALLOWED_EXTENSIONS = {".ps1"}
 TARGET_EXTENSIONS = {
-    ".py", ".md", ".yaml", ".yml", ".json", ".toml",
-    ".ts", ".tsx", ".js", ".jsx", ".css", ".html",
-    ".sh", ".ps1", ".txt", ".cfg", ".ini",
+    ".py",
+    ".md",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".css",
+    ".html",
+    ".sh",
+    ".ps1",
+    ".txt",
+    ".cfg",
+    ".ini",
 }
 EXCLUDE_DIRS = {"node_modules", ".venv", "__pycache__", ".git", "dist", "htmlcov"}
 
@@ -40,11 +57,14 @@ def main() -> int:
     violations: list[str] = []
     for target in args.paths:
         p = Path(target)
-        files = [p] if p.is_file() else (
-            f for f in p.rglob("*")
-            if f.is_file()
-            and f.suffix in TARGET_EXTENSIONS
-            and not any(ex in f.parts for ex in EXCLUDE_DIRS)
+        files = (
+            [p]
+            if p.is_file()
+            else (
+                f
+                for f in p.rglob("*")
+                if f.is_file() and f.suffix in TARGET_EXTENSIONS and not any(ex in f.parts for ex in EXCLUDE_DIRS)
+            )
         )
         for f in files:
             issue = check_file(f)
@@ -52,7 +72,6 @@ def main() -> int:
                 violations.append(issue)
 
     if args.json:
-        import json
         print(json.dumps({"violations": violations, "count": len(violations)}))
     else:
         for v in violations:

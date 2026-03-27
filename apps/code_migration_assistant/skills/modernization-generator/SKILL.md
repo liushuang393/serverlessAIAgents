@@ -88,13 +88,13 @@ Input: BusinessSemanticsArtifact
 
 ### 業務プロセス → コード
 
-| 業務概念 | 生成物 | パターン |
-|---------|-------|---------|
-| 業務プロセス | Service クラス | @Service + @Transactional |
-| 業務イベント | イベントクラス | ApplicationEvent |
-| 状態遷移 | State Enum + 遷移ロジック | State Pattern |
-| 業務ルール | Specification クラス | Specification Pattern |
-| データエンティティ | JPA Entity | @Entity + @Table |
+| 業務概念           | 生成物                    | パターン                  |
+| ------------------ | ------------------------- | ------------------------- |
+| 業務プロセス       | Service クラス            | @Service + @Transactional |
+| 業務イベント       | イベントクラス            | ApplicationEvent          |
+| 状態遷移           | State Enum + 遷移ロジック | State Pattern             |
+| 業務ルール         | Specification クラス      | Specification Pattern     |
+| データエンティティ | JPA Entity                | @Entity + @Table          |
 
 ### 共存パターン（Strangler Fig）
 

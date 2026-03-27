@@ -120,7 +120,7 @@ def _extract_imports(filepath: Path) -> list[tuple[int, str]]:
 
 def _get_layer(module_path: str) -> str | None:
     """モジュールパスから層名を取得する。"""
-    top = module_path.split(".")[0]
+    top = module_path.split(".", maxsplit=1)[0]
     return top if top in LAYER_PACKAGES else None
 
 

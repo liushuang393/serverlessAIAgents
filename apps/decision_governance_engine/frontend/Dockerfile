@@ -175,4 +175,3 @@ USER nginx-user
 
 # Nginx をフォアグラウンドで起動
 CMD ["nginx", "-g", "daemon off;"]
-

@@ -29,45 +29,28 @@ from shared.rag.document_loader import UniversalLoader
 
 
 # Optional dependencies - use Any for module variables to satisfy MyPy
-# Optional dependencies - use Any for module variables to satisfy MyPy
 sqlglot: Any = None
 sql_exp: Any = None
 trafilatura: Any = None
 boto3: Any = None
 
-try:
+with contextlib.suppress(ImportError):
     import sqlglot
     from sqlglot import exp as sql_exp
-except ImportError:  # pragma: no cover
-    pass
 
-try:
+with contextlib.suppress(ImportError):
     import trafilatura
-except ImportError:  # pragma: no cover
-    pass
 
 _httpx_module: Any = None
-try:
+with contextlib.suppress(ImportError):
     _httpx_module = importlib.import_module("httpx")
-except ImportError:  # pragma: no cover
-    pass
 
-try:
+with contextlib.suppress(ImportError):
     import boto3
-except ImportError:  # pragma: no cover
-    pass
 
 _tenacity_module: Any = None
-try:
+with contextlib.suppress(ImportError):
     _tenacity_module = importlib.import_module("tenacity")
-except ImportError:  # pragma: no cover
-    pass
-
-_tenacity_module: Any = None
-try:
-    _tenacity_module = importlib.import_module("tenacity")
-except ImportError:  # pragma: no cover
-    pass
 
 
 if TYPE_CHECKING:

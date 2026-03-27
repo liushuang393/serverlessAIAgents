@@ -1,23 +1,27 @@
 # Market Trend Monitor
 
-
 <!-- README_REQUIRED_SECTIONS_START -->
+
 ## 機能概要
+
 - 複数外部ソースから市場シグナルを収集し、トレンドを継続監視。
 - 分析・スコアリング・レポート生成を自動化し、意思決定を支援。
 - 通知・ダッシュボード連携で、変化点をリアルタイム共有。
 
 ## 優位性
+
 - 収集から検証（Red Team）までを一連フロー化し、誤検知を低減。
 - 9 Agent 協調により、単一分析器より高い網羅性を確保。
 - 定常運用を前提に、日次/週次レポートを標準化できる。
 
 ## 技術アーキテクチャ
+
 - FastAPI + BizCore create_flow によるパイプライン編排。
 - Frontend は React/Vite で可視化し、Backend API と疎結合連携。
 - Evidence Ledger と Signal Scorer で信頼性評価を明示。
 
 ## アプリケーション階層
+
 - Ingestion Layer: データ収集・正規化。
 - Analysis Layer: 抽出・分類・センチメント。
 - Governance Layer: スコアリング・反証検証。
@@ -56,17 +60,17 @@ Collector → EvidenceLedger → Analyzer → SignalScorer → Reporter → RedT
 
 ### エージェント構成
 
-| # | エージェント | 役割 |
-|---|------------|------|
-| 1 | **CollectorAgent** | 複数ソースからデータ収集 |
-| 2 | **EvidenceLedgerAgent** | 証拠台帳の管理 |
-| 3 | **AnalyzerAgent** | トレンド分析・センチメント分析 |
-| 4 | **SignalScorerAgent** | シグナル信頼度スコアリング |
-| 5 | **ReporterAgent** | レポート生成 |
-| 6 | **RedTeamAgent** | 仮説の反証検証 |
-| 7 | **NotifierAgent** | アラート通知 |
-| 8 | **CompetitorTrackingAgent** | 競合動向追跡 |
-| 9 | **PredictionReviewAgent** | 予測レビュー |
+| #   | エージェント                | 役割                           |
+| --- | --------------------------- | ------------------------------ |
+| 1   | **CollectorAgent**          | 複数ソースからデータ収集       |
+| 2   | **EvidenceLedgerAgent**     | 証拠台帳の管理                 |
+| 3   | **AnalyzerAgent**           | トレンド分析・センチメント分析 |
+| 4   | **SignalScorerAgent**       | シグナル信頼度スコアリング     |
+| 5   | **ReporterAgent**           | レポート生成                   |
+| 6   | **RedTeamAgent**            | 仮説の反証検証                 |
+| 7   | **NotifierAgent**           | アラート通知                   |
+| 8   | **CompetitorTrackingAgent** | 競合動向追跡                   |
+| 9   | **PredictionReviewAgent**   | 予測レビュー                   |
 
 ## セットアップ
 
@@ -106,14 +110,14 @@ pip install -e ".[dev,apps]"
 
 環境変数で上書きも可能です:
 
-| 環境変数 | 説明 | デフォルト |
-|---------|------|----------|
-| `MARKET_TREND_MONITOR_API_HOST` | API ホスト | `app_config.json` の値 |
-| `MARKET_TREND_MONITOR_API_PORT` | API ポート | `8002` |
-| `MARKET_TREND_MONITOR_FRONTEND_PORT` | フロントエンドポート | `3002` |
-| `OPENAI_API_KEY` | Provider API キー fallback | Platform 未設定時のみ |
-| `DATABASE_URL` | DB 接続先 | `sqlite:///./market_trend.db` |
-| `LOG_LEVEL` | ログレベル | `INFO` |
+| 環境変数                             | 説明                       | デフォルト                    |
+| ------------------------------------ | -------------------------- | ----------------------------- |
+| `MARKET_TREND_MONITOR_API_HOST`      | API ホスト                 | `app_config.json` の値        |
+| `MARKET_TREND_MONITOR_API_PORT`      | API ポート                 | `8002`                        |
+| `MARKET_TREND_MONITOR_FRONTEND_PORT` | フロントエンドポート       | `3002`                        |
+| `OPENAI_API_KEY`                     | Provider API キー fallback | Platform 未設定時のみ         |
+| `DATABASE_URL`                       | DB 接続先                  | `sqlite:///./market_trend.db` |
+| `LOG_LEVEL`                          | ログレベル                 | `INFO`                        |
 
 ## Platform 主導 LLM 契約
 

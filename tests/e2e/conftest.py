@@ -47,7 +47,7 @@ def skip_if_no_comfyui(request: pytest.FixtureRequest) -> None:
 async def comfyui_client(comfyui_url: str) -> ComfyUIClient:
     """ComfyUIクライアントを生成し、テスト後にクローズ."""
     client = ComfyUIClient(base_url=comfyui_url, timeout=300.0)
-    yield client  # type: ignore[misc]
+    yield client
     await client.close()
 
 

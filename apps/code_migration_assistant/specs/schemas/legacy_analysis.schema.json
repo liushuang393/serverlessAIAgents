@@ -15,16 +15,16 @@
     "extensions"
   ],
   "properties": {
-    "meta": {"type": "object"},
-    "programs": {"type": "array"},
-    "entry_points": {"type": "array"},
-    "io_contracts": {"type": "array"},
-    "data_structures": {"type": "array"},
-    "control_flow": {"type": "array"},
-    "db_access": {"type": "array"},
-    "external_calls": {"type": "array"},
-    "unknowns": {"type": "array"},
-    "extensions": {"type": "object"}
+    "meta": { "type": "object" },
+    "programs": { "type": "array" },
+    "entry_points": { "type": "array" },
+    "io_contracts": { "type": "array" },
+    "data_structures": { "type": "array" },
+    "control_flow": { "type": "array" },
+    "db_access": { "type": "array" },
+    "external_calls": { "type": "array" },
+    "unknowns": { "type": "array" },
+    "extensions": { "type": "object" }
   },
   "additionalProperties": true
 }

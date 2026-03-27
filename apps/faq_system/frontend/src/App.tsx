@@ -1,11 +1,17 @@
-import { useState, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { AuthGuard } from './components/auth/AuthGuard';
-import { LoginForm } from './components/auth/LoginForm';
-import { RegisterForm } from './components/auth/RegisterForm';
-import { AuthCallback } from './components/auth/AuthCallback';
-import { Sidebar } from './components/layout/Sidebar';
-import { ChatWindow } from './components/chat/ChatWindow';
+import { useState, useCallback } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+} from "react-router-dom";
+import { AuthGuard } from "./components/auth/AuthGuard";
+import { LoginForm } from "./components/auth/LoginForm";
+import { RegisterForm } from "./components/auth/RegisterForm";
+import { AuthCallback } from "./components/auth/AuthCallback";
+import { Sidebar } from "./components/layout/Sidebar";
+import { ChatWindow } from "./components/chat/ChatWindow";
 
 /**
  * 認証済みページのレイアウトラッパー。
@@ -33,11 +39,14 @@ function App() {
         <Route path="/register" element={<RegisterForm />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        <Route path="/" element={
-          <AuthGuard>
-            <AppLayout />
-          </AuthGuard>
-        }>
+        <Route
+          path="/"
+          element={
+            <AuthGuard>
+              <AppLayout />
+            </AuthGuard>
+          }
+        >
           <Route index element={<ChatWindow />} />
         </Route>
 

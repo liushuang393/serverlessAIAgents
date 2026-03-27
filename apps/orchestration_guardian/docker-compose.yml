@@ -9,7 +9,13 @@ services:
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/api/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8007/api/health')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

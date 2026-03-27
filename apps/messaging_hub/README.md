@@ -184,11 +184,11 @@ vim apps/messaging_hub/.env
 
 ```bash
 # ローカル開発（ホットリロード有効）
-# host / port は app_config.json を既定とし、scripts/dev.py が uvicorn に引き渡す
+# host / port は 明示指定 > app_config.json の順で解決し、共通 launcher 経由で起動
 conda run -n agentflow python apps/messaging_hub/scripts/dev.py --reload
 
-# 本番起動（リロードなし）
-conda run -n agentflow uvicorn apps.messaging_hub.main:app --host "${MSGHUB_HOST:-0.0.0.0}" --port "${MSGHUB_PORT:-8004}"
+# 本番相当のローカル起動（リロードなし）
+conda run -n agentflow python apps/messaging_hub/scripts/dev.py --no-reload --workers 2
 ```
 
 起動後のアクセス先：
@@ -238,6 +238,8 @@ PWA（インストール）手順:
 ```bash
 conda run -n agentflow python -m control_plane.main publish ./apps/messaging_hub --target docker
 ```
+
+Docker 直起動時も backend の bind host / port は `app_config.json` を既定とし、compose wrapper または明示 env で override します。
 
 発布時の補足（PWA）:
 
@@ -543,7 +545,7 @@ RUN pip install -e ".[dev]" && \
     pip install python-telegram-bot slack-sdk discord.py
 
 # host / port の既定値は app_config.json を使用
-CMD ["sh", "-c", "exec uvicorn apps.messaging_hub.main:app --host ${MSGHUB_HOST} --port ${MSGHUB_PORT}"]
+CMD ["python", "-m", "kernel.runtime.uvicorn_launcher", "--config", "apps/messaging_hub/app_config.json", "--app", "apps.messaging_hub.main:app", "--host-env", "MSGHUB_HOST", "--port-env", "MSGHUB_PORT"]
 ```
 
 ### 環境変数（本番環境）

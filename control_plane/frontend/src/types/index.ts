@@ -5,7 +5,7 @@
  */
 
 /** App ヘルスステータス */
-export type AppStatus = 'healthy' | 'unhealthy' | 'unknown' | 'stopped';
+export type AppStatus = "healthy" | "unhealthy" | "unknown" | "stopped";
 
 /** ランタイムURL */
 export interface RuntimeUrls {
@@ -54,12 +54,12 @@ export interface RuntimeCLITool {
   executable: string | null;
   install_commands: string[][];
   auth: RuntimeCLIAuth;
-  diagnostic_mode: 'read_only' | 'plan';
+  diagnostic_mode: "read_only" | "plan";
   diagnostic_command: string[] | null;
 }
 
 export interface RuntimeCLIConfig {
-  preferred: Array<'codex' | 'claude'>;
+  preferred: Array<"codex" | "claude">;
   codex: RuntimeCLITool;
   claude: RuntimeCLITool;
 }
@@ -118,7 +118,7 @@ export interface AppListItem {
   urls?: RuntimeUrls;
   runtime?: RuntimeConfig;
   visibility?: {
-    mode: 'private' | 'public' | 'tenant_allowlist';
+    mode: "private" | "public" | "tenant_allowlist";
     tenants: string[];
   };
   business_base: BusinessBaseKind;
@@ -138,7 +138,7 @@ export interface AppDetail {
   services: Record<string, unknown>;
   dependencies: DependenciesConfig;
   visibility?: {
-    mode: 'private' | 'public' | 'tenant_allowlist';
+    mode: "private" | "public" | "tenant_allowlist";
     tenants: string[];
   };
   blueprint?: {
@@ -205,20 +205,20 @@ export interface HealthCheckDetails {
     frontend?: {
       required: boolean;
       healthy: boolean;
-      status: AppStatus | 'skipped';
+      status: AppStatus | "skipped";
       message?: string;
       port?: number | null;
     };
     backend?: {
       required: boolean;
       healthy: boolean;
-      status: AppStatus | 'skipped';
+      status: AppStatus | "skipped";
       message?: string;
     };
     database?: {
       required: boolean;
       healthy: boolean;
-      status: AppStatus | 'skipped';
+      status: AppStatus | "skipped";
       message?: string;
       kind?: string | null;
       port?: number | null;
@@ -238,7 +238,7 @@ export interface HealthCheckResult {
 /** App 操作結果（publish/start/stop） */
 export interface AppActionResponse {
   app_name: string;
-  action: 'publish' | 'start' | 'stop' | string;
+  action: "publish" | "start" | "stop" | string;
   success: boolean;
   command: string;
   command_source: string;
@@ -413,14 +413,14 @@ export interface AgentsByBusinessBaseResponse {
 
 /** スキルカテゴリ ID */
 export type SkillCategoryId =
-  | 'common'
-  | 'code_development'
-  | 'web_search'
-  | 'enterprise_office'
-  | 'ad_marketing'
-  | 'enterprise_workflow'
-  | 'ai_assistant'
-  | 'media_creative';
+  | "common"
+  | "code_development"
+  | "web_search"
+  | "enterprise_office"
+  | "ad_marketing"
+  | "enterprise_workflow"
+  | "ai_assistant"
+  | "media_creative";
 
 /** Skill 情報 */
 export interface SkillInfo {
@@ -559,7 +559,7 @@ export interface RAGDatabaseTypeOption {
   name: string;
   label: string;
   dialect: string;
-  connection_kind: 'network' | 'file';
+  connection_kind: "network" | "file";
   default_port: number | null;
   sample_uri: string;
 }
@@ -623,7 +623,7 @@ export interface AppRAGConfigPatchRequest {
 }
 
 export interface AppRAGHotApplyResult {
-  mode: 'hot';
+  mode: "hot";
   applied: boolean;
   subscriber_count: number;
 }
@@ -684,53 +684,56 @@ export interface RAGStatsResponse {
  * ============================================================ */
 
 export type EnginePattern =
-  | 'simple'
-  | 'flow'
-  | 'pipeline'
-  | 'coordinator'
-  | 'deep_agent';
+  | "simple"
+  | "flow"
+  | "pipeline"
+  | "coordinator"
+  | "deep_agent";
 
-export type DatabaseKind = 'none' | 'sqlite' | 'postgresql';
+export type DatabaseKind = "none" | "sqlite" | "postgresql";
 export type VectorDatabaseKind =
-  | 'none'
-  | 'qdrant'
-  | 'pinecone'
-  | 'weaviate'
-  | 'pgvector'
-  | 'milvus';
+  | "none"
+  | "qdrant"
+  | "pinecone"
+  | "weaviate"
+  | "pgvector"
+  | "milvus";
 export type LLMProviderKind =
-  | 'auto'
-  | 'openai'
-  | 'anthropic'
-  | 'gemini'
-  | 'azure_openai'
-  | 'ollama'
-  | 'openrouter'
-  | 'custom';
-export type ProductLineKind = 'migration' | 'faq' | 'assistant' | 'framework';
-export type SurfaceProfileKind = 'business' | 'developer' | 'operator';
-export type AuditProfileKind = 'business' | 'developer';
-export type SecurityModeKind = 'read_only' | 'approval_required' | 'autonomous';
-export type RiskLevelKind = 'low' | 'medium' | 'high';
-export type EvolutionScopeLevel = 'tenant_app' | 'tenant_product_line' | 'global_verified';
-export type EvolutionValidatorBackend = 'redis_stream' | 'none';
+  | "auto"
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "azure_openai"
+  | "ollama"
+  | "openrouter"
+  | "custom";
+export type ProductLineKind = "migration" | "faq" | "assistant" | "framework";
+export type SurfaceProfileKind = "business" | "developer" | "operator";
+export type AuditProfileKind = "business" | "developer";
+export type SecurityModeKind = "read_only" | "approval_required" | "autonomous";
+export type RiskLevelKind = "low" | "medium" | "high";
+export type EvolutionScopeLevel =
+  | "tenant_app"
+  | "tenant_product_line"
+  | "global_verified";
+export type EvolutionValidatorBackend = "redis_stream" | "none";
 export type BusinessBaseKind =
-  | 'platform'
-  | 'knowledge'
-  | 'reasoning'
-  | 'interaction'
-  | 'integration'
-  | 'operations'
-  | 'governance'
-  | 'media'
-  | 'custom';
+  | "platform"
+  | "knowledge"
+  | "reasoning"
+  | "interaction"
+  | "integration"
+  | "operations"
+  | "governance"
+  | "media"
+  | "custom";
 export type AppTemplateKind =
-  | 'faq_knowledge_service'
-  | 'intelligence_monitoring'
-  | 'decision_governance'
-  | 'workflow_orchestrator'
-  | 'multichannel_assistant'
-  | 'ops_automation_runner';
+  | "faq_knowledge_service"
+  | "intelligence_monitoring"
+  | "decision_governance"
+  | "workflow_orchestrator"
+  | "multichannel_assistant"
+  | "ops_automation_runner";
 
 export interface AgentBlueprintInput {
   name: string;
@@ -815,7 +818,7 @@ export interface AppCreateRequest {
   framework_env_file: string;
   default_skills: string[];
   mcp_servers: string[];
-  tenant_visibility_mode: 'private' | 'public' | 'tenant_allowlist';
+  tenant_visibility_mode: "private" | "public" | "tenant_allowlist";
   tenant_ids: string[];
   agents: AgentBlueprintInput[];
 }
@@ -883,7 +886,7 @@ export interface AppCreateOptionsResponse {
     label: string;
   }>;
   visibility_modes?: Array<{
-    value: 'private' | 'public' | 'tenant_allowlist';
+    value: "private" | "public" | "tenant_allowlist";
     label: string;
   }>;
   evolution_scope_options?: Array<{
@@ -926,7 +929,7 @@ export interface AppTemplatesResponse {
 }
 
 export interface PortConflictItem {
-  port_type: 'api' | 'frontend' | 'db' | 'redis';
+  port_type: "api" | "frontend" | "db" | "redis";
   port: number;
   apps: string[];
 }
@@ -992,14 +995,14 @@ export interface LLMProviderSecretStatus {
 
 export interface LLMProviderRuntimeStatus {
   name: string;
-  status: 'available' | 'unavailable';
+  status: "available" | "unavailable";
   api_key_env: string | null;
   source: string | null;
   masked: string | null;
   last_error: string | null;
 }
 
-export type InferenceEngineType = 'vllm' | 'sglang' | 'tgi';
+export type InferenceEngineType = "vllm" | "sglang" | "tgi";
 
 export interface LLMInferenceEngineConfigItem {
   name: string;
@@ -1009,7 +1012,7 @@ export interface LLMInferenceEngineConfigItem {
   metrics_path: string;
   model_list_path: string;
   enabled: boolean;
-  deployment_mode: 'manual' | 'docker';
+  deployment_mode: "manual" | "docker";
   docker_image: string | null;
   served_model_name: string | null;
   container_name: string | null;
@@ -1027,7 +1030,7 @@ export interface LLMInferenceEngineConfigItem {
 export interface LLMEngineRuntimeStatus {
   name: string;
   engine_type: InferenceEngineType;
-  status: 'available' | 'unavailable';
+  status: "available" | "unavailable";
   latency_ms: number | null;
   gpu_usage: number | null;
   loaded_models: string[];
@@ -1044,7 +1047,12 @@ export interface LLMModelConfigItem {
   model_id: string | null;
   provider: string;
   model: string;
-  model_type: 'text' | 'embedding' | 'image' | 'speech_to_text' | 'text_to_speech';
+  model_type:
+    | "text"
+    | "embedding"
+    | "image"
+    | "speech_to_text"
+    | "text_to_speech";
   api_base: string | null;
   api_key_env: string | null;
   engine: string | null;
@@ -1056,9 +1064,9 @@ export interface LLMModelConfigItem {
 }
 
 export interface LLMRoutingPolicyConfig {
-  priority: 'latency' | 'cost' | 'quality';
+  priority: "latency" | "cost" | "quality";
   fallback_chain: Record<string, string[]>;
-  load_balance_strategy: 'round_robin' | 'least_latency' | 'random';
+  load_balance_strategy: "round_robin" | "least_latency" | "random";
   cost_budget: number | null;
 }
 
@@ -1090,17 +1098,17 @@ export interface LLMManagementOverviewResponse {
 }
 
 export type LLMManagementProviderKind =
-  | 'openai'
-  | 'anthropic'
-  | 'google'
-  | 'ollama'
-  | 'azure_openai'
-  | 'openrouter'
-  | 'deepseek'
-  | 'custom'
-  | 'local';
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "ollama"
+  | "azure_openai"
+  | "openrouter"
+  | "deepseek"
+  | "custom"
+  | "local";
 
-export type LLMBackendKind = 'none' | 'vllm' | 'sglang' | 'tgi';
+export type LLMBackendKind = "none" | "vllm" | "sglang" | "tgi";
 
 export interface LLMCatalogProvider {
   name: LLMManagementProviderKind;
@@ -1118,7 +1126,12 @@ export interface LLMCatalogModel {
   model_id: string | null;
   provider: string;
   model: string;
-  model_type: 'text' | 'embedding' | 'image' | 'speech_to_text' | 'text_to_speech';
+  model_type:
+    | "text"
+    | "embedding"
+    | "image"
+    | "speech_to_text"
+    | "text_to_speech";
   capabilities: string[];
   context_window: number;
   recommended_for: string[];
@@ -1161,17 +1174,17 @@ export interface LLMSetupCommandResult {
 }
 
 export interface LLMPreflightStep {
-  category: 'provider' | 'backend';
+  category: "provider" | "backend";
   target: string;
-  phase: 'detect' | 'install' | 'start' | 'health' | 'validate';
-  status: 'success' | 'failed' | 'skipped' | 'dry_run';
+  phase: "detect" | "install" | "start" | "health" | "validate";
+  status: "success" | "failed" | "skipped" | "dry_run";
   message: string;
   command: LLMSetupCommandResult | null;
   remediation: string[];
 }
 
 export interface LLMPreflightReport {
-  status: 'success' | 'failed' | 'partial' | 'dry_run';
+  status: "success" | "failed" | "partial" | "dry_run";
   started_at: string;
   completed_at: string;
   request: LLMPreflightRequest;

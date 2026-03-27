@@ -74,7 +74,7 @@ async def test_orchestrator_routes_strategy_and_records_events() -> None:
             context={},
         )
 
-    orchestrator._planner.create_plan = _custom_plan  # type: ignore[assignment]
+    orchestrator._planner.create_plan = _custom_plan
 
     result = await orchestrator.execute(
         "test task",

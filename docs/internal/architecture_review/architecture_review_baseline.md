@@ -72,65 +72,65 @@ infrastructure
 
 以下数据来自粗粒度 import 扫描，表示“跨层 import 语句数 / 涉及文件数”：
 
-| Source | Target | Count | Files | Baseline |
-| --- | --- | ---: | ---: | --- |
-| `apps` | `kernel` | 203 | 137 | expected-heavy |
-| `apps` | `shared` | 71 | 43 | expected-heavy |
-| `control_plane` | `kernel` | 62 | 43 | expected-heavy |
-| `kernel` | `infrastructure` | 49 | 24 | suspicious |
-| `apps` | `infrastructure` | 45 | 33 | acceptable |
-| `kernel` | `shared` | 43 | 31 | suspicious |
-| `shared` | `infrastructure` | 37 | 27 | acceptable |
-| `infrastructure` | `contracts` | 36 | 20 | expected |
-| `control_plane` | `infrastructure` | 30 | 21 | expected |
-| `shared` | `kernel` | 22 | 14 | suspicious |
-| `apps` | `harness` | 21 | 16 | acceptable |
-| `control_plane` | `shared` | 20 | 10 | expected |
-| `domain` | `kernel` | 18 | 9 | suspicious |
-| `harness` | `infrastructure` | 14 | 10 | acceptable-with-adapters |
-| `shared` | `control_plane` | 4 | 3 | violation |
-| `apps` | `control_plane` | 3 | 3 | suspicious |
-| `control_plane` | `apps` | 2 | 1 | suspicious |
-| `kernel` | `control_plane` | 1 | 1 | violation |
-| `shared` | `apps` | 1 | 1 | violation |
+| Source           | Target           | Count | Files | Baseline                 |
+| ---------------- | ---------------- | ----: | ----: | ------------------------ |
+| `apps`           | `kernel`         |   203 |   137 | expected-heavy           |
+| `apps`           | `shared`         |    71 |    43 | expected-heavy           |
+| `control_plane`  | `kernel`         |    62 |    43 | expected-heavy           |
+| `kernel`         | `infrastructure` |    49 |    24 | suspicious               |
+| `apps`           | `infrastructure` |    45 |    33 | acceptable               |
+| `kernel`         | `shared`         |    43 |    31 | suspicious               |
+| `shared`         | `infrastructure` |    37 |    27 | acceptable               |
+| `infrastructure` | `contracts`      |    36 |    20 | expected                 |
+| `control_plane`  | `infrastructure` |    30 |    21 | expected                 |
+| `shared`         | `kernel`         |    22 |    14 | suspicious               |
+| `apps`           | `harness`        |    21 |    16 | acceptable               |
+| `control_plane`  | `shared`         |    20 |    10 | expected                 |
+| `domain`         | `kernel`         |    18 |     9 | suspicious               |
+| `harness`        | `infrastructure` |    14 |    10 | acceptable-with-adapters |
+| `shared`         | `control_plane`  |     4 |     3 | violation                |
+| `apps`           | `control_plane`  |     3 |     3 | suspicious               |
+| `control_plane`  | `apps`           |     2 |     1 | suspicious               |
+| `kernel`         | `control_plane`  |     1 |     1 | violation                |
+| `shared`         | `apps`           |     1 |     1 | violation                |
 
 ## Horizontal Expansion
 
 ### Cross-Layer Violation Matrix
 
-| Pattern | Representative Files | Horizontal Spread | Current Status |
-| --- | --- | --- | --- |
-| `shared -> control_plane` | `shared/services/publish_service.py`, `shared/channels/gateway.py` | 聚集在消息通道与发布链路 | 已收口为 runtime facade / lazy compat |
-| `kernel -> control_plane` | `kernel/agents/mixins/rag_mixin.py` | 主要集中在 capability bootstrap 类型感知 | 已切到 `kernel.runtime` |
-| `apps -> control_plane internals` | `apps/messaging_hub/main.py`, `apps/faq_system/main.py` | 代表 app 启动路径 | 已切到 `kernel.runtime` facade |
-| `domain -> runtime/shared helpers` | `domain/templates/*` 9 个模板文件 | finance / healthcare / manufacturing 三类模板均存在 | 已切到 `kernel.templates.template_runtime` 与 `domain.templates.template_helpers` |
-| `control_plane -> shared -> apps/control_plane` 回环 | `control_plane/services/publish_orchestrator.py` + `shared/services/publish_service.py` | 发布链主路径 | 已将 canonical 实现迁入 `control_plane.publish.service` |
+| Pattern                                              | Representative Files                                                                    | Horizontal Spread                                   | Current Status                                                                    |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `shared -> control_plane`                            | `shared/services/publish_service.py`, `shared/channels/gateway.py`                      | 聚集在消息通道与发布链路                            | 已收口为 runtime facade / lazy compat                                             |
+| `kernel -> control_plane`                            | `kernel/agents/mixins/rag_mixin.py`                                                     | 主要集中在 capability bootstrap 类型感知            | 已切到 `kernel.runtime`                                                           |
+| `apps -> control_plane internals`                    | `apps/messaging_hub/main.py`, `apps/faq_system/main.py`                                 | 代表 app 启动路径                                   | 已切到 `kernel.runtime` facade                                                    |
+| `domain -> runtime/shared helpers`                   | `domain/templates/*` 9 个模板文件                                                       | finance / healthcare / manufacturing 三类模板均存在 | 已切到 `kernel.templates.template_runtime` 与 `domain.templates.template_helpers` |
+| `control_plane -> shared -> apps/control_plane` 回环 | `control_plane/services/publish_orchestrator.py` + `shared/services/publish_service.py` | 发布链主路径                                        | 已将 canonical 实现迁入 `control_plane.publish.service`                           |
 
 ### `apps/*/app_config.json` Completeness Matrix
 
-| Area | Current Observation | Risk | Action |
-| --- | --- | --- | --- |
-| canonical loader | `shared.config.manifest` 已存在并可统一读取 | 低 | 已作为 bootstrap / plugin registry 真源 |
-| plugin bindings | 业务 app 覆盖较好，framework app 不均匀 | 中 | 继续在治理与审计上补齐 |
-| product line / profile | 多数 manifest 已具备最小字段 | 中 | `AppConfig` 明确降为 projection |
-| runtime commands / urls | 完整性随 app 差异较大 | 中 | 保持由 canonical manifest 承载 |
+| Area                    | Current Observation                         | Risk | Action                                  |
+| ----------------------- | ------------------------------------------- | ---- | --------------------------------------- |
+| canonical loader        | `shared.config.manifest` 已存在并可统一读取 | 低   | 已作为 bootstrap / plugin registry 真源 |
+| plugin bindings         | 业务 app 覆盖较好，framework app 不均匀     | 中   | 继续在治理与审计上补齐                  |
+| product line / profile  | 多数 manifest 已具备最小字段                | 中   | `AppConfig` 明确降为 projection         |
+| runtime commands / urls | 完整性随 app 差异较大                       | 中   | 保持由 canonical manifest 承载          |
 
 ### Plugin / Skill / Provider Comparison
 
-| Kind | Canonical Layer | Role | Current Implementation Status |
-| --- | --- | --- | --- |
-| `plugin` | `contracts.plugin` + `harness.governance` | 可声明、可治理、可绑定的安装单元 | 已统一默认 packs 根目录与 canonical manifest loader |
-| `skill` | `kernel.skills` | app-facing capability composition | 保持为 runtime-facing composition |
-| `provider` | `infrastructure` | 外部后端适配 | 维持现状，未做破坏式迁移 |
+| Kind       | Canonical Layer                           | Role                              | Current Implementation Status                       |
+| ---------- | ----------------------------------------- | --------------------------------- | --------------------------------------------------- |
+| `plugin`   | `contracts.plugin` + `harness.governance` | 可声明、可治理、可绑定的安装单元  | 已统一默认 packs 根目录与 canonical manifest loader |
+| `skill`    | `kernel.skills`                           | app-facing capability composition | 保持为 runtime-facing composition                   |
+| `provider` | `infrastructure`                          | 外部后端适配                      | 维持现状，未做破坏式迁移                            |
 
 ### Hot File Inventory
 
-| File | Approx Role | Review Result |
-| --- | --- | --- |
-| `control_plane/services/app_lifecycle.py` | lifecycle + repair + runtime management | 仍为 P2 热点 |
-| `control_plane/services/app_discovery.py` | discovery + normalize + validate | 已补 projection 真源说明，后续继续拆分 |
-| `control_plane/services/publish_orchestrator.py` | publish facade | 已切换到 canonical publish service |
-| `harness/governance/plugin_registry.py` | plugin governance facade | 已拆 loader / binding resolver / policy evaluator 协作对象 |
+| File                                             | Approx Role                             | Review Result                                              |
+| ------------------------------------------------ | --------------------------------------- | ---------------------------------------------------------- |
+| `control_plane/services/app_lifecycle.py`        | lifecycle + repair + runtime management | 仍为 P2 热点                                               |
+| `control_plane/services/app_discovery.py`        | discovery + normalize + validate        | 已补 projection 真源说明，后续继续拆分                     |
+| `control_plane/services/publish_orchestrator.py` | publish facade                          | 已切换到 canonical publish service                         |
+| `harness/governance/plugin_registry.py`          | plugin governance facade                | 已拆 loader / binding resolver / policy evaluator 协作对象 |
 
 ## Implemented Remediation Snapshot
 
@@ -165,28 +165,28 @@ infrastructure
 
 按 Python 文件行数统计的热点模块：
 
-| LOC | Path |
-| ---: | --- |
-| 3294 | `kernel/patterns/deep_agent.py` |
-| 2873 | `apps/faq_system/backend/agents/faq_agent.py` |
-| 2679 | `control_plane/services/app_lifecycle.py` |
-| 2590 | `apps/messaging_hub/main.py` |
+|  LOC | Path                                                |
+| ---: | --------------------------------------------------- |
+| 3294 | `kernel/patterns/deep_agent.py`                     |
+| 2873 | `apps/faq_system/backend/agents/faq_agent.py`       |
+| 2679 | `control_plane/services/app_lifecycle.py`           |
+| 2590 | `apps/messaging_hub/main.py`                        |
 | 2128 | `apps/faq_system/backend/services/rag_ingestion.py` |
-| 1314 | `shared/services/semantic_layer.py` |
-| 1295 | `apps/code_migration_assistant/engine.py` |
-| 1149 | `control_plane/services/app_scaffolder.py` |
-| 1122 | `control_plane/routers/apps.py` |
-| 1042 | `control_plane/services/framework_audit.py` |
+| 1314 | `shared/services/semantic_layer.py`                 |
+| 1295 | `apps/code_migration_assistant/engine.py`           |
+| 1149 | `control_plane/services/app_scaffolder.py`          |
+| 1122 | `control_plane/routers/apps.py`                     |
+| 1042 | `control_plane/services/framework_audit.py`         |
 
 这些文件不一定都是问题，但它们同时具有“复杂度高 + 边界敏感”的特征，值得在评审中优先阅读。
 
 ## Representative App Selection
 
-| App | Why It Was Chosen |
-| --- | --- |
-| `code_migration_assistant` | `product_line=migration`，10 个 agents，3 个 plugin bindings，编排与 workflow 密度最高 |
-| `messaging_hub` | `product_line=assistant`，2 个 plugin bindings，直接触碰 `control_plane`，最能暴露控制面与通道耦合 |
-| `faq_system` | `product_line=faq`，7 个 agents，2 个 plugin bindings，`shared/kernel/infrastructure` 复用最重 |
+| App                        | Why It Was Chosen                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------- |
+| `code_migration_assistant` | `product_line=migration`，10 个 agents，3 个 plugin bindings，编排与 workflow 密度最高             |
+| `messaging_hub`            | `product_line=assistant`，2 个 plugin bindings，直接触碰 `control_plane`，最能暴露控制面与通道耦合 |
+| `faq_system`               | `product_line=faq`，7 个 agents，2 个 plugin bindings，`shared/kernel/infrastructure` 复用最重     |
 
 代表应用的粗粒度依赖画像：
 

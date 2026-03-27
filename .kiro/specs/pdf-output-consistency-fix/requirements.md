@@ -47,9 +47,9 @@ This document specifies the requirements for fixing the PDF output consistency i
 #### Acceptance Criteria
 
 1. WHEN HTML_Fallback_Mode is used, THE PDF_Generator SHALL generate complete HTML for all sections
-2. WHEN the _build_shu_html method is called, THE PDF_Generator SHALL return complete HTML without truncation
-3. WHEN the _build_qi_html method is called, THE PDF_Generator SHALL return complete HTML without truncation
-4. WHEN the _build_review_html method is called, THE PDF_Generator SHALL return complete HTML without truncation
+2. WHEN the \_build_shu_html method is called, THE PDF_Generator SHALL return complete HTML without truncation
+3. WHEN the \_build_qi_html method is called, THE PDF_Generator SHALL return complete HTML without truncation
+4. WHEN the \_build_review_html method is called, THE PDF_Generator SHALL return complete HTML without truncation
 5. FOR ALL section builder methods, THE PDF_Generator SHALL complete execution without premature termination
 
 ### Requirement 4: Styling Consistency
@@ -92,9 +92,9 @@ This document specifies the requirements for fixing the PDF output consistency i
 #### Acceptance Criteria
 
 1. THE PDF_Generator SHALL have complete implementations of all section builder methods
-2. WHEN the _build_shu_html method is defined, THE PDF_Generator SHALL include the complete method body
-3. WHEN the _build_qi_html method is defined, THE PDF_Generator SHALL include the complete method body
-4. WHEN the _build_review_html method is defined, THE PDF_Generator SHALL include the complete method body
+2. WHEN the \_build_shu_html method is defined, THE PDF_Generator SHALL include the complete method body
+3. WHEN the \_build_qi_html method is defined, THE PDF_Generator SHALL include the complete method body
+4. WHEN the \_build_review_html method is defined, THE PDF_Generator SHALL include the complete method body
 5. FOR ALL methods in the PDF_Generator class, THE implementation SHALL be syntactically complete
 
 ### Requirement 8: Round-Trip Consistency

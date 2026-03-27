@@ -110,22 +110,27 @@ GovernanceEngine.evaluate_tool()
 # 移行設計書
 
 ## 1. 概要
+
 - 対象システム: {system_name}
 - 移行元: COBOL / IBM メインフレーム
 - 移行先: Java / Spring Boot / AWS
 
 ## 2. 業務フロー
+
 {business_processes から自動生成}
 
 ## 3. 新旧対照表
-| No | 旧機能 | 新機能 | 変換方式 | リスク |
-|----|-------|-------|---------|-------|
-| 1  | ...   | ...   | 自動    | 低    |
+
+| No  | 旧機能 | 新機能 | 変換方式 | リスク |
+| --- | ------ | ------ | -------- | ------ |
+| 1   | ...    | ...    | 自動     | 低     |
 
 ## 4. テスト計画
+
 {test_synthesis から自動生成}
 
 ## 5. リスク分析
+
 {risk_assessment から自動生成}
 ```
 
@@ -146,7 +151,7 @@ GovernanceEngine.evaluate_tool()
     "total_operations": 150,
     "approved": 148,
     "rejected": 2,
-    "by_risk_level": {"low": 100, "normal": 40, "high": 10}
+    "by_risk_level": { "low": 100, "normal": 40, "high": 10 }
   },
   "unknowns": [],
   "extensions": {}

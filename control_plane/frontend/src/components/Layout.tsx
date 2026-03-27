@@ -4,25 +4,25 @@
  * 全画面共通のレイアウトコンポーネント。
  */
 
-import { NavLink, Outlet } from 'react-router-dom';
-import { LocaleSwitcher, useI18n } from '@/i18n';
+import { NavLink, Outlet } from "react-router-dom";
+import { LocaleSwitcher, useI18n } from "@/i18n";
 
 export function Layout() {
   const { t } = useI18n();
 
   /** ロケール変化時に再計算されるナビゲーション項目 */
   const navItems = [
-    { to: '/',                    icon: '📊', label: t('nav.dashboard') },
-    { to: '/apps',                icon: '📦', label: t('nav.apps') },
-    { to: '/agents',              icon: '🤖', label: t('nav.agents') },
-    { to: '/agent-orchestration', icon: '🔀', label: t('nav.orchestration') },
-    { to: '/agent-patterns',      icon: '🧬', label: t('nav.patterns') },
-    { to: '/skills',              icon: '🧩', label: t('nav.skills') },
-    { to: '/rag',                 icon: '📚', label: t('nav.rag') },
-    { to: '/mcp',                 icon: '🔌', label: t('nav.mcp') },
-    { to: '/cli',                 icon: '📖', label: t('nav.cli') },
-    { to: '/llm-management',      icon: '🧠', label: t('nav.llm_management') },
-    { to: '/settings',            icon: '⚙️', label: t('nav.settings') },
+    { to: "/", icon: "📊", label: t("nav.dashboard") },
+    { to: "/apps", icon: "📦", label: t("nav.apps") },
+    { to: "/agents", icon: "🤖", label: t("nav.agents") },
+    { to: "/agent-orchestration", icon: "🔀", label: t("nav.orchestration") },
+    { to: "/agent-patterns", icon: "🧬", label: t("nav.patterns") },
+    { to: "/skills", icon: "🧩", label: t("nav.skills") },
+    { to: "/rag", icon: "📚", label: t("nav.rag") },
+    { to: "/mcp", icon: "🔌", label: t("nav.mcp") },
+    { to: "/cli", icon: "📖", label: t("nav.cli") },
+    { to: "/llm-management", icon: "🧠", label: t("nav.llm_management") },
+    { to: "/settings", icon: "⚙️", label: t("nav.settings") },
   ];
 
   return (
@@ -46,17 +46,19 @@ export function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
-              data-testid={item.to === '/rag' ? 'nav-rag' : undefined}
+              end={item.to === "/"}
+              data-testid={item.to === "/rag" ? "nav-rag" : undefined}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? 'bg-indigo-600/20 text-indigo-400 font-medium'
-                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                    ? "bg-indigo-600/20 text-indigo-400 font-medium"
+                    : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                 }`
               }
             >
-              <span aria-hidden="true" className="text-base">{item.icon}</span>
+              <span aria-hidden="true" className="text-base">
+                {item.icon}
+              </span>
               {item.label}
             </NavLink>
           ))}

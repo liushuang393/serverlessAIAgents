@@ -9,70 +9,138 @@
  */
 
 /// <reference types="vitest" />
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import fs from 'node:fs';
-import path from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import fs from "node:fs";
+import path from "path";
 
-const appConfigPath = path.resolve(__dirname, '../app_config.json');
-let appConfig: { ports?: { api?: number; frontend?: number } } = {};
+type AppConfig = {
+  ports?: {
+    api?: number;
+    frontend?: number;
+  };
+  runtime?: {
+    hosts?: {
+      backend?: string | null;
+      frontend?: string | null;
+    };
+  };
+};
+
+function parsePort(value: string | number | undefined): number | undefined {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function requirePort(
+  name: string,
+  envValue: string | undefined,
+  manifestValue: number | undefined,
+): number {
+  const resolved = parsePort(envValue ?? manifestValue);
+  if (resolved !== undefined) {
+    return resolved;
+  }
+  throw new Error(`${name} が app_config.json または env にありません。`);
+}
+
+function requireHost(
+  name: string,
+  envValue: string | undefined,
+  manifestValue: string | null | undefined,
+): string {
+  const resolved = envValue?.trim() || manifestValue?.trim();
+  if (resolved) {
+    return resolved;
+  }
+  throw new Error(`${name} が app_config.json または env にありません。`);
+}
+
+function normalizeProxyHost(host: string): string {
+  if (host === "0.0.0.0" || host === "::") {
+    return "localhost";
+  }
+  return host;
+}
+
+const appConfigPath = path.resolve(__dirname, "../app_config.json");
+let appConfig: AppConfig = {};
 if (fs.existsSync(appConfigPath)) {
   try {
-    appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf-8')) as { ports?: { api?: number; frontend?: number } };
+    appConfig = JSON.parse(
+      fs.readFileSync(appConfigPath, "utf-8"),
+    ) as AppConfig;
   } catch {
     appConfig = {};
   }
 }
-const apiPort = appConfig.ports?.api ?? 8001;
-const frontendPort = appConfig.ports?.frontend ?? 5174;
+const apiPort = requirePort(
+  "DGE_PORT",
+  process.env.DGE_PORT,
+  appConfig.ports?.api,
+);
+const frontendPort = requirePort(
+  "FRONTEND_PORT",
+  process.env.FRONTEND_PORT,
+  appConfig.ports?.frontend,
+);
+const frontendHost = requireHost(
+  "FRONTEND_HOST",
+  process.env.FRONTEND_HOST,
+  appConfig.runtime?.hosts?.frontend,
+);
+const backendHost = normalizeProxyHost(
+  requireHost(
+    "DGE_HOST",
+    process.env.DGE_HOST,
+    appConfig.runtime?.hosts?.backend,
+  ),
+);
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@bizcore/i18n': path.resolve(__dirname, './src/i18n/base'),
+      "@": path.resolve(__dirname, "./src"),
+      "@bizcore/i18n": path.resolve(__dirname, "./src/i18n/base"),
     },
   },
-  // -------------------------------------------------------------------------
-  // 開発サーバー設定（vite dev 時のみ有効）
-  // 本番環境では Nginx が /api/ を backend:8000 にプロキシ
-  // -------------------------------------------------------------------------
   server: {
     port: frontendPort,
-    host: '0.0.0.0',  // WSL2 から Windows ブラウザにアクセス可能にするため
+    host: frontendHost,
     proxy: {
-      '/api': {
-        // PROXY_TARGET: 容器内では Docker 内部ネットワーク名を使用
-        // ※ VITE_ プレフィックスを使うとブラウザ側に注入されてしまうため、
-        //    proxy target 専用に PROXY_TARGET を使用する
-        target: process.env.PROXY_TARGET || `http://localhost:${apiPort}`,
+      "/api": {
+        target: process.env.PROXY_TARGET || `http://${backendHost}:${apiPort}`,
         changeOrigin: true,
-        // SSE ストリーミング対応 - 重要な設定
-        ws: false,  // WebSocket を無効化（SSE と競合防止）
-        timeout: 0,  // タイムアウト無効化（長時間接続対応）
-        proxyTimeout: 0,  // プロキシタイムアウト無効化
+        ws: false,
+        timeout: 0,
+        proxyTimeout: 0,
         configure: (proxy) => {
-          // SSE 接続用の設定
-          proxy.on('proxyReq', (proxyReq, req) => {
-            if (req.url?.includes('/stream')) {
-              proxyReq.setHeader('Accept', 'text/event-stream');
-              proxyReq.setHeader('Cache-Control', 'no-cache');
-              proxyReq.setHeader('Connection', 'keep-alive');
+          proxy.on("proxyReq", (proxyReq, req) => {
+            if (req.url?.includes("/stream")) {
+              proxyReq.setHeader("Accept", "text/event-stream");
+              proxyReq.setHeader("Cache-Control", "no-cache");
+              proxyReq.setHeader("Connection", "keep-alive");
             }
           });
-          // レスポンスヘッダーの追加
-          proxy.on('proxyRes', (proxyRes, req) => {
-            if (req.url?.includes('/stream')) {
-              proxyRes.headers['Cache-Control'] = 'no-cache';
-              proxyRes.headers['X-Accel-Buffering'] = 'no';
+          proxy.on("proxyRes", (proxyRes, req) => {
+            if (req.url?.includes("/stream")) {
+              proxyRes.headers["Cache-Control"] = "no-cache";
+              proxyRes.headers["X-Accel-Buffering"] = "no";
             }
           });
-          // エラーハンドリング
-          proxy.on('error', (err, req, res) => {
+          proxy.on("error", (err, req, res) => {
             void req;
             void res;
-            console.error('[Vite Proxy Error]', err.message);
+            console.error("[Vite Proxy Error]", err.message);
           });
         },
       },
@@ -80,14 +148,13 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/__tests__/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    environment: "jsdom",
+    setupFiles: ["./src/__tests__/setup.ts"],
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
     coverage: {
-      reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.d.ts', 'src/__tests__/**'],
+      reporter: ["text", "json", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.d.ts", "src/__tests__/**"],
     },
   },
 });
-

@@ -4,12 +4,16 @@
  * コレクション / ドキュメント / チャンクプレビューの状態管理。
  */
 
-import { create } from 'zustand';
-import type { CollectionInfo, DocumentInfo, ChunkPreview } from '../api/knowledge';
-import { knowledgeApi } from '../api/knowledge';
+import { create } from "zustand";
+import type {
+  CollectionInfo,
+  DocumentInfo,
+  ChunkPreview,
+} from "../api/knowledge";
+import { knowledgeApi } from "../api/knowledge";
 
 /** アクティブタブ */
-export type KBTab = 'dashboard' | 'collections' | 'documents' | 'config';
+export type KBTab = "dashboard" | "collections" | "documents" | "config";
 
 interface KnowledgeState {
   activeTab: KBTab;
@@ -26,18 +30,25 @@ interface KnowledgeState {
 
   fetchCollections: () => Promise<void>;
   createCollection: (data: Record<string, unknown>) => Promise<void>;
-  updateCollection: (name: string, data: Record<string, unknown>) => Promise<void>;
+  updateCollection: (
+    name: string,
+    data: Record<string, unknown>,
+  ) => Promise<void>;
   deleteCollection: (name: string) => Promise<void>;
 
   fetchDocuments: (collection: string) => Promise<void>;
   uploadDocument: (collection: string, file: File) => Promise<void>;
   deleteDocument: (collection: string, docId: string) => Promise<void>;
   indexDocument: (collection: string, docId: string) => Promise<void>;
-  previewChunks: (collection: string, docId: string, opts?: Record<string, unknown>) => Promise<void>;
+  previewChunks: (
+    collection: string,
+    docId: string,
+    opts?: Record<string, unknown>,
+  ) => Promise<void>;
 }
 
 export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
-  activeTab: 'dashboard',
+  activeTab: "dashboard",
   collections: [],
   documents: [],
   chunkPreviews: [],
@@ -46,7 +57,8 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
   loading: false,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
-  setSelectedCollection: (name) => set({ selectedCollection: name, documents: [], chunkPreviews: [] }),
+  setSelectedCollection: (name) =>
+    set({ selectedCollection: name, documents: [], chunkPreviews: [] }),
   setError: (err) => set({ error: err }),
 
   fetchCollections: async () => {
@@ -55,7 +67,10 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       const res = await knowledgeApi.listCollections();
       set({ collections: res.collections, loading: false });
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error', loading: false });
+      set({
+        error: e instanceof Error ? e.message : "Unknown error",
+        loading: false,
+      });
     }
   },
 
@@ -65,7 +80,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       await knowledgeApi.createCollection(data);
       await get().fetchCollections();
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 
@@ -75,7 +90,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       await knowledgeApi.updateCollection(name, data);
       await get().fetchCollections();
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 
@@ -87,7 +102,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       if (s.selectedCollection === name) set({ selectedCollection: null });
       await get().fetchCollections();
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 
@@ -97,7 +112,10 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       const res = await knowledgeApi.listDocuments(collection);
       set({ documents: res.documents, loading: false });
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error', loading: false });
+      set({
+        error: e instanceof Error ? e.message : "Unknown error",
+        loading: false,
+      });
     }
   },
 
@@ -107,7 +125,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       await knowledgeApi.uploadDocument(collection, file);
       await get().fetchDocuments(collection);
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 
@@ -117,7 +135,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       await knowledgeApi.deleteDocument(collection, docId);
       await get().fetchDocuments(collection);
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 
@@ -127,7 +145,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       await knowledgeApi.indexDocument(collection, docId);
       await get().fetchDocuments(collection);
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 
@@ -137,7 +155,7 @@ export const useKnowledgeStore = create<KnowledgeState>()((set, get) => ({
       const res = await knowledgeApi.previewChunks(collection, docId, opts);
       set({ chunkPreviews: res.chunks });
     } catch (e) {
-      set({ error: e instanceof Error ? e.message : 'Unknown error' });
+      set({ error: e instanceof Error ? e.message : "Unknown error" });
     }
   },
 }));

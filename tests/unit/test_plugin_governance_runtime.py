@@ -502,7 +502,7 @@ def test_signature_enforcement_defaults_to_deny_on_staging(
     plugins_dir.mkdir(parents=True)
     apps_dir.mkdir(parents=True)
     registry = PluginRegistry(plugins_dir=plugins_dir, apps_dir=apps_dir)
-    assert registry._signature_enforcement == "deny"  # type: ignore[attr-defined]
+    assert registry._signature_enforcement == "deny"
 
 
 def test_plugin_registry_defaults_to_kernel_plugin_packs(
@@ -530,7 +530,7 @@ def test_plugin_registry_defaults_to_kernel_plugin_packs(
     registry = PluginRegistry()
 
     assert registry.get_manifest("official.sample-pack") is not None
-    assert registry._plugins_dir == tmp_path / "kernel" / "plugins" / "packs"  # type: ignore[attr-defined]
+    assert registry._plugins_dir == tmp_path / "kernel" / "plugins" / "packs"
 
 
 def test_plugin_registry_loads_app_snapshot_via_canonical_manifest_loader(
@@ -566,7 +566,7 @@ def test_plugin_registry_loads_app_snapshot_via_canonical_manifest_loader(
     )
 
     registry = PluginRegistry(plugins_dir=plugins_dir, apps_dir=apps_dir)
-    snapshot = registry._load_app_snapshot("faq_app")  # type: ignore[attr-defined]
+    snapshot = registry._load_app_snapshot("faq_app")
 
     assert snapshot is not None
     assert snapshot.product_line == "faq"

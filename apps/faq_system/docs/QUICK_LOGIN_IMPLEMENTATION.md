@@ -47,7 +47,7 @@ class AuthService:
     def __init__(self, secret_key: str = "your-secret-key"):
         self.secret_key = secret_key
         self.users = {}  # 临时存储，生产用DB
-    
+
     def create_token(self, user_id: str, role: str) -> str:
         payload = {
             "sub": user_id,
@@ -55,13 +55,13 @@ class AuthService:
             "exp": datetime.utcnow() + timedelta(hours=24)
         }
         return jwt.encode(payload, self.secret_key, algorithm="HS256")
-    
+
     def verify_token(self, token: str) -> dict | None:
         try:
             return jwt.decode(token, self.secret_key, algorithms=["HS256"])
         except:
             return None
-    
+
     async def login(self, username: str, password: str) -> tuple[bool, str]:
         # 验证用户（示例）
         if username == "admin" and password == "admin123":
@@ -93,12 +93,12 @@ async def logout():
 async def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
-    
+
     token = authorization[7:]
     payload = auth_service.verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
-    
+
     return payload
 ```
 
@@ -156,4 +156,3 @@ curl -X POST http://localhost:8001/api/chat \
 - `agentflow/security/auth_middleware.py` - 认证中间件
 - `apps/decision_governance_engine/routers/auth.py` - 参考实现
 - FastAPI 文档：https://fastapi.tiangolo.com/tutorial/security/
-

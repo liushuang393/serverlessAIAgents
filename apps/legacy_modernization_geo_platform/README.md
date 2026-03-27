@@ -37,7 +37,13 @@ GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE=1
 conda run -n agentflow python apps/legacy_modernization_geo_platform/scripts/dev.py --reload
 ```
 
-`scripts/dev.py` は `app_config.json` を既定値とし、`GEO_PLATFORM_HOST` / `GEO_PLATFORM_PORT` があればそれを優先して `uvicorn` を起動します。既定では API は `http://localhost:8100` です。
+`scripts/dev.py` は `明示指定 > app_config.json` の順で backend host / port を解決し、共通 launcher 経由で起動します。既定では API は `http://localhost:8100` です。
+
+本番相当のローカル起動:
+
+```bash
+conda run -n agentflow python apps/legacy_modernization_geo_platform/scripts/dev.py --no-reload --workers 2
+```
 
 ### 3. フロントエンドを起動する
 

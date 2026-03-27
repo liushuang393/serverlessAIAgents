@@ -5,8 +5,16 @@
   font-weight: 400;
   color: #182030;
   background:
-    radial-gradient(circle at top right, rgba(194, 108, 60, 0.18), transparent 24rem),
-    radial-gradient(circle at bottom left, rgba(17, 93, 111, 0.16), transparent 26rem),
+    radial-gradient(
+      circle at top right,
+      rgba(194, 108, 60, 0.18),
+      transparent 24rem
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(17, 93, 111, 0.16),
+      transparent 26rem
+    ),
     linear-gradient(180deg, #f8f4eb 0%, #f2ede2 100%);
 }
 
@@ -118,7 +126,9 @@ button {
   text-align: left;
   background: transparent;
   color: #182030;
-  transition: transform 120ms ease, background 120ms ease;
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
 }
 
 .tab:hover,

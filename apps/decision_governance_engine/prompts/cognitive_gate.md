@@ -32,6 +32,7 @@
 ## 出力形式
 
 必ず以下のJSON形式で出力してください：
+
 ```json
 {
     "evaluation_object": "評価対象（50字以内、必須）",
@@ -48,6 +49,7 @@
 ```
 
 **重要**:
+
 - `criteria` は必ず1個以上の評価軸を含めること（空配列は不可）
 - 評価軸が不明な場合は「実現可能性」「コスト」「リスク」を使用
 - `evaluation_object` と `intent` は必ず具体的な内容を記入
@@ -55,21 +57,22 @@
 ## 例
 
 ### 入力
+
 「国際企業向けリアルタイム音声会議システムを自社構築すべきか」
 
 ### 出力
+
 ```json
 {
-    "evaluation_object": "国際音声会議システムの自社構築 vs SaaS利用の判断",
-    "intent": "既存SaaSが法規制・データ主権要件を満たさないため、代替手段の可否を判断",
-    "criteria": ["法規制適合性", "運用統制性", "長期コスト", "技術的リスク"],
-    "irreversibility": {
-        "level": "HIGH",
-        "description": "自社構築は数年のコミットメント、撤退時の埋没コスト大"
-    },
-    "proceed": true,
-    "missing_info": [],
-    "clarification_questions": []
+  "evaluation_object": "国際音声会議システムの自社構築 vs SaaS利用の判断",
+  "intent": "既存SaaSが法規制・データ主権要件を満たさないため、代替手段の可否を判断",
+  "criteria": ["法規制適合性", "運用統制性", "長期コスト", "技術的リスク"],
+  "irreversibility": {
+    "level": "HIGH",
+    "description": "自社構築は数年のコミットメント、撤退時の埋没コスト大"
+  },
+  "proceed": true,
+  "missing_info": [],
+  "clarification_questions": []
 }
 ```
-

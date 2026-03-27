@@ -4,7 +4,15 @@
   "title": "StrategySearchRequestV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["tenant_id", "app_id", "product_line", "intent", "task_signature", "decision_mode", "top_k"],
+  "required": [
+    "tenant_id",
+    "app_id",
+    "product_line",
+    "intent",
+    "task_signature",
+    "decision_mode",
+    "top_k"
+  ],
   "properties": {
     "tenant_id": { "type": ["string", "null"] },
     "app_id": { "type": ["string", "null"] },

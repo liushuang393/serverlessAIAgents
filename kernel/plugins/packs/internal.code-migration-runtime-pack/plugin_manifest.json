@@ -8,16 +8,8 @@
     "migration.fix.apply"
   ],
   "risk_tier": "medium",
-  "side_effects": [
-    "filesystem.read",
-    "filesystem.write",
-    "subprocess.exec"
-  ],
-  "required_permissions": [
-    "repo.read",
-    "repo.write",
-    "os.exec"
-  ],
+  "side_effects": ["filesystem.read", "filesystem.write", "subprocess.exec"],
+  "required_permissions": ["repo.read", "repo.write", "os.exec"],
   "signature": {
     "algorithm": "ed25519",
     "issuer": "bizcore-local",
@@ -25,12 +17,7 @@
   },
   "compatibility": {
     "kernel": ">=2.0.0",
-    "product_lines": [
-      "migration"
-    ]
+    "product_lines": ["migration"]
   },
-  "tests_required": [
-    "unit",
-    "integration"
-  ]
+  "tests_required": ["unit", "integration"]
 }

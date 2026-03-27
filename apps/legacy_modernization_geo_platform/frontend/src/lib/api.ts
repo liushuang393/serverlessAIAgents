@@ -6,14 +6,14 @@ import type {
   GeoQAReport,
   QuestionGraphArtifact,
   TaskStateResponse,
-} from '../types';
+} from "../types";
 
 function getApiBase(): string {
   return import.meta.env.VITE_API_BASE_URL || window.location.origin;
 }
 
 function getStoredAccessToken(): string | null {
-  return window.localStorage.getItem('GEO_PLATFORM_ACCESS_TOKEN');
+  return window.localStorage.getItem("GEO_PLATFORM_ACCESS_TOKEN");
 }
 
 function buildHeaders(): HeadersInit {
@@ -27,23 +27,23 @@ function buildHeaders(): HeadersInit {
 export function buildStreamUrl(path: string): string {
   const resolvedUrl = new URL(path, getApiBase());
   const accessToken = getStoredAccessToken();
-  if (accessToken && !resolvedUrl.searchParams.has('access_token')) {
-    resolvedUrl.searchParams.set('access_token', accessToken);
+  if (accessToken && !resolvedUrl.searchParams.has("access_token")) {
+    resolvedUrl.searchParams.set("access_token", accessToken);
   }
   return resolvedUrl.toString();
 }
 
 export function buildWebSocketUrl(path: string): string {
   const resolvedUrl = new URL(path, getApiBase());
-  if (resolvedUrl.protocol === 'http:') {
-    resolvedUrl.protocol = 'ws:';
-  } else if (resolvedUrl.protocol === 'https:') {
-    resolvedUrl.protocol = 'wss:';
+  if (resolvedUrl.protocol === "http:") {
+    resolvedUrl.protocol = "ws:";
+  } else if (resolvedUrl.protocol === "https:") {
+    resolvedUrl.protocol = "wss:";
   }
 
   const accessToken = getStoredAccessToken();
-  if (accessToken && !resolvedUrl.searchParams.has('access_token')) {
-    resolvedUrl.searchParams.set('access_token', accessToken);
+  if (accessToken && !resolvedUrl.searchParams.has("access_token")) {
+    resolvedUrl.searchParams.set("access_token", accessToken);
   }
 
   return resolvedUrl.toString();
@@ -61,9 +61,9 @@ export async function startExecution(
   payload: GeoExecuteRequest,
 ): Promise<{ task_id: string; stream_url: string; ws_url: string }> {
   const response = await fetch(`${getApiBase()}/api/geo/execute`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...buildHeaders(),
     },
     body: JSON.stringify(payload),
@@ -85,31 +85,35 @@ export async function submitApproval(
   comment?: string,
 ): Promise<unknown> {
   const response = await fetch(`${getApiBase()}/api/geo/${taskId}/approval`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...buildHeaders(),
     },
     body: JSON.stringify({
       approved,
-      reviewer_name: 'operator-ui',
+      reviewer_name: "operator-ui",
       action,
-      comment: comment ?? 'UI approval',
+      comment: comment ?? "UI approval",
     }),
   });
   return readJson(response);
 }
 
-export async function postCommand(taskId: string, command: string, comment?: string): Promise<unknown> {
+export async function postCommand(
+  taskId: string,
+  command: string,
+  comment?: string,
+): Promise<unknown> {
   const response = await fetch(`${getApiBase()}/api/geo/${taskId}/commands`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...buildHeaders(),
     },
     body: JSON.stringify({
       command,
-      actor: 'operator-ui',
+      actor: "operator-ui",
       comment,
       payload: {},
     }),
@@ -121,9 +125,12 @@ export async function fetchArtifact<T>(
   taskId: string,
   artifactName: string,
 ): Promise<T> {
-  const response = await fetch(`${getApiBase()}/api/geo/${taskId}/artifacts/${artifactName}`, {
-    headers: buildHeaders(),
-  });
+  const response = await fetch(
+    `${getApiBase()}/api/geo/${taskId}/artifacts/${artifactName}`,
+    {
+      headers: buildHeaders(),
+    },
+  );
   return readJson(response);
 }
 
@@ -135,11 +142,21 @@ export async function fetchArtifacts(taskId: string): Promise<{
   evidenceMatrix?: EvidenceMatrixArtifact;
 }> {
   const [signal, draft, qa, questionGraph, evidenceMatrix] = await Promise.all([
-    fetchArtifact<AccountSignalArtifact>(taskId, 'account_signal_artifact').catch(() => undefined),
-    fetchArtifact<ContentDraftArtifact>(taskId, 'content_draft_artifact').catch(() => undefined),
-    fetchArtifact<GeoQAReport>(taskId, 'geo_qa_report').catch(() => undefined),
-    fetchArtifact<QuestionGraphArtifact>(taskId, 'question_graph_artifact').catch(() => undefined),
-    fetchArtifact<EvidenceMatrixArtifact>(taskId, 'evidence_matrix').catch(() => undefined),
+    fetchArtifact<AccountSignalArtifact>(
+      taskId,
+      "account_signal_artifact",
+    ).catch(() => undefined),
+    fetchArtifact<ContentDraftArtifact>(taskId, "content_draft_artifact").catch(
+      () => undefined,
+    ),
+    fetchArtifact<GeoQAReport>(taskId, "geo_qa_report").catch(() => undefined),
+    fetchArtifact<QuestionGraphArtifact>(
+      taskId,
+      "question_graph_artifact",
+    ).catch(() => undefined),
+    fetchArtifact<EvidenceMatrixArtifact>(taskId, "evidence_matrix").catch(
+      () => undefined,
+    ),
   ]);
   return { signal, draft, qa, questionGraph, evidenceMatrix };
 }

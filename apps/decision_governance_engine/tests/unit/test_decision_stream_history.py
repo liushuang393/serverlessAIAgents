@@ -56,7 +56,7 @@ async def test_stream_saves_history_on_flow_complete_before_client_close(
     _DummyRepository.save_calls = []
 
     monkeypatch.setattr(decision_router, "ENABLE_HISTORY", True)
-    monkeypatch.setattr(decision_router, "get_engine", lambda: _DummyEngine())
+    monkeypatch.setattr(decision_router, "get_engine", _DummyEngine)
     monkeypatch.setattr(decision_router, "_cache_report_from_result", lambda *_a, **_k: None)
 
     import apps.decision_governance_engine.repositories as repo_pkg

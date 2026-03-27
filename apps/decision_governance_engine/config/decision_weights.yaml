@@ -62,7 +62,7 @@ dimensions:
     description: "开发成本 + 运维成本"
     min_score: 1
     max_score: 5
-    inverse: true  # 分数越低越好
+    inverse: true # 分数越低越好
 
   risk:
     id: "risk"
@@ -106,7 +106,7 @@ presets:
     name_ja: "成長優先"
     name_en: "Growth First"
     description: "收益/窗口权重大，适合快速扩张期"
-    
+
     # 权重配置（总和 = 100）
     weights:
       user_impact: 18
@@ -117,26 +117,26 @@ presets:
       risk: 10
       reversibility: 7
       dependencies: 5
-    
+
     # GO/NO_GO/DELAY/PILOT 阈值
     thresholds:
       go:
-        min_score: 3.8           # 加权平均 >= 3.8
-        min_confidence: 0.70     # 置信度 >= 70%
+        min_score: 3.8 # 加权平均 >= 3.8
+        min_confidence: 0.70 # 置信度 >= 70%
         min_evidence_coverage: 0.6
-        hard_veto_dimensions: ["risk"]  # 风险 >= 4 则硬否决
+        hard_veto_dimensions: ["risk"] # 风险 >= 4 则硬否决
         hard_veto_score: 4
-      
+
       pilot:
         min_score: 3.0
         min_confidence: 0.45
         min_evidence_coverage: 0.4
-      
+
       delay:
         min_score: 2.5
         min_confidence: 0.30
         min_evidence_coverage: 0.2
-      
+
       # 低于 delay 阈值则为 NO_GO
 
   # --------------------------------------------------------------------------
@@ -148,7 +148,7 @@ presets:
     name_ja: "リスク優先"
     name_en: "Risk First"
     description: "合规/可逆性权重大，适合合规敏感行业"
-    
+
     weights:
       user_impact: 12
       growth_potential: 14
@@ -158,7 +158,7 @@ presets:
       risk: 22
       reversibility: 14
       dependencies: 10
-    
+
     thresholds:
       go:
         min_score: 4.0
@@ -238,10 +238,10 @@ mode_settings:
 # ==============================================================================
 evidence_reliability:
   domain_scores:
-    gov: 0.95      # .gov ドメイン
-    edu: 0.90      # .edu ドメイン
-    org: 0.75      # .org ドメイン
-    com: 0.60      # .com ドメイン
+    gov: 0.95 # .gov ドメイン
+    edu: 0.90 # .edu ドメイン
+    org: 0.75 # .org ドメイン
+    com: 0.60 # .com ドメイン
     default: 0.50
 
   freshness_decay:
@@ -250,4 +250,3 @@ evidence_reliability:
     days_180: 0.7
     days_365: 0.5
     older: 0.3
-

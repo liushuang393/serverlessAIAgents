@@ -14,15 +14,15 @@
     "extensions"
   ],
   "properties": {
-    "meta": {"type": "object"},
-    "package_mapping": {"type": "object"},
-    "class_mapping": {"type": "object"},
-    "transaction_policy": {"type": "object"},
-    "state_model": {"type": "object"},
-    "framework_mapping": {"type": "object"},
-    "rationale": {"type": "object"},
-    "unknowns": {"type": "array"},
-    "extensions": {"type": "object"}
+    "meta": { "type": "object" },
+    "package_mapping": { "type": "object" },
+    "class_mapping": { "type": "object" },
+    "transaction_policy": { "type": "object" },
+    "state_model": { "type": "object" },
+    "framework_mapping": { "type": "object" },
+    "rationale": { "type": "object" },
+    "unknowns": { "type": "array" },
+    "extensions": { "type": "object" }
   },
   "additionalProperties": true
 }

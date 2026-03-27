@@ -1,4 +1,5 @@
 """kernel MetricsService Protocol のテスト."""
+
 from __future__ import annotations
 
 
@@ -21,19 +22,13 @@ def test_metrics_service_is_runtime_checkable() -> None:
 class _DummyMetrics:
     """テスト用のダミー実装."""
 
-    def increment(
-        self, name: str, value: float = 1.0, tags: dict[str, str] | None = None
-    ) -> None:
+    def increment(self, name: str, value: float = 1.0, tags: dict[str, str] | None = None) -> None:
         pass
 
-    def gauge(
-        self, name: str, value: float, tags: dict[str, str] | None = None
-    ) -> None:
+    def gauge(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
         pass
 
-    def histogram(
-        self, name: str, value: float, tags: dict[str, str] | None = None
-    ) -> None:
+    def histogram(self, name: str, value: float, tags: dict[str, str] | None = None) -> None:
         pass
 
 

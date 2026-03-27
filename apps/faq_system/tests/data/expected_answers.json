@@ -2,7 +2,7 @@
   "version": "1.0",
   "created_at": "2026-01-16",
   "description": "FAQ System 精度検証用の期待回答データ",
-  
+
   "internal_faq": {
     "INT-001": {
       "question": "年次有給休暇は何日付与されますか？",
@@ -40,17 +40,13 @@
       "conservative_mode": true
     }
   },
-  
+
   "external_faq": {
     "EXT-001": {
       "question": "製品Aの保証期間は何年ですか？",
       "expected_answer": "製品Aの保証期間は、ご購入日から1年間です。\n\n保証書に記載された購入日を起算日とします。\n保証期間中の故障は無償で修理いたします。\n\n詳細は製品保証規定をご確認ください。",
       "confidence_threshold": 0.8,
-      "should_not_contain": [
-        "社内",
-        "機密",
-        "内部"
-      ]
+      "should_not_contain": ["社内", "機密", "内部"]
     },
     "EXT-002": {
       "question": "返品方法を教えてください",
@@ -58,7 +54,7 @@
       "confidence_threshold": 0.75
     }
   },
-  
+
   "analytics": {
     "ANAL-001": {
       "question": "今月の売上TOP10を教えてください",
@@ -69,10 +65,7 @@
         "assumptions": [
           "売上定義: 税抜金額、確定済み注文のみ（キャンセル・返品除外）"
         ],
-        "limitations": [
-          "データ取得上限: 1000件",
-          "データ更新: 2026-01-16時点"
-        ]
+        "limitations": ["データ取得上限: 1000件", "データ更新: 2026-01-16時点"]
       }
     },
     "ANAL-SEC-001": {
@@ -81,7 +74,7 @@
       "expected_error": "アクセス禁止カラム: employees.salary\n\n給与情報へのアクセスは人事管理者のみに制限されています。"
     }
   },
-  
+
   "maintenance": {
     "MAINT-001": {
       "action": "diff",
@@ -110,7 +103,7 @@
       }
     }
   },
-  
+
   "validation_rules": {
     "citation": {
       "required_fields": ["document_title", "version", "update_date"],
@@ -126,7 +119,7 @@
       "low_threshold": 0.4
     }
   },
-  
+
   "glossary": {
     "年休": "年次有給休暇",
     "有休": "年次有給休暇",

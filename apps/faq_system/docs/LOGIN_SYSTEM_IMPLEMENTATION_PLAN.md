@@ -1,6 +1,7 @@
 # FAQ System 登录系统实现方案
 
 ## 🎯 目标
+
 为FAQ系统添加完整的认证和授权系统，保护所有API端点。
 
 ## 📐 架构设计
@@ -40,6 +41,7 @@
 ### Phase 1: 基础认证（1-2周）
 
 #### 1.1 创建认证模块
+
 ```
 apps/faq_system/backend/auth/
 ├── __init__.py
@@ -50,6 +52,7 @@ apps/faq_system/backend/auth/
 ```
 
 #### 1.2 实现认证端点
+
 ```python
 POST   /api/auth/login       # 用户名/密码登录
 POST   /api/auth/logout      # 登出
@@ -58,6 +61,7 @@ GET    /api/auth/me          # 获取当前用户
 ```
 
 #### 1.3 集成认证中间件
+
 - 在 `main.py` 中添加 `AuthMiddleware`
 - 保护所有 `/api/*` 端点
 - 排除公开端点（如 `/health`）
@@ -65,11 +69,13 @@ GET    /api/auth/me          # 获取当前用户
 ### Phase 2: 权限控制（1-2周）
 
 #### 2.1 激活权限配置
+
 - 使用现有的 `PermissionConfig`
 - 定义角色和权限
 - 实现权限检查装饰器
 
 #### 2.2 集成到Agents
+
 - 在 `InternalKBAgent` 中检查权限
 - 在 `AnalyticsAgent` 中检查权限
 - 在 `MaintenanceAgent` 中检查权限
@@ -77,25 +83,30 @@ GET    /api/auth/me          # 获取当前用户
 ### Phase 3: 高级功能（2-3周）
 
 #### 3.1 SSO集成（可选）
+
 - Azure AD / Okta / Google
 - OAuth2 流程
 
 #### 3.2 审计日志
+
 - 记录所有认证事件
 - 记录权限检查结果
 
 ## 🔑 关键文件修改
 
 ### 1. `apps/faq_system/main.py`
+
 - 添加认证中间件
 - 添加认证端点
 - 保护现有端点
 
 ### 2. `apps/faq_system/backend/agents/*.py`
+
 - 在 `process()` 方法中检查权限
 - 传递用户上下文
 
 ### 3. 新建 `apps/faq_system/backend/auth/`
+
 - 认证服务实现
 - JWT处理
 - 会话管理
@@ -121,4 +132,3 @@ GET    /api/auth/me          # 获取当前用户
 - **Phase 2**：1-2周
 - **Phase 3**：2-3周
 - **测试和优化**：1-2周
-

@@ -19,6 +19,7 @@
 ## 🐍 Python バージョン要件
 
 ### サポートバージョン
+
 ```python
 # 最小バージョン: Python 3.13+
 # 理由: AG-UI プロトコル要件 + パフォーマンス優位性
@@ -26,6 +27,7 @@ requires-python = ">=3.13"
 ```
 
 ### バージョン互換性
+
 - **3.13+**: 完全サポート（推奨）
 - **3.12**: 限定的サポート（レガシー環境のみ）
 - **3.11 以下**: 非サポート
@@ -35,6 +37,7 @@ requires-python = ">=3.13"
 ## 🎨 コードフォーマッティング
 
 ### Ruff 設定
+
 Ruff を統一的な linter および formatter として使用：
 
 ```toml
@@ -54,6 +57,7 @@ ignore = ["ANN101", "ANN102"]
 ### フォーマットルール
 
 #### 基本フォーマット
+
 ```python
 # ✅ 正しい: 100文字以内で適切な改行
 def process_user_data(
@@ -69,6 +73,7 @@ def process_user_data(user_id: str, data: dict[str, Any], validate: bool = True)
 ```
 
 #### インデントと空白
+
 ```python
 # ✅ 正しい: 4スペースインデント、一貫した空白
 class UserProcessor:
@@ -88,6 +93,7 @@ class UserProcessor:
 ```
 
 #### 文字列引用符
+
 ```python
 # ✅ 推奨: ダブルクォートを優先
 user_name = "john_doe"
@@ -102,6 +108,7 @@ sql = 'SELECT * FROM users WHERE status = "active"'
 ## 📦 インポート管理
 
 ### インポート順序
+
 ```python
 # 1. 標準ライブラリ
 import os
@@ -119,6 +126,7 @@ from agentflow.services import UserService
 ```
 
 ### インポートスタイル
+
 ```python
 # ✅ 推奨: 明示的なインポート
 from typing import Any, Dict, List, Optional
@@ -133,6 +141,7 @@ from typing import *
 ```
 
 ### 相対インポート
+
 ```python
 # ✅ 正しい: 明示的な相対インポート
 from .core import BaseAgent
@@ -147,6 +156,7 @@ from core import BaseAgent
 ## 🔷 型アノテーション
 
 ### 必須原則
+
 ```python
 # ✅ 必須: すべての関数に完全な型アノテーション
 async def execute_workflow(
@@ -164,6 +174,7 @@ def execute_workflow(workflow_id, inputs, timeout=30.0):
 ```
 
 ### ジェネリック型
+
 ```python
 from typing import TypeVar, Generic, Protocol
 
@@ -180,6 +191,7 @@ class Storage(Protocol):
 ```
 
 ### 特殊型パターン
+
 ```python
 # ✅ 推奨: Union より | 演算子を使用
 def process_data(data: str | int | None = None) -> str:
@@ -211,18 +223,18 @@ async def execute_with_callback(
 
 ### 違反パターン早見表
 
-| # | ❌ 違反 | ✅ 正解 |
-|---|---|---|
-| 1 | `def fn(x):` 型なし | `def fn(x: str) -> None:` |
-| 2 | `Optional[X]` を None チェックなしで参照 | `if v is not None:` ガード必須 |
-| 3 | `Any` をデフォルト型として使う | 具体型を明示（理由コメント必須） |
-| 4 | 宣言型と return 値が不一致 | 宣言と実装を一致させる |
-| 5 | `dict["key"]` 直アクセス | `.get("key")` または存在確認 |
-| 6 | `cast()` で型を誤魔化す | 正しい型の値を生成する |
-| 7 | `# type: ignore` 理由なし | 根本原因を修正する |
-| 8 | Pydantic フィールドに型なし | `field: str`, `field: int \| None` |
-| 9 | `list[str]` に異なる型を append | `list[str \| int]` で型拡張 |
-| 10 | `async def` の戻り値型省略 | `async def fn() -> dict[str, Any]:` |
+| #   | ❌ 違反                                  | ✅ 正解                             |
+| --- | ---------------------------------------- | ----------------------------------- |
+| 1   | `def fn(x):` 型なし                      | `def fn(x: str) -> None:`           |
+| 2   | `Optional[X]` を None チェックなしで参照 | `if v is not None:` ガード必須      |
+| 3   | `Any` をデフォルト型として使う           | 具体型を明示（理由コメント必須）    |
+| 4   | 宣言型と return 値が不一致               | 宣言と実装を一致させる              |
+| 5   | `dict["key"]` 直アクセス                 | `.get("key")` または存在確認        |
+| 6   | `cast()` で型を誤魔化す                  | 正しい型の値を生成する              |
+| 7   | `# type: ignore` 理由なし                | 根本原因を修正する                  |
+| 8   | Pydantic フィールドに型なし              | `field: str`, `field: int \| None`  |
+| 9   | `list[str]` に異なる型を append          | `list[str \| int]` で型拡張         |
+| 10  | `async def` の戻り値型省略               | `async def fn() -> dict[str, Any]:` |
 
 ### コード例: None 安全性（最頻出クラッシュ原因）
 
@@ -274,6 +286,7 @@ class Config(BaseModel):
 ### 必須ツール
 
 #### Ruff (Lint + Format)
+
 ```bash
 # インストール
 pip install ruff
@@ -285,6 +298,7 @@ ruff check --fix .    # 自動修正
 ```
 
 #### MyPy (型チェック)
+
 ```bash
 # インストール
 pip install mypy
@@ -295,6 +309,7 @@ mypy --show-error-codes agentflow  # エラーコード表示
 ```
 
 ### 設定ファイル
+
 ```toml
 # pyproject.toml
 [tool.mypy]
@@ -323,6 +338,7 @@ disallow_incomplete_defs = true
 ## 🤖 自動化チェック
 
 ### Pre-commit フック
+
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -341,6 +357,7 @@ repos:
 ```
 
 ### CI/CD 統合
+
 ```yaml
 # .github/workflows/ci.yml
 - name: Run Ruff
@@ -354,6 +371,7 @@ repos:
 ```
 
 ### ローカル開発チェック
+
 ```bash
 # 推奨スクリプト (check.sh)
 #!/bin/bash
@@ -387,6 +405,7 @@ echo "✅ All checks passed!"
 > [Python型エラー頻出パターン（厳重注意）](#python型エラー頻出パターン厳重注意)
 
 ### ゼロトレランスルール
+
 ```python
 # ❌ 禁止: Any 型の乱用（正当な理由とコメントがない限り）
 def process(data: Any) -> Any:  # コメント必須
@@ -405,6 +424,7 @@ logger.debug("Debug info")  # ✅
 ```
 
 ### コード品質ルール
+
 ```python
 # ❌ 禁止: 可変デフォルト引数
 def add_item(item: str, items: list[str] = []) -> list[str]:  # ❌
@@ -439,4 +459,4 @@ DATABASE_URL = os.getenv("DATABASE_URL")  # ✅
 
 **これらのコーディング規約を守ることで、高品質で保守性の高いコードを維持できます。** 🎯
 
-*最終更新: 2026-02-21 | バージョン: 1.1.0*
+_最終更新: 2026-02-21 | バージョン: 1.1.0_

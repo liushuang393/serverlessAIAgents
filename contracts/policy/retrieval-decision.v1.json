@@ -4,7 +4,14 @@
   "title": "RetrievalDecisionV1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["mode", "confidence", "complexity", "novelty", "staleness_risk", "reason_codes"],
+  "required": [
+    "mode",
+    "confidence",
+    "complexity",
+    "novelty",
+    "staleness_risk",
+    "reason_codes"
+  ],
   "properties": {
     "mode": {
       "type": "string",

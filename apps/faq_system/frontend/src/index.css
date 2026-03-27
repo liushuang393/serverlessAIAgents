@@ -1,7 +1,7 @@
 /* Google Fonts は @import "tailwindcss" より前に置く必要がある。
    Tailwind v4 の @import "tailwindcss" はインライン展開されるため、
    PostCSS から見ると @import url(...) がルールの後に来てしまいエラーになる。 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -37,7 +37,7 @@
 body {
   background-color: var(--bg-main);
   color: var(--text-main);
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -62,8 +62,10 @@ body {
 }
 
 /* Typography */
-h1, h2, h3 {
-  font-family: 'Outfit', sans-serif;
+h1,
+h2,
+h3 {
+  font-family: "Outfit", sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -195,7 +197,7 @@ a {
 
 .markdown-content code {
   color: var(--primary);
-  font-family: 'Fira Code', monospace;
+  font-family: "Fira Code", monospace;
 }
 
 .markdown-content p {

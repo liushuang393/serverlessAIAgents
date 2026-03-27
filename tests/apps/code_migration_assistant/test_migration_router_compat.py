@@ -44,7 +44,7 @@ def test_upload_uses_legacy_backend_when_configured(monkeypatch: Any, tmp_path: 
     monkeypatch.setenv("MIGRATION_EXECUTION_BACKEND", "legacy_engine")
 
     store = router_module.get_task_store()
-    store._tasks.clear()  # type: ignore[attr-defined]
+    store._tasks.clear()
     router_module._background_tasks.clear()
 
     called: dict[str, bool] = {"legacy": False}

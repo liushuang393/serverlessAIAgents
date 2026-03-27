@@ -168,67 +168,67 @@ public record {Name}Request(
 
 ### 基本ステートメント
 
-| COBOLパターン | Javaコード | 注意事項 |
-|-------------|-----------|---------|
-| `MOVE A TO B` | `b = a;` | 型変換が必要な場合は明示 |
-| `ADD A TO B` | `b = b.add(a);` | 数値はBigDecimal使用 |
-| `SUBTRACT A FROM B` | `b = b.subtract(a);` | |
-| `MULTIPLY A BY B` | `b = b.multiply(a);` | |
-| `DIVIDE A INTO B` | `b = b.divide(a, scale, HALF_UP);` | スケール明記必須 |
-| `COMPUTE result = expr` | `result = expr;` | BigDecimalで式を構築 |
-| `IF cond THEN ... ELSE ... END-IF` | `if (cond) { ... } else { ... }` | |
-| `EVALUATE expr WHEN val` | `switch (expr) { case val: ... }` | Java 14+ switch式推奨 |
-| `PERFORM UNTIL cond` | `while (!cond) { ... }` | |
-| `PERFORM VARYING i FROM 1 BY 1` | `for (int i = 1; i <= n; i++)` | |
-| `PERFORM para` | `para();` プライベートメソッド呼び出し | |
-| `PERFORM para THRU para-end` | `para();` 〜 `paraEnd();` | |
-| `DISPLAY "text"` | `log.info("text");` | 本番出力はログへ |
-| `ACCEPT var FROM DATE` | `LocalDate.now()` | |
-| `ACCEPT var FROM TIME` | `LocalTime.now()` | |
-| `STOP RUN` | `return response;` または `throw new BusinessException(...)` | |
-| `GO TO para` | **非推奨**: `break`/`continue`/メソッド再編で対応 | GOTO変換は必ず注釈追加 |
+| COBOLパターン                      | Javaコード                                                   | 注意事項                 |
+| ---------------------------------- | ------------------------------------------------------------ | ------------------------ |
+| `MOVE A TO B`                      | `b = a;`                                                     | 型変換が必要な場合は明示 |
+| `ADD A TO B`                       | `b = b.add(a);`                                              | 数値はBigDecimal使用     |
+| `SUBTRACT A FROM B`                | `b = b.subtract(a);`                                         |                          |
+| `MULTIPLY A BY B`                  | `b = b.multiply(a);`                                         |                          |
+| `DIVIDE A INTO B`                  | `b = b.divide(a, scale, HALF_UP);`                           | スケール明記必須         |
+| `COMPUTE result = expr`            | `result = expr;`                                             | BigDecimalで式を構築     |
+| `IF cond THEN ... ELSE ... END-IF` | `if (cond) { ... } else { ... }`                             |                          |
+| `EVALUATE expr WHEN val`           | `switch (expr) { case val: ... }`                            | Java 14+ switch式推奨    |
+| `PERFORM UNTIL cond`               | `while (!cond) { ... }`                                      |                          |
+| `PERFORM VARYING i FROM 1 BY 1`    | `for (int i = 1; i <= n; i++)`                               |                          |
+| `PERFORM para`                     | `para();` プライベートメソッド呼び出し                       |                          |
+| `PERFORM para THRU para-end`       | `para();` 〜 `paraEnd();`                                    |                          |
+| `DISPLAY "text"`                   | `log.info("text");`                                          | 本番出力はログへ         |
+| `ACCEPT var FROM DATE`             | `LocalDate.now()`                                            |                          |
+| `ACCEPT var FROM TIME`             | `LocalTime.now()`                                            |                          |
+| `STOP RUN`                         | `return response;` または `throw new BusinessException(...)` |                          |
+| `GO TO para`                       | **非推奨**: `break`/`continue`/メソッド再編で対応            | GOTO変換は必ず注釈追加   |
 
 ### 文字列操作
 
-| COBOLパターン | Javaコード |
-|-------------|-----------|
-| `STRING a DELIMITED SIZE INTO b` | `b = a.trim();` または `b = String.join("", parts)` |
-| `UNSTRING s INTO a b` | `String[] parts = s.split(delim); a = parts[0]; b = parts[1];` |
-| `INSPECT s TALLYING count FOR ALL "x"` | `long count = s.chars().filter(c -> c == 'x').count();` |
-| `INSPECT s REPLACING ALL "x" BY "y"` | `s = s.replace("x", "y");` |
-| `MOVE SPACES TO var` | `var = "";` または `var = " ".repeat(n);` |
-| `MOVE ZEROS TO var` | `var = BigDecimal.ZERO;` または `var = 0;` |
+| COBOLパターン                          | Javaコード                                                     |
+| -------------------------------------- | -------------------------------------------------------------- |
+| `STRING a DELIMITED SIZE INTO b`       | `b = a.trim();` または `b = String.join("", parts)`            |
+| `UNSTRING s INTO a b`                  | `String[] parts = s.split(delim); a = parts[0]; b = parts[1];` |
+| `INSPECT s TALLYING count FOR ALL "x"` | `long count = s.chars().filter(c -> c == 'x').count();`        |
+| `INSPECT s REPLACING ALL "x" BY "y"`   | `s = s.replace("x", "y");`                                     |
+| `MOVE SPACES TO var`                   | `var = "";` または `var = " ".repeat(n);`                      |
+| `MOVE ZEROS TO var`                    | `var = BigDecimal.ZERO;` または `var = 0;`                     |
 
 ### データ型変換（精度保持必須）
 
-| COBOL型 | Java型 | 変換コード例 |
-|---------|--------|------------|
-| `PIC 9(n)` n≤9 | `int` | `int val = Integer.parseInt(cobolStr.trim());` |
-| `PIC 9(n)` n>9 | `long` | `long val = Long.parseLong(cobolStr.trim());` |
-| `PIC S9(n)V9(m)` | `BigDecimal` | `new BigDecimal(cobolStr.trim()).setScale(m, HALF_UP)` |
-| `PIC 9(n)V9(m)` | `BigDecimal` | `new BigDecimal(cobolStr.trim()).setScale(m, HALF_UP)` |
-| `PIC COMP-3` | `BigDecimal` | パックドデシマルをデコードしてBigDecimal |
-| `PIC COMP` / `COMP-5` | `int` / `long` | バイナリ整数 |
-| `PIC X(n)` | `String` | `cobolStr.stripTrailing()` 末尾空白除去 |
-| `PIC X(n)` 日付 `YYYYMMDD` | `LocalDate` | `LocalDate.parse(s, DateTimeFormatter.BASIC_ISO_DATE)` |
-| `PIC X(n)` 時刻 `HHMMSS` | `LocalTime` | `LocalTime.parse(s, DateTimeFormatter.ofPattern("HHmmss"))` |
+| COBOL型                    | Java型         | 変換コード例                                                |
+| -------------------------- | -------------- | ----------------------------------------------------------- |
+| `PIC 9(n)` n≤9             | `int`          | `int val = Integer.parseInt(cobolStr.trim());`              |
+| `PIC 9(n)` n>9             | `long`         | `long val = Long.parseLong(cobolStr.trim());`               |
+| `PIC S9(n)V9(m)`           | `BigDecimal`   | `new BigDecimal(cobolStr.trim()).setScale(m, HALF_UP)`      |
+| `PIC 9(n)V9(m)`            | `BigDecimal`   | `new BigDecimal(cobolStr.trim()).setScale(m, HALF_UP)`      |
+| `PIC COMP-3`               | `BigDecimal`   | パックドデシマルをデコードしてBigDecimal                    |
+| `PIC COMP` / `COMP-5`      | `int` / `long` | バイナリ整数                                                |
+| `PIC X(n)`                 | `String`       | `cobolStr.stripTrailing()` 末尾空白除去                     |
+| `PIC X(n)` 日付 `YYYYMMDD` | `LocalDate`    | `LocalDate.parse(s, DateTimeFormatter.BASIC_ISO_DATE)`      |
+| `PIC X(n)` 時刻 `HHMMSS`   | `LocalTime`    | `LocalTime.parse(s, DateTimeFormatter.ofPattern("HHmmss"))` |
 
 ### DB操作（EXEC SQL変換）
 
-| COBOLパターン | Javaコード |
-|-------------|-----------|
-| `EXEC SQL SELECT ... INTO :var` | `repository.findById(id).orElseThrow(...)` |
-| `EXEC SQL INSERT INTO ...` | `repository.save(entity)` |
-| `EXEC SQL UPDATE ...` | `repository.save(entity)` （Entityの`@Version`でロック） |
-| `EXEC SQL DELETE ...` | `repository.deleteById(id)` |
-| `EXEC SQL SELECT ... FOR UPDATE` | `@Lock(PESSIMISTIC_WRITE)` + Repository |
-| `EXEC SQL COMMIT` | `@Transactional` メソッド終了 = 自動コミット |
-| `EXEC SQL ROLLBACK` | 例外スロー → `@Transactional` が自動ロールバック |
-| `EXEC SQL OPEN cursor` | `repository.findAll(specification)` |
-| `EXEC SQL FETCH cursor` | `List<Entity>` または `Stream<Entity>` |
-| `SQLCODE = 0` | 正常（例外なし） |
-| `SQLCODE = 100` / NOT FOUND | `Optional.isEmpty()` または `NotFoundException` |
-| `SQLCODE = -803` | `DuplicateKeyException` → `@ControllerAdvice` で409返却 |
+| COBOLパターン                    | Javaコード                                               |
+| -------------------------------- | -------------------------------------------------------- |
+| `EXEC SQL SELECT ... INTO :var`  | `repository.findById(id).orElseThrow(...)`               |
+| `EXEC SQL INSERT INTO ...`       | `repository.save(entity)`                                |
+| `EXEC SQL UPDATE ...`            | `repository.save(entity)` （Entityの`@Version`でロック） |
+| `EXEC SQL DELETE ...`            | `repository.deleteById(id)`                              |
+| `EXEC SQL SELECT ... FOR UPDATE` | `@Lock(PESSIMISTIC_WRITE)` + Repository                  |
+| `EXEC SQL COMMIT`                | `@Transactional` メソッド終了 = 自動コミット             |
+| `EXEC SQL ROLLBACK`              | 例外スロー → `@Transactional` が自動ロールバック         |
+| `EXEC SQL OPEN cursor`           | `repository.findAll(specification)`                      |
+| `EXEC SQL FETCH cursor`          | `List<Entity>` または `Stream<Entity>`                   |
+| `SQLCODE = 0`                    | 正常（例外なし）                                         |
+| `SQLCODE = 100` / NOT FOUND      | `Optional.isEmpty()` または `NotFoundException`          |
+| `SQLCODE = -803`                 | `DuplicateKeyException` → `@ControllerAdvice` で409返却  |
 
 ### 排他制御（LOCKING）
 

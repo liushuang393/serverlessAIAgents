@@ -53,12 +53,12 @@ pic_patterns:
   - pattern: "^X\\(\\d+\\)$"
     description: "PIC X(n) - 文字列"
     java_type: String
-    java_default: "\"\""
+    java_default: '""'
 
   - pattern: "^A\\(\\d+\\)$"
     description: "PIC A(n) - アルファベット文字列"
     java_type: String
-    java_default: "\"\""
+    java_default: '""'
 
   # COMP-3（パック10進数）
   - pattern: "^S9\\(\\d+\\)V9\\(\\d+\\)\\s+COMP-3$"
@@ -84,7 +84,7 @@ inferred_types:
 
   string:
     java_type: String
-    java_default: "\"\""
+    java_default: '""'
 
   comp3:
     java_type: BigDecimal
@@ -103,8 +103,7 @@ required_imports:
 
 # COBOL 特殊値のマッピング
 special_values:
-  SPACES: "\"\""
+  SPACES: '""'
   ZEROS: "0"
   HIGH-VALUES: "\"\\uFFFF\""
   LOW-VALUES: "\"\\u0000\""
-

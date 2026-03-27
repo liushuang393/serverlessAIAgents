@@ -1,4 +1,5 @@
 """kernel/skills/ 配下のトップレベルに infrastructure 直接 import がないことを確認."""
+
 import ast
 from pathlib import Path
 
@@ -35,7 +36,4 @@ def test_skills_no_top_level_infrastructure_import() -> None:
                 if _is_inside_function(tree, node.lineno):
                     continue
                 violations.append(f"{py_file}:{node.lineno}: from {node.module}")
-    assert violations == [], (
-        f"infrastructure import が {len(violations)} 箇所残存:\n"
-        + "\n".join(violations)
-    )
+    assert violations == [], f"infrastructure import が {len(violations)} 箇所残存:\n" + "\n".join(violations)

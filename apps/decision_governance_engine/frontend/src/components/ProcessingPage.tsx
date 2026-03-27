@@ -6,23 +6,27 @@
  * 設計参考: design/decision-processing-ui.tsx
  */
 
-import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { useDecisionStore } from '../store/useDecisionStore';
-import { useDecisionStream, AgentProgress, ThinkingLog } from '../hooks/useDecisionStream';
+import React, { useEffect, useCallback, useState, useRef } from "react";
+import { useDecisionStore } from "../store/useDecisionStore";
+import {
+  useDecisionStream,
+  AgentProgress,
+  ThinkingLog,
+} from "../hooks/useDecisionStream";
 
 /** 開発時ログ（lint no-console 対応） */
-const debugLog = (..._args: unknown[]): void => { };
+const debugLog = (..._args: unknown[]): void => {};
 
 /** Agent アイコン設定（8 Agent対応） - Decision Governance Engine v1.1 */
 const AGENT_ICONS: Record<string, string> = {
-  cognitive_gate: '🧠',
-  gatekeeper: '🚪',
-  clarification: '🔬',
-  dao: '🎯',
-  fa: '🛤️',
-  shu: '📋',
-  qi: '🔧',
-  review: '🔍',
+  cognitive_gate: "🧠",
+  gatekeeper: "🚪",
+  clarification: "🔬",
+  dao: "🎯",
+  fa: "🛤️",
+  shu: "📋",
+  qi: "🔧",
+  review: "🔍",
 };
 
 /** 進捗サマリー用に件数を安全に抽出 */
@@ -30,10 +34,10 @@ const getCountValue = (value: unknown): number | null => {
   if (Array.isArray(value)) {
     return value.length;
   }
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const parsed = Number.parseInt(value, 10);
     return Number.isNaN(parsed) ? null : parsed;
   }
@@ -41,63 +45,97 @@ const getCountValue = (value: unknown): number | null => {
 };
 
 /** Agent カード */
-const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ agent, isReview }) => {
+const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({
+  agent,
+  isReview,
+}) => {
   const statusColor = {
-    waiting: 'border-slate-700',
-    running: 'border-indigo-500 shadow-lg shadow-indigo-500/10',
-    completed: 'border-emerald-500/20',
-    failed: 'border-red-500',
+    waiting: "border-slate-700",
+    running: "border-indigo-500 shadow-lg shadow-indigo-500/10",
+    completed: "border-emerald-500/20",
+    failed: "border-red-500",
   };
 
-  const icon = AGENT_ICONS[agent.id] || '○';
+  const icon = AGENT_ICONS[agent.id] || "○";
   const pathCount = getCountValue(agent.result?.paths);
   const phaseCount = getCountValue(agent.result?.phases);
   const implementationCount = getCountValue(agent.result?.implementations);
 
   return (
-    <div className={`bg-[#12121a] rounded-xl ${isReview ? 'border-2 border-dashed' : 'border'} ${statusColor[agent.status]} p-5 transition-all duration-500`}>
+    <div
+      className={`bg-[#12121a] rounded-xl ${isReview ? "border-2 border-dashed" : "border"} ${statusColor[agent.status]} p-5 transition-all duration-500`}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${agent.status === 'completed' ? 'bg-emerald-500/10' :
-              agent.status === 'running' ? 'bg-indigo-500/10' : 'bg-slate-800'
-            }`}>
-            {agent.status === 'completed' ? '✓' : icon}
+          <div
+            className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
+              agent.status === "completed"
+                ? "bg-emerald-500/10"
+                : agent.status === "running"
+                  ? "bg-indigo-500/10"
+                  : "bg-slate-800"
+            }`}
+          >
+            {agent.status === "completed" ? "✓" : icon}
           </div>
           <div>
-            <div className="font-medium">{agent.name} <span className="text-slate-500 font-normal">/ {agent.label}</span></div>
+            <div className="font-medium">
+              {agent.name}{" "}
+              <span className="text-slate-500 font-normal">
+                / {agent.label}
+              </span>
+            </div>
             <div className="text-xs text-slate-500">
-              {agent.message || (agent.status === 'waiting' ? '待機中' : '')}
+              {agent.message || (agent.status === "waiting" ? "待機中" : "")}
             </div>
           </div>
         </div>
-        <span className={`text-sm ${agent.status === 'completed' ? 'text-emerald-400' :
-            agent.status === 'running' ? 'text-indigo-400' : 'text-slate-600'
-          }`}>
-          {agent.status === 'completed' ? '完了' :
-            agent.status === 'running' ? `${agent.progress}%` : ''}
+        <span
+          className={`text-sm ${
+            agent.status === "completed"
+              ? "text-emerald-400"
+              : agent.status === "running"
+                ? "text-indigo-400"
+                : "text-slate-600"
+          }`}
+        >
+          {agent.status === "completed"
+            ? "完了"
+            : agent.status === "running"
+              ? `${agent.progress}%`
+              : ""}
         </span>
       </div>
 
       {/* プログレスバー */}
       <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
         <div
-          className={`h-full transition-all duration-500 rounded-full ${agent.status === 'completed' ? 'bg-emerald-500' :
-              agent.status === 'running' ? (isReview ? 'bg-amber-500' : 'bg-indigo-500') : 'bg-slate-700'
-            }`}
+          className={`h-full transition-all duration-500 rounded-full ${
+            agent.status === "completed"
+              ? "bg-emerald-500"
+              : agent.status === "running"
+                ? isReview
+                  ? "bg-amber-500"
+                  : "bg-indigo-500"
+                : "bg-slate-700"
+          }`}
           style={{ width: `${agent.progress}%` }}
         />
       </div>
 
       {/* 結果プレビュー（完了時） */}
-      {agent.status === 'completed' && agent.result && (
+      {agent.status === "completed" && agent.result && (
         <div className="mt-3 pt-3 border-t border-white/5">
-          {agent.id === 'cognitive_gate' && agent.result.evaluation_object ? (
+          {agent.id === "cognitive_gate" && agent.result.evaluation_object ? (
             <div className="text-sm text-slate-400">
-              評価対象: <span className="text-cyan-400">{String(agent.result.evaluation_object)}</span>
+              評価対象:{" "}
+              <span className="text-cyan-400">
+                {String(agent.result.evaluation_object)}
+              </span>
             </div>
           ) : null}
-          {agent.id === 'gatekeeper' && (
-            agent.result?.is_acceptable ? (
+          {agent.id === "gatekeeper" &&
+            (agent.result?.is_acceptable ? (
               <div className="text-sm text-emerald-400">
                 ✓ 質問を受理しました
               </div>
@@ -105,39 +143,52 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
               <div className="text-sm text-amber-400">
                 ⚠️ {String(agent.result.rejection_message)}
               </div>
-            ) : null
-          )}
-          {agent.id === 'clarification' && agent.result.confidence ? (
+            ) : null)}
+          {agent.id === "clarification" && agent.result.confidence ? (
             <div className="text-sm text-slate-400">
-              診断信頼度: <span className="text-cyan-400">{String(agent.result.confidence)}</span>
+              診断信頼度:{" "}
+              <span className="text-cyan-400">
+                {String(agent.result.confidence)}
+              </span>
             </div>
           ) : null}
-          {agent.id === 'dao' && agent.result.type ? (
+          {agent.id === "dao" && agent.result.type ? (
             <div className="flex items-center gap-4 text-sm">
               <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs">
                 {String(agent.result.type)}
               </span>
-              <span className="text-slate-400">{String(agent.result.essence)}</span>
+              <span className="text-slate-400">
+                {String(agent.result.essence)}
+              </span>
             </div>
           ) : null}
-          {agent.id === 'fa' && agent.result.paths ? (
+          {agent.id === "fa" && agent.result.paths ? (
             <div className="text-sm text-slate-400">
-              {pathCount ?? '複数'}つの戦略を評価 → <span className="text-emerald-400">{String(agent.result.recommended)}</span>を推奨
+              {pathCount ?? "複数"}つの戦略を評価 →{" "}
+              <span className="text-emerald-400">
+                {String(agent.result.recommended)}
+              </span>
+              を推奨
             </div>
           ) : null}
-          {agent.id === 'shu' && agent.result.phases ? (
+          {agent.id === "shu" && agent.result.phases ? (
             <div className="text-sm text-slate-400">
-              {phaseCount ?? '複数'}フェーズの実行計画を策定
+              {phaseCount ?? "複数"}フェーズの実行計画を策定
             </div>
           ) : null}
-          {agent.id === 'qi' && agent.result.implementations ? (
+          {agent.id === "qi" && agent.result.implementations ? (
             <div className="text-sm text-slate-400">
-              {implementationCount ?? '複数'}件の実装要素を特定
+              {implementationCount ?? "複数"}件の実装要素を特定
             </div>
           ) : null}
-          {agent.id === 'review' && agent.result.verdict ? (
-            <div className={`text-sm ${agent.result.verdict === 'PASS' ? 'text-emerald-400' : 'text-amber-400'
-              }`}>
+          {agent.id === "review" && agent.result.verdict ? (
+            <div
+              className={`text-sm ${
+                agent.result.verdict === "PASS"
+                  ? "text-emerald-400"
+                  : "text-amber-400"
+              }`}
+            >
               判定: {String(agent.result.verdict)}
             </div>
           ) : null}
@@ -148,12 +199,16 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
 };
 
 /** 思考ログパネル */
-const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onToggle: () => void }> = ({ logs, isExpanded, onToggle }) => {
+const ThinkingLogPanel: React.FC<{
+  logs: ThinkingLog[];
+  isExpanded: boolean;
+  onToggle: () => void;
+}> = ({ logs, isExpanded, onToggle }) => {
   const logEndRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (isExpanded && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [logs, isExpanded]);
 
@@ -167,16 +222,26 @@ const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onT
           <span>💭</span> 思考ログ
           <span className="text-xs text-slate-600">({logs.length}件)</span>
         </span>
-        <span className={`text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+        <span
+          className={`text-slate-500 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+        >
+          ▼
+        </span>
       </button>
       {isExpanded && (
         <div className="max-h-48 overflow-y-auto border-t border-white/5 p-3 space-y-2 text-xs font-mono">
           {logs.map((log, i) => (
             <div key={i} className="flex gap-2 text-slate-400">
               <span className="text-slate-600 shrink-0">
-                {new Date(log.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {new Date(log.timestamp).toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
               </span>
-              <span className="text-indigo-400 shrink-0">[{log.agentName}]</span>
+              <span className="text-indigo-400 shrink-0">
+                [{log.agentName}]
+              </span>
               <span className="text-slate-300 break-all">{log.content}</span>
             </div>
           ))}
@@ -188,7 +253,16 @@ const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onT
 };
 
 export const ProcessingPage: React.FC = () => {
-  const { question, constraints, stakeholders, requestId, setPage, setReport, setRequestId, addToHistory } = useDecisionStore();
+  const {
+    question,
+    constraints,
+    stakeholders,
+    requestId,
+    setPage,
+    setReport,
+    setRequestId,
+    addToHistory,
+  } = useDecisionStore();
   const {
     isConnected,
     isComplete,
@@ -210,7 +284,7 @@ export const ProcessingPage: React.FC = () => {
     stopStream();
     setTimeout(() => {
       // reset() は呼ばない - 入力内容を保持
-      setPage('input');
+      setPage("input");
       setIsCancelling(false);
     }, 300);
   }, [stopStream, setPage]);
@@ -218,10 +292,16 @@ export const ProcessingPage: React.FC = () => {
   /** リトライ処理 */
   const handleRetry = useCallback(() => {
     if (question) {
-      const budget = constraints.budget ? Number.parseFloat(constraints.budget) : undefined;
-      const timeline = constraints.timeline ? Number.parseInt(constraints.timeline, 10) : undefined;
-      const technical = constraints.technical.length > 0 ? constraints.technical : undefined;
-      const regulatory = constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
+      const budget = constraints.budget
+        ? Number.parseFloat(constraints.budget)
+        : undefined;
+      const timeline = constraints.timeline
+        ? Number.parseInt(constraints.timeline, 10)
+        : undefined;
+      const technical =
+        constraints.technical.length > 0 ? constraints.technical : undefined;
+      const regulatory =
+        constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
       const team = constraints.team || undefined;
       const resumeRequestId = streamRequestId || requestId || undefined;
       startStream(
@@ -236,16 +316,27 @@ export const ProcessingPage: React.FC = () => {
           requestId: resumeRequestId,
           resume: Boolean(resumeRequestId),
           preserveProgress: Boolean(resumeRequestId),
-        }
+        },
       );
     }
-  }, [question, constraints.budget, constraints.timeline, constraints.technical, constraints.regulatory, constraints.team, stakeholders, startStream, streamRequestId, requestId]);
+  }, [
+    question,
+    constraints.budget,
+    constraints.timeline,
+    constraints.technical,
+    constraints.regulatory,
+    constraints.team,
+    stakeholders,
+    startStream,
+    streamRequestId,
+    requestId,
+  ]);
 
   /** レポート画面へ遷移 */
   const handleViewReport = useCallback(() => {
     if (report) {
       setReport(report);
-      setPage('report');
+      setPage("report");
     }
   }, [report, setReport, setPage]);
 
@@ -262,14 +353,28 @@ export const ProcessingPage: React.FC = () => {
     // Zustand persist の hydration 完了後に question が設定される
     if (question && !hasStartedRef.current) {
       hasStartedRef.current = true;
-      const budget = constraints.budget ? Number.parseFloat(constraints.budget) : undefined;
-      const timeline = constraints.timeline ? Number.parseInt(constraints.timeline, 10) : undefined;
-      const technical = constraints.technical.length > 0 ? constraints.technical : undefined;
-      const regulatory = constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
+      const budget = constraints.budget
+        ? Number.parseFloat(constraints.budget)
+        : undefined;
+      const timeline = constraints.timeline
+        ? Number.parseInt(constraints.timeline, 10)
+        : undefined;
+      const technical =
+        constraints.technical.length > 0 ? constraints.technical : undefined;
+      const regulatory =
+        constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
       const team = constraints.team || undefined;
-      startStream(question, budget, timeline, stakeholders, technical, regulatory, team);
+      startStream(
+        question,
+        budget,
+        timeline,
+        stakeholders,
+        technical,
+        regulatory,
+        team,
+      );
     } else if (!question) {
-      debugLog('[ProcessingPage] question が空 - hydration 待ち中');
+      debugLog("[ProcessingPage] question が空 - hydration 待ち中");
     }
 
     // Cleanup: React Strict Mode 対応
@@ -279,14 +384,24 @@ export const ProcessingPage: React.FC = () => {
       // 少し遅延して、Strict Mode の再マウントかどうかを確認
       setTimeout(() => {
         if (!isMountedRef.current) {
-          debugLog('[ProcessingPage] 真のアンマウント - ストリーム停止');
+          debugLog("[ProcessingPage] 真のアンマウント - ストリーム停止");
           stopStream();
         }
       }, 100);
       isMountedRef.current = false;
-      hasStartedRef.current = false;  // 再マウント時に再開できるようにリセット
+      hasStartedRef.current = false; // 再マウント時に再開できるようにリセット
     };
-  }, [question, constraints.budget, constraints.timeline, constraints.technical, constraints.regulatory, constraints.team, stakeholders, startStream, stopStream]);
+  }, [
+    question,
+    constraints.budget,
+    constraints.timeline,
+    constraints.technical,
+    constraints.regulatory,
+    constraints.team,
+    stakeholders,
+    startStream,
+    stopStream,
+  ]);
 
   // 完了時にレポートを保存（自動遷移しない - ボタンで遷移）
   useEffect(() => {
@@ -298,11 +413,20 @@ export const ProcessingPage: React.FC = () => {
         question,
         reportId: report.report_id,
         requestId: streamRequestId || requestId || null,
-        status: 'completed',
+        status: "completed",
       });
       // 自動遷移を削除 - ユーザーがボタンをクリックして遷移
     }
-  }, [isComplete, report, question, requestId, setReport, streamRequestId, setRequestId, addToHistory]);
+  }, [
+    isComplete,
+    report,
+    question,
+    requestId,
+    setReport,
+    streamRequestId,
+    setRequestId,
+    addToHistory,
+  ]);
 
   // 実行中でも request_id をストアへ反映（resume 用）
   useEffect(() => {
@@ -318,18 +442,21 @@ export const ProcessingPage: React.FC = () => {
         question,
         reportId: null,
         requestId: streamRequestId || requestId || null,
-        status: 'failed',
+        status: "failed",
       });
       // エラー時も自動遷移しない - 画面に留まってエラーを表示
     }
   }, [error, isComplete, question, requestId, streamRequestId, addToHistory]);
 
-  const completedCount = agents.filter((a) => a.status === 'completed').length;
+  const completedCount = agents.filter((a) => a.status === "completed").length;
   const overallProgress = Math.round((completedCount / agents.length) * 100);
   // 後方互換: 旧REJECT由来の文面も「改善提案」扱いで表示
   const isReviewIssue =
     Boolean(error) &&
-    (String(error).startsWith('重大課題') || String(error).startsWith('検証で重大課題') || String(error).startsWith('検証で') || String(error).includes('改善'));
+    (String(error).startsWith("重大課題") ||
+      String(error).startsWith("検証で重大課題") ||
+      String(error).startsWith("検証で") ||
+      String(error).includes("改善"));
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -343,8 +470,12 @@ export const ProcessingPage: React.FC = () => {
             <span className="font-semibold">Decision Agent</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-            <span className="text-sm text-slate-400">{isConnected ? 'ストリーム接続中' : '未接続'}</span>
+            <span
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-400" : "bg-slate-600"}`}
+            />
+            <span className="text-sm text-slate-400">
+              {isConnected ? "ストリーム接続中" : "未接続"}
+            </span>
           </div>
         </div>
       </header>
@@ -357,17 +488,27 @@ export const ProcessingPage: React.FC = () => {
             {overallProgress}%
           </div>
           <div className="text-slate-400 mt-2">
-            {error ? (isReviewIssue ? '🧩 改善提案があります' : '⚠️ エラーが発生しました') : isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
+            {error
+              ? isReviewIssue
+                ? "🧩 改善提案があります"
+                : "⚠️ エラーが発生しました"
+              : isComplete
+                ? "✅ 分析完了"
+                : "⏳ 分析処理中..."}
           </div>
         </div>
 
         {/* エラー表示 */}
         {error && (
-          <div className={`mb-8 rounded-xl p-4 ${isReviewIssue
-              ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
-              : 'bg-red-500/10 border border-red-500/30 text-red-400'
-            }`}>
-            {isReviewIssue ? '⚠️ ' : '🚨 '}{error}
+          <div
+            className={`mb-8 rounded-xl p-4 ${
+              isReviewIssue
+                ? "bg-amber-500/10 border border-amber-500/30 text-amber-300"
+                : "bg-red-500/10 border border-red-500/30 text-red-400"
+            }`}
+          >
+            {isReviewIssue ? "⚠️ " : "🚨 "}
+            {error}
           </div>
         )}
 
@@ -379,9 +520,7 @@ export const ProcessingPage: React.FC = () => {
         </div>
 
         {/* Review Agent（検証 - 特別表示） */}
-        {agents[7] && (
-          <AgentCard agent={agents[7]} isReview />
-        )}
+        {agents[7] && <AgentCard agent={agents[7]} isReview />}
 
         {/* アクションボタン */}
         <div className="flex justify-center gap-4 mt-8">
@@ -398,7 +537,7 @@ export const ProcessingPage: React.FC = () => {
                 onClick={handleRetry}
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium transition-all flex items-center gap-2"
               >
-                {isReviewIssue ? '📋 改善提案を反映して再分析' : '🔄 リトライ'}
+                {isReviewIssue ? "📋 改善提案を反映して再分析" : "🔄 リトライ"}
               </button>
               <button
                 onClick={handleCancel}
@@ -420,7 +559,7 @@ export const ProcessingPage: React.FC = () => {
                   キャンセル中...
                 </>
               ) : (
-                'キャンセル'
+                "キャンセル"
               )}
             </button>
           )}

@@ -18,18 +18,18 @@
 
 ### AI が最も犯しやすい Python 型エラー（絶対禁止）
 
-| # | ❌ 違反パターン | ✅ 正解 | 理由 |
-|---|---|---|---|
-| 1 | 型アノテーションなし `def fn(x):` | `def fn(x: str) -> None:` | mypy エラー直行 |
-| 2 | `Optional[X]` を None チェックなしで参照 | `if value is not None:` ガード後にアクセス | AttributeError 原因 |
-| 3 | `Any` をデフォルト型として使う | 具体型を明示（理由コメント必須） | 型安全を無効化 |
-| 4 | 戻り値型と実際の `return` 値が不一致 | 宣言型と一致する値を返す | mypy エラー & 実行時バグ |
-| 5 | `dict["key"]` で KeyError リスク | `.get("key")` または存在確認必須 | 実行時クラッシュ |
-| 6 | `cast()` で型を誤魔化す | 実際に正しい型の値を生成する | 型チェック回避 |
-| 7 | `# type: ignore` を理由なく使う | 根本原因を修正する | 問題先送り厳禁 |
-| 8 | Pydantic フィールドに `Any` / 型なし | `field: str`, `field: int \| None` 等 | バリデーション無効化 |
-| 9 | `list[str]` に異なる型を append | `list[str \| int]` 等で型を拡張 | TypeError 原因 |
-| 10 | `async def` の戻り値型を省略 | `async def fn() -> dict[str, Any]:` | 非同期でも型必須 |
+| #   | ❌ 違反パターン                          | ✅ 正解                                    | 理由                     |
+| --- | ---------------------------------------- | ------------------------------------------ | ------------------------ |
+| 1   | 型アノテーションなし `def fn(x):`        | `def fn(x: str) -> None:`                  | mypy エラー直行          |
+| 2   | `Optional[X]` を None チェックなしで参照 | `if value is not None:` ガード後にアクセス | AttributeError 原因      |
+| 3   | `Any` をデフォルト型として使う           | 具体型を明示（理由コメント必須）           | 型安全を無効化           |
+| 4   | 戻り値型と実際の `return` 値が不一致     | 宣言型と一致する値を返す                   | mypy エラー & 実行時バグ |
+| 5   | `dict["key"]` で KeyError リスク         | `.get("key")` または存在確認必須           | 実行時クラッシュ         |
+| 6   | `cast()` で型を誤魔化す                  | 実際に正しい型の値を生成する               | 型チェック回避           |
+| 7   | `# type: ignore` を理由なく使う          | 根本原因を修正する                         | 問題先送り厳禁           |
+| 8   | Pydantic フィールドに `Any` / 型なし     | `field: str`, `field: int \| None` 等      | バリデーション無効化     |
+| 9   | `list[str]` に異なる型を append          | `list[str \| int]` 等で型を拡張            | TypeError 原因           |
+| 10  | `async def` の戻り値型を省略             | `async def fn() -> dict[str, Any]:`        | 非同期でも型必須         |
 
 ### コード生成・編集時の必須チェックリスト（毎回実施）
 
@@ -171,15 +171,15 @@
 
 個別実行する場合は以下をすべて通過させること。
 
-| 領域                    | チェック             | コマンド例                                   |
-| ----------------------- | -------------------- | -------------------------------------------- |
-| **Python**              | フォーマット・リント | `ruff format .` / `ruff check .`             |
+| 領域                    | チェック             | コマンド例                                                                            |
+| ----------------------- | -------------------- | ------------------------------------------------------------------------------------- |
+| **Python**              | フォーマット・リント | `ruff format .` / `ruff check .`                                                      |
 | **Python**              | 型チェック           | `mypy contracts infrastructure shared kernel harness control_plane domain apps tests` |
-| **Python**              | テスト               | `pytest --cov=control_plane --cov-fail-under=80` |
-| **フロント (React/TS)** | リント               | `cd control_plane/frontend && npm run lint` |
-| **フロント (React/TS)** | 型チェック           | `cd control_plane/frontend && npm run type-check` |
-| **フロント (React/TS)** | ビルド               | `cd control_plane/frontend && npm run build` |
-| **共通**                | 軽量フック           | `pre-commit run --all-files`                 |
+| **Python**              | テスト               | `pytest --cov=control_plane --cov-fail-under=80`                                      |
+| **フロント (React/TS)** | リント               | `cd control_plane/frontend && npm run lint`                                           |
+| **フロント (React/TS)** | 型チェック           | `cd control_plane/frontend && npm run type-check`                                     |
+| **フロント (React/TS)** | ビルド               | `cd control_plane/frontend && npm run build`                                          |
+| **共通**                | 軽量フック           | `pre-commit run --all-files`                                                          |
 
 依存関係を更新した場合（Dependabot マージ含む）も上記を実行すること。詳細は [依存関係管理](project/dependency-management.md) を参照。
 
@@ -261,13 +261,13 @@
 
 ## 🔤 文字コード規約（Encoding Rule）
 
-| # | ルール |
-|---|---|
-| 1 | 既定の文字コードは **UTF-8 (BOM なし)** |
-| 2 | Windows PowerShell 5.1 向け `.ps1` は日本語を含む場合 **UTF-8 with BOM** を検討 |
-| 3 | 既存ファイル編集前に **現行エンコーディングを必ず確認** |
-| 4 | 日本語を含む設定ファイル・スクリプト・README・テンプレートで文字化け禁止 |
-| 5 | 新規作成時はファイル種別ごとに推奨エンコーディングを明示 |
+| #   | ルール                                                                          |
+| --- | ------------------------------------------------------------------------------- |
+| 1   | 既定の文字コードは **UTF-8 (BOM なし)**                                         |
+| 2   | Windows PowerShell 5.1 向け `.ps1` は日本語を含む場合 **UTF-8 with BOM** を検討 |
+| 3   | 既存ファイル編集前に **現行エンコーディングを必ず確認**                         |
+| 4   | 日本語を含む設定ファイル・スクリプト・README・テンプレートで文字化け禁止        |
+| 5   | 新規作成時はファイル種別ごとに推奨エンコーディングを明示                        |
 
 **ファイル種別ごとの推奨**:
 | 種別 | 推奨エンコーディング |
@@ -386,6 +386,7 @@ npm run dev
 - `app_config.json` を持つ App のポートは `app_config.json` を単一定義元とし、`<APP>_HOST/PORT` は一時上書き用途に限定する
 - `app_config.json` を持つ App の起動優先順位は `明示指定（CLI 引数 / compose 注入 env） > app_config.json` とし、その後ろにコード側の第3既定値を置かない
 - `scripts/dev.py` / `scripts/compose.py` / `docker-compose*.yml` / `vite.config.*` / 起動 shell は、未指定時に `app_config.json` から host / port を読み、追加の数値 fallback を持たない
+- FastAPI backend の起動責務は `main.py` / `api.py` に持たせず、共通 launcher またはそれを包む `scripts/dev.py` / Docker command に集約する
 - 詳細: [開発原則 - 環境設定管理](global/principles.md#環境設定管理environment-configuration)
 
 ## モジュラー設計ルール
@@ -805,55 +806,55 @@ GET /api/studios/framework/agents  ← Platform UI へ配信
 }
 ```
 
-| フィールド | 必須 | 説明 | 省略時の動作 |
-|---|---|---|---|
-| `name` | ✅ 必須 | Agent 名（App 内一意、snake_case 推奨） | バリデーションエラー |
-| `module` | 推奨 | Python モジュールパス（例: `apps.faq_system.agents.qa_agent`） | 省略可だが診断・監査機能が低下 |
-| `capabilities` | 推奨 | 能力タグ一覧（下表参照） | 空リスト→検索にヒットしなくなる |
-| `business_base` | 推奨 | 業務基盤分類（下表参照） | capabilities・App名から自動推論 |
-| `pattern` | 推奨 | Agent パターン（下表参照） | name・module・engine_pattern から自動推論 |
+| フィールド      | 必須    | 説明                                                           | 省略時の動作                              |
+| --------------- | ------- | -------------------------------------------------------------- | ----------------------------------------- |
+| `name`          | ✅ 必須 | Agent 名（App 内一意、snake_case 推奨）                        | バリデーションエラー                      |
+| `module`        | 推奨    | Python モジュールパス（例: `apps.faq_system.agents.qa_agent`） | 省略可だが診断・監査機能が低下            |
+| `capabilities`  | 推奨    | 能力タグ一覧（下表参照）                                       | 空リスト→検索にヒットしなくなる           |
+| `business_base` | 推奨    | 業務基盤分類（下表参照）                                       | capabilities・App名から自動推論           |
+| `pattern`       | 推奨    | Agent パターン（下表参照）                                     | name・module・engine_pattern から自動推論 |
 
 ### 15.3 business_base 有効値一覧
 
-| 値 | 意味 | 典型的な用途 |
-|---|---|---|
-| `platform` | プラットフォーム管理 | Gallery, Publish, Analytics 等の Platform 自身のAgent |
-| `knowledge` | 知識・RAG | FAQ, 検索, ドキュメント回答 |
-| `reasoning` | 推論・分析 | 分析, スコアリング, トレンド検出, 予測 |
-| `interaction` | 対話・通知 | チャット, 会議, メッセージング, 通知 |
-| `integration` | 外部統合 | SQL接続, Webhook, MCP, API連携 |
-| `operations` | 運用・移行 | マイグレーション, デプロイ, ワークフロー |
-| `governance` | ガバナンス・監査 | Gate判定, コンプライアンス, レビュー, 監査 |
-| `media` | メディア生成 | 画像生成, デザイン, ComfyUI |
-| `custom` | その他 | 上記に該当しない場合（最後の手段） |
+| 値            | 意味                 | 典型的な用途                                          |
+| ------------- | -------------------- | ----------------------------------------------------- |
+| `platform`    | プラットフォーム管理 | Gallery, Publish, Analytics 等の Platform 自身のAgent |
+| `knowledge`   | 知識・RAG            | FAQ, 検索, ドキュメント回答                           |
+| `reasoning`   | 推論・分析           | 分析, スコアリング, トレンド検出, 予測                |
+| `interaction` | 対話・通知           | チャット, 会議, メッセージング, 通知                  |
+| `integration` | 外部統合             | SQL接続, Webhook, MCP, API連携                        |
+| `operations`  | 運用・移行           | マイグレーション, デプロイ, ワークフロー              |
+| `governance`  | ガバナンス・監査     | Gate判定, コンプライアンス, レビュー, 監査            |
+| `media`       | メディア生成         | 画像生成, デザイン, ComfyUI                           |
+| `custom`      | その他               | 上記に該当しない場合（最後の手段）                    |
 
 ### 15.4 pattern（Agent パターン）有効値一覧
 
-| 値 | 意味 | 典型的な Agent 名キーワード |
-|---|---|---|
-| `specialist` | 単一責務の専門 Agent | FaqAgent, FileOrganizerAgent |
-| `coordinator` | 複数 Agent の調整・ルーティング | Coordinator, Orchestrator, Hub |
-| `pipeline_stage` | Pipeline の中間ステージ | PromptPlanner, Transformer |
-| `gatekeeper` | 入口判定・ポリシーガード | GateAgent, PolicyAgent, GuardAgent |
-| `reviewer` | 品質検証・レビュー | ReviewAgent, Checker, Validator |
-| `analyzer` | 分析・診断・スコアリング | AnalyzerAgent, DiagnosAgent, Scorer |
-| `executor` | 実行・収集・変換 | CollectorAgent, WorkflowExecutor |
-| `router` | 意図分類・ディスパッチ | RouterAgent, IntentClassifier |
-| `reporter` | 集計・レポート・要約 | ReporterAgent, SummaryAgent |
-| `custom` | その他 | 上記に該当しない場合（最後の手段） |
+| 値               | 意味                            | 典型的な Agent 名キーワード         |
+| ---------------- | ------------------------------- | ----------------------------------- |
+| `specialist`     | 単一責務の専門 Agent            | FaqAgent, FileOrganizerAgent        |
+| `coordinator`    | 複数 Agent の調整・ルーティング | Coordinator, Orchestrator, Hub      |
+| `pipeline_stage` | Pipeline の中間ステージ         | PromptPlanner, Transformer          |
+| `gatekeeper`     | 入口判定・ポリシーガード        | GateAgent, PolicyAgent, GuardAgent  |
+| `reviewer`       | 品質検証・レビュー              | ReviewAgent, Checker, Validator     |
+| `analyzer`       | 分析・診断・スコアリング        | AnalyzerAgent, DiagnosAgent, Scorer |
+| `executor`       | 実行・収集・変換                | CollectorAgent, WorkflowExecutor    |
+| `router`         | 意図分類・ディスパッチ          | RouterAgent, IntentClassifier       |
+| `reporter`       | 集計・レポート・要約            | ReporterAgent, SummaryAgent         |
+| `custom`         | その他                          | 上記に該当しない場合（最後の手段）  |
 
 ### 15.5 engine_pattern（App レベル）有効値
 
 App の `blueprint.engine_pattern` に設定する値。
 
-| 値 | 対応 Engine | 使用目的 |
-|---|---|---|
-| `simple` | `SimpleEngine` | 単一 Agent の直接応答 |
-| `flow` | Flow DSL | 宣言的チェーン（gate/then/parallel/review） |
-| `pipeline` | `PipelineEngine` | 多段処理＋Reviewループ |
-| `coordinator` | `AgentCoordinator` | 動的ルーティング、複数 Agent 協調 |
-| `deep_agent` | `PEVEngine` 等 | 計画/実行/検証の深い自律ループ |
-| `custom` | 独自実装 | 上記に該当しない場合 |
+| 値            | 対応 Engine        | 使用目的                                    |
+| ------------- | ------------------ | ------------------------------------------- |
+| `simple`      | `SimpleEngine`     | 単一 Agent の直接応答                       |
+| `flow`        | Flow DSL           | 宣言的チェーン（gate/then/parallel/review） |
+| `pipeline`    | `PipelineEngine`   | 多段処理＋Reviewループ                      |
+| `coordinator` | `AgentCoordinator` | 動的ルーティング、複数 Agent 協調           |
+| `deep_agent`  | `PEVEngine` 等     | 計画/実行/検証の深い自律ループ              |
+| `custom`      | 独自実装           | 上記に該当しない場合                        |
 
 ### 15.6 新規 Agent 追加の DoD チェックリスト
 
@@ -886,10 +887,10 @@ App の `blueprint.engine_pattern` に設定する値。
 
 ### 14.1 非同期 DB コミット（最重要）
 
-| ❌ バグ | ✅ 正解 | 理由 |
-|---|---|---|
+| ❌ バグ                                       | ✅ 正解                                    | 理由                                                  |
+| --------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
 | `session.add(obj)` のみで `commit()` を忘れる | `session.add(obj); await session.commit()` | 非同期モード（aiosqlite/asyncpg）は自動コミットしない |
-| `session.commit()` を `await` なしで呼ぶ | `await session.commit()` | 非同期セッションは coroutine を返す |
+| `session.commit()` を `await` なしで呼ぶ      | `await session.commit()`                   | 非同期セッションは coroutine を返す                   |
 
 - SQLite 同期モードは自動コミットするが、**非同期モード・PostgreSQL では必ず明示 commit が必要**。
 - `IntegrityError` のハンドリングも忘れないこと（ユニーク制約違反等）。
@@ -898,11 +899,11 @@ App の `blueprint.engine_pattern` に設定する値。
 
 バックエンドが送信する SSE イベントタイプ: `progress`, `result`, `error`
 
-| ❌ バグ | ✅ 正解 | 理由 |
-|---|---|---|
-| `result` イベントを無視する | `result` イベントから回答本文を取得し表示する | チャットの回答が画面に表示されない致命的バグ |
-| SSE パースを `try/catch` なしで行う | 各行を個別に `try/catch` で囲む | 1行の不正データで全ストリームが停止 |
-| イベント型を `any` で扱う | 型安全な union 型で定義する | TypeScript の型チェックが無効化される |
+| ❌ バグ                             | ✅ 正解                                       | 理由                                         |
+| ----------------------------------- | --------------------------------------------- | -------------------------------------------- |
+| `result` イベントを無視する         | `result` イベントから回答本文を取得し表示する | チャットの回答が画面に表示されない致命的バグ |
+| SSE パースを `try/catch` なしで行う | 各行を個別に `try/catch` で囲む               | 1行の不正データで全ストリームが停止          |
+| イベント型を `any` で扱う           | 型安全な union 型で定義する                   | TypeScript の型チェックが無効化される        |
 
 ### 14.3 Pydantic バリデーション vs サービス層バリデーション
 

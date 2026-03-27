@@ -2,7 +2,7 @@
  * RAGOverview - RAG 機能概要 + App 単位設定管理.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   fetchAppRAGConfigs,
   fetchAppRAGIngestRuns,
@@ -10,7 +10,7 @@ import {
   patchAppRAGConfig,
   restartApp,
   setupQdrantLocal,
-} from '@/api/client';
+} from "@/api/client";
 import type {
   AppRAGConfig,
   RAGDataSource,
@@ -19,10 +19,10 @@ import type {
   RAGIngestRunSummary,
   RAGPattern,
   RAGVectorProviderOption,
-} from '@/types';
-import { useAppStore } from '@/store/useAppStore';
+} from "@/types";
+import { useAppStore } from "@/store/useAppStore";
 
-type DataSourceType = 'web' | 'file' | 'database' | 'api' | 's3';
+type DataSourceType = "web" | "file" | "database" | "api" | "s3";
 
 interface DataSourceTypeOption {
   value: DataSourceType;
@@ -61,77 +61,78 @@ interface RAGFormState {
 
 const DEFAULT_DATABASE_TYPE_OPTIONS: RAGDatabaseTypeOption[] = [
   {
-    name: 'postgresql',
-    label: 'PostgreSQL',
-    dialect: 'postgresql',
-    connection_kind: 'network',
+    name: "postgresql",
+    label: "PostgreSQL",
+    dialect: "postgresql",
+    connection_kind: "network",
     default_port: 5432,
-    sample_uri: 'postgresql+asyncpg://user:password@localhost:5432/app_db',
+    sample_uri: "postgresql+asyncpg://user:password@localhost:5432/app_db",
   },
   {
-    name: 'mysql',
-    label: 'MySQL',
-    dialect: 'mysql',
-    connection_kind: 'network',
+    name: "mysql",
+    label: "MySQL",
+    dialect: "mysql",
+    connection_kind: "network",
     default_port: 3306,
-    sample_uri: 'mysql+aiomysql://user:password@localhost:3306/app_db',
+    sample_uri: "mysql+aiomysql://user:password@localhost:3306/app_db",
   },
   {
-    name: 'sqlite',
-    label: 'SQLite',
-    dialect: 'sqlite',
-    connection_kind: 'file',
+    name: "sqlite",
+    label: "SQLite",
+    dialect: "sqlite",
+    connection_kind: "file",
     default_port: null,
-    sample_uri: 'sqlite+aiosqlite:///./app.db',
+    sample_uri: "sqlite+aiosqlite:///./app.db",
   },
   {
-    name: 'mssql',
-    label: 'SQL Server',
-    dialect: 'mssql',
-    connection_kind: 'network',
+    name: "mssql",
+    label: "SQL Server",
+    dialect: "mssql",
+    connection_kind: "network",
     default_port: 1433,
-    sample_uri: 'mssql+pyodbc://user:password@localhost:1433/app_db?driver=ODBC+Driver+18+for+SQL+Server',
+    sample_uri:
+      "mssql+pyodbc://user:password@localhost:1433/app_db?driver=ODBC+Driver+18+for+SQL+Server",
   },
 ];
 
 const DEFAULT_VECTOR_PROVIDER_OPTIONS: RAGVectorProviderOption[] = [
-  { name: 'qdrant', label: 'Qdrant' },
-  { name: 'pinecone', label: 'Pinecone' },
-  { name: 'weaviate', label: 'Weaviate' },
-  { name: 'pgvector', label: 'PostgreSQL (pgvector)' },
-  { name: 'milvus', label: 'Milvus' },
+  { name: "qdrant", label: "Qdrant" },
+  { name: "pinecone", label: "Pinecone" },
+  { name: "weaviate", label: "Weaviate" },
+  { name: "pgvector", label: "PostgreSQL (pgvector)" },
+  { name: "milvus", label: "Milvus" },
 ];
 
 const DATA_SOURCE_TYPE_OPTIONS: DataSourceTypeOption[] = [
   {
-    value: 'web',
-    label: 'Web',
-    description: 'クロール対象のページ URL を登録',
-    placeholder: 'https://example.com/docs',
+    value: "web",
+    label: "Web",
+    description: "クロール対象のページ URL を登録",
+    placeholder: "https://example.com/docs",
   },
   {
-    value: 'file',
-    label: 'File',
-    description: 'ローカルファイルや共有パスを登録',
-    placeholder: '/data/knowledge/faq.md',
+    value: "file",
+    label: "File",
+    description: "ローカルファイルや共有パスを登録",
+    placeholder: "/data/knowledge/faq.md",
   },
   {
-    value: 'database',
-    label: 'Database',
-    description: 'SQL DB 接続情報と対象テーブル/クエリを登録',
-    placeholder: 'postgresql+asyncpg://user:password@localhost:5432/app_db',
+    value: "database",
+    label: "Database",
+    description: "SQL DB 接続情報と対象テーブル/クエリを登録",
+    placeholder: "postgresql+asyncpg://user:password@localhost:5432/app_db",
   },
   {
-    value: 'api',
-    label: 'API',
-    description: '外部 API の取得先を登録',
-    placeholder: 'https://api.example.com/v1/faq',
+    value: "api",
+    label: "API",
+    description: "外部 API の取得先を登録",
+    placeholder: "https://api.example.com/v1/faq",
   },
   {
-    value: 's3',
-    label: 'S3',
-    description: 'オブジェクトストレージを登録',
-    placeholder: 's3://bucket/path',
+    value: "s3",
+    label: "S3",
+    description: "オブジェクトストレージを登録",
+    placeholder: "s3://bucket/path",
   },
 ];
 
@@ -140,63 +141,73 @@ function createSourceId(): string {
 }
 
 function normalizeDatabaseKind(value: string | null | undefined): string {
-  const kind = String(value ?? '').trim().toLowerCase();
+  const kind = String(value ?? "")
+    .trim()
+    .toLowerCase();
   if (!kind) {
-    return '';
+    return "";
   }
-  if (kind.includes('postgres')) {
-    return 'postgresql';
+  if (kind.includes("postgres")) {
+    return "postgresql";
   }
-  if (kind.includes('sqlite')) {
-    return 'sqlite';
+  if (kind.includes("sqlite")) {
+    return "sqlite";
   }
-  if (kind.includes('mysql')) {
-    return 'mysql';
+  if (kind.includes("mysql")) {
+    return "mysql";
   }
-  if (kind.includes('mssql') || kind.includes('sqlserver') || kind.includes('sql_server')) {
-    return 'mssql';
+  if (
+    kind.includes("mssql") ||
+    kind.includes("sqlserver") ||
+    kind.includes("sql_server")
+  ) {
+    return "mssql";
   }
   return kind;
 }
 
 function normalizeSourceType(value: string | null | undefined): DataSourceType {
-  const type = String(value ?? '').trim().toLowerCase();
-  if (type === 'file') return 'file';
-  if (type === 'database' || type === 'db' || type === 'sql') return 'database';
-  if (type === 'api') return 'api';
-  if (type === 's3') return 's3';
-  return 'web';
+  const type = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (type === "file") return "file";
+  if (type === "database" || type === "db" || type === "sql") return "database";
+  if (type === "api") return "api";
+  if (type === "s3") return "s3";
+  return "web";
 }
 
 function cleanText(value: unknown): string {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return value.trim();
   }
-  if (typeof value === 'number' && Number.isFinite(value)) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return String(value);
   }
-  return '';
+  return "";
 }
 
 function readOption(options: Record<string, unknown>, key: string): string {
   return cleanText(options[key]);
 }
 
-function compactOptions(options: Record<string, unknown>): Record<string, unknown> {
+function compactOptions(
+  options: Record<string, unknown>,
+): Record<string, unknown> {
   const entries = Object.entries(options)
     .map(([key, value]) => [key, cleanText(value)] as const)
     .filter(([, value]) => value.length > 0);
   return Object.fromEntries(entries);
 }
 
-function createEmptySource(type: DataSourceType = 'web'): DataSourceDraft {
+function createEmptySource(type: DataSourceType = "web"): DataSourceDraft {
   return {
     id: createSourceId(),
     type,
-    uri: '',
-    label: '',
+    uri: "",
+    label: "",
     enabled: true,
-    schedule: '',
+    schedule: "",
     options: {},
   };
 }
@@ -205,15 +216,15 @@ function buildDatabaseSourceFromHint(
   appName: string,
   dbHint: RAGDatabaseHint | undefined,
 ): DataSourceDraft {
-  const kind = normalizeDatabaseKind(dbHint?.kind) || 'postgresql';
+  const kind = normalizeDatabaseKind(dbHint?.kind) || "postgresql";
   const uri = cleanText(dbHint?.uri) || cleanText(dbHint?.sample_uri);
   const label = cleanText(dbHint?.sample_label) || `${appName} SQL source`;
   const options: Record<string, unknown> = {
     dialect: kind,
     database_type: kind,
-    read_mode: 'query',
-    query: 'SELECT 1 AS sample_value',
-    row_limit: '200',
+    read_mode: "query",
+    query: "SELECT 1 AS sample_value",
+    row_limit: "200",
   };
   const databaseName = cleanText(dbHint?.database);
   const host = cleanText(dbHint?.host);
@@ -221,14 +232,14 @@ function buildDatabaseSourceFromHint(
   if (databaseName) options.database = databaseName;
   if (host) options.host = host;
   if (user) options.user = user;
-  if (typeof dbHint?.port === 'number') options.port = String(dbHint.port);
+  if (typeof dbHint?.port === "number") options.port = String(dbHint.port);
   return {
     id: createSourceId(),
-    type: 'database',
+    type: "database",
     uri,
     label,
     enabled: true,
-    schedule: '',
+    schedule: "",
     options,
   };
 }
@@ -238,28 +249,35 @@ function draftFromSource(source: RAGDataSource): DataSourceDraft {
     id: cleanText(source.id) || createSourceId(),
     type: normalizeSourceType(source.type),
     uri: cleanText(source.uri),
-    label: cleanText(source.label ?? ''),
+    label: cleanText(source.label ?? ""),
     enabled: source.enabled ?? true,
-    schedule: cleanText(source.schedule ?? ''),
-    options: typeof source.options === 'object' && source.options !== null ? source.options : {},
+    schedule: cleanText(source.schedule ?? ""),
+    options:
+      typeof source.options === "object" && source.options !== null
+        ? source.options
+        : {},
   };
 }
 
 function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
   const uri = cleanText(source.uri);
-  if (!uri && source.type !== 'database') {
+  if (!uri && source.type !== "database") {
     return null;
   }
   const label = cleanText(source.label);
   const schedule = cleanText(source.schedule);
   const options = compactOptions(source.options);
-  if (source.type === 'database') {
-    const normalizedDbType = normalizeDatabaseKind(cleanText(options.database_type) || cleanText(options.dialect));
-    const normalizedDialect = normalizeDatabaseKind(cleanText(options.dialect) || normalizedDbType);
+  if (source.type === "database") {
+    const normalizedDbType = normalizeDatabaseKind(
+      cleanText(options.database_type) || cleanText(options.dialect),
+    );
+    const normalizedDialect = normalizeDatabaseKind(
+      cleanText(options.dialect) || normalizedDbType,
+    );
     const nextOptions: Record<string, unknown> = {
       ...options,
-      database_type: normalizedDbType || 'postgresql',
-      dialect: normalizedDialect || normalizedDbType || 'postgresql',
+      database_type: normalizedDbType || "postgresql",
+      dialect: normalizedDialect || normalizedDbType || "postgresql",
     };
 
     const readModeRaw = cleanText(nextOptions.read_mode).toLowerCase();
@@ -271,17 +289,18 @@ function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
       cleanText(nextOptions.tables).length > 0 ||
       hasTablesList;
     const hasQuery = cleanText(nextOptions.query).length > 0;
-    let readMode: 'table' | 'query' = readModeRaw === 'table' ? 'table' : 'query';
+    let readMode: "table" | "query" =
+      readModeRaw === "table" ? "table" : "query";
 
-    if (readMode === 'table' && !hasTable) {
-      readMode = hasQuery ? 'query' : 'query';
+    if (readMode === "table" && !hasTable) {
+      readMode = hasQuery ? "query" : "query";
     }
-    if (readMode === 'query' && !hasQuery) {
-      nextOptions.query = 'SELECT 1 AS sample_value';
+    if (readMode === "query" && !hasQuery) {
+      nextOptions.query = "SELECT 1 AS sample_value";
     }
     nextOptions.read_mode = readMode;
     if (!cleanText(nextOptions.row_limit)) {
-      nextOptions.row_limit = '200';
+      nextOptions.row_limit = "200";
     }
 
     return {
@@ -306,12 +325,15 @@ function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
   };
 }
 
-function sourcePlaceholder(type: DataSourceType, dbHint?: RAGDatabaseHint): string {
-  if (type === 'database' && dbHint) {
+function sourcePlaceholder(
+  type: DataSourceType,
+  dbHint?: RAGDatabaseHint,
+): string {
+  if (type === "database" && dbHint) {
     return cleanText(dbHint.uri) || cleanText(dbHint.sample_uri);
   }
   const option = DATA_SOURCE_TYPE_OPTIONS.find((item) => item.value === type);
-  return option?.placeholder ?? '';
+  return option?.placeholder ?? "";
 }
 
 function findDatabaseTypeOption(
@@ -321,7 +343,9 @@ function findDatabaseTypeOption(
 ): RAGDatabaseTypeOption {
   const normalized = normalizeDatabaseKind(value);
   if (normalized) {
-    const found = options.find((item) => item.name === normalized || item.dialect === normalized);
+    const found = options.find(
+      (item) => item.name === normalized || item.dialect === normalized,
+    );
     if (found) {
       return found;
     }
@@ -329,7 +353,9 @@ function findDatabaseTypeOption(
   const fallback = options[0] ?? DEFAULT_DATABASE_TYPE_OPTIONS[0];
   const hintKind = normalizeDatabaseKind(dbHint?.kind);
   if (hintKind) {
-    const hinted = options.find((item) => item.name === hintKind || item.dialect === hintKind);
+    const hinted = options.find(
+      (item) => item.name === hintKind || item.dialect === hintKind,
+    );
     if (hinted) {
       return hinted;
     }
@@ -338,19 +364,23 @@ function findDatabaseTypeOption(
     return fallback;
   }
   return {
-    name: 'postgresql',
-    label: 'PostgreSQL',
-    dialect: 'postgresql',
-    connection_kind: 'network',
+    name: "postgresql",
+    label: "PostgreSQL",
+    dialect: "postgresql",
+    connection_kind: "network",
     default_port: 5432,
-    sample_uri: cleanText(dbHint?.sample_uri) || 'postgresql+asyncpg://user:password@localhost:5432/app_db',
+    sample_uri:
+      cleanText(dbHint?.sample_uri) ||
+      "postgresql+asyncpg://user:password@localhost:5432/app_db",
   };
 }
 
 function toForm(config: AppRAGConfig): RAGFormState {
   const baseSources = config.rag.data_sources.map(draftFromSource);
   const dbHint = config.db_hint;
-  const hasDatabaseSource = baseSources.some((source) => source.type === 'database');
+  const hasDatabaseSource = baseSources.some(
+    (source) => source.type === "database",
+  );
   const dataSources =
     dbHint?.available && !hasDatabaseSource
       ? [buildDatabaseSourceFromHint(config.app_name, dbHint), ...baseSources]
@@ -358,31 +388,33 @@ function toForm(config: AppRAGConfig): RAGFormState {
 
   return {
     enabled: config.rag.enabled,
-    pattern: config.rag.pattern ?? '',
-    vector_provider: config.rag.vector_provider ?? '',
-    vector_url: config.rag.vector_url ?? '',
-    vector_collection: config.rag.vector_collection ?? '',
-    embedding_model: config.rag.embedding_model ?? '',
+    pattern: config.rag.pattern ?? "",
+    vector_provider: config.rag.vector_provider ?? "",
+    vector_url: config.rag.vector_url ?? "",
+    vector_collection: config.rag.vector_collection ?? "",
+    embedding_model: config.rag.embedding_model ?? "",
     chunk_strategy: config.rag.chunk_strategy,
     chunk_size: config.rag.chunk_size,
     chunk_overlap: config.rag.chunk_overlap,
     retrieval_method: config.rag.retrieval_method,
-    reranker: config.rag.reranker ?? '',
+    reranker: config.rag.reranker ?? "",
     top_k: config.rag.top_k,
     score_threshold:
-      config.rag.score_threshold === null || config.rag.score_threshold === undefined
-        ? ''
+      config.rag.score_threshold === null ||
+      config.rag.score_threshold === undefined
+        ? ""
         : String(config.rag.score_threshold),
-    indexing_schedule: config.rag.indexing_schedule ?? '',
+    indexing_schedule: config.rag.indexing_schedule ?? "",
     data_sources: dataSources,
   };
 }
 
 export function RAGOverview() {
-  const { ragOverview, loading, error, loadRAGOverview, clearError } = useAppStore();
+  const { ragOverview, loading, error, loadRAGOverview, clearError } =
+    useAppStore();
   const [ragConfigs, setRagConfigs] = useState<AppRAGConfig[]>([]);
   const [patterns, setPatterns] = useState<RAGPattern[]>([]);
-  const [selectedApp, setSelectedApp] = useState('');
+  const [selectedApp, setSelectedApp] = useState("");
   const [form, setForm] = useState<RAGFormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [patternModified, setPatternModified] = useState(false);
@@ -399,7 +431,8 @@ export function RAGOverview() {
   );
   const databaseTypeOptions = useMemo(() => {
     const apiOptions = ragOverview?.database_types ?? [];
-    const base = apiOptions.length > 0 ? apiOptions : DEFAULT_DATABASE_TYPE_OPTIONS;
+    const base =
+      apiOptions.length > 0 ? apiOptions : DEFAULT_DATABASE_TYPE_OPTIONS;
     const normalizedBase = base.map((option) => ({
       ...option,
       name: normalizeDatabaseKind(option.name) || option.name,
@@ -409,10 +442,15 @@ export function RAGOverview() {
     if (!hintKind) {
       return normalizedBase;
     }
-    if (normalizedBase.some((option) => option.name === hintKind || option.dialect === hintKind)) {
+    if (
+      normalizedBase.some(
+        (option) => option.name === hintKind || option.dialect === hintKind,
+      )
+    ) {
       return normalizedBase;
     }
-    const inferredConnectionKind: 'network' | 'file' = hintKind === 'sqlite' ? 'file' : 'network';
+    const inferredConnectionKind: "network" | "file" =
+      hintKind === "sqlite" ? "file" : "network";
     return [
       ...normalizedBase,
       {
@@ -423,7 +461,7 @@ export function RAGOverview() {
         default_port: null,
         sample_uri:
           cleanText(selectedConfig?.db_hint?.sample_uri) ||
-          'postgresql+asyncpg://user:password@localhost:5432/app_db',
+          "postgresql+asyncpg://user:password@localhost:5432/app_db",
       },
     ];
   }, [ragOverview?.database_types, selectedConfig?.db_hint]);
@@ -475,13 +513,17 @@ export function RAGOverview() {
     try {
       const result = await setupQdrantLocal();
       if (result.success) {
-        setManagerMessage(`Qdrant セットアップ完了: ${result.qdrant_url ?? 'http://localhost:6333'}`);
+        setManagerMessage(
+          `Qdrant セットアップ完了: ${result.qdrant_url ?? "http://localhost:6333"}`,
+        );
         await loadManager();
       } else {
         setManagerError(`セットアップ失敗: ${result.message}`);
       }
     } catch (err) {
-      setManagerError(err instanceof Error ? err.message : 'セットアップエラー');
+      setManagerError(
+        err instanceof Error ? err.message : "セットアップエラー",
+      );
     } finally {
       setSetupLoading(false);
     }
@@ -500,11 +542,15 @@ export function RAGOverview() {
 
       if (!selectedApp && configs.apps.length > 0) {
         setSelectedApp(configs.apps[0].app_name);
-      } else if (selectedApp && !configs.apps.some((item) => item.app_name === selectedApp)) {
-        setSelectedApp(configs.apps[0]?.app_name ?? '');
+      } else if (
+        selectedApp &&
+        !configs.apps.some((item) => item.app_name === selectedApp)
+      ) {
+        setSelectedApp(configs.apps[0]?.app_name ?? "");
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'RAG 設定一覧の取得に失敗しました';
+      const message =
+        err instanceof Error ? err.message : "RAG 設定一覧の取得に失敗しました";
       setManagerError(message);
     } finally {
       setManagerLoading(false);
@@ -527,11 +573,12 @@ export function RAGOverview() {
       chunk_size: pattern.config.chunk_size,
       chunk_overlap: pattern.config.chunk_overlap,
       retrieval_method: pattern.config.retrieval_method,
-      reranker: pattern.config.reranker ?? '',
+      reranker: pattern.config.reranker ?? "",
       top_k: pattern.config.top_k,
       score_threshold:
-        pattern.config.score_threshold === null || pattern.config.score_threshold === undefined
-          ? ''
+        pattern.config.score_threshold === null ||
+        pattern.config.score_threshold === undefined
+          ? ""
           : String(pattern.config.score_threshold),
     });
     setPatternModified(false);
@@ -561,12 +608,12 @@ export function RAGOverview() {
         data_sources: current.data_sources.map((source) =>
           source.id === sourceId
             ? {
-              ...source,
-              options: {
-                ...source.options,
-                [key]: value,
-              },
-            }
+                ...source,
+                options: {
+                  ...source.options,
+                  [key]: value,
+                },
+              }
             : source,
         ),
       };
@@ -592,18 +639,26 @@ export function RAGOverview() {
       }
       return {
         ...current,
-        data_sources: current.data_sources.filter((source) => source.id !== sourceId),
+        data_sources: current.data_sources.filter(
+          (source) => source.id !== sourceId,
+        ),
       };
     });
   };
 
   const applyDetectedDatabaseSource = () => {
     const seeded = buildDatabaseSourceFromHint(
-      selectedConfig?.app_name ?? 'app',
+      selectedConfig?.app_name ?? "app",
       selectedConfig?.db_hint,
     );
-    const seededKind = normalizeDatabaseKind(readOption(seeded.options, 'database_type'));
-    const seededType = findDatabaseTypeOption(databaseTypeOptions, seededKind, selectedConfig?.db_hint);
+    const seededKind = normalizeDatabaseKind(
+      readOption(seeded.options, "database_type"),
+    );
+    const seededType = findDatabaseTypeOption(
+      databaseTypeOptions,
+      seededKind,
+      selectedConfig?.db_hint,
+    );
     const seededOptions: Record<string, unknown> = {
       ...seeded.options,
       database_type: seededType.name,
@@ -614,7 +669,9 @@ export function RAGOverview() {
       if (!current) {
         return current;
       }
-      const currentDbIndex = current.data_sources.findIndex((source) => source.type === 'database');
+      const currentDbIndex = current.data_sources.findIndex(
+        (source) => source.type === "database",
+      );
       if (currentDbIndex >= 0) {
         const nextSources = [...current.data_sources];
         const existing = nextSources[currentDbIndex];
@@ -646,10 +703,23 @@ export function RAGOverview() {
     });
   };
 
-  const handleDatabaseTypeChange = (source: DataSourceDraft, nextType: string) => {
-    const nextOption = findDatabaseTypeOption(databaseTypeOptions, nextType, selectedConfig?.db_hint);
-    const currentTypeName = readOption(source.options, 'database_type') || readOption(source.options, 'dialect');
-    const currentOption = findDatabaseTypeOption(databaseTypeOptions, currentTypeName, selectedConfig?.db_hint);
+  const handleDatabaseTypeChange = (
+    source: DataSourceDraft,
+    nextType: string,
+  ) => {
+    const nextOption = findDatabaseTypeOption(
+      databaseTypeOptions,
+      nextType,
+      selectedConfig?.db_hint,
+    );
+    const currentTypeName =
+      readOption(source.options, "database_type") ||
+      readOption(source.options, "dialect");
+    const currentOption = findDatabaseTypeOption(
+      databaseTypeOptions,
+      currentTypeName,
+      selectedConfig?.db_hint,
+    );
     const uriText = cleanText(source.uri);
     const shouldUpdateUri = !uriText || uriText === currentOption.sample_uri;
     updateSource(source.id, {
@@ -662,18 +732,28 @@ export function RAGOverview() {
     });
   };
 
-  const handleSourceTypeChange = (source: DataSourceDraft, nextType: DataSourceType) => {
+  const handleSourceTypeChange = (
+    source: DataSourceDraft,
+    nextType: DataSourceType,
+  ) => {
     const patch: Partial<DataSourceDraft> = {
       type: nextType,
       options: { ...source.options },
     };
-    if (nextType === 'database') {
-      const seeded = buildDatabaseSourceFromHint(selectedConfig?.app_name ?? 'app', selectedConfig?.db_hint);
+    if (nextType === "database") {
+      const seeded = buildDatabaseSourceFromHint(
+        selectedConfig?.app_name ?? "app",
+        selectedConfig?.db_hint,
+      );
       const seededTypeName =
-        readOption(source.options, 'database_type') ||
-        readOption(source.options, 'dialect') ||
-        readOption(seeded.options, 'database_type');
-      const seededType = findDatabaseTypeOption(databaseTypeOptions, seededTypeName, selectedConfig?.db_hint);
+        readOption(source.options, "database_type") ||
+        readOption(source.options, "dialect") ||
+        readOption(seeded.options, "database_type");
+      const seededType = findDatabaseTypeOption(
+        databaseTypeOptions,
+        seededTypeName,
+        selectedConfig?.db_hint,
+      );
       if (!cleanText(source.uri)) {
         patch.uri = cleanText(seeded.uri) || seededType.sample_uri;
       }
@@ -698,11 +778,12 @@ export function RAGOverview() {
     }
     const runtimeDbUri = cleanText(selectedConfig.db_hint?.uri);
     const hasInvalidDatabaseSource = form.data_sources.some(
-      (source) => source.type === 'database' && !cleanText(source.uri) && !runtimeDbUri,
+      (source) =>
+        source.type === "database" && !cleanText(source.uri) && !runtimeDbUri,
     );
     if (hasInvalidDatabaseSource) {
       setManagerError(
-        'Database source の URI が未設定です。URI を入力するか、app_config の runtime.database.url / runtime.urls.database を設定してください。',
+        "Database source の URI が未設定です。URI を入力するか、app_config の runtime.database.url / runtime.urls.database を設定してください。",
       );
       return;
     }
@@ -723,7 +804,8 @@ export function RAGOverview() {
         retrieval_method: form.retrieval_method,
         reranker: form.reranker || null,
         top_k: form.top_k,
-        score_threshold: form.score_threshold === '' ? null : Number(form.score_threshold),
+        score_threshold:
+          form.score_threshold === "" ? null : Number(form.score_threshold),
         indexing_schedule: form.indexing_schedule || null,
         data_sources: form.data_sources
           .map(sourceToPayload)
@@ -737,33 +819,40 @@ export function RAGOverview() {
           const restart = await restartApp(selectedConfig.app_name);
           if (!restart.success) {
             restartError =
-              (typeof restart.error === 'string' && restart.error) ||
-              'restart API returned success=false';
+              (typeof restart.error === "string" && restart.error) ||
+              "restart API returned success=false";
           }
         } catch (err) {
-          restartError = err instanceof Error ? err.message : 'restart request failed';
+          restartError =
+            err instanceof Error ? err.message : "restart request failed";
         }
       }
       await Promise.all([loadManager(), loadRAGOverview()]);
       try {
-        const runsResponse = await fetchAppRAGIngestRuns(selectedConfig.app_name, 20);
+        const runsResponse = await fetchAppRAGIngestRuns(
+          selectedConfig.app_name,
+          20,
+        );
         setIngestRuns(runsResponse.runs);
       } catch {
         setIngestRuns([]);
       }
       if (restartError) {
-        setManagerError(`RAG 設定は保存しましたが、再起動に失敗しました: ${restartError}`);
+        setManagerError(
+          `RAG 設定は保存しましたが、再起動に失敗しました: ${restartError}`,
+        );
       } else {
         setManagerMessage(
           hotApplied
             ? `RAG 設定を保存し、hot apply で反映しました（subscriber: ${
-              updated.hot_apply?.subscriber_count ?? 0
-            }）。`
+                updated.hot_apply?.subscriber_count ?? 0
+              }）。`
             : `RAG 設定を保存し、${selectedConfig.app_name} を再起動しました（hot apply fallback）。`,
         );
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'RAG 設定の保存に失敗しました';
+      const message =
+        err instanceof Error ? err.message : "RAG 設定の保存に失敗しました";
       setManagerError(message);
     } finally {
       setSaving(false);
@@ -782,17 +871,26 @@ export function RAGOverview() {
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between">
           <span className="text-red-400 text-sm">{error}</span>
-          <button onClick={clearError} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+          <button
+            onClick={clearError}
+            className="text-red-400 hover:text-red-300 text-xs"
+          >
+            ✕
+          </button>
         </div>
       )}
 
       {(managerError || managerMessage) && (
         <div
-          data-testid={managerMessage && !managerError ? 'rag-save-success-toast' : undefined}
+          data-testid={
+            managerMessage && !managerError
+              ? "rag-save-success-toast"
+              : undefined
+          }
           className={`rounded-lg p-4 text-sm ${
             managerError
-              ? 'bg-red-500/10 border border-red-500/20 text-red-300'
-              : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+              ? "bg-red-500/10 border border-red-500/20 text-red-300"
+              : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
           }`}
         >
           {managerError ?? managerMessage}
@@ -808,21 +906,41 @@ export function RAGOverview() {
       {ragOverview && !loading && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard icon="📄" label="Chunking Strategies" value={ragOverview.stats.total_strategies} color="indigo" />
-            <StatCard icon="🔀" label="Rerankers" value={ragOverview.stats.total_rerankers} color="cyan" />
-            <StatCard icon="📦" label="Apps Using RAG" value={ragOverview.stats.total_apps_using_rag} color="amber" />
+            <StatCard
+              icon="📄"
+              label="Chunking Strategies"
+              value={ragOverview.stats.total_strategies}
+              color="indigo"
+            />
+            <StatCard
+              icon="🔀"
+              label="Rerankers"
+              value={ragOverview.stats.total_rerankers}
+              color="cyan"
+            />
+            <StatCard
+              icon="📦"
+              label="Apps Using RAG"
+              value={ragOverview.stats.total_apps_using_rag}
+              color="amber"
+            />
           </div>
 
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
-            <p className="text-sm text-slate-300 leading-relaxed">{ragOverview.description}</p>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              {ragOverview.description}
+            </p>
           </div>
 
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-slate-200">RAG Config Studio</h2>
+                <h2 className="text-sm font-semibold text-slate-200">
+                  RAG Config Studio
+                </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  App ごとにデータソース・分割方式・検索方式・再ランク設定を管理します
+                  App
+                  ごとにデータソース・分割方式・検索方式・再ランク設定を管理します
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -832,7 +950,7 @@ export function RAGOverview() {
                   disabled={setupLoading}
                   className="px-3 py-1.5 rounded-md bg-cyan-800/50 hover:bg-cyan-700/50 disabled:opacity-50 text-cyan-300 text-xs border border-cyan-700/30"
                 >
-                  {setupLoading ? 'Qdrant 起動中...' : '🐾 Qdrant セットアップ'}
+                  {setupLoading ? "Qdrant 起動中..." : "🐾 Qdrant セットアップ"}
                 </button>
                 <button
                   onClick={() => void loadManager()}
@@ -848,27 +966,32 @@ export function RAGOverview() {
                 {managerLoading && (
                   <p className="text-xs text-slate-500">読み込み中...</p>
                 )}
-                {!managerLoading && ragConfigs.map((item) => (
-                  <button
-                    key={item.app_name}
-                    data-testid={`rag-app-card-${item.app_name}`}
-                    onClick={() => setSelectedApp(item.app_name)}
-                    className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
-                      selectedApp === item.app_name
-                        ? 'border-indigo-500/50 bg-indigo-500/10'
-                        : 'border-slate-700 bg-slate-950/40 hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <p className="text-sm text-slate-200 flex items-center gap-2">
-                      <span>{item.icon}</span>
-                      <span>{item.display_name}</span>
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">{item.app_name}</p>
-                    <p className="text-xs mt-1 text-slate-400">
-                      {item.rag.enabled ? `RAG ON · ${item.rag.retrieval_method}` : 'RAG OFF'}
-                    </p>
-                  </button>
-                ))}
+                {!managerLoading &&
+                  ragConfigs.map((item) => (
+                    <button
+                      key={item.app_name}
+                      data-testid={`rag-app-card-${item.app_name}`}
+                      onClick={() => setSelectedApp(item.app_name)}
+                      className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
+                        selectedApp === item.app_name
+                          ? "border-indigo-500/50 bg-indigo-500/10"
+                          : "border-slate-700 bg-slate-950/40 hover:bg-slate-800/60"
+                      }`}
+                    >
+                      <p className="text-sm text-slate-200 flex items-center gap-2">
+                        <span>{item.icon}</span>
+                        <span>{item.display_name}</span>
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {item.app_name}
+                      </p>
+                      <p className="text-xs mt-1 text-slate-400">
+                        {item.rag.enabled
+                          ? `RAG ON · ${item.rag.retrieval_method}`
+                          : "RAG OFF"}
+                      </p>
+                    </button>
+                  ))}
               </div>
 
               <div className="lg:col-span-2">
@@ -877,30 +1000,43 @@ export function RAGOverview() {
                     編集対象の App を選択してください。
                   </div>
                 ) : (
-                  <div data-testid="rag-settings-form" className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-4">
+                  <div
+                    data-testid="rag-settings-form"
+                    className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-4"
+                  >
                     {selectedConfig.auth && (
                       <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3">
-                        <p className="text-xs font-semibold text-cyan-200">Tenant SSO / Auth Contract</p>
+                        <p className="text-xs font-semibold text-cyan-200">
+                          Tenant SSO / Auth Contract
+                        </p>
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
                           <p className="text-slate-300">
-                            mode: <span className="text-cyan-200">{selectedConfig.auth.mode || 'legacy'}</span>
-                          </p>
-                          <p className="text-slate-300">
-                            tenant_claim_key:{' '}
-                            <span className="text-cyan-200">{selectedConfig.auth.tenant_claim_key || 'tenant_id'}</span>
-                          </p>
-                          <p className="text-slate-300">
-                            allow_same_tenant_sso:{' '}
+                            mode:{" "}
                             <span className="text-cyan-200">
-                              {selectedConfig.auth.allow_same_tenant_sso ? 'true' : 'false'}
+                              {selectedConfig.auth.mode || "legacy"}
                             </span>
                           </p>
                           <p className="text-slate-300">
-                            required_scopes:{' '}
+                            tenant_claim_key:{" "}
+                            <span className="text-cyan-200">
+                              {selectedConfig.auth.tenant_claim_key ||
+                                "tenant_id"}
+                            </span>
+                          </p>
+                          <p className="text-slate-300">
+                            allow_same_tenant_sso:{" "}
+                            <span className="text-cyan-200">
+                              {selectedConfig.auth.allow_same_tenant_sso
+                                ? "true"
+                                : "false"}
+                            </span>
+                          </p>
+                          <p className="text-slate-300">
+                            required_scopes:{" "}
                             <span className="text-cyan-200">
                               {selectedConfig.auth.required_scopes.length > 0
-                                ? selectedConfig.auth.required_scopes.join(', ')
-                                : '(none)'}
+                                ? selectedConfig.auth.required_scopes.join(", ")
+                                : "(none)"}
                             </span>
                           </p>
                         </div>
@@ -911,7 +1047,9 @@ export function RAGOverview() {
                       <Toggle
                         label="RAG 有効化"
                         checked={form.enabled}
-                        onChange={(value) => setForm({ ...form, enabled: value })}
+                        onChange={(value) =>
+                          setForm({ ...form, enabled: value })
+                        }
                       />
                       <Field label="パターン">
                         <select
@@ -939,7 +1077,12 @@ export function RAGOverview() {
                       <Field label="Vector Provider">
                         <select
                           value={form.vector_provider}
-                          onChange={(e) => setForm({ ...form, vector_provider: e.target.value })}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              vector_provider: e.target.value,
+                            })
+                          }
                           className="input"
                         >
                           <option value="">(auto)</option>
@@ -953,7 +1096,9 @@ export function RAGOverview() {
                       <Field label="Vector URL">
                         <input
                           value={form.vector_url}
-                          onChange={(e) => setForm({ ...form, vector_url: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, vector_url: e.target.value })
+                          }
                           className="input"
                           placeholder="http://localhost:6333"
                         />
@@ -961,7 +1106,12 @@ export function RAGOverview() {
                       <Field label="Collection">
                         <input
                           value={form.vector_collection}
-                          onChange={(e) => setForm({ ...form, vector_collection: e.target.value })}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              vector_collection: e.target.value,
+                            })
+                          }
                           className="input"
                           placeholder={`${selectedConfig.app_name}_knowledge`}
                         />
@@ -969,7 +1119,12 @@ export function RAGOverview() {
                       <Field label="Embedding Model">
                         <input
                           value={form.embedding_model}
-                          onChange={(e) => setForm({ ...form, embedding_model: e.target.value })}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              embedding_model: e.target.value,
+                            })
+                          }
                           className="input"
                           placeholder="text-embedding-3-small"
                         />
@@ -978,7 +1133,13 @@ export function RAGOverview() {
                         <select
                           data-testid="chunk-strategy-select"
                           value={form.chunk_strategy}
-                          onChange={(e) => { setForm({ ...form, chunk_strategy: e.target.value }); setPatternModified(true); }}
+                          onChange={(e) => {
+                            setForm({
+                              ...form,
+                              chunk_strategy: e.target.value,
+                            });
+                            setPatternModified(true);
+                          }}
                           className="input"
                         >
                           {ragOverview.chunk_strategies.map((strategy) => (
@@ -992,14 +1153,22 @@ export function RAGOverview() {
                         <select
                           data-testid="retrieval-method-select"
                           value={form.retrieval_method}
-                          onChange={(e) => { setForm({ ...form, retrieval_method: e.target.value }); setPatternModified(true); }}
+                          onChange={(e) => {
+                            setForm({
+                              ...form,
+                              retrieval_method: e.target.value,
+                            });
+                            setPatternModified(true);
+                          }}
                           className="input"
                         >
-                          {(ragOverview.retrieval_methods ?? []).map((method) => (
-                            <option key={method.name} value={method.name}>
-                              {method.label}
-                            </option>
-                          ))}
+                          {(ragOverview.retrieval_methods ?? []).map(
+                            (method) => (
+                              <option key={method.name} value={method.name}>
+                                {method.label}
+                              </option>
+                            ),
+                          )}
                         </select>
                       </Field>
                       <Field label="Chunk Size">
@@ -1007,7 +1176,13 @@ export function RAGOverview() {
                           data-testid="chunk-size-input"
                           type="number"
                           value={form.chunk_size}
-                          onChange={(e) => { setForm({ ...form, chunk_size: Number(e.target.value) || 800 }); setPatternModified(true); }}
+                          onChange={(e) => {
+                            setForm({
+                              ...form,
+                              chunk_size: Number(e.target.value) || 800,
+                            });
+                            setPatternModified(true);
+                          }}
                           className="input"
                         />
                       </Field>
@@ -1016,14 +1191,23 @@ export function RAGOverview() {
                           data-testid="chunk-overlap-input"
                           type="number"
                           value={form.chunk_overlap}
-                          onChange={(e) => { setForm({ ...form, chunk_overlap: Number(e.target.value) || 120 }); setPatternModified(true); }}
+                          onChange={(e) => {
+                            setForm({
+                              ...form,
+                              chunk_overlap: Number(e.target.value) || 120,
+                            });
+                            setPatternModified(true);
+                          }}
                           className="input"
                         />
                       </Field>
                       <Field label="Reranker">
                         <select
                           value={form.reranker}
-                          onChange={(e) => { setForm({ ...form, reranker: e.target.value }); setPatternModified(true); }}
+                          onChange={(e) => {
+                            setForm({ ...form, reranker: e.target.value });
+                            setPatternModified(true);
+                          }}
                           className="input"
                         >
                           <option value="">none</option>
@@ -1039,7 +1223,13 @@ export function RAGOverview() {
                           data-testid="top-k-input"
                           type="number"
                           value={form.top_k}
-                          onChange={(e) => { setForm({ ...form, top_k: Number(e.target.value) || 5 }); setPatternModified(true); }}
+                          onChange={(e) => {
+                            setForm({
+                              ...form,
+                              top_k: Number(e.target.value) || 5,
+                            });
+                            setPatternModified(true);
+                          }}
                           className="input"
                         />
                       </Field>
@@ -1048,7 +1238,12 @@ export function RAGOverview() {
                           type="number"
                           step="0.01"
                           value={form.score_threshold}
-                          onChange={(e) => setForm({ ...form, score_threshold: e.target.value })}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              score_threshold: e.target.value,
+                            })
+                          }
                           className="input"
                           placeholder="0.2"
                         />
@@ -1056,12 +1251,18 @@ export function RAGOverview() {
                       <Field label="Indexing Schedule">
                         <input
                           value={form.indexing_schedule}
-                          onChange={(e) => setForm({ ...form, indexing_schedule: e.target.value })}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              indexing_schedule: e.target.value,
+                            })
+                          }
                           className="input"
                           placeholder="0 */6 * * *"
                         />
                         <p className="text-[11px] text-slate-500 mt-1">
-                          cron 5 段形式（分 時 日 月 曜日）。例: `0 */6 * * *` は 6 時間ごと。
+                          cron 5 段形式（分 時 日 月 曜日）。例: `0 */6 * * *`
+                          は 6 時間ごと。
                         </p>
                       </Field>
                     </div>
@@ -1069,9 +1270,12 @@ export function RAGOverview() {
                     <div className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/30 p-3.5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-medium text-slate-300">Data Sources</p>
+                          <p className="text-xs font-medium text-slate-300">
+                            Data Sources
+                          </p>
                           <p className="text-[11px] text-slate-500 mt-1">
-                            タイプを選択すると必要項目を展開します。FAQ など DB 情報がある App は自動補完できます。
+                            タイプを選択すると必要項目を展開します。FAQ など DB
+                            情報がある App は自動補完できます。
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1088,7 +1292,9 @@ export function RAGOverview() {
                               onClick={applyDetectedDatabaseSource}
                               className="px-2.5 py-1.5 rounded-md border border-cyan-700/60 text-cyan-300 hover:bg-cyan-500/10 text-[11px]"
                             >
-                              {selectedConfig.db_hint.available ? 'Auto Set DB' : 'Insert DB Sample'}
+                              {selectedConfig.db_hint.available
+                                ? "Auto Set DB"
+                                : "Insert DB Sample"}
                             </button>
                           )}
                         </div>
@@ -1098,21 +1304,33 @@ export function RAGOverview() {
 
                       {form.data_sources.length === 0 && (
                         <div className="rounded-md border border-dashed border-slate-700 p-3 text-xs text-slate-500">
-                          Data Source が未設定です。`Add Source` で追加してください。
+                          Data Source が未設定です。`Add Source`
+                          で追加してください。
                         </div>
                       )}
 
                       {form.data_sources.map((source) => (
-                        <div key={source.id} className="rounded-md border border-slate-700 bg-slate-950/60 p-3 space-y-3">
+                        <div
+                          key={source.id}
+                          className="rounded-md border border-slate-700 bg-slate-950/60 p-3 space-y-3"
+                        >
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
                             <Field label="Type">
                               <select
                                 value={source.type}
-                                onChange={(e) => handleSourceTypeChange(source, normalizeSourceType(e.target.value))}
+                                onChange={(e) =>
+                                  handleSourceTypeChange(
+                                    source,
+                                    normalizeSourceType(e.target.value),
+                                  )
+                                }
                                 className="input"
                               >
                                 {DATA_SOURCE_TYPE_OPTIONS.map((option) => (
-                                  <option key={option.value} value={option.value}>
+                                  <option
+                                    key={option.value}
+                                    value={option.value}
+                                  >
                                     {option.label}
                                   </option>
                                 ))}
@@ -1121,25 +1339,44 @@ export function RAGOverview() {
                             <Field label="URI / Path">
                               <input
                                 value={source.uri}
-                                onChange={(e) => updateSource(source.id, { uri: e.target.value })}
+                                onChange={(e) =>
+                                  updateSource(source.id, {
+                                    uri: e.target.value,
+                                  })
+                                }
                                 className="input"
                                 placeholder={
-                                  source.type === 'database'
+                                  source.type === "database"
                                     ? findDatabaseTypeOption(
-                                      databaseTypeOptions,
-                                      readOption(source.options, 'database_type') ||
-                                      readOption(source.options, 'dialect') ||
-                                      cleanText(selectedConfig.db_hint?.kind),
-                                      selectedConfig.db_hint,
-                                    ).sample_uri
-                                    : sourcePlaceholder(source.type, selectedConfig.db_hint)
+                                        databaseTypeOptions,
+                                        readOption(
+                                          source.options,
+                                          "database_type",
+                                        ) ||
+                                          readOption(
+                                            source.options,
+                                            "dialect",
+                                          ) ||
+                                          cleanText(
+                                            selectedConfig.db_hint?.kind,
+                                          ),
+                                        selectedConfig.db_hint,
+                                      ).sample_uri
+                                    : sourcePlaceholder(
+                                        source.type,
+                                        selectedConfig.db_hint,
+                                      )
                                 }
                               />
                             </Field>
                             <Field label="Label">
                               <input
                                 value={source.label}
-                                onChange={(e) => updateSource(source.id, { label: e.target.value })}
+                                onChange={(e) =>
+                                  updateSource(source.id, {
+                                    label: e.target.value,
+                                  })
+                                }
                                 className="input"
                                 placeholder={`${source.type} source`}
                               />
@@ -1147,7 +1384,11 @@ export function RAGOverview() {
                             <Field label="Schedule (optional, cron)">
                               <input
                                 value={source.schedule}
-                                onChange={(e) => updateSource(source.id, { schedule: e.target.value })}
+                                onChange={(e) =>
+                                  updateSource(source.id, {
+                                    schedule: e.target.value,
+                                  })
+                                }
                                 className="input"
                                 placeholder="0 */6 * * *"
                               />
@@ -1155,141 +1396,267 @@ export function RAGOverview() {
                           </div>
 
                           <p className="text-[11px] text-slate-500">
-                            {DATA_SOURCE_TYPE_OPTIONS.find((option) => option.value === source.type)?.description}
+                            {
+                              DATA_SOURCE_TYPE_OPTIONS.find(
+                                (option) => option.value === source.type,
+                              )?.description
+                            }
                           </p>
 
-                          {source.type === 'database' && (() => {
-                            const dbTypeName =
-                              readOption(source.options, 'database_type') ||
-                              readOption(source.options, 'dialect') ||
-                              cleanText(selectedConfig.db_hint?.kind);
-                            const activeDbType = findDatabaseTypeOption(
-                              databaseTypeOptions,
-                              dbTypeName,
-                              selectedConfig.db_hint,
-                            );
-                            return (
-                              <div className="space-y-2.5">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
-                                  <Field label="Database Type">
-                                    <select
-                                      value={activeDbType.name}
-                                      onChange={(e) => handleDatabaseTypeChange(source, e.target.value)}
-                                      className="input"
-                                    >
-                                      {databaseTypeOptions.map((option) => (
-                                        <option key={option.name} value={option.name}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </Field>
-                                  <Field label="Dialect">
-                                    <select
-                                      value={readOption(source.options, 'dialect') || activeDbType.dialect}
-                                      onChange={(e) => handleDatabaseTypeChange(source, e.target.value)}
-                                      className="input"
-                                    >
-                                      {databaseTypeOptions.map((option) => (
-                                        <option key={option.name} value={option.dialect}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </Field>
-                                  <Field label="Schema">
-                                    <input
-                                      value={readOption(source.options, 'schema')}
-                                      onChange={(e) => updateSourceOption(source.id, 'schema', e.target.value)}
-                                      className="input"
-                                      placeholder="public"
-                                    />
-                                  </Field>
-                                  <Field label="Read Mode">
-                                    <select
-                                      value={readOption(source.options, 'read_mode') || 'query'}
-                                      onChange={(e) => updateSourceOption(source.id, 'read_mode', e.target.value)}
-                                      className="input"
-                                    >
-                                      <option value="table">table</option>
-                                      <option value="query">query</option>
-                                    </select>
-                                  </Field>
-                                </div>
-
-                                {activeDbType.connection_kind === 'network' && (
+                          {source.type === "database" &&
+                            (() => {
+                              const dbTypeName =
+                                readOption(source.options, "database_type") ||
+                                readOption(source.options, "dialect") ||
+                                cleanText(selectedConfig.db_hint?.kind);
+                              const activeDbType = findDatabaseTypeOption(
+                                databaseTypeOptions,
+                                dbTypeName,
+                                selectedConfig.db_hint,
+                              );
+                              return (
+                                <div className="space-y-2.5">
                                   <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
-                                    <Field label="Host (optional)">
-                                      <input
-                                        value={readOption(source.options, 'host')}
-                                        onChange={(e) => updateSourceOption(source.id, 'host', e.target.value)}
+                                    <Field label="Database Type">
+                                      <select
+                                        value={activeDbType.name}
+                                        onChange={(e) =>
+                                          handleDatabaseTypeChange(
+                                            source,
+                                            e.target.value,
+                                          )
+                                        }
                                         className="input"
-                                        placeholder={cleanText(selectedConfig.db_hint?.host) || 'localhost'}
+                                      >
+                                        {databaseTypeOptions.map((option) => (
+                                          <option
+                                            key={option.name}
+                                            value={option.name}
+                                          >
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </Field>
+                                    <Field label="Dialect">
+                                      <select
+                                        value={
+                                          readOption(
+                                            source.options,
+                                            "dialect",
+                                          ) || activeDbType.dialect
+                                        }
+                                        onChange={(e) =>
+                                          handleDatabaseTypeChange(
+                                            source,
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="input"
+                                      >
+                                        {databaseTypeOptions.map((option) => (
+                                          <option
+                                            key={option.name}
+                                            value={option.dialect}
+                                          >
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </Field>
+                                    <Field label="Schema">
+                                      <input
+                                        value={readOption(
+                                          source.options,
+                                          "schema",
+                                        )}
+                                        onChange={(e) =>
+                                          updateSourceOption(
+                                            source.id,
+                                            "schema",
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="input"
+                                        placeholder="public"
                                       />
                                     </Field>
-                                    <Field label="Port (optional)">
-                                      <input
-                                        value={readOption(source.options, 'port')}
-                                        onChange={(e) => updateSourceOption(source.id, 'port', e.target.value)}
+                                    <Field label="Read Mode">
+                                      <select
+                                        value={
+                                          readOption(
+                                            source.options,
+                                            "read_mode",
+                                          ) || "query"
+                                        }
+                                        onChange={(e) =>
+                                          updateSourceOption(
+                                            source.id,
+                                            "read_mode",
+                                            e.target.value,
+                                          )
+                                        }
                                         className="input"
-                                        placeholder={String(activeDbType.default_port ?? '')}
-                                      />
-                                    </Field>
-                                    <Field label="Database (optional)">
-                                      <input
-                                        value={readOption(source.options, 'database')}
-                                        onChange={(e) => updateSourceOption(source.id, 'database', e.target.value)}
-                                        className="input"
-                                        placeholder={cleanText(selectedConfig.db_hint?.database) || 'app_db'}
-                                      />
-                                    </Field>
-                                    <Field label="User (optional)">
-                                      <input
-                                        value={readOption(source.options, 'user')}
-                                        onChange={(e) => updateSourceOption(source.id, 'user', e.target.value)}
-                                        className="input"
-                                        placeholder={cleanText(selectedConfig.db_hint?.user) || 'app_user'}
-                                      />
+                                      >
+                                        <option value="table">table</option>
+                                        <option value="query">query</option>
+                                      </select>
                                     </Field>
                                   </div>
-                                )}
 
-                                {activeDbType.connection_kind === 'file' && (
-                                  <p className="text-[11px] text-slate-500">
-                                    File DB は URI にファイルパスを指定してください。例: `{activeDbType.sample_uri}`
-                                  </p>
-                                )}
+                                  {activeDbType.connection_kind ===
+                                    "network" && (
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                                      <Field label="Host (optional)">
+                                        <input
+                                          value={readOption(
+                                            source.options,
+                                            "host",
+                                          )}
+                                          onChange={(e) =>
+                                            updateSourceOption(
+                                              source.id,
+                                              "host",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="input"
+                                          placeholder={
+                                            cleanText(
+                                              selectedConfig.db_hint?.host,
+                                            ) || "localhost"
+                                          }
+                                        />
+                                      </Field>
+                                      <Field label="Port (optional)">
+                                        <input
+                                          value={readOption(
+                                            source.options,
+                                            "port",
+                                          )}
+                                          onChange={(e) =>
+                                            updateSourceOption(
+                                              source.id,
+                                              "port",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="input"
+                                          placeholder={String(
+                                            activeDbType.default_port ?? "",
+                                          )}
+                                        />
+                                      </Field>
+                                      <Field label="Database (optional)">
+                                        <input
+                                          value={readOption(
+                                            source.options,
+                                            "database",
+                                          )}
+                                          onChange={(e) =>
+                                            updateSourceOption(
+                                              source.id,
+                                              "database",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="input"
+                                          placeholder={
+                                            cleanText(
+                                              selectedConfig.db_hint?.database,
+                                            ) || "app_db"
+                                          }
+                                        />
+                                      </Field>
+                                      <Field label="User (optional)">
+                                        <input
+                                          value={readOption(
+                                            source.options,
+                                            "user",
+                                          )}
+                                          onChange={(e) =>
+                                            updateSourceOption(
+                                              source.id,
+                                              "user",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="input"
+                                          placeholder={
+                                            cleanText(
+                                              selectedConfig.db_hint?.user,
+                                            ) || "app_user"
+                                          }
+                                        />
+                                      </Field>
+                                    </div>
+                                  )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
-                                  <Field label="Table">
-                                    <input
-                                      value={readOption(source.options, 'table')}
-                                      onChange={(e) => updateSourceOption(source.id, 'table', e.target.value)}
-                                      className="input"
-                                      placeholder="faq_entries"
-                                    />
-                                  </Field>
-                                  <div className="md:col-span-3">
-                                    <Field label="Query (optional)">
-                                      <textarea
-                                        value={readOption(source.options, 'query')}
-                                        onChange={(e) => updateSourceOption(source.id, 'query', e.target.value)}
-                                        className="input min-h-20"
-                                        placeholder="SELECT id, question, answer, updated_at FROM faq_entries"
+                                  {activeDbType.connection_kind === "file" && (
+                                    <p className="text-[11px] text-slate-500">
+                                      File DB は URI
+                                      にファイルパスを指定してください。例: `
+                                      {activeDbType.sample_uri}`
+                                    </p>
+                                  )}
+
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                                    <Field label="Table">
+                                      <input
+                                        value={readOption(
+                                          source.options,
+                                          "table",
+                                        )}
+                                        onChange={(e) =>
+                                          updateSourceOption(
+                                            source.id,
+                                            "table",
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="input"
+                                        placeholder="faq_entries"
                                       />
                                     </Field>
+                                    <div className="md:col-span-3">
+                                      <Field label="Query (optional)">
+                                        <textarea
+                                          value={readOption(
+                                            source.options,
+                                            "query",
+                                          )}
+                                          onChange={(e) =>
+                                            updateSourceOption(
+                                              source.id,
+                                              "query",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="input min-h-20"
+                                          placeholder="SELECT id, question, answer, updated_at FROM faq_entries"
+                                        />
+                                      </Field>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })()}
 
-                          {source.type === 'api' && (
+                          {source.type === "api" && (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                               <Field label="Method">
                                 <select
-                                  value={readOption(source.options, 'method') || 'GET'}
-                                  onChange={(e) => updateSourceOption(source.id, 'method', e.target.value)}
+                                  value={
+                                    readOption(source.options, "method") ||
+                                    "GET"
+                                  }
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "method",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                 >
                                   <option value="GET">GET</option>
@@ -1298,16 +1665,34 @@ export function RAGOverview() {
                               </Field>
                               <Field label="Auth Header (optional)">
                                 <input
-                                  value={readOption(source.options, 'auth_header')}
-                                  onChange={(e) => updateSourceOption(source.id, 'auth_header', e.target.value)}
+                                  value={readOption(
+                                    source.options,
+                                    "auth_header",
+                                  )}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "auth_header",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="Bearer ${API_TOKEN}"
                                 />
                               </Field>
                               <Field label="JSON Path (optional)">
                                 <input
-                                  value={readOption(source.options, 'json_path')}
-                                  onChange={(e) => updateSourceOption(source.id, 'json_path', e.target.value)}
+                                  value={readOption(
+                                    source.options,
+                                    "json_path",
+                                  )}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "json_path",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="data.items"
                                 />
@@ -1315,20 +1700,32 @@ export function RAGOverview() {
                             </div>
                           )}
 
-                          {source.type === 'file' && (
+                          {source.type === "file" && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                               <Field label="Glob Pattern (optional)">
                                 <input
-                                  value={readOption(source.options, 'glob')}
-                                  onChange={(e) => updateSourceOption(source.id, 'glob', e.target.value)}
+                                  value={readOption(source.options, "glob")}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "glob",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="**/*.md"
                                 />
                               </Field>
                               <Field label="Encoding (optional)">
                                 <input
-                                  value={readOption(source.options, 'encoding')}
-                                  onChange={(e) => updateSourceOption(source.id, 'encoding', e.target.value)}
+                                  value={readOption(source.options, "encoding")}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "encoding",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="utf-8"
                                 />
@@ -1336,28 +1733,46 @@ export function RAGOverview() {
                             </div>
                           )}
 
-                          {source.type === 's3' && (
+                          {source.type === "s3" && (
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                               <Field label="Region">
                                 <input
-                                  value={readOption(source.options, 'region')}
-                                  onChange={(e) => updateSourceOption(source.id, 'region', e.target.value)}
+                                  value={readOption(source.options, "region")}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "region",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="ap-northeast-1"
                                 />
                               </Field>
                               <Field label="Prefix (optional)">
                                 <input
-                                  value={readOption(source.options, 'prefix')}
-                                  onChange={(e) => updateSourceOption(source.id, 'prefix', e.target.value)}
+                                  value={readOption(source.options, "prefix")}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "prefix",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="faq/"
                                 />
                               </Field>
                               <Field label="File Filter (optional)">
                                 <input
-                                  value={readOption(source.options, 'filter')}
-                                  onChange={(e) => updateSourceOption(source.id, 'filter', e.target.value)}
+                                  value={readOption(source.options, "filter")}
+                                  onChange={(e) =>
+                                    updateSourceOption(
+                                      source.id,
+                                      "filter",
+                                      e.target.value,
+                                    )
+                                  }
                                   className="input"
                                   placeholder="*.json"
                                 />
@@ -1370,7 +1785,11 @@ export function RAGOverview() {
                               <input
                                 type="checkbox"
                                 checked={source.enabled}
-                                onChange={(e) => updateSource(source.id, { enabled: e.target.checked })}
+                                onChange={(e) =>
+                                  updateSource(source.id, {
+                                    enabled: e.target.checked,
+                                  })
+                                }
                                 className="rounded border-slate-600 bg-slate-900"
                               />
                               Enabled
@@ -1389,16 +1808,24 @@ export function RAGOverview() {
 
                     <div className="space-y-2 rounded-lg border border-slate-700/80 bg-slate-950/30 p-3.5">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-medium text-slate-300">Ingestion Runs</p>
+                        <p className="text-xs font-medium text-slate-300">
+                          Ingestion Runs
+                        </p>
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!selectedConfig?.app_name || !selectedConfig.rag.enabled) {
+                            if (
+                              !selectedConfig?.app_name ||
+                              !selectedConfig.rag.enabled
+                            ) {
                               return;
                             }
                             setIngestLoading(true);
                             try {
-                              const response = await fetchAppRAGIngestRuns(selectedConfig.app_name, 20);
+                              const response = await fetchAppRAGIngestRuns(
+                                selectedConfig.app_name,
+                                20,
+                              );
                               setIngestRuns(response.runs);
                             } catch {
                               setIngestRuns([]);
@@ -1413,34 +1840,45 @@ export function RAGOverview() {
                         </button>
                       </div>
                       {!selectedConfig.rag.enabled && (
-                        <p className="text-[11px] text-slate-500">RAG が無効なため実行履歴はありません。</p>
+                        <p className="text-[11px] text-slate-500">
+                          RAG が無効なため実行履歴はありません。
+                        </p>
                       )}
                       {selectedConfig.rag.enabled && (
                         <>
-                      {ingestLoading && (
-                        <p className="text-[11px] text-slate-500">読み込み中...</p>
-                      )}
-                      {!ingestLoading && ingestRuns.length === 0 && (
-                        <p className="text-[11px] text-slate-500">実行履歴はまだありません。</p>
-                      )}
-                      {!ingestLoading && ingestRuns.length > 0 && (
-                        <div className="space-y-2">
-                          {ingestRuns.map((run) => (
-                            <div
-                              key={run.run_id}
-                              className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2"
-                            >
-                              <p className="text-xs text-slate-200 font-medium">{run.run_id}</p>
-                              <p className="text-[11px] text-slate-400 mt-1">
-                                status={run.status} / dry_run={String(run.dry_run)} / duration={run.duration_ms}ms
-                              </p>
-                              <p className="text-[11px] text-slate-500 mt-1">
-                                started={run.started_at ?? '-'} / finished={run.finished_at ?? '-'}
-                              </p>
+                          {ingestLoading && (
+                            <p className="text-[11px] text-slate-500">
+                              読み込み中...
+                            </p>
+                          )}
+                          {!ingestLoading && ingestRuns.length === 0 && (
+                            <p className="text-[11px] text-slate-500">
+                              実行履歴はまだありません。
+                            </p>
+                          )}
+                          {!ingestLoading && ingestRuns.length > 0 && (
+                            <div className="space-y-2">
+                              {ingestRuns.map((run) => (
+                                <div
+                                  key={run.run_id}
+                                  className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2"
+                                >
+                                  <p className="text-xs text-slate-200 font-medium">
+                                    {run.run_id}
+                                  </p>
+                                  <p className="text-[11px] text-slate-400 mt-1">
+                                    status={run.status} / dry_run=
+                                    {String(run.dry_run)} / duration=
+                                    {run.duration_ms}ms
+                                  </p>
+                                  <p className="text-[11px] text-slate-500 mt-1">
+                                    started={run.started_at ?? "-"} / finished=
+                                    {run.finished_at ?? "-"}
+                                  </p>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          )}
                         </>
                       )}
                     </div>
@@ -1458,7 +1896,7 @@ export function RAGOverview() {
                         disabled={saving}
                         className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs"
                       >
-                        {saving ? 'Saving...' : 'Save RAG Config'}
+                        {saving ? "Saving..." : "Save RAG Config"}
                       </button>
                     </div>
                   </div>
@@ -1469,19 +1907,29 @@ export function RAGOverview() {
 
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800">
-              <h2 className="text-sm font-semibold text-slate-200">📦 Apps Using RAG</h2>
+              <h2 className="text-sm font-semibold text-slate-200">
+                📦 Apps Using RAG
+              </h2>
             </div>
             <div className="divide-y divide-slate-800/50">
               {ragOverview.apps_using_rag.map((app) => (
-                <div key={app.app_name} className="px-5 py-3.5 flex items-center gap-4">
+                <div
+                  key={app.app_name}
+                  className="px-5 py-3.5 flex items-center gap-4"
+                >
                   <span className="text-2xl">{app.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-200">{app.display_name}</p>
+                    <p className="text-sm font-medium text-slate-200">
+                      {app.display_name}
+                    </p>
                     <p className="text-xs text-slate-500">{app.app_name}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {app.rag_details.map((detail) => (
-                      <span key={detail} className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] rounded-full">
+                      <span
+                        key={detail}
+                        className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] rounded-full"
+                      >
                         {detail}
                       </span>
                     ))}
@@ -1489,7 +1937,9 @@ export function RAGOverview() {
                 </div>
               ))}
               {ragOverview.apps_using_rag.length === 0 && (
-                <p className="px-5 py-8 text-center text-sm text-slate-500">No apps using RAG</p>
+                <p className="px-5 py-8 text-center text-sm text-slate-500">
+                  No apps using RAG
+                </p>
               )}
             </div>
           </div>
@@ -1505,18 +1955,20 @@ function DBHintBanner({ dbHint }: { dbHint: RAGDatabaseHint | undefined }) {
   }
   if (dbHint.available) {
     const hostPort = cleanText(dbHint.host)
-      ? `${cleanText(dbHint.host)}${typeof dbHint.port === 'number' ? `:${dbHint.port}` : ''}`
-      : '';
+      ? `${cleanText(dbHint.host)}${typeof dbHint.port === "number" ? `:${dbHint.port}` : ""}`
+      : "";
     const dbName = cleanText(dbHint.database);
     return (
       <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-[11px] text-emerald-200">
-        Detected DB: `{dbHint.kind ?? 'unknown'}` {dbName ? `(${dbName})` : ''}{hostPort ? ` @ ${hostPort}` : ''} · source: {dbHint.source}
+        Detected DB: `{dbHint.kind ?? "unknown"}` {dbName ? `(${dbName})` : ""}
+        {hostPort ? ` @ ${hostPort}` : ""} · source: {dbHint.source}
       </div>
     );
   }
   return (
     <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-[11px] text-amber-100">
-      DB 情報が app_config から見つかりません。サンプル URI: `{dbHint.sample_uri}`
+      DB 情報が app_config から見つかりません。サンプル URI: `
+      {dbHint.sample_uri}`
     </div>
   );
 }
@@ -1545,10 +1997,10 @@ function Toggle({
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`w-10 h-6 rounded-full transition-colors ${checked ? 'bg-indigo-600' : 'bg-slate-700'}`}
+        className={`w-10 h-6 rounded-full transition-colors ${checked ? "bg-indigo-600" : "bg-slate-700"}`}
       >
         <span
-          className={`block w-4 h-4 bg-white rounded-full mt-1 transition-transform ${checked ? 'translate-x-5' : 'translate-x-1'}`}
+          className={`block w-4 h-4 bg-white rounded-full mt-1 transition-transform ${checked ? "translate-x-5" : "translate-x-1"}`}
         />
       </button>
     </label>
@@ -1564,23 +2016,25 @@ function StatCard({
   icon: string;
   label: string;
   value: number;
-  color: 'indigo' | 'cyan' | 'amber';
+  color: "indigo" | "cyan" | "amber";
 }) {
   const borderColor = {
-    indigo: 'border-indigo-500/20',
-    cyan: 'border-cyan-500/20',
-    amber: 'border-amber-500/20',
+    indigo: "border-indigo-500/20",
+    cyan: "border-cyan-500/20",
+    amber: "border-amber-500/20",
   }[color];
   const valueColor = {
-    indigo: 'text-indigo-400',
-    cyan: 'text-cyan-400',
-    amber: 'text-amber-400',
+    indigo: "text-indigo-400",
+    cyan: "text-cyan-400",
+    amber: "text-amber-400",
   }[color];
   return (
     <div className={`bg-slate-900/50 border ${borderColor} rounded-xl p-5`}>
       <div className="flex items-center gap-3 mb-2">
         <span className="text-xl">{icon}</span>
-        <span className="text-xs text-slate-500 uppercase tracking-wider">{label}</span>
+        <span className="text-xs text-slate-500 uppercase tracking-wider">
+          {label}
+        </span>
       </div>
       <p className={`text-3xl font-bold ${valueColor}`}>{value}</p>
     </div>

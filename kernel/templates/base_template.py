@@ -348,4 +348,3 @@ def register_template(template: AgentTemplate) -> None:
         template: 登録するテンプレート
     """
     TemplateRegistry().register(template)
-

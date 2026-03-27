@@ -1,25 +1,25 @@
-import { defineConfig } from '@playwright/test';
-import fs from 'node:fs';
-import path from 'node:path';
+import { defineConfig } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
 
 const appConfig = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../app_config.json'), 'utf-8'),
+  fs.readFileSync(path.resolve(__dirname, "../app_config.json"), "utf-8"),
 );
 const frontendPort = appConfig.ports?.frontend ?? 3200;
 const frontendBaseUrl = `http://localhost:${frontendPort}`;
 
 export default defineConfig({
-  testDir: '../../../tests/control_plane',
-  testMatch: '**/*.spec.ts',
+  testDir: "../../../tests/control_plane",
+  testMatch: "**/*.spec.ts",
   use: {
     baseURL: frontendBaseUrl,
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
   webServer: {
-    command: 'npm run dev',
+    command: "npm run dev",
     port: frontendPort,
     reuseExistingServer: !process.env.CI,
-    cwd: 'control_plane/frontend',
+    cwd: "control_plane/frontend",
   },
 });

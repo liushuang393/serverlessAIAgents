@@ -46,4 +46,4 @@ COPY apps/legacy_modernization_geo_platform/ /app/apps/legacy_modernization_geo_
 COPY --from=frontend-builder /frontend/dist /app/apps/legacy_modernization_geo_platform/frontend/dist
 RUN chown -R appuser:appgroup /app
 USER appuser
-CMD ["sh", "-c", "exec uvicorn apps.legacy_modernization_geo_platform.main:app --host ${GEO_PLATFORM_HOST} --port ${GEO_PLATFORM_PORT}"]
+CMD ["python", "-m", "kernel.runtime.uvicorn_launcher", "--config", "apps/legacy_modernization_geo_platform/app_config.json", "--app", "apps.legacy_modernization_geo_platform.main:app", "--host-env", "GEO_PLATFORM_HOST", "--port-env", "GEO_PLATFORM_PORT"]

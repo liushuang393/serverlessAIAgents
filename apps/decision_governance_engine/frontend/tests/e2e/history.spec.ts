@@ -21,7 +21,9 @@ test.describe("履歴画面", () => {
   test("履歴一覧と詳細モーダルが表示できる", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Decision Agent" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Decision Agent" }),
+    ).toBeVisible();
 
     await page.getByPlaceholder("ユーザー名を入力").fill("admin");
     await page.getByPlaceholder("パスワードを入力").fill("admin123");
@@ -38,6 +40,8 @@ test.describe("履歴画面", () => {
     await expect(page.getByRole("heading", { name: "決策詳細" })).toBeVisible();
 
     await page.getByRole("button", { name: "✕" }).click();
-    await expect(page.getByRole("heading", { name: "決策詳細" })).not.toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "決策詳細" }),
+    ).not.toBeVisible();
   });
 });

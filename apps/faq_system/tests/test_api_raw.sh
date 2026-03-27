@@ -27,4 +27,3 @@ curl -s -X POST http://localhost:8005/api/chat/stream \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"message":"返品ポリシーを教えてください"}' \
   --max-time 30 2>&1 | head -30
-

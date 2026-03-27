@@ -25,7 +25,6 @@ import logging
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,7 +46,6 @@ from apps.decision_governance_engine.routers.report import router as report_rout
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
 from apps.decision_governance_engine.startup import log_startup_info
 from infrastructure.observability.logging import LogLevel, setup_logging
-from kernel.runtime import resolve_app_runtime
 
 
 logger = logging.getLogger("decision_api")
@@ -168,55 +166,3 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             "path": request.url.path,
         },
     )
-
-
-# ========================================
-# アプリ起動（直接実行用）
-# ========================================
-if __name__ == "__main__":
-    import argparse
-
-    import uvicorn
-
-    parser = argparse.ArgumentParser(description="Decision Governance Engine - FastAPI Backend")
-    parser.add_argument(
-        "--reload",
-        action="store_true",
-        help="開発モード（ホットリロード有効）",
-    )
-    parser.add_argument(
-        "--host",
-        default=None,
-        help="ホスト（省略時: 環境変数 DGE_HOST / デフォルト 0.0.0.0）",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=None,
-        help="ポート（省略時: 環境変数 DGE_PORT / app_config.json）",
-    )
-    args = parser.parse_args()
-
-    runtime = resolve_app_runtime(
-        Path(__file__).resolve().parent / "app_config.json",
-        env=os.environ,
-        backend_host_env="DGE_HOST",
-        backend_port_env="DGE_PORT",
-    )
-    _default_host = runtime.hosts.backend or "0.0.0.0"
-    _default_port = runtime.ports.api or 8001
-    _host = args.host or _default_host
-    _port = args.port or _default_port
-
-    print(f"[DGE] Starting on {_host}:{_port} (reload={args.reload})")
-
-    if args.reload:
-        uvicorn.run(
-            "apps.decision_governance_engine.api:app",
-            host=_host,
-            port=_port,
-            reload=True,
-            reload_dirs=["apps/decision_governance_engine", "shared", "kernel", "harness", "control_plane"],
-        )
-    else:
-        uvicorn.run(app, host=_host, port=_port)

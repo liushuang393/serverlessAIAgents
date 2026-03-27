@@ -19,6 +19,7 @@
 ## 🏗️ BizCore 7コア層 + Apps外層
 
 ### アーキテクチャ概要
+
 BizCore は 7 つの独立層と `apps/` 製品層で責務を分離する。
 
 ```
@@ -67,15 +68,15 @@ BizCore は 7 つの独立層と `apps/` 製品層で責務を分離する。
 
 ### 各層の責任
 
-| 層 | ディレクトリ | 主要責任 | 設計原則 |
-|----|-------------|---------|---------|
-| **Layer 1: Experience / Entry** | `domain/`, `control_plane/frontend/` | ユーザー・外部システムからの入口 | ユーザビリティ、アクセシビリティ |
-| **Layer 2: Contracts** | `contracts/` | 唯一の canonical 契約層（型定義・Protocol・イベント） | 契約優先、型安全 |
-| **Layer 3: Kernel** | `kernel/` | 実行中核（Engine, Agent, Flow, Skills, HITL） | 単一責任、テスト容易性 |
-| **Layer 4: Harness** | `harness/` | 横断ガバナンス・品質・安全・検証の専用層 | 独立性、横断関心事の分離 |
-| **Layer 5: Integration** | `shared/integrations/`, `shared/gateway/` | MCP / A2A / OpenAPI（接続専用） | 標準準拠、拡張性 |
-| **Layer 6: Infrastructure / Gateway** | `infrastructure/` | LLM Gateway・外部技術基盤（DB, Vector, Cache） | 疎結合、設定駆動 |
-| **Layer 7: Platform / Apps** | `apps/`, `control_plane/` | アプリ提供・運用・開発支援 | ビジネス駆動、ドメイン分離 |
+| 層                                    | ディレクトリ                              | 主要責任                                              | 設計原則                         |
+| ------------------------------------- | ----------------------------------------- | ----------------------------------------------------- | -------------------------------- |
+| **Layer 1: Experience / Entry**       | `domain/`, `control_plane/frontend/`      | ユーザー・外部システムからの入口                      | ユーザビリティ、アクセシビリティ |
+| **Layer 2: Contracts**                | `contracts/`                              | 唯一の canonical 契約層（型定義・Protocol・イベント） | 契約優先、型安全                 |
+| **Layer 3: Kernel**                   | `kernel/`                                 | 実行中核（Engine, Agent, Flow, Skills, HITL）         | 単一責任、テスト容易性           |
+| **Layer 4: Harness**                  | `harness/`                                | 横断ガバナンス・品質・安全・検証の専用層              | 独立性、横断関心事の分離         |
+| **Layer 5: Integration**              | `shared/integrations/`, `shared/gateway/` | MCP / A2A / OpenAPI（接続専用）                       | 標準準拠、拡張性                 |
+| **Layer 6: Infrastructure / Gateway** | `infrastructure/`                         | LLM Gateway・外部技術基盤（DB, Vector, Cache）        | 疎結合、設定駆動                 |
+| **Layer 7: Platform / Apps**          | `apps/`, `control_plane/`                 | アプリ提供・運用・開発支援                            | ビジネス駆動、ドメイン分離       |
 
 ### 依存方向ルール
 
@@ -88,13 +89,13 @@ BizCore は 7 つの独立層と `apps/` 製品層で責務を分離する。
 
 ### 禁止パターン
 
-| # | 禁止パターン | 理由 |
-|---|---|---|
-| 1 | `kernel/` から `infrastructure/` を直接 import | Kernel は Contracts と shared のみ参照可 |
-| 2 | `contracts/` から他層を import | Contracts は最下層、外部依存禁止 |
-| 3 | `harness/` から `apps/` を import | Harness は横断層、Apps に依存しない |
-| 4 | `shared/` から `kernel/` を import | shared は kernel より下位 |
-| 5 | `infrastructure/` から `kernel/` を import | infrastructure は kernel より下位 |
+| #   | 禁止パターン                                   | 理由                                     |
+| --- | ---------------------------------------------- | ---------------------------------------- |
+| 1   | `kernel/` から `infrastructure/` を直接 import | Kernel は Contracts と shared のみ参照可 |
+| 2   | `contracts/` から他層を import                 | Contracts は最下層、外部依存禁止         |
+| 3   | `harness/` から `apps/` を import              | Harness は横断層、Apps に依存しない      |
+| 4   | `shared/` から `kernel/` を import             | shared は kernel より下位                |
+| 5   | `infrastructure/` から `kernel/` を import     | infrastructure は kernel より下位        |
 
 ---
 
@@ -138,6 +139,7 @@ BizCore は 7 つの独立層と `apps/` 製品層で責務を分離する。
 ## 🏛️ SOLID 原則
 
 ### 1. 単一責任原則 (Single Responsibility)
+
 ```python
 # ✅ 正しい: 各クラスが単一の責任のみを持つ
 class UserValidator:
@@ -165,6 +167,7 @@ class UserManager:
 ```
 
 ### 2. 開放閉鎖原則 (Open/Closed)
+
 ```python
 # ✅ 正しい: 拡張に開いて、修正に閉じる
 from abc import ABC, abstractmethod
@@ -192,6 +195,7 @@ class UserService:
 ```
 
 ### 3. リスコフの置換原則 (Liskov Substitution)
+
 ```python
 # ✅ 正しい: サブクラスは親クラスを置き換え可能
 class BaseAgent(ABC):
@@ -221,6 +225,7 @@ async def run_agent(agent: BaseAgent, task: dict) -> dict:
 ```
 
 ### 4. インターフェース分離原則 (Interface Segregation)
+
 ```python
 # ✅ 正しい: 小さく焦点を絞ったインターフェース
 from typing import Protocol
@@ -246,6 +251,7 @@ class UserQueryService:
 ```
 
 ### 5. 依存性逆転原則 (Dependency Inversion)
+
 ```python
 # ✅ 正しい: 具象クラスではなく抽象に依存
 from typing import Protocol
@@ -276,6 +282,7 @@ class DataService:
 ## 🔗 依存性管理
 
 ### 依存性注入パターン
+
 ```python
 # ✅ 正しい: コンストラクタ注入
 class WorkflowEngine:
@@ -303,6 +310,7 @@ def create_workflow_engine(config: dict) -> WorkflowEngine:
 ```
 
 ### 循環依存の回避
+
 ```python
 # ❌ 間違い: 直接インポートによる循環依存
 # module_a.py
@@ -352,6 +360,7 @@ class ClassB:
 ## ⚡ 非同期設計パターン
 
 ### 非同期コンテキストマネージャー
+
 ```python
 # ✅ 正しい: リソース管理のためのコンテキストマネージャー
 class DatabaseConnection:
@@ -375,6 +384,7 @@ async def process_user_data(user_id: str) -> dict:
 ```
 
 ### 非同期ジェネレーター
+
 ```python
 # ✅ 正しい: ストリーミング処理のための非同期ジェネレーター
 async def stream_workflow_events(
@@ -398,6 +408,7 @@ async def monitor_workflow(workflow_id: str) -> None:
 ```
 
 ### 非同期ファクトリーパターン
+
 ```python
 # ✅ 正しい: 非同期初期化が必要なオブジェクトのファクトリー
 class LLMService:
@@ -430,6 +441,7 @@ async def main():
 ## 🌐 プロトコル設計
 
 ### プロトコル抽象化
+
 ```python
 # ✅ 正しい: プロトコルベースの設計
 from typing import Protocol
@@ -468,6 +480,7 @@ class ProtocolManager:
 ```
 
 ### プロトコル自動適応
+
 ```python
 # ✅ 正しい: 自動プロトコル変換
 class ProtocolAdapter:
@@ -499,6 +512,7 @@ class ProtocolAdapter:
 ## 📊 データフロー設計
 
 ### 一方向データフロー
+
 ```python
 # ✅ 正しい: Flux/Redux パターン風の一方向フロー
 from typing import Callable, Any
@@ -565,6 +579,7 @@ class WorkflowStore:
 ```
 
 ### イミュータブルデータ構造
+
 ```python
 # ✅ 正しい: イミュータブルなデータ更新
 from dataclasses import dataclass, replace
@@ -596,6 +611,7 @@ updated_config = config.with_timeout(60.0).with_agent("validator")
 ## 🔍 アーキテクチャ品質チェック
 
 ### 設計品質チェックリスト
+
 - [ ] SOLID原則が適切に適用されている
 - [ ] 各層の責任分離が明確
 - [ ] 依存性注入が使用されている
@@ -606,6 +622,7 @@ updated_config = config.with_timeout(60.0).with_agent("validator")
 - [ ] イミュータブルなデータ構造が使用されている
 
 ### アーキテクチャレビューポイント
+
 - **スケーラビリティ**: 拡張時の影響範囲
 - **保守性**: 変更の容易さ
 - **テスト容易性**: ユニットテストの書きやすさ
@@ -625,4 +642,4 @@ updated_config = config.with_timeout(60.0).with_agent("validator")
 
 **優れたアーキテクチャは、変化に強いソフトウェアを実現します。** 🏗️
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+_最終更新: 2025-01-19 | バージョン: 1.0.0_

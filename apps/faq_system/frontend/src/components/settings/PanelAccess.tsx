@@ -5,14 +5,14 @@
  * admin ロールの場合のみ「編集」ボタンを表示（将来拡張用）。
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import type { JSX } from 'react';
-import { Shield, Pencil, Save, X } from 'lucide-react';
-import { useI18n } from '../../i18n';
-import { ragApi } from '../../api/rag';
+import { useCallback, useEffect, useState } from "react";
+import type { JSX } from "react";
+import { Shield, Pencil, Save, X } from "lucide-react";
+import { useI18n } from "../../i18n";
+import { ragApi } from "../../api/rag";
 
 /** KB タイプの表示順序 */
-const KB_TYPES = ['internal', 'external', 'confidential'] as const;
+const KB_TYPES = ["internal", "external", "confidential"] as const;
 
 /** マトリクスデータ型 */
 type AccessMatrix = Record<string, Record<string, boolean>>;
@@ -24,15 +24,15 @@ interface StoredUser {
 
 function getCurrentUserRole(): string {
   try {
-    const raw = localStorage.getItem('user_info');
+    const raw = localStorage.getItem("user_info");
     if (raw) {
       const parsed: StoredUser = JSON.parse(raw);
-      return parsed.role ?? 'guest';
+      return parsed.role ?? "guest";
     }
   } catch {
     // パース失敗時はデフォルト
   }
-  return 'guest';
+  return "guest";
 }
 
 /** マトリクスのディープコピーを生成 */
@@ -53,7 +53,7 @@ export function PanelAccess(): JSX.Element {
   const [draft, setDraft] = useState<AccessMatrix | null>(null);
   const [saving, setSaving] = useState(false);
   const currentRole = getCurrentUserRole();
-  const isAdmin = currentRole === 'admin';
+  const isAdmin = currentRole === "admin";
 
   useEffect(() => {
     let cancelled = false;
@@ -132,23 +132,31 @@ export function PanelAccess(): JSX.Element {
 
   if (loading) {
     return (
-      <div data-testid="panel-access-loading" className="text-sm text-[var(--text-muted)] p-4">
-        {t('knowledge_panel.loading')}
+      <div
+        data-testid="panel-access-loading"
+        className="text-sm text-[var(--text-muted)] p-4"
+      >
+        {t("knowledge_panel.loading")}
       </div>
     );
   }
 
   if (error && !matrix) {
     return (
-      <div data-testid="panel-access-error" className="text-sm text-rose-400 p-4">
-        {t('knowledge_panel.error_prefix')}: {error}
+      <div
+        data-testid="panel-access-error"
+        className="text-sm text-rose-400 p-4"
+      >
+        {t("knowledge_panel.error_prefix")}: {error}
       </div>
     );
   }
 
   if (!matrix) {
     return (
-      <div className="text-sm text-[var(--text-muted)] p-4">{t('knowledge_panel.no_data')}</div>
+      <div className="text-sm text-[var(--text-muted)] p-4">
+        {t("knowledge_panel.no_data")}
+      </div>
     );
   }
 
@@ -162,10 +170,16 @@ export function PanelAccess(): JSX.Element {
         <Shield size={16} className="text-indigo-400 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-xs text-white">
-            {t('knowledge_panel.current_role')}: <span data-testid="current-role" className="font-medium text-[var(--primary)]">{currentRole}</span>
+            {t("knowledge_panel.current_role")}:{" "}
+            <span
+              data-testid="current-role"
+              className="font-medium text-[var(--primary)]"
+            >
+              {currentRole}
+            </span>
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            {t('knowledge_panel.access_description')}
+            {t("knowledge_panel.access_description")}
           </p>
         </div>
       </div>
@@ -173,7 +187,7 @@ export function PanelAccess(): JSX.Element {
       {/* 保存エラー */}
       {error && (
         <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400">
-          {t('knowledge_panel.error_prefix')}: {error}
+          {t("knowledge_panel.error_prefix")}: {error}
         </div>
       )}
 
@@ -183,7 +197,7 @@ export function PanelAccess(): JSX.Element {
           <thead>
             <tr className="border-b border-white/5">
               <th className="text-left px-4 py-3 text-xs text-[var(--text-muted)] uppercase font-medium">
-                {t('knowledge_panel.role')}
+                {t("knowledge_panel.role")}
               </th>
               {KB_TYPES.map((kb) => (
                 <th
@@ -197,7 +211,10 @@ export function PanelAccess(): JSX.Element {
           </thead>
           <tbody>
             {roles.map((role) => (
-              <tr key={role} className="border-b border-white/5 last:border-b-0">
+              <tr
+                key={role}
+                className="border-b border-white/5 last:border-b-0"
+              >
                 <td className="px-4 py-3 font-medium text-white">{role}</td>
                 {KB_TYPES.map((kb) => {
                   const allowed = displayMatrix[role]?.[kb] ?? false;
@@ -209,14 +226,20 @@ export function PanelAccess(): JSX.Element {
                           checked={allowed}
                           onChange={() => togglePermission(role, kb)}
                           className="rounded border-white/20 cursor-pointer"
-                          aria-label={`${role} ${kb} ${allowed ? 'allowed' : 'denied'}`}
+                          aria-label={`${role} ${kb} ${allowed ? "allowed" : "denied"}`}
                         />
                       ) : allowed ? (
-                        <span className="text-emerald-400" aria-label={`${role} ${kb} allowed`}>
+                        <span
+                          className="text-emerald-400"
+                          aria-label={`${role} ${kb} allowed`}
+                        >
                           &#10003;
                         </span>
                       ) : (
-                        <span className="text-[var(--text-muted)]" aria-label={`${role} ${kb} denied`}>
+                        <span
+                          className="text-[var(--text-muted)]"
+                          aria-label={`${role} ${kb} denied`}
+                        >
                           &#10005;
                         </span>
                       )}
@@ -241,7 +264,7 @@ export function PanelAccess(): JSX.Element {
                 disabled={saving}
               >
                 <X size={12} />
-                {t('knowledge_panel.cancel')}
+                {t("knowledge_panel.cancel")}
               </button>
               <button
                 data-testid="btn-save-access"
@@ -250,7 +273,9 @@ export function PanelAccess(): JSX.Element {
                 disabled={saving}
               >
                 <Save size={12} />
-                {saving ? t('knowledge_panel.saving') : t('knowledge_panel.save')}
+                {saving
+                  ? t("knowledge_panel.saving")
+                  : t("knowledge_panel.save")}
               </button>
             </>
           ) : (
@@ -260,7 +285,7 @@ export function PanelAccess(): JSX.Element {
               onClick={startEditing}
             >
               <Pencil size={12} />
-              {t('knowledge_panel.edit')}
+              {t("knowledge_panel.edit")}
             </button>
           )}
         </div>

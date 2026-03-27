@@ -4,21 +4,21 @@
  * 利用シナリオ別にグループ化されたスキルカタログ表示。
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { useAppStore } from '@/store/useAppStore';
-import type { SkillCategoryId, SkillInfo } from '@/types';
-import { useI18n } from '../i18n';
+import { useEffect, useMemo, useState } from "react";
+import { useAppStore } from "@/store/useAppStore";
+import type { SkillCategoryId, SkillInfo } from "@/types";
+import { useI18n } from "../i18n";
 
 /** カテゴリ ID → i18n キーのマッピング */
 const CATEGORY_I18N_KEY: Record<SkillCategoryId, string> = {
-  common: 'skill.cat_common',
-  code_development: 'skill.cat_code_development',
-  web_search: 'skill.cat_web_search',
-  enterprise_office: 'skill.cat_enterprise_office',
-  ad_marketing: 'skill.cat_ad_marketing',
-  enterprise_workflow: 'skill.cat_enterprise_workflow',
-  ai_assistant: 'skill.cat_ai_assistant',
-  media_creative: 'skill.cat_media_creative',
+  common: "skill.cat_common",
+  code_development: "skill.cat_code_development",
+  web_search: "skill.cat_web_search",
+  enterprise_office: "skill.cat_enterprise_office",
+  ad_marketing: "skill.cat_ad_marketing",
+  enterprise_workflow: "skill.cat_enterprise_workflow",
+  ai_assistant: "skill.cat_ai_assistant",
+  media_creative: "skill.cat_media_creative",
 };
 
 /** スキルカード Props */
@@ -39,8 +39,12 @@ function SkillCard({ skill, expanded, onToggle, t }: SkillCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h3 className="text-base font-semibold text-slate-200">{skill.label}</h3>
-          <p className="text-xs text-slate-500">{skill.name} v{skill.version}</p>
+          <h3 className="text-base font-semibold text-slate-200">
+            {skill.label}
+          </h3>
+          <p className="text-xs text-slate-500">
+            {skill.name} v{skill.version}
+          </p>
         </div>
         <span className="text-xs text-slate-600">{skill.author}</span>
       </div>
@@ -48,7 +52,10 @@ function SkillCard({ skill, expanded, onToggle, t }: SkillCardProps) {
       {/* タグ */}
       <div className="flex flex-wrap gap-1.5 mb-2">
         {skill.tags.map((tag) => (
-          <span key={tag} className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-full">
+          <span
+            key={tag}
+            className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-full"
+          >
             {tag}
           </span>
         ))}
@@ -56,10 +63,15 @@ function SkillCard({ skill, expanded, onToggle, t }: SkillCardProps) {
       {/* トリガー（展開時） */}
       {expanded && skill.triggers.length > 0 && (
         <div className="mt-3 pt-3 border-t border-slate-800">
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">{t('skill.trigger_words')}</p>
+          <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+            {t("skill.trigger_words")}
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {skill.triggers.map((trigger) => (
-              <span key={trigger} className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] rounded-full">
+              <span
+                key={trigger}
+                className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] rounded-full"
+              >
                 {trigger}
               </span>
             ))}
@@ -72,10 +84,13 @@ function SkillCard({ skill, expanded, onToggle, t }: SkillCardProps) {
 
 export function SkillCatalog() {
   const { t } = useI18n();
-  const { skillGroups, loading, error, loadSkillsGrouped, clearError } = useAppStore();
+  const { skillGroups, loading, error, loadSkillsGrouped, clearError } =
+    useAppStore();
 
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
+    new Set(),
+  );
 
   useEffect(() => {
     loadSkillsGrouped();
@@ -104,9 +119,12 @@ export function SkillCatalog() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">{t('skill.title')}</h1>
+        <h1 className="text-2xl font-bold text-slate-100">
+          {t("skill.title")}
+        </h1>
         <p className="text-sm text-slate-500 mt-1">
-          {t('skill.subtitle')}（{totalSkills} skills / {skillGroups.length} categories）
+          {t("skill.subtitle")}（{totalSkills} skills / {skillGroups.length}{" "}
+          categories）
         </p>
       </div>
 
@@ -114,7 +132,12 @@ export function SkillCatalog() {
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between">
           <span className="text-red-400 text-sm">{error}</span>
-          <button onClick={clearError} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+          <button
+            onClick={clearError}
+            className="text-red-400 hover:text-red-300 text-xs"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -144,8 +167,12 @@ export function SkillCatalog() {
                   <h2 className="text-lg font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors">
                     {label}
                   </h2>
-                  <span className="text-xs text-slate-500 ml-1">({group.skills.length})</span>
-                  <span className={`text-slate-500 text-xs ml-auto transition-transform ${isCollapsed ? '' : 'rotate-90'}`}>
+                  <span className="text-xs text-slate-500 ml-1">
+                    ({group.skills.length})
+                  </span>
+                  <span
+                    className={`text-slate-500 text-xs ml-auto transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                  >
                     ▶
                   </span>
                 </button>
@@ -158,7 +185,11 @@ export function SkillCatalog() {
                         key={skill.name}
                         skill={skill}
                         expanded={expanded === skill.name}
-                        onToggle={() => setExpanded(expanded === skill.name ? null : skill.name)}
+                        onToggle={() =>
+                          setExpanded(
+                            expanded === skill.name ? null : skill.name,
+                          )
+                        }
                         t={t}
                       />
                     ))}
@@ -174,10 +205,9 @@ export function SkillCatalog() {
       {!loading && skillGroups.length === 0 && (
         <div className="text-center py-16">
           <p className="text-4xl mb-4">🧩</p>
-          <p className="text-slate-400">{t('skill.no_skills')}</p>
+          <p className="text-slate-400">{t("skill.no_skills")}</p>
         </div>
       )}
     </div>
   );
 }
-

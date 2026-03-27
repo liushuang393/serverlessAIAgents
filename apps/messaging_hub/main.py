@@ -18,18 +18,18 @@ Telegram・Slack・Discord などを横断して扱う。
 
 起動方法:
     # 開発モード
-    uvicorn apps.messaging_hub.main:app --reload --host 0.0.0.0 --port 8004
+    conda run -n agentflow python apps/messaging_hub/scripts/dev.py --reload
 
-    # 本番モード
-    uvicorn apps.messaging_hub.main:app --host 0.0.0.0 --port 8004
+    # Docker / 発布
+    conda run -n agentflow python apps/messaging_hub/scripts/compose.py publish
 
 環境変数:
     TELEGRAM_BOT_TOKEN: Telegram Bot Token
     SLACK_BOT_TOKEN: Slack Bot Token
     SLACK_SIGNING_SECRET: Slack Signing Secret
     DISCORD_BOT_TOKEN: Discord Bot Token
-    MSGHUB_HOST: backend bind host override
-    MSGHUB_PORT: backend bind port override
+    MSGHUB_HOST: backend bind host override（未指定時は app_config.json）
+    MSGHUB_PORT: backend bind port override（未指定時は app_config.json）
     OPENAI_API_KEY: OpenAI API Key（または他の LLM provider）
 """
 

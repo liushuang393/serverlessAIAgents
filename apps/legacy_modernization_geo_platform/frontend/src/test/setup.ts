@@ -1,6 +1,6 @@
-import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
 afterEach(() => {
   cleanup();
@@ -31,7 +31,7 @@ class MockWebSocket {
   removeEventListener(): void {}
 }
 
-vi.stubGlobal('WebSocket', MockWebSocket);
+vi.stubGlobal("WebSocket", MockWebSocket);
 
 class MockEventSource {
   static readonly CONNECTING = 0;
@@ -54,4 +54,4 @@ class MockEventSource {
   removeEventListener(): void {}
 }
 
-vi.stubGlobal('EventSource', MockEventSource);
+vi.stubGlobal("EventSource", MockEventSource);

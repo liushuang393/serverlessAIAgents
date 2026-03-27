@@ -8,17 +8,17 @@
 
 ## 🚨 CRITICAL: Python 型エラー（コード編集のたびに必ずチェック）
 
-| # | ❌ 違反パターン | ✅ 正解 |
-|---|---|---|
-| 1 | `def fn(x):` 型なし | `def fn(x: str) -> None:` |
-| 2 | `Optional[X]` を None チェックなしで参照 | `if value is not None:` ガード後にアクセス |
-| 3 | `Any` をデフォルト型として使う | 具体型を明示（理由コメント必須） |
-| 4 | 戻り値型と `return` 値が不一致 | 宣言型と一致する値を返す |
-| 5 | `dict["key"]` で KeyError リスク | `.get("key")` または存在確認必須 |
-| 6 | `cast()` で型を誤魔化す | 実際に正しい型の値を生成する |
-| 7 | `# type: ignore` を理由なく使う | 根本原因を修正する |
-| 8 | Pydantic フィールドに `Any` / 型なし | `field: str`, `field: int \| None` 等 |
-| 9 | `async def` の戻り値型を省略 | `async def fn() -> dict[str, Any]:` |
+| #   | ❌ 違反パターン                          | ✅ 正解                                    |
+| --- | ---------------------------------------- | ------------------------------------------ |
+| 1   | `def fn(x):` 型なし                      | `def fn(x: str) -> None:`                  |
+| 2   | `Optional[X]` を None チェックなしで参照 | `if value is not None:` ガード後にアクセス |
+| 3   | `Any` をデフォルト型として使う           | 具体型を明示（理由コメント必須）           |
+| 4   | 戻り値型と `return` 値が不一致           | 宣言型と一致する値を返す                   |
+| 5   | `dict["key"]` で KeyError リスク         | `.get("key")` または存在確認必須           |
+| 6   | `cast()` で型を誤魔化す                  | 実際に正しい型の値を生成する               |
+| 7   | `# type: ignore` を理由なく使う          | 根本原因を修正する                         |
+| 8   | Pydantic フィールドに `Any` / 型なし     | `field: str`, `field: int \| None` 等      |
+| 9   | `async def` の戻り値型を省略             | `async def fn() -> dict[str, Any]:`        |
 
 **毎回の自己チェック**: 全引数・戻り値に型付与済みか？ None ガードは漏れていないか？ mypy --strict でエラー 0 か？
 
@@ -49,37 +49,37 @@
 
 ### 🐍 Python 言語・型安全
 
-| ファイル | 概要 | 利用場面 |
-|---|---|---|
-| [`code-rules/languages/python-rules.md`](code-rules/languages/python-rules.md) | 型アノテーション・非同期・Pydantic・命名規則など Python 全般の実装規約 | Python コードを新規作成・編集するとき |
-| [`code-rules/global/mypy-avoid-patterns.md`](code-rules/global/mypy-avoid-patterns.md) | AI が犯しやすい mypy エラーパターンと安全な修正方法の一覧 | 型エラー (mypy) を修正・解消するとき |
-| [`code-rules/global/ai-weakness.md`](code-rules/global/ai-weakness.md) | AI が頻繁に犯すミスパターン（型・非同期・DB・SSE 等）と対策集 | AI 生成コードのレビューや再発防止の確認 |
+| ファイル                                                                               | 概要                                                                   | 利用場面                                |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------- |
+| [`code-rules/languages/python-rules.md`](code-rules/languages/python-rules.md)         | 型アノテーション・非同期・Pydantic・命名規則など Python 全般の実装規約 | Python コードを新規作成・編集するとき   |
+| [`code-rules/global/mypy-avoid-patterns.md`](code-rules/global/mypy-avoid-patterns.md) | AI が犯しやすい mypy エラーパターンと安全な修正方法の一覧              | 型エラー (mypy) を修正・解消するとき    |
+| [`code-rules/global/ai-weakness.md`](code-rules/global/ai-weakness.md)                 | AI が頻繁に犯すミスパターン（型・非同期・DB・SSE 等）と対策集          | AI 生成コードのレビューや再発防止の確認 |
 
 ### 🏗️ アーキテクチャ・Agent 設計
 
-| ファイル | 概要 | 利用場面 |
-|---|---|---|
-| [`code-rules/project/architecture.md`](code-rules/project/architecture.md) | 7コア層+Apps の依存方向・レイヤ分離・設計原則 | 層構造・依存関係・設計判断に関わるとき |
-| [`code-rules/CLAUDE.md` § 3〜12](code-rules/CLAUDE.md) | Agent/Engine/Flow/HITL の Public API 設計規約とシナリオ別構成例 | AgentFlow の Public API を設計・実装するとき |
-| [`code-rules/CLAUDE.md` § 15](code-rules/CLAUDE.md) | `app_config.json` の `agents[]` 登録フォーマットと DoD チェックリスト | 新規 Agent を追加・登録するとき |
-| [`code-rules/global/principles.md`](code-rules/global/principles.md) | 品質優先・インクリメンタル改善・設計原則などの開発方針 | 設計・実装方針を確認したいとき |
+| ファイル                                                                   | 概要                                                                  | 利用場面                                     |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
+| [`code-rules/project/architecture.md`](code-rules/project/architecture.md) | 7コア層+Apps の依存方向・レイヤ分離・設計原則                         | 層構造・依存関係・設計判断に関わるとき       |
+| [`code-rules/CLAUDE.md` § 3〜12](code-rules/CLAUDE.md)                     | Agent/Engine/Flow/HITL の Public API 設計規約とシナリオ別構成例       | AgentFlow の Public API を設計・実装するとき |
+| [`code-rules/CLAUDE.md` § 15](code-rules/CLAUDE.md)                        | `app_config.json` の `agents[]` 登録フォーマットと DoD チェックリスト | 新規 Agent を追加・登録するとき              |
+| [`code-rules/global/principles.md`](code-rules/global/principles.md)       | 品質優先・インクリメンタル改善・設計原則などの開発方針                | 設計・実装方針を確認したいとき               |
 
 ### 🧪 品質・テスト・CI
 
-| ファイル | 概要 | 利用場面 |
-|---|---|---|
-| [`code-rules/tools/testing.md`](code-rules/tools/testing.md) | pytest 方針・カバレッジ・モック・非同期テストの規約と手順 | テストを書く・修正するとき |
-| [`code-rules/tools/lint-format.md`](code-rules/tools/lint-format.md) | Ruff・ESLint・Prettier の設定方法と利用ルール | リント・フォーマット設定を変更するとき |
+| ファイル                                                                                     | 概要                                                                           | 利用場面                                             |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| [`code-rules/tools/testing.md`](code-rules/tools/testing.md)                                 | pytest 方針・カバレッジ・モック・非同期テストの規約と手順                      | テストを書く・修正するとき                           |
+| [`code-rules/tools/lint-format.md`](code-rules/tools/lint-format.md)                         | Ruff・ESLint・Prettier の設定方法と利用ルール                                  | リント・フォーマット設定を変更するとき               |
 | [`code-rules/tools/architecture-validation.md`](code-rules/tools/architecture-validation.md) | レイヤー境界・プロバイダ隔離・App コンプライアンス・ルール遵守の自動検証ツール | アーキテクチャ違反の確認・CI/CD 検証ツールを使うとき |
-| [`code-rules/tools/check-errors-analysis.md`](code-rules/tools/check-errors-analysis.md) | `./check.sh` の出力エラーを種別に分類し対処する手順ガイド | `check.sh` でエラーが出たとき |
-| [`code-rules/project/ci-cd-guidelines.md`](code-rules/project/ci-cd-guidelines.md) | GitHub Actions・pre-commit フックの設定規約と変更手順 | CI/CD・pre-commit を変更するとき |
+| [`code-rules/tools/check-errors-analysis.md`](code-rules/tools/check-errors-analysis.md)     | `./check.sh` の出力エラーを種別に分類し対処する手順ガイド                      | `check.sh` でエラーが出たとき                        |
+| [`code-rules/project/ci-cd-guidelines.md`](code-rules/project/ci-cd-guidelines.md)           | GitHub Actions・pre-commit フックの設定規約と変更手順                          | CI/CD・pre-commit を変更するとき                     |
 
 ### 📦 プロジェクト管理・構造
 
-| ファイル | 概要 | 利用場面 |
-|---|---|---|
-| [`code-rules/project/dependency-management.md`](code-rules/project/dependency-management.md) | Dependabot・pip/npm 依存更新の方針・グループ化・マージルール | 依存関係を更新・追加するとき |
-| [`code-rules/project/repo-structure.md`](code-rules/project/repo-structure.md) | ディレクトリ構成・ファイル配置・命名の規約 | ファイル・ディレクトリ構造を変更するとき |
+| ファイル                                                                                     | 概要                                                         | 利用場面                                 |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------- |
+| [`code-rules/project/dependency-management.md`](code-rules/project/dependency-management.md) | Dependabot・pip/npm 依存更新の方針・グループ化・マージルール | 依存関係を更新・追加するとき             |
+| [`code-rules/project/repo-structure.md`](code-rules/project/repo-structure.md)               | ディレクトリ構成・ファイル配置・命名の規約                   | ファイル・ディレクトリ構造を変更するとき |
 
 ---
 

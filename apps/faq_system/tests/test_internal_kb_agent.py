@@ -24,10 +24,10 @@ class _ConcreteInternalKBAgent(InternalKBAgent):
     # Abstract methods required by ResilientAgent. Signatures differ intentionally:
     # this stub is only used for direct unit-testing of private methods (_generate_answer etc.)
     # and never goes through the base class run() path that calls output.model_dump().
-    def _parse_input(self, input_data: dict[str, Any]) -> Any:  # type: ignore[override]
+    def _parse_input(self, input_data: dict[str, Any]) -> Any:
         return input_data
 
-    async def process(self, input_data: Any) -> Any:  # type: ignore[override]
+    async def process(self, input_data: Any) -> Any:
         return input_data
 
 

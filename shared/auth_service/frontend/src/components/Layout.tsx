@@ -113,9 +113,7 @@ export function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              style={({ isActive }) =>
-                isActive ? navItemActive : navItemBase
-              }
+              style={({ isActive }) => (isActive ? navItemActive : navItemBase)}
             >
               {item.label}
             </NavLink>

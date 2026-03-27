@@ -5,32 +5,39 @@
  * API対接: GET /api/decision/history, GET /api/report/{id}/pdf
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { useDecisionStore } from '../store/useDecisionStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { decisionApi } from '../api/client';
-import type { ServerHistoryItem } from '../types';
-import { useI18n } from '../i18n';
+import React, { useCallback, useEffect, useState } from "react";
+import { useDecisionStore } from "../store/useDecisionStore";
+import { useAuthStore } from "../store/useAuthStore";
+import { decisionApi } from "../api/client";
+import type { ServerHistoryItem } from "../types";
+import { useI18n } from "../i18n";
 
 /** 決策結果のバッジ色 */
 const DECISION_ROLE_COLORS: Record<string, string> = {
-  GO: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-  NO_GO: 'bg-red-500/10 text-red-400 border-red-500/30',
-  DELAY: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  PILOT: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  GO: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+  NO_GO: "bg-red-500/10 text-red-400 border-red-500/30",
+  DELAY: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  PILOT: "bg-blue-500/10 text-blue-400 border-blue-500/30",
 };
 
 export const HistoryPage: React.FC = () => {
   const { t } = useI18n();
-  const { setPage, setQuestion, setRequestId, reset, loadHistoryReport, previousPage } = useDecisionStore();
+  const {
+    setPage,
+    setQuestion,
+    setRequestId,
+    reset,
+    loadHistoryReport,
+    previousPage,
+  } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
 
   /** 決策結果のローカライズラベル */
   const ROLE_LABELS: Record<string, string> = {
-    GO: t('history.role_label.go'),
-    NO_GO: t('history.role_label.no_go'),
-    DELAY: t('history.role_label.delay'),
-    PILOT: t('history.role_label.pilot'),
+    GO: t("history.role_label.go"),
+    NO_GO: t("history.role_label.no_go"),
+    DELAY: t("history.role_label.delay"),
+    PILOT: t("history.role_label.pilot"),
   };
 
   const [items, setItems] = useState<ServerHistoryItem[]>([]);
@@ -41,8 +48,8 @@ export const HistoryPage: React.FC = () => {
   const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
 
   // フィルター状態
-  const [filterRole, setFilterRole] = useState<string>('');
-  const [filterMode, setFilterMode] = useState<string>('');
+  const [filterRole, setFilterRole] = useState<string>("");
+  const [filterMode, setFilterMode] = useState<string>("");
   const [limit, setLimit] = useState(20);
 
   /** 履歴取得 */
@@ -58,20 +65,21 @@ export const HistoryPage: React.FC = () => {
         mode: filterMode || undefined,
       });
 
-      if (response.status === 'success' || response.status === 'fallback') {
+      if (response.status === "success" || response.status === "fallback") {
         setItems(response.items);
-        if (response.status === 'fallback') {
-          setInfo(t('history.fallback_info'));
+        if (response.status === "fallback") {
+          setInfo(t("history.fallback_info"));
         }
-      } else if (response.status === 'disabled') {
-        setError(t('history.disabled'));
+      } else if (response.status === "disabled") {
+        setError(t("history.disabled"));
         setItems([]);
       } else {
-        setError(t('history.fetch_failed'));
+        setError(t("history.fetch_failed"));
         setItems([]);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('history.fetch_failed');
+      const message =
+        err instanceof Error ? err.message : t("history.fetch_failed");
       setError(message);
       setItems([]);
     } finally {
@@ -85,55 +93,65 @@ export const HistoryPage: React.FC = () => {
   }, [fetchHistory]);
 
   /** PDF ダウンロード */
-  const handleDownloadPdf = useCallback(async (requestId: string) => {
-    setExportingId(requestId);
-    try {
-      const exported = await decisionApi.exportPdf(requestId);
-      const url = URL.createObjectURL(exported.blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = exported.filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t('history.pdf_failed');
-      setError(message);
-    } finally {
-      setExportingId(null);
-    }
-  }, [t]);
+  const handleDownloadPdf = useCallback(
+    async (requestId: string) => {
+      setExportingId(requestId);
+      try {
+        const exported = await decisionApi.exportPdf(requestId);
+        const url = URL.createObjectURL(exported.blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = exported.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : t("history.pdf_failed");
+        setError(message);
+      } finally {
+        setExportingId(null);
+      }
+    },
+    [t],
+  );
 
   /** 詳細表示 (loadHistoryReport でレポートを復元) */
-  const handleViewDetail = useCallback(async (requestId: string) => {
-    setLoadingDetailId(requestId);
-    setError(null);
-    try {
-      await loadHistoryReport(requestId);
-      // loadHistoryReport already navigates to 'report'
-    } catch (err) {
-      const message = err instanceof Error ? err.message : (t('history.detail_failed') || '詳細の読み込みに失敗しました');
-      setError(message);
-    } finally {
-      setLoadingDetailId(null);
-    }
-  }, [loadHistoryReport, t]);
+  const handleViewDetail = useCallback(
+    async (requestId: string) => {
+      setLoadingDetailId(requestId);
+      setError(null);
+      try {
+        await loadHistoryReport(requestId);
+        // loadHistoryReport already navigates to 'report'
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : t("history.detail_failed") || "詳細の読み込みに失敗しました";
+        setError(message);
+      } finally {
+        setLoadingDetailId(null);
+      }
+    },
+    [loadHistoryReport, t],
+  );
 
   /** ログアウト */
   const handleLogout = useCallback(async () => {
     await performLogout();
     reset();
-    setPage('input');
+    setPage("input");
   }, [performLogout, reset, setPage]);
 
   /** 日付フォーマット */
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -144,48 +162,54 @@ export const HistoryPage: React.FC = () => {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setPage('input')}
+              onClick={() => setPage("input")}
               className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center hover:opacity-90 transition-opacity"
             >
               <span className="text-xl">⚡</span>
             </button>
             <div>
-              <h1 className="font-semibold text-lg">{t('history.title')}</h1>
-              <p className="text-xs text-slate-500">{t('history.subtitle')}</p>
+              <h1 className="font-semibold text-lg">{t("history.title")}</h1>
+              <p className="text-xs text-slate-500">{t("history.subtitle")}</p>
             </div>
           </div>
 
           {/* ナビゲーション */}
           <div className="flex items-center gap-4">
-            {previousPage === 'report' && (
+            {previousPage === "report" && (
               <button
-                onClick={() => setPage('report')}
+                onClick={() => setPage("report")}
                 className="px-4 py-2 bg-indigo-700/30 hover:bg-indigo-700/50 text-indigo-300 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
                 <span aria-hidden="true">←</span>
-                {t('history.back_to_report') || '分析結果に戻る'}
+                {t("history.back_to_report") || "分析結果に戻る"}
               </button>
             )}
             <button
-              onClick={() => setPage('input')}
+              onClick={() => setPage("input")}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
             >
-              <span aria-hidden="true">⚡</span> {t('history.new_analysis')}
+              <span aria-hidden="true">⚡</span> {t("history.new_analysis")}
             </button>
 
             {/* ユーザーメニュー */}
             {user && (
               <div className="flex items-center gap-3 pl-4 border-l border-white/10">
                 <div className="text-right">
-                  <div className="text-sm font-medium text-white">{user.display_name}</div>
-                  <div className="text-xs text-slate-500">{user.department}</div>
+                  <div className="text-sm font-medium text-white">
+                    {user.display_name}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {user.department}
+                  </div>
                 </div>
                 <button
                   onClick={handleLogout}
                   className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-                  title={t('common.logout')}
+                  title={t("common.logout")}
                 >
-                  <span role="img" aria-label={t('common.logout')}>&#128682;</span>
+                  <span role="img" aria-label={t("common.logout")}>
+                    &#128682;
+                  </span>
                 </button>
               </div>
             )}
@@ -199,29 +223,39 @@ export const HistoryPage: React.FC = () => {
           <div className="flex items-center gap-4 flex-wrap">
             {/* 決策結果フィルター */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">{t('history.result_filter')}</span>
+              <span className="text-xs text-slate-500">
+                {t("history.result_filter")}
+              </span>
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
                 className="bg-[#0a0a0f] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500/50"
               >
-                <option value="">{t('history.all')}</option>
-                <option value="GO">{t('history.role_label.go')} (GO)</option>
-                <option value="NO_GO">{t('history.role_label.no_go')} (NO_GO)</option>
-                <option value="DELAY">{t('history.role_label.delay')} (DELAY)</option>
-                <option value="PILOT">{t('history.role_label.pilot')} (PILOT)</option>
+                <option value="">{t("history.all")}</option>
+                <option value="GO">{t("history.role_label.go")} (GO)</option>
+                <option value="NO_GO">
+                  {t("history.role_label.no_go")} (NO_GO)
+                </option>
+                <option value="DELAY">
+                  {t("history.role_label.delay")} (DELAY)
+                </option>
+                <option value="PILOT">
+                  {t("history.role_label.pilot")} (PILOT)
+                </option>
               </select>
             </div>
 
             {/* モードフィルター */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">{t('history.mode_filter')}</span>
+              <span className="text-xs text-slate-500">
+                {t("history.mode_filter")}
+              </span>
               <select
                 value={filterMode}
                 onChange={(e) => setFilterMode(e.target.value)}
                 className="bg-[#0a0a0f] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500/50"
               >
-                <option value="">{t('history.all')}</option>
+                <option value="">{t("history.all")}</option>
                 <option value="FAST">FAST</option>
                 <option value="STANDARD">STANDARD</option>
                 <option value="AUDIT">AUDIT</option>
@@ -230,16 +264,18 @@ export const HistoryPage: React.FC = () => {
 
             {/* 表示件数 */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">{t('history.limit_label')}</span>
+              <span className="text-xs text-slate-500">
+                {t("history.limit_label")}
+              </span>
               <select
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
                 className="bg-[#0a0a0f] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500/50"
               >
-                <option value={10}>10 {t('history.items_suffix')}</option>
-                <option value={20}>20 {t('history.items_suffix')}</option>
-                <option value={50}>50 {t('history.items_suffix')}</option>
-                <option value={100}>100 {t('history.items_suffix')}</option>
+                <option value={10}>10 {t("history.items_suffix")}</option>
+                <option value={20}>20 {t("history.items_suffix")}</option>
+                <option value={50}>50 {t("history.items_suffix")}</option>
+                <option value={100}>100 {t("history.items_suffix")}</option>
               </select>
             </div>
 
@@ -254,7 +290,7 @@ export const HistoryPage: React.FC = () => {
               ) : (
                 <span>&#x21BB;</span>
               )}
-              {t('history.refresh')}
+              {t("history.refresh")}
             </button>
           </div>
         </div>
@@ -279,12 +315,12 @@ export const HistoryPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
             <div className="text-4xl mb-4">&#128196;</div>
-            <p>{t('history.empty')}</p>
+            <p>{t("history.empty")}</p>
             <button
-              onClick={() => setPage('input')}
+              onClick={() => setPage("input")}
               className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors"
             >
-              {t('history.start_new')}
+              {t("history.start_new")}
             </button>
           </div>
         ) : (
@@ -299,14 +335,17 @@ export const HistoryPage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span
-                        className={`px-2 py-0.5 rounded border text-xs font-medium ${DECISION_ROLE_COLORS[item.decision_role] || 'bg-slate-500/10 text-slate-400'
-                          }`}
+                        className={`px-2 py-0.5 rounded border text-xs font-medium ${
+                          DECISION_ROLE_COLORS[item.decision_role] ||
+                          "bg-slate-500/10 text-slate-400"
+                        }`}
                       >
                         {ROLE_LABELS[item.decision_role] || item.decision_role}
                       </span>
                       {item.confidence !== null && (
                         <span className="text-xs text-slate-500">
-                          {t('history.confidence')} {Math.round(item.confidence * 100)}%
+                          {t("history.confidence")}{" "}
+                          {Math.round(item.confidence * 100)}%
                         </span>
                       )}
                       <span className="text-xs text-slate-600 px-2 py-0.5 bg-slate-800 rounded">
@@ -314,11 +353,15 @@ export const HistoryPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <p className="text-sm text-slate-300 mb-2 line-clamp-2">{item.question}</p>
+                    <p className="text-sm text-slate-300 mb-2 line-clamp-2">
+                      {item.question}
+                    </p>
 
                     <div className="flex items-center gap-4 text-xs text-slate-500">
                       <span>&#128197; {formatDate(item.created_at)}</span>
-                      <span className="font-mono">ID: {item.request_id.substring(0, 8)}...</span>
+                      <span className="font-mono">
+                        ID: {item.request_id.substring(0, 8)}...
+                      </span>
                     </div>
                   </div>
 
@@ -328,26 +371,26 @@ export const HistoryPage: React.FC = () => {
                       onClick={() => handleViewDetail(item.request_id)}
                       disabled={loadingDetailId === item.request_id}
                       className="px-3 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 rounded-lg text-sm flex items-center gap-2 transition-all disabled:opacity-50"
-                      title={t('history.view_detail') || '詳細を表示'}
+                      title={t("history.view_detail") || "詳細を表示"}
                     >
                       {loadingDetailId === item.request_id ? (
                         <div className="w-4 h-4 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
                       ) : (
                         <span>&#128269;</span>
                       )}
-                      {t('history.detail') || '詳細'}
+                      {t("history.detail") || "詳細"}
                     </button>
                     <button
                       onClick={() => {
                         setQuestion(item.question);
                         setRequestId(item.request_id);
-                        setPage('processing');
+                        setPage("processing");
                       }}
                       className="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-lg text-sm flex items-center gap-2 transition-all"
-                      title={t('history.resume')}
+                      title={t("history.resume")}
                     >
                       <span>🔄</span>
-                      {t('history.resume')}
+                      {t("history.resume")}
                     </button>
                     <button
                       onClick={() => handleDownloadPdf(item.request_id)}
@@ -371,7 +414,10 @@ export const HistoryPage: React.FC = () => {
         {/* ページネーション情報 */}
         {!isLoading && items.length > 0 && (
           <div className="mt-6 text-center text-xs text-slate-500">
-            {t('history.showing_count').replace('{count}', String(items.length))}
+            {t("history.showing_count").replace(
+              "{count}",
+              String(items.length),
+            )}
           </div>
         )}
       </main>

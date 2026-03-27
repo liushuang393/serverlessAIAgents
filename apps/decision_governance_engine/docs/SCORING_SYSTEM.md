@@ -33,16 +33,16 @@
 
 ## 評価次元（8次元）
 
-| 次元ID | 名称 | inverse | 説明 |
-|--------|------|---------|------|
-| user_impact | ユーザー価値 | ❌ | ユーザーが得る実際の価値 |
-| growth_potential | 成長ポテンシャル | ❌ | 市場規模・収益成長の可能性 |
-| timing_window | タイミング | ❌ | 市場機会・競争窓口 |
-| channel_reach | チャネル到達性 | ❌ | ユーザー獲得の容易さ |
-| cost | コスト | ✅ | 開発+運用コスト（低い方が良い） |
-| risk | リスク | ✅ | 市場/実行/法規制リスク（低い方が良い） |
-| reversibility | 可逆性 | ❌ | 失敗時の回復容易さ |
-| dependencies | 依存複雑度 | ✅ | 外部依存・技術負債（低い方が良い） |
+| 次元ID           | 名称             | inverse | 説明                                   |
+| ---------------- | ---------------- | ------- | -------------------------------------- |
+| user_impact      | ユーザー価値     | ❌      | ユーザーが得る実際の価値               |
+| growth_potential | 成長ポテンシャル | ❌      | 市場規模・収益成長の可能性             |
+| timing_window    | タイミング       | ❌      | 市場機会・競争窓口                     |
+| channel_reach    | チャネル到達性   | ❌      | ユーザー獲得の容易さ                   |
+| cost             | コスト           | ✅      | 開発+運用コスト（低い方が良い）        |
+| risk             | リスク           | ✅      | 市場/実行/法規制リスク（低い方が良い） |
+| reversibility    | 可逆性           | ❌      | 失敗時の回復容易さ                     |
+| dependencies     | 依存複雑度       | ✅      | 外部依存・技術負債（低い方が良い）     |
 
 ## inverse 次元の正規化
 
@@ -66,9 +66,10 @@ weighted_score = Σ(normalized_score_i × weight_i) / Σ(weight_i)
 ### プリセット別の重み
 
 #### growth_first（成長優先）
+
 ```yaml
 user_impact: 18%
-growth_potential: 24%  # 最重視
+growth_potential: 24% # 最重視
 timing_window: 14%
 channel_reach: 14%
 cost: 8%
@@ -78,24 +79,26 @@ dependencies: 5%
 ```
 
 #### risk_first（リスク優先）
+
 ```yaml
 user_impact: 12%
 growth_potential: 14%
 timing_window: 8%
 channel_reach: 8%
 cost: 12%
-risk: 22%  # 最重視
+risk: 22% # 最重視
 reversibility: 14%
 dependencies: 10%
 ```
 
 #### efficiency_first（効率優先）
+
 ```yaml
 user_impact: 14%
 growth_potential: 16%
 timing_window: 10%
 channel_reach: 10%
-cost: 20%  # 最重視
+cost: 20% # 最重視
 risk: 12%
 reversibility: 8%
 dependencies: 10%
@@ -104,22 +107,26 @@ dependencies: 10%
 ## 閾値判定
 
 ### GO（実行推奨）
+
 - weighted_score >= 3.8
 - confidence >= 0.70
 - evidence_coverage >= 0.6
 - Hard veto なし
 
 ### PILOT（試験実施）
+
 - weighted_score >= 3.0
 - confidence >= 0.45
 - evidence_coverage >= 0.4
 
 ### DELAY（延期検討）
+
 - weighted_score >= 2.5
 - confidence >= 0.30
 - evidence_coverage >= 0.2
 
 ### NO_GO（実行非推奨）
+
 - 上記いずれにも該当しない
 - または Hard veto 発動
 
@@ -203,10 +210,10 @@ result = engine.calculate_score(dimension_scores, 0.8, 0.7)
 
 ```yaml
 domain_scores:
-  gov: 0.95      # .gov ドメイン
-  edu: 0.90      # .edu ドメイン
-  org: 0.75      # .org ドメイン
-  com: 0.60      # .com ドメイン
+  gov: 0.95 # .gov ドメイン
+  edu: 0.90 # .edu ドメイン
+  org: 0.75 # .org ドメイン
+  com: 0.60 # .com ドメイン
   default: 0.50
 ```
 
@@ -214,11 +221,11 @@ domain_scores:
 
 ```yaml
 freshness_decay:
-  days_30: 1.0    # 30日以内: 減衰なし
-  days_90: 0.9    # 90日以内: 10% 減衰
-  days_180: 0.7   # 180日以内: 30% 減衰
-  days_365: 0.5   # 365日以内: 50% 減衰
-  older: 0.3      # それ以上: 70% 減衰
+  days_30: 1.0 # 30日以内: 減衰なし
+  days_90: 0.9 # 90日以内: 10% 減衰
+  days_180: 0.7 # 180日以内: 30% 減衰
+  days_365: 0.5 # 365日以内: 50% 減衰
+  older: 0.3 # それ以上: 70% 減衰
 ```
 
 ### 最終スコア計算
@@ -240,6 +247,7 @@ else:
 ### API エンドポイント
 
 #### 承認/却下
+
 ```bash
 POST /api/human-review/approve
 {
@@ -252,11 +260,13 @@ POST /api/human-review/approve
 ```
 
 #### 確認状態取得
+
 ```bash
 GET /api/human-review/status/{report_id}
 ```
 
 #### 未確認リスト
+
 ```bash
 GET /api/human-review/pending
 ```
@@ -356,7 +366,7 @@ optimal_weights = optimizer.fit(historical_decisions)
 
 ## 参考資料
 
-- [config/__init__.py](../config/__init__.py) - 設定モデル定義
+- [config/**init**.py](../config/__init__.py) - 設定モデル定義
 - [services/scoring_engine.py](../services/scoring_engine.py) - スコアリングエンジン実装
 - [services/intelligence_service.py](../services/intelligence_service.py) - 信頼度スコアリング
 - [routers/human_review.py](../routers/human_review.py) - 人間確認 API

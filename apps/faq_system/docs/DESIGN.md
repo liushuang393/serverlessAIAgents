@@ -32,11 +32,11 @@
 本システムは、企業内部の知識管理とデータ分析を統合した AI アシスタントシステムです。
 以下の3つの核心機能を提供します：
 
-| 機能 | 対象ユーザー | 主な用途 |
-|------|-------------|---------|
-| **社内FAQ** | 全社員 | 規則/業務照会、新入社員支援、対客製品問合せ |
-| **メンテナンス支援** | 保守担当者 | 仕様変更、影響分析、ドキュメント整理 |
-| **高層データ分析** | 経営層/分析者 | 自然言語→SQL、可視化、アクション提案 |
+| 機能                 | 対象ユーザー  | 主な用途                                    |
+| -------------------- | ------------- | ------------------------------------------- |
+| **社内FAQ**          | 全社員        | 規則/業務照会、新入社員支援、対客製品問合せ |
+| **メンテナンス支援** | 保守担当者    | 仕様変更、影響分析、ドキュメント整理        |
+| **高層データ分析**   | 経営層/分析者 | 自然言語→SQL、可視化、アクション提案        |
 
 ### 1.2 設計原則
 
@@ -69,26 +69,26 @@ apps/faq_system/
 
 ### 2.2 agentflow フレームワーク活用可能モジュール
 
-| モジュール | パス | 機能 | 活用方針 |
-|-----------|------|------|----------|
-| **PolicyEngine** | `agentflow/security/policy_engine.py` | RBAC/ABAC/PBAC統一認可 | 権限制御の基盤 |
-| **DataSanitizer** | `agentflow/security/data_sanitizer.py` | PII脱敏、注入検出 | 入出力フィルタ |
-| **HallucinationDetector** | `agentflow/security/hallucination_detector.py` | 幻覚検出、信頼度評価 | 回答品質検証 |
-| **AuthMiddleware** | `agentflow/security/auth_middleware.py` | JWT/API Key認証 | 認証統一 |
-| **RBACManager** | `agentflow/security/rbac.py` | ロール権限管理 | アクセス制御 |
-| **RAGPipeline** | `agentflow/knowledge/rag_pipeline.py` | 検索増強生成 | KB検索基盤 |
-| **Text2SQLService** | `agentflow/services/text2sql_service.py` | NL→SQL変換 | データ分析基盤 |
-| **FAQAgent** | `agentflow/agents/faq_agent.py` | FAQ専門Agent | 問答処理基盤 |
+| モジュール                | パス                                           | 機能                   | 活用方針       |
+| ------------------------- | ---------------------------------------------- | ---------------------- | -------------- |
+| **PolicyEngine**          | `agentflow/security/policy_engine.py`          | RBAC/ABAC/PBAC統一認可 | 権限制御の基盤 |
+| **DataSanitizer**         | `agentflow/security/data_sanitizer.py`         | PII脱敏、注入検出      | 入出力フィルタ |
+| **HallucinationDetector** | `agentflow/security/hallucination_detector.py` | 幻覚検出、信頼度評価   | 回答品質検証   |
+| **AuthMiddleware**        | `agentflow/security/auth_middleware.py`        | JWT/API Key認証        | 認証統一       |
+| **RBACManager**           | `agentflow/security/rbac.py`                   | ロール権限管理         | アクセス制御   |
+| **RAGPipeline**           | `agentflow/knowledge/rag_pipeline.py`          | 検索増強生成           | KB検索基盤     |
+| **Text2SQLService**       | `agentflow/services/text2sql_service.py`       | NL→SQL変換             | データ分析基盤 |
+| **FAQAgent**              | `agentflow/agents/faq_agent.py`                | FAQ専門Agent           | 問答処理基盤   |
 
 ### 2.3 現状の課題
 
-| 課題 | 影響 | 対策方針 |
-|------|------|----------|
-| 社内/対客KB未分離 | 情報漏洩リスク | 物理隔離アーキテクチャ |
-| 引用ソース不明確 | 信頼性低下 | 必須引用機能 |
-| 権限制御不十分 | セキュリティリスク | RBAC/ABAC統合 |
-| 術語不統一 | 検索精度低下 | Glossary辞書 |
-| MyNumber等の除外なし | コンプライアンスリスク | システム級除外 |
+| 課題                 | 影響                   | 対策方針               |
+| -------------------- | ---------------------- | ---------------------- |
+| 社内/対客KB未分離    | 情報漏洩リスク         | 物理隔離アーキテクチャ |
+| 引用ソース不明確     | 信頼性低下             | 必須引用機能           |
+| 権限制御不十分       | セキュリティリスク     | RBAC/ABAC統合          |
+| 術語不統一           | 検索精度低下           | Glossary辞書           |
+| MyNumber等の除外なし | コンプライアンスリスク | システム級除外         |
 
 ---
 
@@ -223,24 +223,24 @@ from agentflow.security import PolicyEngine, AuthContext
 @dataclass
 class InternalKBConfig:
     """社内KB Agent 設定."""
-    
+
     # KB設定
     collection: str = "internal_kb"
     top_k: int = 5
     min_similarity: float = 0.3
-    
+
     # 保守モード（規則類）
     conservative_mode: bool = True
     conservative_keywords: list[str] = field(default_factory=lambda: [
         "規則", "規程", "ポリシー", "制度", "規定", "手続き", "申請"
     ])
-    
+
     # 引用設定
     require_citation: bool = True
     include_version: bool = True
     include_update_date: bool = True
     include_page_number: bool = True
-    
+
     # 不確定時の動作
     uncertainty_threshold: float = 0.6
     auto_generate_ticket: bool = True
@@ -248,25 +248,25 @@ class InternalKBConfig:
 
 class InternalKBAgent(ResilientAgent):
     """社内KB Agent（RBAC制御 + 保守モード）."""
-    
+
     name = "InternalKBAgent"
-    
+
     async def process(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """処理実行."""
         question = input_data.get("question", "")
         user_context = input_data.get("user_context", {})
-        
+
         # 1. 権限チェック
         auth_result = await self._check_permission(user_context)
         if not auth_result.allowed:
             return self._create_access_denied_response(auth_result.reason)
-        
+
         # 2. クエリ分類（規則類か判定）
         is_rule_query = self._is_rule_query(question)
-        
+
         # 3. 検索実行
         search_results = await self._search(question, user_context)
-        
+
         # 4. 回答生成（規則類は保守モード）
         if is_rule_query:
             response = await self._generate_conservative_answer(
@@ -274,13 +274,13 @@ class InternalKBAgent(ResilientAgent):
             )
         else:
             response = await self._generate_answer(question, search_results)
-        
+
         # 5. 不確定判定
         if response["confidence"] < self._config.uncertainty_threshold:
             response = await self._handle_uncertainty(question, response)
-        
+
         return response
-    
+
     async def _generate_conservative_answer(
         self, question: str, results: list
     ) -> dict[str, Any]:
@@ -288,18 +288,18 @@ class InternalKBAgent(ResilientAgent):
         # 摘録 + 定位を優先
         # 自由発揮を抑制
         pass
-    
+
     async def _handle_uncertainty(
         self, question: str, response: dict
     ) -> dict[str, Any]:
         """不確定時の処理（確認促す + 工単生成）."""
         response["needs_confirmation"] = True
         response["suggested_contacts"] = self._get_responsible_department(question)
-        
+
         if self._config.auto_generate_ticket:
             ticket = await self._generate_inquiry_ticket(question)
             response["ticket_id"] = ticket.id
-        
+
         return response
 ```
 
@@ -412,69 +412,69 @@ class ImpactAnalysis:
 @dataclass
 class MaintenanceConfig:
     """メンテナンス支援設定."""
-    
+
     # 差分抽出設定
     diff_categories: list[str] = None
     ignore_whitespace: bool = True
-    
+
     # 影響分析設定
     enable_module_analysis: bool = True
     enable_api_analysis: bool = True
     enable_db_analysis: bool = True
     enable_test_analysis: bool = True
-    
+
     # 成果物生成設定
     generate_release_note: bool = True
     generate_faq_draft: bool = True
     generate_training_notice: bool = True
     generate_test_checklist: bool = True
-    
+
     # カバレッジ提示必須
     require_coverage_disclosure: bool = True
 
 
 class MaintenanceAgent(ResilientAgent):
     """メンテナンス支援Agent."""
-    
+
     name = "MaintenanceAgent"
-    
+
     async def analyze_diff(
         self, old_doc: str, new_doc: str
     ) -> list[DiffResult]:
         """仕様差分分析."""
         pass
-    
+
     async def analyze_impact(
         self, diffs: list[DiffResult]
     ) -> ImpactAnalysis:
         """影響範囲分析."""
         pass
-    
+
     async def generate_deliverables(
         self, diffs: list[DiffResult], impact: ImpactAnalysis
     ) -> dict[str, str]:
         """変更成果物自動生成."""
         deliverables = {}
-        
+
         if self._config.generate_release_note:
             deliverables["release_note"] = await self._generate_release_note(
                 diffs, impact
             )
-        
+
         if self._config.generate_faq_draft:
             deliverables["faq_draft"] = await self._generate_faq_draft(
                 diffs, impact
             )
-        
+
         # カバレッジ提示を追加
         if self._config.require_coverage_disclosure:
             for key, value in deliverables.items():
                 deliverables[key] = self._add_coverage_disclosure(
                     value, impact.coverage_info
                 )
-        
+
         return deliverables
-    
+
     async def check_document_health(
         self, documents: list[str]
     ) -> dict[str, Any]:
@@ -547,31 +547,31 @@ from typing import Any
 @dataclass
 class SQLGuardrails:
     """SQL護欄設定."""
-    
+
     # 許可されるSQL操作
     allowed_operations: list[str] = field(default_factory=lambda: ["SELECT"])
-    
+
     # 禁止キーワード
     forbidden_keywords: list[str] = field(default_factory=lambda: [
-        "INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", 
+        "INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE",
         "ALTER", "CREATE", "GRANT", "REVOKE"
     ])
-    
+
     # ホワイトリストテーブル
     whitelist_tables: list[str] = field(default_factory=list)
-    
+
     # ブラックリストカラム（個人情報等）
     blacklist_columns: list[str] = field(default_factory=lambda: [
         "*.password", "*.mynumber", "*.salary", "*.ssn",
         "employees.salary", "customers.credit_card",
         "customers.phone", "customers.address"
     ])
-    
+
     # 自動制限
     auto_limit: int = 1000
     query_timeout_seconds: int = 30
     max_cost_threshold: float = 100.0  # クエリコスト上限
-    
+
     # 監査
     audit_all_queries: bool = True
 
@@ -579,12 +579,12 @@ class SQLGuardrails:
 @dataclass
 class AnalyticsResponse:
     """分析レスポンス（証拠チェーン付き）."""
-    
+
     answer: str
     sql: str
     data: list[dict[str, Any]]
     chart: dict[str, Any] | None
-    
+
     # 証拠チェーン（必須）
     evidence_chain: dict[str, Any] = field(default_factory=lambda: {
         "data_sources": [],       # データソース
@@ -593,7 +593,7 @@ class AnalyticsResponse:
         "limitations": [],        # 制限事項
         "alternatives": [],       # 代替オプション
     })
-    
+
     # 不確定性
     uncertainty_level: str = "low"  # low, medium, high
     needs_verification: bool = False
@@ -601,7 +601,7 @@ class AnalyticsResponse:
 
 class SecureText2SQLService:
     """セキュアText2SQLサービス."""
-    
+
     def __init__(
         self,
         semantic_layer: "SemanticLayer",
@@ -609,33 +609,33 @@ class SecureText2SQLService:
     ) -> None:
         self._semantic_layer = semantic_layer
         self._guardrails = guardrails
-    
+
     async def query(self, question: str, user_context: dict) -> AnalyticsResponse:
         """セキュアクエリ実行."""
-        
+
         # 1. 権限チェック
         allowed_tables = self._get_allowed_tables(user_context)
-        
+
         # 2. 語義層で指標/ディメンションを解決
         resolved = await self._semantic_layer.resolve(question)
-        
+
         # 3. SQL生成（護欄適用）
         sql = await self._generate_sql(resolved, allowed_tables)
-        
+
         # 4. SQL検証
         self._validate_sql(sql)
-        
+
         # 5. 実行（タイムアウト + コスト制限）
         result = await self._execute_with_limits(sql)
-        
+
         # 6. 証拠チェーン構築
         evidence = self._build_evidence_chain(
             question, sql, resolved, result
         )
-        
+
         # 7. 回答生成
         answer = await self._generate_answer(question, result)
-        
+
         return AnalyticsResponse(
             answer=answer,
             sql=sql,
@@ -643,21 +643,21 @@ class SecureText2SQLService:
             chart=self._generate_chart(result),
             evidence_chain=evidence,
         )
-    
+
     def _validate_sql(self, sql: str) -> None:
         """SQL検証（護欄チェック）."""
         sql_upper = sql.upper()
-        
+
         # 禁止キーワードチェック
         for keyword in self._guardrails.forbidden_keywords:
             if keyword in sql_upper:
                 raise SecurityError(f"禁止されたSQL操作: {keyword}")
-        
+
         # ブラックリストカラムチェック
         for column in self._guardrails.blacklist_columns:
             if self._column_in_sql(column, sql):
                 raise SecurityError(f"アクセス禁止カラム: {column}")
-        
+
         # LIMIT確認
         if "LIMIT" not in sql_upper:
             # 自動追加
@@ -821,7 +821,7 @@ from typing import Any
 @dataclass
 class AuditLog:
     """監査ログエントリ."""
-    
+
     timestamp: datetime
     user_id: str
     action: str  # query, view, export, etc.
@@ -833,11 +833,11 @@ class AuditLog:
     ip_address: str
     user_agent: str
     session_id: str
-    
+
     # 結果
     success: bool
     error_message: str | None = None
-    
+
     # セキュリティ関連
     pii_detected: bool = False
     pii_masked: bool = False
@@ -846,12 +846,12 @@ class AuditLog:
 
 class AuditLogger:
     """監査ログマネージャー."""
-    
+
     async def log(self, entry: AuditLog) -> None:
         """ログ記録."""
         # DB保存 + 必要に応じてアラート
         pass
-    
+
     async def query_logs(
         self,
         user_id: str | None = None,
@@ -861,7 +861,7 @@ class AuditLogger:
     ) -> list[AuditLog]:
         """ログ検索."""
         pass
-    
+
     async def detect_anomaly(self) -> list[dict]:
         """異常検知（大量アクセス、時間外アクセス等）."""
         pass
@@ -875,20 +875,20 @@ class AuditLogger:
 @dataclass
 class APPIConfig:
     """APPI（日本個人情報保護法）対応設定."""
-    
+
     # 特定個人情報の完全除外
     exclude_mynumber: bool = True
     exclude_medical_info: bool = True
     exclude_criminal_record: bool = True
-    
+
     # 漏洩時対応
     breach_notification_enabled: bool = True
     breach_notification_threshold: int = 1  # 1件でも通知
-    
+
     # 保持期間
     data_retention_days: int = 365
     audit_log_retention_days: int = 1095  # 3年
-    
+
     # 越権アラート
     unauthorized_access_alert: bool = True
     alert_channels: list[str] = field(default_factory=lambda: [
@@ -899,13 +899,13 @@ class APPIConfig:
 
 class APPIComplianceChecker:
     """APPI準拠チェッカー."""
-    
+
     async def check_data_access(
         self, user_context: dict, data: dict
     ) -> tuple[bool, str]:
         """データアクセスの適法性チェック."""
         pass
-    
+
     async def report_breach(
         self, breach_info: dict
     ) -> None:
@@ -928,28 +928,28 @@ from typing import Any
 @dataclass
 class Citation:
     """引用情報."""
-    
+
     # 必須フィールド
     document_id: str
     title: str
     source_path: str
     snippet: str
     relevance_score: float
-    
+
     # バージョン管理
     version: str
     update_date: str
     effective_date: str | None = None
     expiry_date: str | None = None
-    
+
     # 位置情報
     page_number: int | None = None
     section: str | None = None
     paragraph: int | None = None
-    
+
     # 適用範囲
     applicable_scope: str | None = None  # 例: "正社員・契約社員"
-    
+
     # Owner情報
     owner_department: str | None = None
     owner_contact: str | None = None
@@ -957,13 +957,13 @@ class Citation:
 
 class CitationService:
     """引用管理サービス."""
-    
+
     async def extract_citations(
         self, search_results: list[dict]
     ) -> list[Citation]:
         """検索結果から引用情報を抽出."""
         pass
-    
+
     async def validate_citations(
         self, citations: list[Citation]
     ) -> list[Citation]:
@@ -974,7 +974,7 @@ class CitationService:
                 c.warning = "このドキュメントは期限切れの可能性があります"
             valid.append(c)
         return valid
-    
+
     def format_citations(
         self, citations: list[Citation], format: str = "inline"
     ) -> str:
@@ -1010,7 +1010,7 @@ async def verify_answer(answer: str, context: str) -> dict:
         output=answer,
         context=context,
     )
-    
+
     return {
         "confidence_score": result.confidence_score,
         "is_reliable": result.is_reliable,
@@ -1027,14 +1027,14 @@ async def verify_answer(answer: str, context: str) -> dict:
 @dataclass
 class DegradationConfig:
     """降格設定."""
-    
+
     confidence_thresholds: dict[str, float] = field(default_factory=lambda: {
         "high_confidence": 0.8,    # 自信を持って回答
         "medium_confidence": 0.6,  # 注意書き付きで回答
         "low_confidence": 0.4,     # 確認を促す
         "no_confidence": 0.0,      # 回答を控える
     })
-    
+
     # 降格時の動作
     suggest_contacts: bool = True
     auto_generate_ticket: bool = True
@@ -1043,35 +1043,35 @@ class DegradationConfig:
 
 class GracefulDegradationService:
     """優雅な降格サービス."""
-    
+
     async def handle_low_confidence(
         self, question: str, confidence: float, partial_answer: str
     ) -> dict[str, Any]:
         """低信頼度時の処理."""
-        
+
         response = {
             "answer": None,
             "confidence": confidence,
             "status": "needs_confirmation",
         }
-        
+
         if confidence >= self._config.confidence_thresholds["medium_confidence"]:
             # 注意書き付きで回答
             response["answer"] = partial_answer
             response["warning"] = "この回答は一部の情報に基づいています。正確性を確認してください。"
-        
+
         if confidence < self._config.confidence_thresholds["low_confidence"]:
             # 確認を促す
             response["message"] = "申し訳ありません。この質問に対する十分な情報が見つかりませんでした。"
-            
+
             if self._config.suggest_contacts:
                 response["suggested_contacts"] = await self._get_contacts(question)
-            
+
             if self._config.auto_generate_ticket:
                 ticket = await self._generate_ticket(question)
                 response["ticket_id"] = ticket.id
                 response["message"] += f"\n問合せチケット（{ticket.id}）を作成しました。"
-        
+
         return response
 ```
 
@@ -1086,14 +1086,14 @@ from typing import Any
 @dataclass
 class GlossaryEntry:
     """術語エントリ."""
-    
+
     term: str                    # 正式名称
     aliases: list[str]           # 別名、略称、片仮名表記
     definition: str              # 定義
     category: str                # カテゴリ
     department: str              # 所管部門
     related_terms: list[str]     # 関連術語
-    
+
     # 日本語特有
     reading_hiragana: str        # ひらがな読み
     reading_katakana: str        # カタカナ読み
@@ -1101,16 +1101,16 @@ class GlossaryEntry:
 
 class GlossaryService:
     """術語辞書サービス."""
-    
+
     async def expand_query(self, query: str) -> str:
         """クエリを同義語で拡張."""
         # 例: "年休" → "年休 OR 年次有給休暇 OR 有給"
         pass
-    
+
     async def normalize_term(self, term: str) -> str:
         """術語を正式名称に正規化."""
         pass
-    
+
     async def suggest_terms(self, partial: str) -> list[GlossaryEntry]:
         """術語候補を提案."""
         pass
@@ -1183,22 +1183,22 @@ from typing import Any
 @dataclass
 class Feedback:
     """ユーザーフィードバック."""
-    
+
     feedback_id: str
     question_id: str
     user_id: str
     timestamp: datetime
-    
+
     # 評価
     helpful: bool
     accuracy_score: int | None = None  # 1-5
     completeness_score: int | None = None  # 1-5
-    
+
     # コメント
     comment: str | None = None
     missing_info: str | None = None  # 不足情報
     incorrect_info: str | None = None  # 誤情報
-    
+
     # 改善提案
     suggested_answer: str | None = None
     suggested_source: str | None = None
@@ -1206,13 +1206,13 @@ class Feedback:
 
 class FeedbackService:
     """フィードバック管理サービス."""
-    
+
     async def submit_feedback(self, feedback: Feedback) -> None:
         """フィードバック登録."""
         # DB保存
         # 自動分析トリガー
         pass
-    
+
     async def analyze_feedback(self) -> dict[str, Any]:
         """フィードバック分析."""
         return {
@@ -1222,7 +1222,7 @@ class FeedbackService:
             "knowledge_gaps": [],  # 待補充点
             "action_items": [],
         }
-    
+
     async def generate_improvement_tasks(self) -> list[dict]:
         """改善タスク自動生成."""
         # 低評価の回答を分析
@@ -1242,14 +1242,14 @@ from datetime import datetime, timedelta
 @dataclass
 class ExpiryConfig:
     """期限切れ監視設定."""
-    
+
     # 事前通知
     warning_days: list[int] = None  # デフォルト: [30, 14, 7, 1]
-    
+
     # 通知先
     notify_owner: bool = True
     notify_admin: bool = True
-    
+
     # 自動処理
     auto_archive_after_days: int = 90  # 期限切れ後90日でアーカイブ
     auto_unpublish: bool = False  # 期限切れで自動非公開
@@ -1257,16 +1257,16 @@ class ExpiryConfig:
 
 class ExpiryMonitor:
     """期限切れ監視サービス."""
-    
+
     async def check_expiring_documents(self) -> list[dict]:
         """期限切れ間近のドキュメントを検出."""
         pass
-    
+
     async def send_expiry_notifications(self) -> None:
         """期限切れ通知を送信."""
         # Owner へメール/Slack通知
         pass
-    
+
     async def generate_renewal_tasks(self) -> list[dict]:
         """更新タスクを生成."""
         pass
@@ -1280,19 +1280,19 @@ class ExpiryMonitor:
 @dataclass
 class CoverageMetrics:
     """カバレッジ指標."""
-    
+
     # 部門別
     department_coverage: dict[str, float]  # 部門名 → カバレッジ率
-    
+
     # 主題別
     topic_coverage: dict[str, float]  # 主題 → カバレッジ率
-    
+
     # 質問統計
     total_questions: int
     answered_questions: int
     unanswered_questions: int
     low_confidence_answers: int
-    
+
     # 命中率
     hit_rate: float  # 関連文書が見つかった割合
     satisfaction_rate: float  # 「役に立った」評価の割合
@@ -1300,18 +1300,18 @@ class CoverageMetrics:
 
 class CoverageDashboard:
     """カバレッジダッシュボード."""
-    
+
     async def calculate_metrics(
         self, period_days: int = 30
     ) -> CoverageMetrics:
         """指標を計算."""
         pass
-    
+
     async def identify_gaps(self) -> list[dict]:
         """ギャップを特定."""
         # 質問が多いが命中率が低い主題
         pass
-    
+
     async def generate_recommendations(self) -> list[dict]:
         """改善提案を生成."""
         pass
@@ -1427,46 +1427,46 @@ from typing import Any
 @dataclass
 class Document:
     """ドキュメント."""
-    
+
     # 識別
     document_id: str
     title: str
-    
+
     # 分類
     category: str  # policy, manual, faq, product, etc.
     department: str
     tags: list[str] = field(default_factory=list)
-    
+
     # コンテンツ
     content: str
     content_type: str  # text, pdf, html, docx
     source_path: str
-    
+
     # バージョン管理
     version: str
     created_at: datetime
     updated_at: datetime
     created_by: str
     updated_by: str
-    
+
     # 有効期限
     effective_date: datetime | None = None
     expiry_date: datetime | None = None
-    
+
     # アクセス制御
     visibility: str = "internal"  # internal, external, confidential
     allowed_roles: list[str] = field(default_factory=list)
     allowed_departments: list[str] = field(default_factory=list)
-    
+
     # Owner
     owner_id: str = ""
     owner_department: str = ""
-    
+
     # 承認状態
     approval_status: str = "draft"  # draft, pending, approved, rejected
     approved_by: str | None = None
     approved_at: datetime | None = None
-    
+
     # メタデータ
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
@@ -1477,28 +1477,28 @@ class Document:
 @dataclass
 class QuestionHistory:
     """質問履歴."""
-    
+
     question_id: str
     session_id: str
     user_id: str
     timestamp: datetime
-    
+
     # 質問内容
     question: str
     query_type: str  # faq, sql, maintenance
-    
+
     # 回答
     answer: str
     confidence: float
     citations: list[dict] = field(default_factory=list)
-    
+
     # 分析結果（SQLの場合）
     sql: str | None = None
     data: list[dict] | None = None
-    
+
     # フィードバック
     feedback: dict | None = None
-    
+
     # セキュリティ
     pii_detected: bool = False
     pii_masked: bool = False
@@ -1510,34 +1510,34 @@ class QuestionHistory:
 @dataclass
 class AuditLog:
     """監査ログ."""
-    
+
     log_id: str
     timestamp: datetime
-    
+
     # ユーザー情報
     user_id: str
     user_role: str
     user_department: str
-    
+
     # アクション
     action: str
     resource_type: str
     resource_id: str
-    
+
     # 詳細
     request_body: dict
     response_summary: str
     data_sources_accessed: list[str]
-    
+
     # 環境
     ip_address: str
     user_agent: str
     session_id: str
-    
+
     # 結果
     success: bool
     error_message: str | None = None
-    
+
     # セキュリティフラグ
     security_flags: dict = field(default_factory=dict)
 ```
@@ -1849,7 +1849,7 @@ test_cases:
     ],
     "expected_confidence_min": 0.85
   },
-  
+
   "FAQ_006": {
     "question": "来年の昇給率はどのくらいですか？",
     "expected_answer": "申し訳ありません。来年度の昇給率については、現時点では正式な情報が確認できませんでした。\n\n確認方法:\n- 人事部（内線: 1234）にお問い合わせください\n- 年度末に発表される「給与改定通知」をご確認ください\n\n問合せチケット（#TKT-20260116-001）を作成しましたので、担当者から追って回答いたします。",
@@ -1862,18 +1862,14 @@ test_cases:
     "expected_answer": "今月（2026年1月1日〜16日）の売上TOP10は以下の通りです:\n\n| 順位 | 商品名 | 売上金額 |\n|-----|--------|----------|\n| 1 | 商品A | ¥15,000,000 |\n| 2 | 商品B | ¥12,300,000 |\n| ... | ... | ... |\n\n※ 本データは2026年1月16日15:00時点の確定済み注文に基づいています。\n※ 売上定義: 税抜金額（キャンセル・返品除外）",
     "expected_evidence_chain": {
       "data_sources": [
-        {"table": "sales", "description": "売上トランザクション"}
+        { "table": "sales", "description": "売上トランザクション" }
       ],
       "query_conditions": [
         "期間: 2026-01-01 〜 2026-01-16",
         "対象: 確定済み注文のみ"
       ],
-      "assumptions": [
-        "売上定義: 税抜金額"
-      ],
-      "limitations": [
-        "本日分は15時時点のデータ"
-      ]
+      "assumptions": ["売上定義: 税抜金額"],
+      "limitations": ["本日分は15時時点のデータ"]
     }
   }
 }
@@ -1887,16 +1883,16 @@ test_cases:
 
 本プロジェクトで開発された以下のコンポーネントは、agentflow フレームワークに反哺します：
 
-| コンポーネント | 対象パス | 機能 |
-|---------------|---------|------|
-| **IsolatedKBManager** | `agentflow/knowledge/isolated_kb.py` | 複数KB物理隔離管理 |
-| **SemanticLayer** | `agentflow/services/semantic_layer.py` | 指標/ディメンション辞書管理 |
-| **TicketGenerator** | `agentflow/integrations/ticket_generator.py` | 工単自動生成（Jira/ServiceNow連携） |
-| **DocHealthChecker** | `agentflow/knowledge/doc_health_checker.py` | ドキュメント健康度チェック |
-| **CoverageAnalyzer** | `agentflow/analysis/coverage_analyzer.py` | KBカバレッジ分析 |
-| **GlossaryService** | `agentflow/knowledge/glossary.py` | 術語辞書・同義語展開 |
-| **CitationFormatter** | `agentflow/utils/citation_formatter.py` | 引用フォーマット |
-| **GracefulDegradation** | `agentflow/patterns/graceful_degradation.py` | 優雅な降格パターン |
+| コンポーネント          | 対象パス                                     | 機能                                |
+| ----------------------- | -------------------------------------------- | ----------------------------------- |
+| **IsolatedKBManager**   | `agentflow/knowledge/isolated_kb.py`         | 複数KB物理隔離管理                  |
+| **SemanticLayer**       | `agentflow/services/semantic_layer.py`       | 指標/ディメンション辞書管理         |
+| **TicketGenerator**     | `agentflow/integrations/ticket_generator.py` | 工単自動生成（Jira/ServiceNow連携） |
+| **DocHealthChecker**    | `agentflow/knowledge/doc_health_checker.py`  | ドキュメント健康度チェック          |
+| **CoverageAnalyzer**    | `agentflow/analysis/coverage_analyzer.py`    | KBカバレッジ分析                    |
+| **GlossaryService**     | `agentflow/knowledge/glossary.py`            | 術語辞書・同義語展開                |
+| **CitationFormatter**   | `agentflow/utils/citation_formatter.py`      | 引用フォーマット                    |
+| **GracefulDegradation** | `agentflow/patterns/graceful_degradation.py` | 優雅な降格パターン                  |
 
 ### 12.2 パターン共有
 
@@ -1927,16 +1923,16 @@ test_cases:
 
 ### A. 用語集
 
-| 用語 | 説明 |
-|-----|------|
-| KB | Knowledge Base（知識ベース） |
-| RAG | Retrieval-Augmented Generation（検索増強生成） |
-| NL2SQL | Natural Language to SQL |
-| RBAC | Role-Based Access Control |
-| ABAC | Attribute-Based Access Control |
-| PII | Personally Identifiable Information |
-| APPI | Act on the Protection of Personal Information（個人情報保護法） |
-| 語義層 | Semantic Layer（指標定義の抽象化層） |
+| 用語   | 説明                                                            |
+| ------ | --------------------------------------------------------------- |
+| KB     | Knowledge Base（知識ベース）                                    |
+| RAG    | Retrieval-Augmented Generation（検索増強生成）                  |
+| NL2SQL | Natural Language to SQL                                         |
+| RBAC   | Role-Based Access Control                                       |
+| ABAC   | Attribute-Based Access Control                                  |
+| PII    | Personally Identifiable Information                             |
+| APPI   | Act on the Protection of Personal Information（個人情報保護法） |
+| 語義層 | Semantic Layer（指標定義の抽象化層）                            |
 
 ### B. 参考資料
 
@@ -1946,10 +1942,10 @@ test_cases:
 
 ### C. 変更履歴
 
-| バージョン | 日付 | 変更内容 |
-|-----------|------|---------|
-| 3.0.0 | 2026-01-16 | 初版作成 |
-| 3.1.0 | 2026-01-16 | 実装完了、技術仕様・利用ガイド追加 |
+| バージョン | 日付       | 変更内容                           |
+| ---------- | ---------- | ---------------------------------- |
+| 3.0.0      | 2026-01-16 | 初版作成                           |
+| 3.1.0      | 2026-01-16 | 実装完了、技術仕様・利用ガイド追加 |
 
 ---
 
@@ -1961,47 +1957,47 @@ test_cases:
 
 #### agentflow フレームワーク（共通機能）
 
-| モジュール | パス | 説明 |
-|-----------|------|------|
-| **IsolatedKBManager** | `agentflow/knowledge/isolated_kb.py` | 社内/対客/機密KB の物理隔離管理 |
-| **SemanticLayerService** | `agentflow/services/semantic_layer.py` | 指標・ディメンション辞書、SQL生成ヒント |
-| **TicketGenerator** | `agentflow/integrations/ticket_generator.py` | Jira/ServiceNow 工単自動生成 |
-| **DocHealthChecker** | `agentflow/knowledge/doc_health_checker.py` | 期限切れ/重複/品質チェック |
+| モジュール               | パス                                         | 説明                                    |
+| ------------------------ | -------------------------------------------- | --------------------------------------- |
+| **IsolatedKBManager**    | `agentflow/knowledge/isolated_kb.py`         | 社内/対客/機密KB の物理隔離管理         |
+| **SemanticLayerService** | `agentflow/services/semantic_layer.py`       | 指標・ディメンション辞書、SQL生成ヒント |
+| **TicketGenerator**      | `agentflow/integrations/ticket_generator.py` | Jira/ServiceNow 工単自動生成            |
+| **DocHealthChecker**     | `agentflow/knowledge/doc_health_checker.py`  | 期限切れ/重複/品質チェック              |
 
 #### FAQ System Agents
 
-| モジュール | パス | 説明 |
-|-----------|------|------|
-| **InternalKBAgent** | `backend/agents/internal_kb_agent.py` | 社内KB（RBAC + 保守モード + 必須引用） |
-| **ExternalKBAgent** | `backend/agents/external_kb_agent.py` | 対客KB（公開情報のみ） |
-| **MaintenanceAgent** | `backend/agents/maintenance_agent.py` | 仕様差分・影響分析・成果物生成 |
-| **AnalyticsAgent** | `backend/agents/analytics_agent.py` | 語義層 + SQL護欄 + 証拠チェーン |
+| モジュール           | パス                                  | 説明                                   |
+| -------------------- | ------------------------------------- | -------------------------------------- |
+| **InternalKBAgent**  | `backend/agents/internal_kb_agent.py` | 社内KB（RBAC + 保守モード + 必須引用） |
+| **ExternalKBAgent**  | `backend/agents/external_kb_agent.py` | 対客KB（公開情報のみ）                 |
+| **MaintenanceAgent** | `backend/agents/maintenance_agent.py` | 仕様差分・影響分析・成果物生成         |
+| **AnalyticsAgent**   | `backend/agents/analytics_agent.py`   | 語義層 + SQL護欄 + 証拠チェーン        |
 
 #### FAQ System Services
 
-| モジュール | パス | 説明 |
-|-----------|------|------|
-| **GlossaryService** | `backend/services/glossary_service.py` | 術語辞書（同義語/略称/カタカナ） |
-| **CitationService** | `backend/services/citation_service.py` | 引用ソース管理・フォーマット |
-| **FeedbackService** | `backend/services/feedback_service.py` | フィードバック収集・分析 |
-| **CoverageDashboard** | `backend/services/coverage_dashboard.py` | カバレッジ可視化 |
+| モジュール            | パス                                     | 説明                             |
+| --------------------- | ---------------------------------------- | -------------------------------- |
+| **GlossaryService**   | `backend/services/glossary_service.py`   | 術語辞書（同義語/略称/カタカナ） |
+| **CitationService**   | `backend/services/citation_service.py`   | 引用ソース管理・フォーマット     |
+| **FeedbackService**   | `backend/services/feedback_service.py`   | フィードバック収集・分析         |
+| **CoverageDashboard** | `backend/services/coverage_dashboard.py` | カバレッジ可視化                 |
 
 #### FAQ System Security
 
-| モジュール | パス | 説明 |
-|-----------|------|------|
-| **PermissionConfig** | `backend/security/permission_config.py` | RBAC権限設定・フィールド制限 |
-| **AuditLogger** | `backend/security/audit_logger.py` | 監査ログ・異常検知 |
-| **APPIComplianceChecker** | `backend/security/appi_compliance.py` | PII検出/マスク/漏洩報告 |
+| モジュール                | パス                                    | 説明                         |
+| ------------------------- | --------------------------------------- | ---------------------------- |
+| **PermissionConfig**      | `backend/security/permission_config.py` | RBAC権限設定・フィールド制限 |
+| **AuditLogger**           | `backend/security/audit_logger.py`      | 監査ログ・異常検知           |
+| **APPIComplianceChecker** | `backend/security/appi_compliance.py`   | PII検出/マスク/漏洩報告      |
 
 ### 13.2 テストデータ
 
-| ファイル | 説明 |
-|---------|------|
-| `tests/data/internal_faq_test_cases.yaml` | 社内FAQテストケース（17件） |
-| `tests/data/maintenance_test_cases.yaml` | メンテナンステストケース（7件） |
-| `tests/data/analytics_test_cases.yaml` | 分析テストケース（14件） |
-| `tests/data/expected_answers.json` | 期待回答データ |
+| ファイル                                  | 説明                            |
+| ----------------------------------------- | ------------------------------- |
+| `tests/data/internal_faq_test_cases.yaml` | 社内FAQテストケース（17件）     |
+| `tests/data/maintenance_test_cases.yaml`  | メンテナンステストケース（7件） |
+| `tests/data/analytics_test_cases.yaml`    | 分析テストケース（14件）        |
+| `tests/data/expected_answers.json`        | 期待回答データ                  |
 
 ---
 
@@ -2243,10 +2239,10 @@ app = FastAPI()
 async def websocket_faq(websocket: WebSocket):
     await websocket.accept()
     agent = InternalKBAgent()
-    
+
     while True:
         data = await websocket.receive_json()
-        
+
         # ストリーム実行
         async for event in agent.run_stream(data):
             await websocket.send_json(event)
@@ -2256,12 +2252,12 @@ async def websocket_faq(websocket: WebSocket):
 
 #### よくある問題
 
-| 問題 | 原因 | 対処法 |
-|-----|------|--------|
-| `PermissionError` | 権限不足 | ユーザーロールと KB タイプを確認 |
-| 低信頼度回答 | KB にコンテンツ不足 | ドキュメント追加、術語辞書拡充 |
-| SQL生成エラー | 指標未定義 | 語義層に指標を追加 |
-| PII検出誤検知 | パターン過敏 | APPIConfig で閾値調整 |
+| 問題              | 原因                | 対処法                           |
+| ----------------- | ------------------- | -------------------------------- |
+| `PermissionError` | 権限不足            | ユーザーロールと KB タイプを確認 |
+| 低信頼度回答      | KB にコンテンツ不足 | ドキュメント追加、術語辞書拡充   |
+| SQL生成エラー     | 指標未定義          | 語義層に指標を追加               |
+| PII検出誤検知     | パターン過敏        | APPIConfig で閾値調整            |
 
 #### ログ確認
 

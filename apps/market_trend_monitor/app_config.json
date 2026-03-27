@@ -153,10 +153,7 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "embedding",
-        "text"
-      ],
+      "allowed_modalities": ["embedding", "text"],
       "extra_model_refs": []
     },
     "rag": {

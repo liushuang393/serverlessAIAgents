@@ -1,13 +1,13 @@
 /**
  * ダッシュボードコンポーネント.
- * 
+ *
  * 目的: トレンドグラフと最新ニュースを表示
  * I/O:
  *   - Input: なし (ストアから取得)
  *   - Output: ダッシュボードUI
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect } from "react";
 import {
   Box,
   Grid,
@@ -18,12 +18,12 @@ import {
   Stack,
   Chip,
   Tooltip,
-} from '@mui/material';
-import { useAppStore } from '@/store/useAppStore';
-import TrendChart from './TrendChart';
-import TrendList from './TrendList';
-import AISummaryCard from './AISummaryCard';
-import { useI18n } from '../i18n';
+} from "@mui/material";
+import { useAppStore } from "@/store/useAppStore";
+import TrendChart from "./TrendChart";
+import TrendList from "./TrendList";
+import AISummaryCard from "./AISummaryCard";
+import { useI18n } from "../i18n";
 
 const Dashboard: React.FC = () => {
   const { t } = useI18n();
@@ -68,54 +68,55 @@ const Dashboard: React.FC = () => {
           p: { xs: 3, md: 4 },
           mb: 3,
           background:
-            'linear-gradient(135deg, rgba(79,70,229,0.9), rgba(124,58,237,0.85))',
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: 'var(--shadow-elev)',
-          position: 'relative',
-          overflow: 'hidden',
+            "linear-gradient(135deg, rgba(79,70,229,0.9), rgba(124,58,237,0.85))",
+          color: "#fff",
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "var(--shadow-elev)",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             inset: 0,
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
-            backgroundSize: '36px 36px',
+              "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
             opacity: 0.2,
             zIndex: 0,
-            pointerEvents: 'none',
+            pointerEvents: "none",
           }}
         />
         <Box
           sx={{
-            position: 'absolute',
+            position: "absolute",
             right: -40,
             top: -60,
             width: 200,
             height: 200,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(255,255,255,0.4), transparent 70%)',
-            filter: 'blur(4px)',
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(255,255,255,0.4), transparent 70%)",
+            filter: "blur(4px)",
             zIndex: 0,
-            pointerEvents: 'none',
+            pointerEvents: "none",
           }}
         />
-        <Stack spacing={1} sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h4">{t('dash.hero_title')}</Typography>
+        <Stack spacing={1} sx={{ position: "relative", zIndex: 1 }}>
+          <Typography variant="h4">{t("dash.hero_title")}</Typography>
           <Typography variant="body1" sx={{ opacity: 0.8 }}>
-            {t('dash.hero_subtitle')}
+            {t("dash.hero_subtitle")}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" mt={1}>
             {topTopics.length === 0 ? (
               <Chip
-                label={t('dash.collecting_data')}
+                label={t("dash.collecting_data")}
                 size="small"
                 sx={{
-                  color: '#fff',
-                  borderColor: 'rgba(255,255,255,0.4)',
-                  background: 'rgba(255,255,255,0.1)',
+                  color: "#fff",
+                  borderColor: "rgba(255,255,255,0.4)",
+                  background: "rgba(255,255,255,0.1)",
                 }}
                 variant="outlined"
               />
@@ -126,9 +127,9 @@ const Dashboard: React.FC = () => {
                   label={topic}
                   size="small"
                   sx={{
-                    color: '#fff',
-                    borderColor: 'rgba(255,255,255,0.3)',
-                    background: 'rgba(255,255,255,0.12)',
+                    color: "#fff",
+                    borderColor: "rgba(255,255,255,0.3)",
+                    background: "rgba(255,255,255,0.12)",
                   }}
                   variant="outlined"
                 />
@@ -139,9 +140,9 @@ const Dashboard: React.FC = () => {
       </Paper>
 
       <AISummaryCard
-        summary={`現在、市場では「${topTopics[0] || '新しい技術'}」に関する話題が急上昇しています。情報の信頼性スコアは ${(averageScore * 100).toFixed(0)}% と高く、具体的なアクションを検討するフェーズに入っています。`}
+        summary={`現在、市場では「${topTopics[0] || "新しい技術"}」に関する話題が急上昇しています。情報の信頼性スコアは ${(averageScore * 100).toFixed(0)}% と高く、具体的なアクションを検討するフェーズに入っています。`}
         actionRequired={averageScore > 0.6}
-        status={averageScore > 0.7 ? 'positive' : 'neutral'}
+        status={averageScore > 0.7 ? "positive" : "neutral"}
       />
 
       <Grid container spacing={3}>
@@ -151,15 +152,15 @@ const Dashboard: React.FC = () => {
               p: 3,
               minHeight: 160,
               backgroundImage:
-                'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(18,18,26,0.9))',
+                "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(18,18,26,0.9))",
             }}
           >
             <Typography variant="overline" color="text.secondary">
-              {t('dash.trend_count')}
+              {t("dash.trend_count")}
             </Typography>
             <Typography variant="h3">{trends.length}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('dash.trend_count_desc')}
+              {t("dash.trend_count_desc")}
             </Typography>
           </Paper>
         </Grid>
@@ -169,15 +170,15 @@ const Dashboard: React.FC = () => {
               p: 3,
               minHeight: 160,
               backgroundImage:
-                'linear-gradient(135deg, rgba(168,85,247,0.12), rgba(18,18,26,0.9))',
+                "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(18,18,26,0.9))",
             }}
           >
             <Typography variant="overline" color="text.secondary">
-              {t('dash.article_count')}
+              {t("dash.article_count")}
             </Typography>
             <Typography variant="h3">{totalArticles}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('dash.article_count_desc')}
+              {t("dash.article_count_desc")}
             </Typography>
           </Paper>
         </Grid>
@@ -187,17 +188,21 @@ const Dashboard: React.FC = () => {
               p: 3,
               minHeight: 160,
               backgroundImage:
-                'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(18,18,26,0.9))',
+                "linear-gradient(135deg, rgba(14,165,233,0.12), rgba(18,18,26,0.9))",
             }}
           >
-            <Tooltip title={t('dash.avg_score_tooltip')} arrow>
-              <Typography variant="overline" color="text.secondary" sx={{ cursor: 'help' }}>
-                {t('dash.avg_score')}
+            <Tooltip title={t("dash.avg_score_tooltip")} arrow>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                sx={{ cursor: "help" }}
+              >
+                {t("dash.avg_score")}
               </Typography>
             </Tooltip>
             <Typography variant="h3">{averageScore.toFixed(2)}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('dash.avg_score_desc')}
+              {t("dash.avg_score_desc")}
             </Typography>
           </Paper>
         </Grid>
@@ -207,14 +212,14 @@ const Dashboard: React.FC = () => {
           <Paper
             sx={{
               p: 3,
-              height: '420px',
-              border: '1px solid rgba(99,102,241,0.2)',
+              height: "420px",
+              border: "1px solid rgba(99,102,241,0.2)",
               backgroundImage:
-                'linear-gradient(180deg, rgba(18,18,26,0.95), rgba(10,10,15,0.95))',
+                "linear-gradient(180deg, rgba(18,18,26,0.95), rgba(10,10,15,0.95))",
             }}
           >
             <Typography variant="h6" gutterBottom>
-              {t('dash.trend_chart')}
+              {t("dash.trend_chart")}
             </Typography>
             <TrendChart trends={trends} />
           </Paper>
@@ -225,38 +230,42 @@ const Dashboard: React.FC = () => {
           <Paper
             sx={{
               p: 3,
-              height: '420px',
-              border: '1px solid rgba(168,85,247,0.2)',
+              height: "420px",
+              border: "1px solid rgba(168,85,247,0.2)",
               backgroundImage:
-                'linear-gradient(180deg, rgba(18,18,26,0.95), rgba(10,10,15,0.95))',
+                "linear-gradient(180deg, rgba(18,18,26,0.95), rgba(10,10,15,0.95))",
             }}
           >
             <Typography variant="h6" gutterBottom>
-              {t('dash.insight_summary')}
+              {t("dash.insight_summary")}
             </Typography>
             <Stack spacing={2} mt={2}>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  {t('dash.top_theme')}
+                  {t("dash.top_theme")}
                 </Typography>
                 <Typography variant="h6">
-                  {topTopics[0] || t('dash.awaiting_data')}
+                  {topTopics[0] || t("dash.awaiting_data")}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  {t('dash.main_sources')}
+                  {t("dash.main_sources")}
                 </Typography>
                 <Typography variant="h6">
-                  {trends.length > 0 ? 'News / GitHub / arXiv' : t('dash.not_aggregated')}
+                  {trends.length > 0
+                    ? "News / GitHub / arXiv"
+                    : t("dash.not_aggregated")}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  {t('dash.signal_status')}
+                  {t("dash.signal_status")}
                 </Typography>
                 <Typography variant="h6">
-                  {averageScore > 0.65 ? t('dash.strong_signal') : t('dash.normal_monitoring')}
+                  {averageScore > 0.65
+                    ? t("dash.strong_signal")
+                    : t("dash.normal_monitoring")}
                 </Typography>
               </Box>
             </Stack>
@@ -268,13 +277,13 @@ const Dashboard: React.FC = () => {
           <Paper
             sx={{
               p: 3,
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: "1px solid rgba(255,255,255,0.06)",
               backgroundImage:
-                'linear-gradient(180deg, rgba(18,18,26,0.96), rgba(10,10,15,0.96))',
+                "linear-gradient(180deg, rgba(18,18,26,0.96), rgba(10,10,15,0.96))",
             }}
           >
             <Typography variant="h6" gutterBottom>
-              {t('dash.latest_trends')}
+              {t("dash.latest_trends")}
             </Typography>
             <TrendList trends={trends.slice(0, 10)} />
           </Paper>

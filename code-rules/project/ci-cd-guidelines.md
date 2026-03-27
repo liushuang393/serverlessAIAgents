@@ -19,6 +19,7 @@
 ## 🎯 デプロイ原則
 
 ### 継続的デプロイメント
+
 ```yaml
 # ✅ 正しい: 自動化されたデプロイプロセス
 # .github/workflows/deploy.yml
@@ -52,6 +53,7 @@ jobs:
 ```
 
 ### イミュータブルデプロイメント
+
 ```dockerfile
 # ✅ 正しい: イミュータブルなコンテナイメージ
 FROM python:3.13-slim
@@ -85,6 +87,7 @@ CMD ["python", "-m", "agentflow.api"]
 ```
 
 ### ブルーグリーンデプロイメント
+
 ```bash
 #!/bin/bash
 # ✅ 正しい: ブルーグリーンデプロイメントスクリプト
@@ -147,6 +150,7 @@ echo "Deployment completed successfully!"
 ## 🌍 環境管理
 
 ### 環境設定管理
+
 ```python
 # ✅ 正しい: 環境別設定管理
 import os
@@ -217,6 +221,7 @@ print(f"Running in {config.app_name} mode")
 ```
 
 ### 環境変数の管理
+
 ```bash
 # ✅ 正しい: .env ファイルの管理（バージョン管理対象外）
 # .env.example（テンプレート）
@@ -258,6 +263,7 @@ DATABASE_URL=postgresql://localhost/agentflow_dev
 ```
 
 ### シークレット管理
+
 ```python
 # ✅ 正しい: AWS Secrets Manager 統合
 import boto3
@@ -323,6 +329,7 @@ class ConfigWithSecrets:
 ## 🐳 コンテナ化
 
 ### Dockerfile のベストプラクティス
+
 ```dockerfile
 # ✅ 正しい: マルチステージビルド
 # Build stage
@@ -372,6 +379,7 @@ CMD ["python", "-m", "uvicorn", "agentflow.api:app", "--host", "0.0.0.0", "--por
 ```
 
 ### Docker Compose の設定
+
 ```yaml
 # ✅ 正しい: マルチサービス構成
 version: '3.8'
@@ -457,6 +465,7 @@ networks:
 ## 🔄 CI/CD パイプライン
 
 ### GitHub Actions ワークフロー
+
 ```yaml
 # .github/workflows/ci-cd.yml
 name: CI/CD Pipeline
@@ -480,7 +489,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Cache dependencies
         uses: actions/cache@v3
@@ -571,20 +580,24 @@ jobs:
 
 **実行タイミング:** Lint 後、Type check 前
 **ツール:**
+
 - `python scripts/check_layer_boundaries.py` - 7層境界ルール
 - `python scripts/check_no_direct_provider_calls.py` - プロバイダ隔離
 - `python scripts/check_app_compliance.py` - App フレームワーク準拠
 - `python scripts/check_rules_compliance.py` - ルール総合遵守
 
 **ブロッキング条件:**
+
 - レイヤー境界違反 > 25 (段階的に 0 へ削減)
 - プロバイダ直接 import > 0 (即時ブロック)
 
 **非ブロッキング (レポートのみ):**
+
 - App コンプライアンス (改善追跡用)
 - ルールコンプライアンス (トレンド監視)
 
 ### デプロイスクリプト
+
 ```bash
 #!/bin/bash
 # scripts/deploy.sh
@@ -634,6 +647,7 @@ echo "✅ Deployment completed successfully!"
 ## 📦 リリース管理
 
 ### セマンティックバージョニング
+
 ```python
 # ✅ 正しい: バージョン管理
 # agentflow/__init__.py
@@ -668,7 +682,8 @@ def update_version(version_type: str):
 ```
 
 ### リリースノート生成
-```python
+
+````python
 # ✅ 正しい: 自動リリースノート生成
 # scripts/generate-release-notes.py
 import re
@@ -697,20 +712,23 @@ def generate_release_notes(version: str) -> str:
 
 ```bash
 pip install agentflow=={version}
-```
+````
 
 ## Docker
 
 ```bash
 docker pull ghcr.io/liushuang393/serverlessaiaagents:{version}
 ```
+
 """
 
 # 使用例
-if __name__ == "__main__":
-    notes = generate_release_notes("1.2.3")
-    print(notes)
-```
+
+if **name** == "**main**":
+notes = generate_release_notes("1.2.3")
+print(notes)
+
+````
 
 ### リリースチェックリスト
 ```markdown
@@ -743,13 +761,14 @@ if __name__ == "__main__":
 - [ ] 監視ダッシュボード確認
 - [ ] ユーザー通知（該当する場合）
 - [ ] 問題発生時のロールバック準備
-```
+````
 
 ---
 
 ## 🔄 ロールバック戦略
 
 ### 自動ロールバック
+
 ```bash
 #!/bin/bash
 # scripts/rollback.sh
@@ -786,6 +805,7 @@ echo "✅ Rollback completed successfully!"
 ```
 
 ### 段階的ロールバック
+
 ```python
 # ✅ 正しい: カナリアロールバック
 class RollingRollback:
@@ -839,6 +859,7 @@ class RollingRollback:
 ## 📊 監視とログ
 
 ### アプリケーションメトリクス
+
 ```python
 # ✅ 正しい: Prometheus メトリクス統合
 from prometheus_client import Counter, Histogram, Gauge, generate_latest
@@ -895,6 +916,7 @@ async def metrics():
 ```
 
 ### 構造化ログ
+
 ```python
 # ✅ 正しい: JSON 形式の構造化ログ
 import logging
@@ -979,10 +1001,11 @@ except Exception as e:
 ```
 
 ### ログ集約と分析
+
 ```yaml
 # ✅ 正しい: ELK Stack 設定例
 # docker-compose.logging.yml
-version: '3.8'
+version: "3.8"
 
 services:
   elasticsearch:
@@ -1020,6 +1043,7 @@ volumes:
 ## ✅ デプロイチェックリスト
 
 ### デプロイ前チェックリスト
+
 - [ ] すべてのテストが通過
 - [ ] カバレッジ 80% 以上
 - [ ] セキュリティスキャン通過
@@ -1029,6 +1053,7 @@ volumes:
 - [ ] ロールバックプラン策定済み
 
 ### デプロイ中チェックリスト
+
 - [ ] データベースバックアップ取得
 - [ ] ブルーグリーンデプロイメント実行
 - [ ] ヘルスチェック通過
@@ -1036,6 +1061,7 @@ volumes:
 - [ ] ログ集約正常動作
 
 ### デプロイ後チェックリスト
+
 - [ ] 機能テスト実行
 - [ ] パフォーマンス監視
 - [ ] エラーレート確認
@@ -1055,4 +1081,4 @@ volumes:
 
 **信頼性が高く、安全なデプロイメントが成功の鍵です。** 🚀
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+_最終更新: 2025-01-19 | バージョン: 1.0.0_

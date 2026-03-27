@@ -4,7 +4,7 @@
  * 新 /api/knowledge/collections エンドポイントのクライアント。
  */
 
-const BASE = '';
+const BASE = "";
 
 /** コレクション情報 */
 export interface CollectionInfo {
@@ -33,7 +33,7 @@ export interface DocumentInfo {
   filename: string;
   file_type: string;
   file_size: number;
-  status: 'uploaded' | 'chunked' | 'indexed' | 'error';
+  status: "uploaded" | "chunked" | "indexed" | "error";
   chunk_count: number;
   uploaded_by: string | null;
   uploaded_at: string;
@@ -53,7 +53,7 @@ export interface ChunkPreview {
 // ---------------------------------------------------------------------------
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { credentials: 'include' });
+  const res = await fetch(`${BASE}${path}`, { credentials: "include" });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     const detail = errorData.detail || errorData.message || res.statusText;
@@ -64,9 +64,9 @@ async function get<T>(path: string): Promise<T> {
 
 async function post<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -79,9 +79,9 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 
 async function patch<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -94,8 +94,8 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
 
 async function del<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: 'DELETE',
-    credentials: 'include',
+    method: "DELETE",
+    credentials: "include",
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -107,10 +107,10 @@ async function del<T>(path: string): Promise<T> {
 
 async function upload<T>(path: string, file: File): Promise<T> {
   const form = new FormData();
-  form.append('file', file);
+  form.append("file", file);
   const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    credentials: 'include',
+    method: "POST",
+    credentials: "include",
     body: form,
   });
   if (!res.ok) throw new Error(`UPLOAD ${path} failed: ${res.status}`);
@@ -121,7 +121,7 @@ async function upload<T>(path: string, file: File): Promise<T> {
 // API クライアント
 // ---------------------------------------------------------------------------
 
-const P = '/api/knowledge/collections';
+const P = "/api/knowledge/collections";
 
 export const knowledgeApi = {
   // コレクション
@@ -137,14 +137,16 @@ export const knowledgeApi = {
   updateCollection: (name: string, data: Record<string, unknown>) =>
     patch<{ collection: CollectionInfo }>(`${P}/${name}`, data),
 
-  deleteCollection: (name: string) =>
-    del<{ deleted: boolean }>(`${P}/${name}`),
+  deleteCollection: (name: string) => del<{ deleted: boolean }>(`${P}/${name}`),
 
   getCollectionStats: (name: string) =>
     get<Record<string, unknown>>(`${P}/${name}/stats`),
 
   testQuery: (name: string, query: string, topK = 5) =>
-    post<Record<string, unknown>>(`${P}/${name}/test-query`, { query, top_k: topK }),
+    post<Record<string, unknown>>(`${P}/${name}/test-query`, {
+      query,
+      top_k: topK,
+    }),
 
   // ドキュメント
   listDocuments: (name: string) =>
@@ -159,7 +161,11 @@ export const knowledgeApi = {
   deleteDocument: (name: string, docId: string) =>
     del<{ deleted: boolean }>(`${P}/${name}/documents/${docId}`),
 
-  previewChunks: (name: string, docId: string, opts?: Record<string, unknown>) =>
+  previewChunks: (
+    name: string,
+    docId: string,
+    opts?: Record<string, unknown>,
+  ) =>
     post<{ total: number; chunks: ChunkPreview[] }>(
       `${P}/${name}/documents/${docId}/preview-chunks`,
       opts,

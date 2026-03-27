@@ -1,17 +1,17 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: '../tests',
-  testMatch: '**/*.spec.ts',
+  testDir: "../tests",
+  testMatch: "**/*.spec.ts",
   use: {
-    baseURL: 'http://localhost:3004',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    baseURL: "http://localhost:3004",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
   webServer: {
-    command: 'npm run dev -- --port 3004',
+    command: "npm run dev -- --port 3004",
     port: 3004,
     reuseExistingServer: !process.env.CI,
-    cwd: 'apps/faq_system/frontend',
+    cwd: "apps/faq_system/frontend",
   },
 });

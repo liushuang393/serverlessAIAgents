@@ -58,12 +58,7 @@
   "dependencies": {
     "database": "postgresql",
     "redis": false,
-    "external": [
-      "google_oauth",
-      "ldap_server",
-      "microsoft_oauth",
-      "saml_idp"
-    ]
+    "external": ["google_oauth", "ldap_server", "microsoft_oauth", "saml_idp"]
   },
   "runtime": {
     "urls": {
@@ -105,12 +100,7 @@
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": [
-        "jwt",
-        "oauth2",
-        "saml",
-        "ldap"
-      ],
+      "providers": ["jwt", "oauth2", "saml", "ldap"],
       "allow_anonymous": false,
       "required_scopes": [],
       "mode": "tenant_sso",
@@ -131,9 +121,7 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "text"
-      ],
+      "allowed_modalities": ["text"],
       "extra_model_refs": []
     },
     "rag": {
@@ -161,9 +149,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -199,11 +185,7 @@
       "consumer_group": "evolution-validator-v1",
       "max_retries": 5
     },
-    "scope_policy": [
-      "tenant_app",
-      "tenant_product_line",
-      "global_verified"
-    ],
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
       "high_complexity_threshold": 0.7,

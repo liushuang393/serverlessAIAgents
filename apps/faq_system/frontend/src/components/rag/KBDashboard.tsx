@@ -4,10 +4,10 @@
  * コレクション総数・ドキュメント数・最終インジェスト等の
  * サマリーカードとクイックアクションを表示する。
  */
-import { useEffect } from 'react';
-import { Database, FileText, Clock, Search } from 'lucide-react';
-import { useI18n } from '../../i18n';
-import { useRAGStore } from '../../stores/ragStore';
+import { useEffect } from "react";
+import { Database, FileText, Clock, Search } from "lucide-react";
+import { useI18n } from "../../i18n";
+import { useRAGStore } from "../../stores/ragStore";
 
 function StatCard({
   icon: Icon,
@@ -54,30 +54,34 @@ export function KBDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Database}
-          label={t('rag.stat_collections')}
-          value={collectionsLoading ? '...' : collections.length}
+          label={t("rag.stat_collections")}
+          value={collectionsLoading ? "..." : collections.length}
           color="text-indigo-400"
         />
         <StatCard
           icon={FileText}
-          label={t('rag.stat_documents')}
-          value={collectionsLoading ? '...' : totalDocs}
+          label={t("rag.stat_documents")}
+          value={collectionsLoading ? "..." : totalDocs}
           color="text-emerald-400"
         />
         <StatCard
           icon={Clock}
-          label={t('rag.stat_last_ingest')}
+          label={t("rag.stat_last_ingest")}
           value={
             lastIngest?.started_at
-              ? new Date(lastIngest.started_at).toLocaleDateString('ja-JP')
-              : '-'
+              ? new Date(lastIngest.started_at).toLocaleDateString("ja-JP")
+              : "-"
           }
           color="text-amber-400"
         />
         <StatCard
           icon={Search}
-          label={t('rag.stat_active_collections')}
-          value={collectionsLoading ? '...' : collections.filter((c) => c.document_count > 0).length}
+          label={t("rag.stat_active_collections")}
+          value={
+            collectionsLoading
+              ? "..."
+              : collections.filter((c) => c.document_count > 0).length
+          }
           color="text-cyan-400"
         />
       </div>
@@ -85,18 +89,20 @@ export function KBDashboard() {
       {/* コレクション一覧 */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-white">{t('rag.collections')}</h2>
+          <h2 className="text-sm font-semibold text-white">
+            {t("rag.collections")}
+          </h2>
           <button
-            onClick={() => setActiveTab('collections')}
+            onClick={() => setActiveTab("collections")}
             className="text-xs text-[var(--primary)] hover:underline"
           >
-            {t('rag.view_all')}
+            {t("rag.view_all")}
           </button>
         </div>
 
         {collections.length === 0 && !collectionsLoading && (
           <div className="text-center py-12 text-[var(--text-muted)] text-sm">
-            {t('rag.no_collections')}
+            {t("rag.no_collections")}
           </div>
         )}
 
@@ -107,7 +113,7 @@ export function KBDashboard() {
               type="button"
               onClick={() => {
                 useRAGStore.getState().selectCollection(col.collection_name);
-                setActiveTab('documents');
+                setActiveTab("documents");
               }}
               className="text-left rounded-xl bg-white/[0.03] border border-white/5 p-4 hover:bg-white/[0.06] hover:border-[var(--primary)]/20 transition-all"
             >
@@ -130,12 +136,14 @@ export function KBDashboard() {
       {ingestRuns.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-white">{t('rag.recent_ingests')}</h2>
+            <h2 className="text-sm font-semibold text-white">
+              {t("rag.recent_ingests")}
+            </h2>
             <button
-              onClick={() => setActiveTab('ingest')}
+              onClick={() => setActiveTab("ingest")}
               className="text-xs text-[var(--primary)] hover:underline"
             >
-              {t('rag.view_all')}
+              {t("rag.view_all")}
             </button>
           </div>
           <div className="space-y-1.5">
@@ -147,19 +155,23 @@ export function KBDashboard() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`px-2 py-0.5 rounded-full ${
-                      run.status === 'completed'
-                        ? 'text-emerald-400 bg-emerald-500/10'
-                        : run.status === 'failed'
-                          ? 'text-rose-400 bg-rose-500/10'
-                          : 'text-blue-400 bg-blue-500/10'
+                      run.status === "completed"
+                        ? "text-emerald-400 bg-emerald-500/10"
+                        : run.status === "failed"
+                          ? "text-rose-400 bg-rose-500/10"
+                          : "text-blue-400 bg-blue-500/10"
                     }`}
                   >
                     {run.status}
                   </span>
-                  <span className="text-[var(--text-muted)] font-mono">{run.run_id.slice(0, 8)}</span>
+                  <span className="text-[var(--text-muted)] font-mono">
+                    {run.run_id.slice(0, 8)}
+                  </span>
                 </div>
                 <span className="text-[var(--text-muted)]">
-                  {run.started_at ? new Date(run.started_at).toLocaleString('ja-JP') : '-'}
+                  {run.started_at
+                    ? new Date(run.started_at).toLocaleString("ja-JP")
+                    : "-"}
                 </span>
               </div>
             ))}

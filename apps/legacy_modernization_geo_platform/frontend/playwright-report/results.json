@@ -26,9 +26,7 @@
         "name": "",
         "testDir": "/home/liush/projects/serverlessAIAgents/apps/legacy_modernization_geo_platform/frontend/src",
         "testIgnore": [],
-        "testMatch": [
-          "**/*.e2e.spec.ts"
-        ],
+        "testMatch": ["**/*.e2e.spec.ts"],
         "timeout": 30000
       }
     ],
@@ -46,10 +44,7 @@
           "outputFile": "playwright-report/results.json"
         }
       ],
-      [
-        "list",
-        null
-      ]
+      ["list", null]
     ],
     "reportSlowTests": {
       "max": 5,

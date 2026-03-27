@@ -4,7 +4,7 @@
  */
 
 // ---------- 定数 ----------
-const API_BASE = window.location.origin;  // 同一オリジン
+const API_BASE = window.location.origin; // 同一オリジン
 
 // 互換マッピング（既存契約テスト/イベント命名との整合維持用）
 const LEGACY_STAGE_INDEX_MAP = {
@@ -12,34 +12,39 @@ const LEGACY_STAGE_INDEX_MAP = {
   "migration.extract_business_semantics": 1,
   "migration.design_architecture": 2,
 };
-const LEGACY_STAGES = ['analysis', 'business_semantics', 'design'];
+const LEGACY_STAGES = ["analysis", "business_semantics", "design"];
 
 const STAGE_LABELS = {
-  analyzer:      { icon: "1", label: "COBOL解析" },
-  designer:      { icon: "2", label: "Spring Boot設計" },
-  transformer:   { icon: "3", label: "Java変換" },
-  test_generator:{ icon: "4", label: "テスト生成" },
-  verifier:      { icon: "5", label: "検証" },
-  quality_gate:  { icon: "6", label: "品質ゲート" },
-  pipeline:      { icon: "★", label: "パイプライン" },
+  analyzer: { icon: "1", label: "COBOL解析" },
+  designer: { icon: "2", label: "Spring Boot設計" },
+  transformer: { icon: "3", label: "Java変換" },
+  test_generator: { icon: "4", label: "テスト生成" },
+  verifier: { icon: "5", label: "検証" },
+  quality_gate: { icon: "6", label: "品質ゲート" },
+  pipeline: { icon: "★", label: "パイプライン" },
 };
 
 const PIPELINE_STAGES = [
-  "analyzer", "designer", "transformer", "test_generator", "verifier", "quality_gate",
+  "analyzer",
+  "designer",
+  "transformer",
+  "test_generator",
+  "verifier",
+  "quality_gate",
 ];
 
 // ---------- アプリ状態 ----------
 let currentTaskId = null;
 let currentEventSource = null;
 let pendingHITLRequestId = null;
-let stageStates = {};    // stage => "pending" | "running" | "complete" | "error"
+let stageStates = {}; // stage => "pending" | "running" | "complete" | "error"
 
 // ---------- 認証ヘルパー ----------
 function getApiKey() {
   return (
-    localStorage.getItem("CODE_MIGRATION_API_KEY")
-    || new URLSearchParams(window.location.search).get("api_key")
-    || ""
+    localStorage.getItem("CODE_MIGRATION_API_KEY") ||
+    new URLSearchParams(window.location.search).get("api_key") ||
+    ""
   );
 }
 
@@ -74,8 +79,13 @@ fileInput.addEventListener("change", () => {
 });
 
 // ドラッグ&ドロップ
-dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
-dropZone.addEventListener("dragleave", () => { dropZone.classList.remove("dragover"); });
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("dragover");
+});
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("dragover");
+});
 dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
   dropZone.classList.remove("dragover");
@@ -119,7 +129,7 @@ async function startMigration() {
         method: "POST",
         headers: buildAuthHeaders(),
         body: formData,
-      }
+      },
     );
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -170,7 +180,7 @@ async function checkStatusAndClose(taskId) {
   try {
     const res = await fetch(
       withApiKey(`${API_BASE}/api/migrate/${taskId}/status`),
-      { headers: buildAuthHeaders() }
+      { headers: buildAuthHeaders() },
     );
     const data = await res.json();
     if (data.status === "complete" || data.status === "error") {
@@ -194,7 +204,10 @@ function handleEvent(event) {
       break;
 
     case "progress":
-      appendLog(`  ${stageLabel(stage)}: ${event.message || ""}${event.current ? ` (${event.current}/${event.total})` : ""}`, "info");
+      appendLog(
+        `  ${stageLabel(stage)}: ${event.message || ""}${event.current ? ` (${event.current}/${event.total})` : ""}`,
+        "info",
+      );
       break;
 
     case "stage_complete": {
@@ -206,7 +219,10 @@ function handleEvent(event) {
 
     case "evolution": {
       const iterNum = event.iteration || "";
-      appendLog(`⟳ Evolution #${iterNum}: ${event.problem || ""} → ${event.fix || "プロンプト改善"}`, "warn");
+      appendLog(
+        `⟳ Evolution #${iterNum}: ${event.problem || ""} → ${event.fix || "プロンプト改善"}`,
+        "warn",
+      );
       // 対象ステージをリセット
       if (stage) resetStageFrom(stage);
       break;
@@ -218,13 +234,21 @@ function handleEvent(event) {
       break;
 
     case "complete":
-      PIPELINE_STAGES.forEach(s => {
+      PIPELINE_STAGES.forEach((s) => {
         if (stageStates[s] !== "complete") updateStage(s, "complete");
       });
       appendLog("✓ 移行完了！", "success");
-      if (currentEventSource) { currentEventSource.close(); currentEventSource = null; }
-      showResult(true, "移行完了", `プログラム: ${event.program_name || ""}  バージョン: v${event.version || 1}`);
-      if (currentTaskId) document.getElementById("download-btn").style.display = "inline-flex";
+      if (currentEventSource) {
+        currentEventSource.close();
+        currentEventSource = null;
+      }
+      showResult(
+        true,
+        "移行完了",
+        `プログラム: ${event.program_name || ""}  バージョン: v${event.version || 1}`,
+      );
+      if (currentTaskId)
+        document.getElementById("download-btn").style.display = "inline-flex";
       startBtn.disabled = false;
       break;
 
@@ -232,7 +256,10 @@ function handleEvent(event) {
       const errStage = stage || "pipeline";
       updateStage(errStage, "error");
       appendLog(`✗ エラー: ${event.message || "不明なエラー"}`, "error");
-      if (currentEventSource) { currentEventSource.close(); currentEventSource = null; }
+      if (currentEventSource) {
+        currentEventSource.close();
+        currentEventSource = null;
+      }
       showResult(false, "移行失敗", event.message || "エラーが発生しました");
       startBtn.disabled = false;
       break;
@@ -248,7 +275,7 @@ function initStageList() {
   stageStates = {};
   const list = document.getElementById("stage-list");
   list.innerHTML = "";
-  PIPELINE_STAGES.forEach(s => {
+  PIPELINE_STAGES.forEach((s) => {
     stageStates[s] = "pending";
     const item = document.createElement("div");
     item.className = "stage-item pending";
@@ -270,8 +297,14 @@ function updateStage(stage, status) {
   const el = document.getElementById(`stage-${stage}`);
   if (!el) return;
   el.className = `stage-item ${status}`;
-  const statusLabels = { pending: "待機中", running: "実行中", complete: "完了", error: "エラー" };
-  el.querySelector(".stage-status").textContent = statusLabels[status] || status;
+  const statusLabels = {
+    pending: "待機中",
+    running: "実行中",
+    complete: "完了",
+    error: "エラー",
+  };
+  el.querySelector(".stage-status").textContent =
+    statusLabels[status] || status;
 }
 
 function resetStageFrom(startStage) {
@@ -318,13 +351,16 @@ async function downloadResult() {
 // ---------- HITL ----------
 function showHITLDialog(event) {
   pendingHITLRequestId = event.request_id;
-  document.getElementById("hitl-question").textContent = event.question || "設計内容を確認してください。";
+  document.getElementById("hitl-question").textContent =
+    event.question || "設計内容を確認してください。";
 
   const unknowns = event.unknowns || [];
   const ul = document.getElementById("hitl-unknowns");
   if (unknowns.length > 0) {
-    ul.innerHTML = "<strong>不明点リスト:</strong><ul>" +
-      unknowns.map(u => `<li>${escapeHtml(u)}</li>`).join("") + "</ul>";
+    ul.innerHTML =
+      "<strong>不明点リスト:</strong><ul>" +
+      unknowns.map((u) => `<li>${escapeHtml(u)}</li>`).join("") +
+      "</ul>";
     ul.style.display = "block";
   } else {
     ul.style.display = "none";
@@ -355,7 +391,10 @@ async function submitHITL(approved) {
       const err = await res.json().catch(() => ({}));
       appendLog(`HITL送信エラー: ${err.detail || res.statusText}`, "error");
     } else {
-      appendLog(`HITL応答送信: ${approved ? "承認" : "拒否"} "${comment}"`, approved ? "success" : "warn");
+      appendLog(
+        `HITL応答送信: ${approved ? "承認" : "拒否"} "${comment}"`,
+        approved ? "success" : "warn",
+      );
     }
   } catch (e) {
     appendLog(`HITL送信失敗: ${e.message}`, "error");
@@ -371,7 +410,10 @@ function resetUI() {
   document.getElementById("download-btn").style.display = "none";
   currentTaskId = null;
   pendingHITLRequestId = null;
-  if (currentEventSource) { currentEventSource.close(); currentEventSource = null; }
+  if (currentEventSource) {
+    currentEventSource.close();
+    currentEventSource = null;
+  }
 }
 
 // ---------- ユーティリティ ----------

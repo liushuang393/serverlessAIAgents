@@ -18,7 +18,7 @@ repos:
       - id: fix-mypy-unused-ignore
         name: "Python: Remove unused type: ignore (mypy)"
         language: system
-        entry: python scripts/fix_mypy_safe.py
+        entry: /home/liush/miniconda3/envs/agentflow/bin/python scripts/fix_mypy_safe.py
         pass_filenames: false
         types: [python]
         # mypy が使えない環境ではスキップ（CI でも安全に動く）
@@ -51,7 +51,7 @@ repos:
       - id: check-layer-boundaries
         name: "Arch: Layer boundary check"
         language: system
-        entry: conda run -n agentflow python scripts/check_layer_boundaries.py
+        entry: /home/liush/miniconda3/bin/conda run -n agentflow python scripts/check_layer_boundaries.py
         pass_filenames: false
         types: [python]
         always_run: true
@@ -59,14 +59,14 @@ repos:
       - id: check-no-direct-provider
         name: "Arch: Provider SDK direct import check"
         language: system
-        entry: conda run -n agentflow python scripts/check_no_direct_provider_calls.py
+        entry: /home/liush/miniconda3/bin/conda run -n agentflow python scripts/check_no_direct_provider_calls.py
         pass_filenames: false
         types: [python]
         always_run: true
 
       - id: check-encoding
         name: Check file encoding (UTF-8, no BOM)
-        entry: conda run -n agentflow python scripts/check_encoding.py
+        entry: /home/liush/miniconda3/bin/conda run -n agentflow python scripts/check_encoding.py
         language: system
         types: [text]
         pass_filenames: true

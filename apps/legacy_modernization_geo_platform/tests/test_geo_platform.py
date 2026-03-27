@@ -22,20 +22,23 @@ if TYPE_CHECKING:
 
 def _build_settings(tmp_path: Path) -> GeoPlatformSettings:
     runtime = resolve_app_runtime("apps/legacy_modernization_geo_platform/app_config.json")
+    if runtime.ports.api is None or runtime.urls.backend is None or runtime.urls.frontend is None:
+        msg = "legacy_modernization_geo_platform の manifest に必要な runtime 値がありません。"
+        raise AssertionError(msg)
     frontend_dist_dir = tmp_path / "frontend-dist"
     frontend_dist_dir.mkdir(parents=True, exist_ok=True)
     (frontend_dist_dir / "index.html").write_text("<html><body>test</body></html>", encoding="utf-8")
     return GeoPlatformSettings(
         app_root=tmp_path,
         host="127.0.0.1",
-        port=runtime.ports.api or 8100,
+        port=runtime.ports.api,
         api_key="",
-        cors_origins=[runtime.urls.frontend or "http://localhost:3100"],
+        cors_origins=[runtime.urls.frontend],
         db_path=tmp_path / "data" / "geo.db",
         artifacts_dir=tmp_path / "data" / "artifacts",
         reports_dir=tmp_path / "data" / "reports",
         published_dir=tmp_path / "data" / "published",
-        public_base_url=runtime.urls.backend or "http://localhost:8100",
+        public_base_url=runtime.urls.backend,
         frontend_dist_dir=frontend_dist_dir,
     )
 
@@ -146,6 +149,9 @@ def test_approval_publishes_page_and_report(monkeypatch, tmp_path: Path) -> None
     monkeypatch.setenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE", "1")
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
     runtime = resolve_app_runtime("apps/legacy_modernization_geo_platform/app_config.json")
+    if runtime.urls.backend is None:
+        msg = "legacy_modernization_geo_platform の backend URL がありません。"
+        raise AssertionError(msg)
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
     client = TestClient(app)
 
@@ -178,7 +184,7 @@ def test_approval_publishes_page_and_report(monkeypatch, tmp_path: Path) -> None
     assert completed["report"] is not None
 
     page_url = completed["published_pages"][0]["page_url"]
-    public_page = client.get(page_url.replace(runtime.urls.backend or "http://localhost:8100", ""))
+    public_page = client.get(page_url.replace(runtime.urls.backend, ""))
     assert public_page.status_code == 200
     assert "FAQPage" in public_page.text
 
@@ -228,6 +234,9 @@ def test_content_language_propagates_to_draft_publish_and_report(
     monkeypatch.setenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE", "1")
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
     runtime = resolve_app_runtime("apps/legacy_modernization_geo_platform/app_config.json")
+    if runtime.urls.backend is None:
+        msg = "legacy_modernization_geo_platform の backend URL がありません。"
+        raise AssertionError(msg)
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
     client = TestClient(app)
 
@@ -269,7 +278,7 @@ def test_content_language_propagates_to_draft_publish_and_report(
 
     completed = _wait_for_status(client, start["task_id"], TaskStatus.COMPLETED.value)
     page_url = completed["published_pages"][0]["page_url"]
-    public_page = client.get(page_url.replace(runtime.urls.backend or "http://localhost:8100", ""))
+    public_page = client.get(page_url.replace(runtime.urls.backend, ""))
     assert public_page.status_code == 200
     assert expected_html_lang in public_page.text
     assert expected_faq_label in public_page.text

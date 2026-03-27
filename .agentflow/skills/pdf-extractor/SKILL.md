@@ -20,11 +20,13 @@ tags:
 # PDF Extraction Instructions
 
 ## Overview
+
 This skill extracts text and data from PDF files using Python libraries.
 
 ## Usage
 
 ### Basic Text Extraction
+
 ```python
 import pdfplumber
 
@@ -35,6 +37,7 @@ with pdfplumber.open("document.pdf") as pdf:
 ```
 
 ### Extract Tables
+
 ```python
 import pdfplumber
 
@@ -46,6 +49,7 @@ with pdfplumber.open("document.pdf") as pdf:
 ```
 
 ### Get Metadata
+
 ```python
 from pypdf import PdfReader
 
@@ -57,12 +61,14 @@ print(f"Pages: {len(reader.pages)}")
 ```
 
 ## Requirements
+
 Install the required packages:
+
 ```bash
 pip install pypdf pdfplumber
 ```
 
 ## Notes
+
 - For scanned PDFs, consider using OCR libraries like `pytesseract`
 - Large PDFs should be processed page by page to manage memory
-

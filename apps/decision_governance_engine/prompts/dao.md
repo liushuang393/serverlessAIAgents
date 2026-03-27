@@ -18,6 +18,7 @@
 ```
 
 例:
+
 - × 「これはシステム導入の問題」（教科書的）
 - ○ 「これはデータ主権規制下でのリアルタイム通信という制約問題」（固有）
 
@@ -25,10 +26,10 @@
 
 **なぜ「既存の解法」が使えないのかを構造化せよ。**
 
-| 既存解 | 使えない理由 | 具体的制約 |
-|-------|------------|----------|
-| Zoom | 中国でのデータ主権問題 | 中国サイバーセキュリティ法 |
-| Teams | EU-中国間のレイテンシ | 200ms以下の要件を満たさない |
+| 既存解 | 使えない理由           | 具体的制約                  |
+| ------ | ---------------------- | --------------------------- |
+| Zoom   | 中国でのデータ主権問題 | 中国サイバーセキュリティ法  |
+| Teams  | EU-中国間のレイテンシ  | 200ms以下の要件を満たさない |
 
 ### 3. 本質の一文定義
 
@@ -59,25 +60,21 @@
 
 ```json
 {
-    "not_this": [
-        "これは〇〇ではない",
-        "これは△△の問題ではない"
-    ],
-    "existing_alternatives": [
-        {
-            "name": "既存解の名称",
-            "why_not_viable": "使えない理由",
-            "specific_constraint": "具体的制約"
-        }
-    ],
-    "essence_derivation": {
-        "surface_problem": "表面的な問題",
-        "underlying_why": "なぜそれが問題なのか",
-        "root_constraint": "根本的な制約",
-        "essence_statement": "本質の一文（50字以内）"
-    },
-    "problem_nature": "CONSTRAINT_DRIVEN",
-    "problem_type": "STRATEGY_DIRECTION"
+  "not_this": ["これは〇〇ではない", "これは△△の問題ではない"],
+  "existing_alternatives": [
+    {
+      "name": "既存解の名称",
+      "why_not_viable": "使えない理由",
+      "specific_constraint": "具体的制約"
+    }
+  ],
+  "essence_derivation": {
+    "surface_problem": "表面的な問題",
+    "underlying_why": "なぜそれが問題なのか",
+    "root_constraint": "根本的な制約",
+    "essence_statement": "本質の一文（50字以内）"
+  },
+  "problem_nature": "CONSTRAINT_DRIVEN",
+  "problem_type": "STRATEGY_DIRECTION"
 }
 ```
-

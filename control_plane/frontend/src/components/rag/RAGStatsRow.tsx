@@ -4,9 +4,9 @@
  * Platform ダッシュボードで RAG 全体の統計を表示する。
  * 読み取り専用。
  */
-import { useI18n } from '../../i18n';
+import { useI18n } from "../../i18n";
 
-import type { RAGStatsResponse } from '@/types';
+import type { RAGStatsResponse } from "@/types";
 
 interface Props {
   stats: RAGStatsResponse;
@@ -38,25 +38,25 @@ export function RAGStatsRow({ stats, appCount }: Props) {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatItem
         icon="📦"
-        label={t('rag_dashboard.apps_with_rag')}
+        label={t("rag_dashboard.apps_with_rag")}
         value={appCount}
         color="text-amber-400"
       />
       <StatItem
         icon="📄"
-        label={t('rag_dashboard.chunk_strategies')}
+        label={t("rag_dashboard.chunk_strategies")}
         value={stats.total_strategies}
         color="text-indigo-400"
       />
       <StatItem
         icon="🔀"
-        label={t('rag_dashboard.rerankers')}
+        label={t("rag_dashboard.rerankers")}
         value={stats.total_rerankers}
         color="text-cyan-400"
       />
       <StatItem
         icon="🔍"
-        label={t('rag_dashboard.retrieval_methods')}
+        label={t("rag_dashboard.retrieval_methods")}
         value={stats.total_apps_using_rag}
         color="text-emerald-400"
       />

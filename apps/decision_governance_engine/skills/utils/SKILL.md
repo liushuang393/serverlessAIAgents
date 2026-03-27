@@ -13,6 +13,7 @@ tags:
 # UtilitySkills（共通ユーティリティ）
 
 ## 概要
+
 Decision Governance Engineの各種ユーティリティ機能を提供するスキル集。
 
 ---
@@ -20,9 +21,11 @@ Decision Governance Engineの各種ユーティリティ機能を提供するス
 ## 1. PDFレポート出力
 
 ### 機能
+
 DecisionReportをPDF形式でエクスポートする。
 
 ### 入力スキーマ
+
 ```yaml
 type: object
 properties:
@@ -48,6 +51,7 @@ properties:
 ```
 
 ### 出力スキーマ
+
 ```yaml
 type: object
 properties:
@@ -64,12 +68,14 @@ properties:
 ### PDFレイアウト仕様
 
 #### 表紙
+
 - タイトル: 意思決定レポート
 - レポートID
 - 生成日時
 - 機密レベル
 
 #### 目次
+
 1. エグゼクティブサマリー
 2. 本質分析（道）
 3. 戦略選定（法）
@@ -78,11 +84,13 @@ properties:
 6. 検証結果（Review）
 
 #### 各セクション
+
 - 見出し + Agent名
 - 構造化データをテーブル形式で表示
 - グラフ・図表（成功確率、タイムラインなど）
 
 #### フッター
+
 - ページ番号
 - 「本文書はDecision Governance Engineにより自動生成」
 
@@ -91,9 +99,11 @@ properties:
 ## 2. Markdown出力
 
 ### 機能
+
 DecisionReportをMarkdown形式でエクスポートする。
 
 ### 入力スキーマ
+
 ```yaml
 type: object
 properties:
@@ -111,22 +121,25 @@ properties:
 ```
 
 ### 出力形式
+
 ```markdown
 # 意思決定レポート
 
 ## レポートID: DGE-20240101-ABC123
 
 ## エグゼクティブサマリー
+
 - **一行結論**: [one_line_decision]
 - **推奨アクション**: [recommended_action]
 - **主要リスク**: [key_risks]
 - **最初の一歩**: [first_step]
 
 ## 本質分析（道）
-| 項目 | 内容 |
-|------|------|
+
+| 項目       | 内容           |
+| ---------- | -------------- |
 | 問題タイプ | [problem_type] |
-| 本質 | [essence] |
+| 本質       | [essence]      |
 
 ...
 ```
@@ -136,9 +149,11 @@ properties:
 ## 3. タイムライン図生成
 
 ### 機能
+
 ShuResultからGanttチャート（Mermaid形式）を生成する。
 
 ### 入力
+
 ```yaml
 type: object
 properties:
@@ -151,6 +166,7 @@ properties:
 ```
 
 ### 出力（Mermaid形式）
+
 ```mermaid
 gantt
     title 実行計画タイムライン
@@ -167,9 +183,11 @@ gantt
 ## 4. リスクマトリクス生成
 
 ### 機能
+
 FaResult/QiResultからリスクマトリクスを生成する。
 
 ### 入力
+
 ```yaml
 type: object
 properties:
@@ -180,6 +198,7 @@ properties:
 ```
 
 ### 出力（ASCII形式）
+
 ```
 影響度 ↑
   高 │ ■ リスク1    ▲ リスク3
@@ -195,19 +214,20 @@ properties:
 
 ## 5. エクスポート形式一覧
 
-| 形式 | 拡張子 | 用途 |
-|------|--------|------|
-| PDF | .pdf | 印刷・共有・アーカイブ |
-| Markdown | .md | ドキュメント管理・Wiki |
-| JSON | .json | システム連携・API |
-| HTML | .html | Web表示・プレゼン |
-| CSV | .csv | データ分析・Excel |
+| 形式     | 拡張子 | 用途                   |
+| -------- | ------ | ---------------------- |
+| PDF      | .pdf   | 印刷・共有・アーカイブ |
+| Markdown | .md    | ドキュメント管理・Wiki |
+| JSON     | .json  | システム連携・API      |
+| HTML     | .html  | Web表示・プレゼン      |
+| CSV      | .csv   | データ分析・Excel      |
 
 ---
 
 ## 6. 実装例（Python）
 
 ### PDFエクスポート
+
 ```python
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table
@@ -216,10 +236,10 @@ async def export_to_pdf(report: DecisionReport, output_path: str) -> dict:
     """DecisionReportをPDFにエクスポート."""
     doc = SimpleDocTemplate(output_path, pagesize=A4)
     elements = []
-    
+
     # タイトル
     elements.append(Paragraph(f"意思決定レポート: {report.report_id}"))
-    
+
     # エグゼクティブサマリー
     elements.append(Paragraph("エグゼクティブサマリー"))
     summary_data = [
@@ -227,11 +247,11 @@ async def export_to_pdf(report: DecisionReport, output_path: str) -> dict:
         ["推奨アクション", report.executive_summary.recommended_action],
     ]
     elements.append(Table(summary_data))
-    
+
     # ... 各セクション追加
-    
+
     doc.build(elements)
-    
+
     return {
         "success": True,
         "file_path": output_path,
@@ -241,6 +261,7 @@ async def export_to_pdf(report: DecisionReport, output_path: str) -> dict:
 ```
 
 ### Markdownエクスポート
+
 ```python
 def export_to_markdown(report: DecisionReport) -> str:
     """DecisionReportをMarkdownにエクスポート."""
@@ -264,12 +285,12 @@ def export_to_markdown(report: DecisionReport) -> str:
 
 ## 7. 依存ライブラリ
 
-| ライブラリ | バージョン | 用途 |
-|------------|-----------|------|
-| reportlab | >=4.0 | PDF生成 |
-| Pillow | >=10.0 | 画像処理 |
-| matplotlib | >=3.8 | グラフ生成 |
-| pydantic | >=2.0 | データ検証 |
+| ライブラリ | バージョン | 用途       |
+| ---------- | ---------- | ---------- |
+| reportlab  | >=4.0      | PDF生成    |
+| Pillow     | >=10.0     | 画像処理   |
+| matplotlib | >=3.8      | グラフ生成 |
+| pydantic   | >=2.0      | データ検証 |
 
 ---
 
@@ -295,4 +316,3 @@ md_content = export_to_markdown(decision_report)
 # タイムライン図
 mermaid_code = generate_timeline(shu_result, format="mermaid")
 ```
-

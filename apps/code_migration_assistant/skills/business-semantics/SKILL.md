@@ -65,12 +65,12 @@ examples:
 
 ### コード構造 → 業務概念
 
-| コード構造 | 業務概念 | 例 |
-|-----------|---------|-----|
-| `IF WS-AGE >= 65` | 年齢制限ルール | 高齢者割引判定 |
-| `PERFORM CALC-TAX` | 業務サブプロセス | 税計算処理 |
-| `WRITE REPORT-REC` | 業務イベント（出力） | 報告書出力 |
-| `WS-STATUS: 1→2→3` | 状態遷移 | 申請→審査→承認 |
+| コード構造         | 業務概念             | 例             |
+| ------------------ | -------------------- | -------------- |
+| `IF WS-AGE >= 65`  | 年齢制限ルール       | 高齢者割引判定 |
+| `PERFORM CALC-TAX` | 業務サブプロセス     | 税計算処理     |
+| `WRITE REPORT-REC` | 業務イベント（出力） | 報告書出力     |
+| `WS-STATUS: 1→2→3` | 状態遷移             | 申請→審査→承認 |
 
 ### 出力モデル構造
 
@@ -89,15 +89,17 @@ examples:
     }
   ],
   "business_events": [
-    {"name": "注文受付", "trigger": "WRITE ORDER-REC", "type": "output"},
-    {"name": "在庫不足", "trigger": "IF WS-STOCK < WS-QTY", "type": "exception"}
+    { "name": "注文受付", "trigger": "WRITE ORDER-REC", "type": "output" },
+    {
+      "name": "在庫不足",
+      "trigger": "IF WS-STOCK < WS-QTY",
+      "type": "exception"
+    }
   ],
   "state_model": {
     "entity": "注文",
     "states": ["新規", "確認済", "出荷済", "完了"],
-    "transitions": [
-      {"from": "新規", "to": "確認済", "event": "在庫確認OK"}
-    ]
+    "transitions": [{ "from": "新規", "to": "確認済", "event": "在庫確認OK" }]
   },
   "business_rules": [
     {

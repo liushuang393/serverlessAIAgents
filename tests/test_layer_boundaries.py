@@ -48,7 +48,6 @@ def test_no_layer_boundary_violations() -> None:
     pytest.fail(msg)
 
 
-
 def _is_top_level_eager(node: ast.AST, tree: ast.Module) -> bool:
     """ノードがトップレベル eager import かどうかを判定."""
     # TYPE_CHECKING ブロック内チェック

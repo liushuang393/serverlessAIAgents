@@ -221,7 +221,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
             enabled=True,
         )
 
@@ -239,7 +239,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
         )
 
         emitter.emit_iteration(
@@ -256,7 +256,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
         )
 
         emitter.emit_subcall(
@@ -273,7 +273,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
         )
 
         emitter.emit_action(
@@ -290,7 +290,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
         )
 
         emitter.emit_complete(
@@ -310,7 +310,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
         )
 
         emitter.emit_error(
@@ -326,7 +326,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
             enabled=False,
         )
 
@@ -348,7 +348,7 @@ class TestRLMEventEmitter:
 
         emitter.emit_start(total_contexts=1, total_tokens=1000)  # No events yet
 
-        emitter.set_callback(lambda e: events.append(e))
+        emitter.set_callback(events.append)
         emitter.emit_start(total_contexts=2, total_tokens=2000)
 
         assert len(events) == 1
@@ -358,7 +358,7 @@ class TestRLMEventEmitter:
         events: list[dict] = []
         emitter = RLMEventEmitter(
             flow_id="flow-123",
-            callback=lambda e: events.append(e),
+            callback=events.append,
         )
 
         long_answer = "x" * 200

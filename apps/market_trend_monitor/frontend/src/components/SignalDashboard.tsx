@@ -3,7 +3,7 @@
  *
  * Phase 13: 5軸レーダーチャート + グレード分布
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Card,
@@ -21,9 +21,9 @@ import {
   TableHead,
   TableRow,
   Tooltip,
-} from '@mui/material';
-import { apiClient } from '../api/client';
-import { useI18n } from '../i18n';
+} from "@mui/material";
+import { apiClient } from "../api/client";
+import { useI18n } from "../i18n";
 
 interface SignalScore {
   reliability: number;
@@ -55,14 +55,20 @@ interface SignalDashboardResponse {
 }
 
 const gradeColors: Record<string, string> = {
-  A: '#4caf50',
-  B: '#2196f3',
-  C: '#ff9800',
-  D: '#9e9e9e',
+  A: "#4caf50",
+  B: "#2196f3",
+  C: "#ff9800",
+  D: "#9e9e9e",
 };
 
 function RadarChart({ score }: { score: SignalScore }) {
-  const axes = ['reliability', 'leading', 'relevance', 'actionability', 'convergence'] as const;
+  const axes = [
+    "reliability",
+    "leading",
+    "relevance",
+    "actionability",
+    "convergence",
+  ] as const;
   const size = 160;
   const center = size / 2;
   const radius = size * 0.38;
@@ -80,7 +86,9 @@ function RadarChart({ score }: { score: SignalScore }) {
     };
   });
 
-  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+  const pathD =
+    points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") +
+    " Z";
 
   return (
     <svg width={size} height={size} viewBox={`-6 0 ${size} ${size}`}>
@@ -92,13 +100,18 @@ function RadarChart({ score }: { score: SignalScore }) {
               const angle = (Math.PI * 2 * i) / axes.length - Math.PI / 2;
               return `${center + Math.cos(angle) * radius * scale},${center + Math.sin(angle) * radius * scale}`;
             })
-            .join(' ')}
+            .join(" ")}
           fill="none"
           stroke="rgba(255,255,255,0.1)"
           strokeWidth="1"
         />
       ))}
-      <path d={pathD} fill={`${gradeColors[score.grade]}33`} stroke={gradeColors[score.grade]} strokeWidth="2" />
+      <path
+        d={pathD}
+        fill={`${gradeColors[score.grade]}33`}
+        stroke={gradeColors[score.grade]}
+        strokeWidth="2"
+      />
       {points.map((p) => (
         <g key={p.axis}>
           <circle cx={p.x} cy={p.y} r="3" fill={gradeColors[score.grade]} />
@@ -126,28 +139,28 @@ export default function SignalDashboard() {
   const [stats, setStats] = useState<Record<string, unknown>>({});
 
   const axisLabels: Record<string, string> = {
-    reliability: 'Reliability',
-    leading: 'Leading',
-    relevance: 'Relevance',
-    actionability: 'Actionability',
-    convergence: 'Convergence',
+    reliability: "Reliability",
+    leading: "Leading",
+    relevance: "Relevance",
+    actionability: "Actionability",
+    convergence: "Convergence",
   };
 
   const fetchSignals = useCallback(async () => {
     setLoading(true);
     try {
       const [signalResp, dashResp] = await Promise.allSettled([
-        apiClient.get<SignalsResponse>('/signals'),
-        apiClient.get<SignalDashboardResponse>('/signals/dashboard'),
+        apiClient.get<SignalsResponse>("/signals"),
+        apiClient.get<SignalDashboardResponse>("/signals/dashboard"),
       ]);
-      if (signalResp.status === 'fulfilled') {
+      if (signalResp.status === "fulfilled") {
         setSignals(signalResp.value.data.signals || []);
         setError(null);
       } else {
         setSignals([]);
-        setError(t('signal.fetch_error'));
+        setError(t("signal.fetch_error"));
       }
-      if (dashResp.status === 'fulfilled') {
+      if (dashResp.status === "fulfilled") {
         setStats(dashResp.value.data || {});
       } else {
         setStats({});
@@ -155,7 +168,7 @@ export default function SignalDashboard() {
     } catch {
       setSignals([]);
       setStats({});
-      setError(t('signal.fetch_error'));
+      setError(t("signal.fetch_error"));
     } finally {
       setLoading(false);
     }
@@ -165,39 +178,54 @@ export default function SignalDashboard() {
     fetchSignals();
   }, [fetchSignals]);
 
-  const gradeDist = (stats as Record<string, Record<string, number>>).grade_distribution || {};
+  const gradeDist =
+    (stats as Record<string, Record<string, number>>).grade_distribution || {};
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {t('signal.title')}
+        {t("signal.title")}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {t('signal.subtitle')}
+        {t("signal.subtitle")}
       </Typography>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        {['A', 'B', 'C', 'D'].map((grade) => (
+        {["A", "B", "C", "D"].map((grade) => (
           <Grid item xs={3} key={grade}>
             <Tooltip
               arrow
               title={
-                grade === 'A' ? t('signal.grade_a_tip') :
-                  grade === 'B' ? t('signal.grade_b_tip') :
-                    grade === 'C' ? t('signal.grade_c_tip') :
-                      t('signal.grade_d_tip')
+                grade === "A"
+                  ? t("signal.grade_a_tip")
+                  : grade === "B"
+                    ? t("signal.grade_b_tip")
+                    : grade === "C"
+                      ? t("signal.grade_c_tip")
+                      : t("signal.grade_d_tip")
               }
             >
-              <Card sx={{ cursor: 'help' }}>
-                <CardContent sx={{ textAlign: 'center', py: 1 }}>
+              <Card sx={{ cursor: "help" }}>
+                <CardContent sx={{ textAlign: "center", py: 1 }}>
                   <Chip
-                    label={`${t('signal.grade_prefix')} ${grade}`}
-                    sx={{ bgcolor: gradeColors[grade], color: 'white', fontWeight: 'bold', mb: 1 }}
+                    label={`${t("signal.grade_prefix")} ${grade}`}
+                    sx={{
+                      bgcolor: gradeColors[grade],
+                      color: "white",
+                      fontWeight: "bold",
+                      mb: 1,
+                    }}
                   />
-                  <Typography variant="h4">{(gradeDist[grade] as number) || 0}</Typography>
+                  <Typography variant="h4">
+                    {(gradeDist[grade] as number) || 0}
+                  </Typography>
                 </CardContent>
               </Card>
             </Tooltip>
@@ -209,11 +237,11 @@ export default function SignalDashboard() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>{t('signal.table_trend')}</TableCell>
-              <TableCell>{t('signal.table_grade')}</TableCell>
-              <TableCell>{t('signal.table_score')}</TableCell>
-              <TableCell>{t('signal.table_radar')}</TableCell>
-              <TableCell>{t('signal.table_detail')}</TableCell>
+              <TableCell>{t("signal.table_trend")}</TableCell>
+              <TableCell>{t("signal.table_grade")}</TableCell>
+              <TableCell>{t("signal.table_score")}</TableCell>
+              <TableCell>{t("signal.table_radar")}</TableCell>
+              <TableCell>{t("signal.table_detail")}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -221,23 +249,32 @@ export default function SignalDashboard() {
               <TableRow key={signal.id}>
                 <TableCell>
                   <Typography variant="body2">
-                    {(signal.metadata?.trend_topic as string) || signal.trend_id}
+                    {(signal.metadata?.trend_topic as string) ||
+                      signal.trend_id}
                   </Typography>
                 </TableCell>
                 <TableCell>
                   <Tooltip
                     arrow
                     title={
-                      signal.grade === 'A' ? t('signal.grade_a_row_tip') :
-                        signal.grade === 'B' ? t('signal.grade_b_row_tip') :
-                          signal.grade === 'C' ? t('signal.grade_c_row_tip') :
-                            t('signal.grade_d_row_tip')
+                      signal.grade === "A"
+                        ? t("signal.grade_a_row_tip")
+                        : signal.grade === "B"
+                          ? t("signal.grade_b_row_tip")
+                          : signal.grade === "C"
+                            ? t("signal.grade_c_row_tip")
+                            : t("signal.grade_d_row_tip")
                     }
                   >
                     <Chip
                       label={signal.grade}
                       size="small"
-                      sx={{ bgcolor: gradeColors[signal.grade], color: 'white', fontWeight: 'bold', cursor: 'help' }}
+                      sx={{
+                        bgcolor: gradeColors[signal.grade],
+                        color: "white",
+                        fontWeight: "bold",
+                        cursor: "help",
+                      }}
                     />
                   </Tooltip>
                 </TableCell>
@@ -253,24 +290,42 @@ export default function SignalDashboard() {
                   <Box>
                     {Object.entries(axisLabels).map(([key, label]) => {
                       const tips: Record<string, string> = {
-                        reliability: t('signal.axis_reliability_tip'),
-                        leading: t('signal.axis_leading_tip'),
-                        relevance: t('signal.axis_relevance_tip'),
-                        actionability: t('signal.axis_actionability_tip'),
-                        convergence: t('signal.axis_convergence_tip'),
+                        reliability: t("signal.axis_reliability_tip"),
+                        leading: t("signal.axis_leading_tip"),
+                        relevance: t("signal.axis_relevance_tip"),
+                        actionability: t("signal.axis_actionability_tip"),
+                        convergence: t("signal.axis_convergence_tip"),
                       };
                       return (
-                        <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box
+                          key={key}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                          }}
+                        >
                           <Tooltip title={tips[key]} placement="left" arrow>
-                            <Typography variant="caption" sx={{ width: 90, cursor: 'help' }}>{label}</Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ width: 90, cursor: "help" }}
+                            >
+                              {label}
+                            </Typography>
                           </Tooltip>
                           <LinearProgress
                             variant="determinate"
-                            value={signal.score[key as keyof SignalScore] as number * 100}
+                            value={
+                              (signal.score[
+                                key as keyof SignalScore
+                              ] as number) * 100
+                            }
                             sx={{ width: 60, height: 6 }}
                           />
                           <Typography variant="caption">
-                            {(signal.score[key as keyof SignalScore] as number).toFixed(2)}
+                            {(
+                              signal.score[key as keyof SignalScore] as number
+                            ).toFixed(2)}
                           </Typography>
                         </Box>
                       );

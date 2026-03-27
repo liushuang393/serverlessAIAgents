@@ -8,15 +8,8 @@
     "assistant.memory.retention"
   ],
   "risk_tier": "medium",
-  "side_effects": [
-    "filesystem.read",
-    "filesystem.write",
-    "database.read"
-  ],
-  "required_permissions": [
-    "memory.read",
-    "memory.write"
-  ],
+  "side_effects": ["filesystem.read", "filesystem.write", "database.read"],
+  "required_permissions": ["memory.read", "memory.write"],
   "signature": {
     "algorithm": "ed25519",
     "issuer": "bizcore-official",
@@ -24,13 +17,7 @@
   },
   "compatibility": {
     "kernel": ">=2.0.0",
-    "product_lines": [
-      "assistant"
-    ]
+    "product_lines": ["assistant"]
   },
-  "tests_required": [
-    "unit",
-    "integration",
-    "security"
-  ]
+  "tests_required": ["unit", "integration", "security"]
 }

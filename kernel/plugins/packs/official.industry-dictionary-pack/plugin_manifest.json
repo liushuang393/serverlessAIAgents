@@ -8,12 +8,8 @@
     "faq.multilingual.glossary"
   ],
   "risk_tier": "low",
-  "side_effects": [
-    "database.read"
-  ],
-  "required_permissions": [
-    "kb.read"
-  ],
+  "side_effects": ["database.read"],
+  "required_permissions": ["kb.read"],
   "signature": {
     "algorithm": "ed25519",
     "issuer": "bizcore-official",
@@ -21,12 +17,7 @@
   },
   "compatibility": {
     "kernel": ">=2.0.0",
-    "product_lines": [
-      "faq"
-    ]
+    "product_lines": ["faq"]
   },
-  "tests_required": [
-    "unit",
-    "integration"
-  ]
+  "tests_required": ["unit", "integration"]
 }

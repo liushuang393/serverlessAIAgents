@@ -52,7 +52,11 @@ class _FakeFetchProvider:
                 ok=False,
                 url=url,
                 mode=self._mode,
-                metadata={"provider": self.name, "reason": "failed", "dynamic_hint": self._mode is WebRetrievalMode.HTML_READABILITY},
+                metadata={
+                    "provider": self.name,
+                    "reason": "failed",
+                    "dynamic_hint": self._mode is WebRetrievalMode.HTML_READABILITY,
+                },
             )
         return FetchResult(
             ok=True,
@@ -191,7 +195,9 @@ async def test_structured_output_applies_extract_after_read() -> None:
             request_id="req-extract",
             intent=WebIntent(intent=WebIntentType.EXTRACT, url="https://allowed.example.com/post"),
             constraints=QualityConstraints(structured_output=True),
-            extraction_schema=ExtractionSchema(name="default", json_schema={"properties": {"title": {"type": "string"}}}),
+            extraction_schema=ExtractionSchema(
+                name="default", json_schema={"properties": {"title": {"type": "string"}}}
+            ),
             allowed_domains=["allowed.example.com"],
         )
     )

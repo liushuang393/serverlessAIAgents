@@ -3,15 +3,15 @@
  * React + TypeScript プロジェクト用設定.
  */
 
-import js from '@eslint/js';
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
-import reactHooks from 'eslint-plugin-react-hooks';
-import reactRefresh from 'eslint-plugin-react-refresh';
+import js from "@eslint/js";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
 
 export default tseslint.config(
   // 無視するファイル・ディレクトリ
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ["dist", "node_modules"] },
 
   // JavaScript 推奨設定
   js.configs.recommended,
@@ -21,7 +21,7 @@ export default tseslint.config(
 
   // React + TypeScript ファイル用設定
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2024,
       globals: {
@@ -35,53 +35,52 @@ export default tseslint.config(
       },
     },
     plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
     },
     rules: {
       // React Hooks ルール
       ...reactHooks.configs.recommended.rules,
 
       // React Refresh ルール
-      'react-refresh/only-export-components': [
-        'warn',
+      "react-refresh/only-export-components": [
+        "warn",
         { allowConstantExport: true },
       ],
 
       // TypeScript ルール
-      '@typescript-eslint/no-unused-vars': [
-        'error',
+      "@typescript-eslint/no-unused-vars": [
+        "error",
         {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',  // catch の未使用変数も許可
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_", // catch の未使用変数も許可
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/explicit-module-boundary-types": "off",
 
       // 一般ルール
-      'no-console': 'error',
-      'no-debugger': 'error',
+      "no-console": "error",
+      "no-debugger": "error",
 
       // エラーハンドリング品質ルール
       // 空の catch ブロックを禁止（生吞み例外防止）
-      'no-empty': ['error', { allowEmptyCatch: false }],
+      "no-empty": ["error", { allowEmptyCatch: false }],
     },
   },
 
   // 設定ファイル用（Node.js 環境）
   {
-    files: ['*.config.{js,ts}', 'vite.config.ts'],
+    files: ["*.config.{js,ts}", "vite.config.ts"],
     languageOptions: {
       globals: {
         ...globals.node,
       },
     },
     rules: {
-      'no-console': 'off',
+      "no-console": "off",
     },
-  }
+  },
 );
-

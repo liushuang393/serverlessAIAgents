@@ -1,4 +1,4 @@
-"""Runtime settings for the Legacy Modernization GEO Platform."""
+"""Legacy Modernization GEO Platform の実行時設定。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ APP_CONFIG_PATH = APP_ROOT / "app_config.json"
 
 @dataclass(slots=True)
 class GeoPlatformSettings:
-    """Runtime settings resolved from environment variables."""
+    """環境変数と manifest から解決した実行時設定。"""
 
     app_root: Path
     host: str
@@ -30,12 +30,12 @@ class GeoPlatformSettings:
     frontend_dist_dir: Path
 
     def __post_init__(self) -> None:
-        """Ensure mutable runtime directories exist for injected settings too."""
+        """注入された設定でも必要ディレクトリが存在するようにする。"""
         self.ensure_directories()
 
     @classmethod
     def from_env(cls, *, app_root: Path | None = None) -> GeoPlatformSettings:
-        """Build settings from environment variables."""
+        """環境変数と manifest から設定を組み立てる。"""
         resolved_root = app_root or APP_ROOT
         runtime = resolve_app_runtime(
             APP_CONFIG_PATH,
@@ -44,6 +44,12 @@ class GeoPlatformSettings:
             backend_port_env="GEO_PLATFORM_PORT",
             backend_url_env="GEO_PLATFORM_PUBLIC_BASE_URL",
         )
+        backend_host = runtime.hosts.backend
+        backend_port = runtime.ports.api
+        backend_url = runtime.urls.backend
+        if backend_host is None or backend_port is None or backend_url is None:
+            msg = "GEO Platform の backend host / port / URL は app_config.json または明示 env で指定してください。"
+            raise RuntimeError(msg)
         api_key_env_name = os.getenv("GEO_PLATFORM_API_KEY_ENV", "GEO_PLATFORM_API_KEY")
         default_origins = _default_frontend_origins(runtime.ports.frontend)
         raw_origins = os.getenv("GEO_PLATFORM_CORS_ORIGINS", ",".join(default_origins))
@@ -69,26 +75,22 @@ class GeoPlatformSettings:
                 str(resolved_root / "data" / "published"),
             ),
         ).resolve()
-        public_base_url = os.getenv(
-            "GEO_PLATFORM_PUBLIC_BASE_URL",
-            runtime.urls.backend or f"http://localhost:{runtime.ports.api or 8100}",
-        )
         return cls(
             app_root=resolved_root,
-            host=os.getenv("GEO_PLATFORM_HOST", runtime.hosts.backend or "0.0.0.0"),
-            port=int(os.getenv("GEO_PLATFORM_PORT", str(runtime.ports.api or 8100))),
+            host=backend_host,
+            port=backend_port,
             api_key=os.getenv(api_key_env_name, ""),
             cors_origins=cors_origins,
             db_path=db_path,
             artifacts_dir=artifacts_dir,
             reports_dir=reports_dir,
             published_dir=published_dir,
-            public_base_url=public_base_url.rstrip("/"),
+            public_base_url=backend_url.rstrip("/"),
             frontend_dist_dir=(resolved_root / "frontend" / "dist").resolve(),
         )
 
     def ensure_directories(self) -> None:
-        """Create mutable directories required at runtime."""
+        """実行時に必要な可変ディレクトリを作成する。"""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir.mkdir(parents=True, exist_ok=True)

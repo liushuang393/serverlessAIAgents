@@ -178,7 +178,7 @@ class TestA2AServer:
 
         monkeypatch.setattr(
             "kernel.protocols.a2a_server.asyncio.get_event_loop",
-            lambda: _LoopStub(),
+            _LoopStub,
         )
 
         server = A2AServer()

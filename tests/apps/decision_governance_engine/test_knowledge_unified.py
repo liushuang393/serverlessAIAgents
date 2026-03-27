@@ -46,7 +46,7 @@ async def managers(async_engine):
     sf = async_sessionmaker(async_engine, expire_on_commit=False)
 
     @asynccontextmanager
-    async def _factory():  # type: ignore[return]
+    async def _factory():
         async with sf() as s:
             yield s
 

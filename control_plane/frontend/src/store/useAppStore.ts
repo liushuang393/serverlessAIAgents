@@ -4,7 +4,7 @@
  * App 一覧・サマリー・詳細のグローバル状態管理。
  */
 
-import { create } from 'zustand';
+import { create } from "zustand";
 import type {
   AggregatedAgent,
   AppDetail,
@@ -15,7 +15,7 @@ import type {
   SkillCategoryGroup,
   SkillInfo,
   TagInfo,
-} from '@/types';
+} from "@/types";
 import {
   fetchAgents,
   fetchAppDetail,
@@ -28,7 +28,7 @@ import {
   fetchSummary,
   refreshApps,
   searchSkills,
-} from '@/api/client';
+} from "@/api/client";
 
 interface LoadAppsOptions {
   waitForHealth?: boolean;
@@ -72,7 +72,10 @@ interface AppState {
   /** サマリーをロード */
   loadSummary: () => Promise<void>;
   /** App 詳細をロード */
-  loadAppDetail: (name: string, options?: LoadAppDetailOptions) => Promise<void>;
+  loadAppDetail: (
+    name: string,
+    options?: LoadAppDetailOptions,
+  ) => Promise<void>;
   /** ヘルスチェック実行 */
   checkHealth: (name: string) => Promise<void>;
   /** App 一覧を再スキャン */
@@ -114,12 +117,17 @@ export const useAppStore = create<AppState>((set) => ({
     try {
       const res = await fetchApps({ waitForHealth });
       if (silent) {
-        set((state) => ({ apps: res.apps, totalApps: res.total, loading: state.loading }));
+        set((state) => ({
+          apps: res.apps,
+          totalApps: res.total,
+          loading: state.loading,
+        }));
       } else {
         set({ apps: res.apps, totalApps: res.total, loading: false });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'App 一覧の取得に失敗';
+      const message =
+        err instanceof Error ? err.message : "App 一覧の取得に失敗";
       if (silent) {
         set({ error: message });
       } else {
@@ -133,7 +141,8 @@ export const useAppStore = create<AppState>((set) => ({
       const res = await fetchSummary();
       set({ summary: res });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'サマリーの取得に失敗';
+      const message =
+        err instanceof Error ? err.message : "サマリーの取得に失敗";
       set({ error: message });
     }
   },
@@ -146,7 +155,8 @@ export const useAppStore = create<AppState>((set) => ({
       });
       set({ selectedApp: detail, loading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'App 詳細の取得に失敗';
+      const message =
+        err instanceof Error ? err.message : "App 詳細の取得に失敗";
       set({ error: message, loading: false });
     }
   },
@@ -175,7 +185,7 @@ export const useAppStore = create<AppState>((set) => ({
         loading: false,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : '再スキャンに失敗';
+      const message = err instanceof Error ? err.message : "再スキャンに失敗";
       set({ error: message, loading: false });
     }
   },
@@ -190,7 +200,8 @@ export const useAppStore = create<AppState>((set) => ({
         loading: false,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Agent 一覧の取得に失敗';
+      const message =
+        err instanceof Error ? err.message : "Agent 一覧の取得に失敗";
       set({ error: message, loading: false });
     }
   },
@@ -209,7 +220,8 @@ export const useAppStore = create<AppState>((set) => ({
         loading: false,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Skill 一覧の取得に失敗';
+      const message =
+        err instanceof Error ? err.message : "Skill 一覧の取得に失敗";
       set({ error: message, loading: false });
     }
   },
@@ -220,7 +232,10 @@ export const useAppStore = create<AppState>((set) => ({
       const res = await fetchSkillsGrouped();
       set({ skillGroups: res.groups, loading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'カテゴリ別 Skill 一覧の取得に失敗';
+      const message =
+        err instanceof Error
+          ? err.message
+          : "カテゴリ別 Skill 一覧の取得に失敗";
       set({ error: message, loading: false });
     }
   },
@@ -231,7 +246,7 @@ export const useAppStore = create<AppState>((set) => ({
       const res = await searchSkills(tag);
       set({ skills: res.skills, loading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Skill 検索に失敗';
+      const message = err instanceof Error ? err.message : "Skill 検索に失敗";
       set({ error: message, loading: false });
     }
   },
@@ -243,11 +258,11 @@ export const useAppStore = create<AppState>((set) => ({
       const overview = await fetchRAGOverview();
       set({ ragOverview: overview, loading: false });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'RAG 情報の取得に失敗';
+      const message =
+        err instanceof Error ? err.message : "RAG 情報の取得に失敗";
       set({ error: message, loading: false });
     }
   },
 
   clearError: () => set({ error: null }),
 }));
-

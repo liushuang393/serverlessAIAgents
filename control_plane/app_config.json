@@ -154,9 +154,7 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "text"
-      ],
+      "allowed_modalities": ["text"],
       "extra_model_refs": []
     },
     "rag": {

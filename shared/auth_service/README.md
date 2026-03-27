@@ -214,35 +214,35 @@ AUTH_SERVICE_JWT_SECRET=<auth_service と同じ JWT_SECRET_KEY の値>
 
 ### 認可 API (`/auth/authorization`)
 
-| メソッド | パス | 説明 |
-| -------- | ---- | ---- |
-| `GET` | `/auth/authorization/roles` | ロール一覧 |
-| `GET` | `/auth/authorization/roles/{name}` | ロール詳細 |
-| `POST` | `/auth/authorization/roles` | ロール作成 |
-| `PUT` | `/auth/authorization/roles/{name}` | ロール更新 |
-| `DELETE` | `/auth/authorization/roles/{name}` | ロール削除 |
-| `GET` | `/auth/authorization/permissions` | パーミッション一覧 |
-| `POST` | `/auth/authorization/roles/{name}/permissions` | ロールにパーミッション割り当て |
-| `DELETE` | `/auth/authorization/roles/{name}/permissions/{perm}` | ロールからパーミッション削除 |
-| `GET` | `/auth/authorization/users/{user_id}/roles` | ユーザーロール一覧 |
-| `POST` | `/auth/authorization/users/{user_id}/roles` | ユーザーにロール割り当て |
-| `DELETE` | `/auth/authorization/users/{user_id}/roles/{role}` | ユーザーからロール解除 |
-| `GET` | `/auth/authorization/users/{user_id}/permissions` | ユーザー有効パーミッション |
-| `POST` | `/auth/authorization/check` | 認可チェック |
-| `POST` | `/auth/authorization/check-resource` | リソースアクセスチェック |
-| `GET` | `/auth/authorization/resource-permissions` | リソースパーミッション一覧 |
-| `POST` | `/auth/authorization/resource-permissions` | リソースパーミッション作成 |
-| `DELETE` | `/auth/authorization/resource-permissions/{id}` | リソースパーミッション削除 |
+| メソッド | パス                                                  | 説明                           |
+| -------- | ----------------------------------------------------- | ------------------------------ |
+| `GET`    | `/auth/authorization/roles`                           | ロール一覧                     |
+| `GET`    | `/auth/authorization/roles/{name}`                    | ロール詳細                     |
+| `POST`   | `/auth/authorization/roles`                           | ロール作成                     |
+| `PUT`    | `/auth/authorization/roles/{name}`                    | ロール更新                     |
+| `DELETE` | `/auth/authorization/roles/{name}`                    | ロール削除                     |
+| `GET`    | `/auth/authorization/permissions`                     | パーミッション一覧             |
+| `POST`   | `/auth/authorization/roles/{name}/permissions`        | ロールにパーミッション割り当て |
+| `DELETE` | `/auth/authorization/roles/{name}/permissions/{perm}` | ロールからパーミッション削除   |
+| `GET`    | `/auth/authorization/users/{user_id}/roles`           | ユーザーロール一覧             |
+| `POST`   | `/auth/authorization/users/{user_id}/roles`           | ユーザーにロール割り当て       |
+| `DELETE` | `/auth/authorization/users/{user_id}/roles/{role}`    | ユーザーからロール解除         |
+| `GET`    | `/auth/authorization/users/{user_id}/permissions`     | ユーザー有効パーミッション     |
+| `POST`   | `/auth/authorization/check`                           | 認可チェック                   |
+| `POST`   | `/auth/authorization/check-resource`                  | リソースアクセスチェック       |
+| `GET`    | `/auth/authorization/resource-permissions`            | リソースパーミッション一覧     |
+| `POST`   | `/auth/authorization/resource-permissions`            | リソースパーミッション作成     |
+| `DELETE` | `/auth/authorization/resource-permissions/{id}`       | リソースパーミッション削除     |
 
 ### 管理 API (`/auth/admin`)
 
-| メソッド | パス | 説明 |
-| -------- | ---- | ---- |
-| `GET` | `/auth/admin/users` | ユーザー一覧（ページネーション付き） |
-| `GET` | `/auth/admin/users/{user_id}` | ユーザー詳細 |
-| `PUT` | `/auth/admin/users/{user_id}` | ユーザー更新（ロール・有効/無効） |
-| `DELETE` | `/auth/admin/users/{user_id}` | ユーザー無効化（論理削除） |
-| `POST` | `/auth/admin/users/{user_id}/reset-password` | 管理者パスワードリセット |
+| メソッド | パス                                         | 説明                                 |
+| -------- | -------------------------------------------- | ------------------------------------ |
+| `GET`    | `/auth/admin/users`                          | ユーザー一覧（ページネーション付き） |
+| `GET`    | `/auth/admin/users/{user_id}`                | ユーザー詳細                         |
+| `PUT`    | `/auth/admin/users/{user_id}`                | ユーザー更新（ロール・有効/無効）    |
+| `DELETE` | `/auth/admin/users/{user_id}`                | ユーザー無効化（論理削除）           |
+| `POST`   | `/auth/admin/users/{user_id}/reset-password` | 管理者パスワードリセット             |
 
 ### ログイン例
 
@@ -304,11 +304,11 @@ curl -X POST http://localhost:8010/auth/refresh \
 
 3 つのデフォルトロールが初期データとしてシードされます。
 
-| ロール | パーミッション |
-| ------ | -------------- |
-| `admin` | `*`（全権限） |
-| `manager` | `users:read`, `roles:read`, `faq:read`, `faq:write`, `analytics:read`, `analytics:write`, `system:read` |
-| `employee` | `users:read`, `faq:read`, `analytics:read` |
+| ロール     | パーミッション                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------- |
+| `admin`    | `*`（全権限）                                                                                           |
+| `manager`  | `users:read`, `roles:read`, `faq:read`, `faq:write`, `analytics:read`, `analytics:write`, `system:read` |
+| `employee` | `users:read`, `faq:read`, `analytics:read`                                                              |
 
 ### ワイルドカードマッチング
 
@@ -330,12 +330,12 @@ curl -X POST http://localhost:8010/auth/refresh \
 
 `.env.example` で設定可能な認可関連の設定項目です。
 
-| 環境変数 | デフォルト | 説明 |
-| -------- | ---------- | ---- |
-| `AUTHZ_CACHE_TTL_SECONDS` | `300` | 認可キャッシュ TTL（秒） |
-| `AUTHZ_EMBED_PERMISSIONS_IN_JWT` | `true` | JWT にロール・パーミッションを埋め込む |
-| `AUTHZ_MAX_JWT_PERMISSIONS` | `50` | JWT に埋め込むパーミッション数の上限 |
-| `AUTHZ_DEFAULT_OPEN` | `true` | リソースパーミッション未設定時にフルアクセスを許可 |
+| 環境変数                         | デフォルト | 説明                                               |
+| -------------------------------- | ---------- | -------------------------------------------------- |
+| `AUTHZ_CACHE_TTL_SECONDS`        | `300`      | 認可キャッシュ TTL（秒）                           |
+| `AUTHZ_EMBED_PERMISSIONS_IN_JWT` | `true`     | JWT にロール・パーミッションを埋め込む             |
+| `AUTHZ_MAX_JWT_PERMISSIONS`      | `50`       | JWT に埋め込むパーミッション数の上限               |
+| `AUTHZ_DEFAULT_OPEN`             | `true`     | リソースパーミッション未設定時にフルアクセスを許可 |
 
 ---
 
@@ -434,19 +434,19 @@ shared/auth_service/api/
 
 リソースの標準定義を管理するマスタ API。各 App は自分のリソース（vector_db, business_db, kb 等）を登録する。
 
-| エンドポイント | メソッド | 認可 | 説明 |
-|---|---|---|---|
-| `/auth/authorization/resource-definitions` | GET | 認証済み | リソース定義一覧（app_name, resource_type でフィルタ可） |
-| `/auth/authorization/resource-definitions` | POST | `*`（admin） | リソース定義作成 |
-| `/auth/authorization/resource-definitions/{id}` | DELETE | `*`（admin） | リソース定義削除 |
+| エンドポイント                                  | メソッド | 認可         | 説明                                                     |
+| ----------------------------------------------- | -------- | ------------ | -------------------------------------------------------- |
+| `/auth/authorization/resource-definitions`      | GET      | 認証済み     | リソース定義一覧（app_name, resource_type でフィルタ可） |
+| `/auth/authorization/resource-definitions`      | POST     | `*`（admin） | リソース定義作成                                         |
+| `/auth/authorization/resource-definitions/{id}` | DELETE   | `*`（admin） | リソース定義削除                                         |
 
 ### スコープ解決 API
 
 ロールの許可スコープを解決する API。resource_permissions × resource_definitions を結合して返す。
 
-| エンドポイント | メソッド | 認可 | 説明 |
-|---|---|---|---|
-| `/auth/authorization/resolve-scopes` | GET | 認証済み | `role`, `app_name`, `resource_type` パラメータで許可スコープ一覧を取得 |
+| エンドポイント                       | メソッド | 認可     | 説明                                                                   |
+| ------------------------------------ | -------- | -------- | ---------------------------------------------------------------------- |
+| `/auth/authorization/resolve-scopes` | GET      | 認証済み | `role`, `app_name`, `resource_type` パラメータで許可スコープ一覧を取得 |
 
 **レスポンス例:**
 
@@ -471,12 +471,12 @@ shared/auth_service/api/
 
 起動時に以下のリソース定義が自動シードされる（`seed_faq_resource_definitions()`）:
 
-| resource_id | scope | backend_key | 説明 |
-|---|---|---|---|
-| `faq__default__common` | common | shared | 全社員アクセス可 |
-| `faq__default__manager` | manager | shared | マネージャー限定 |
-| `faq__default__sales` | sales | shared | 営業部限定 |
-| `faq__default__employee` | employee | shared | 一般社員限定 |
+| resource_id                  | scope        | backend_key  | 説明                |
+| ---------------------------- | ------------ | ------------ | ------------------- |
+| `faq__default__common`       | common       | shared       | 全社員アクセス可    |
+| `faq__default__manager`      | manager      | shared       | マネージャー限定    |
+| `faq__default__sales`        | sales        | shared       | 営業部限定          |
+| `faq__default__employee`     | employee     | shared       | 一般社員限定        |
 | `faq__default__confidential` | confidential | confidential | 機密（専用 Qdrant） |
 
 ---

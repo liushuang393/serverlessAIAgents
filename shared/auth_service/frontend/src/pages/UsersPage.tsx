@@ -220,7 +220,9 @@ export function UsersPage() {
       setTotal(data.total);
     } catch (err) {
       const msg =
-        err instanceof ApiError ? err.message : "ユーザー一覧の取得に失敗しました";
+        err instanceof ApiError
+          ? err.message
+          : "ユーザー一覧の取得に失敗しました";
       setAlert({ type: "error", msg });
     } finally {
       setLoading(false);
@@ -259,8 +261,7 @@ export function UsersPage() {
       setAlert({ type: "success", msg: "ユーザー情報を更新しました" });
       void loadUsers();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : "更新に失敗しました";
+      const msg = err instanceof ApiError ? err.message : "更新に失敗しました";
       setAlert({ type: "error", msg });
     }
   }
@@ -314,7 +315,9 @@ export function UsersPage() {
       setSelectedRole("");
     } catch (err) {
       const msg =
-        err instanceof ApiError ? err.message : "ロール情報の取得に失敗しました";
+        err instanceof ApiError
+          ? err.message
+          : "ロール情報の取得に失敗しました";
       setAlert({ type: "error", msg });
       setRoleTarget(null);
     }
@@ -518,13 +521,15 @@ export function UsersPage() {
       {roleTarget && (
         <div style={modalOverlay} onClick={() => setRoleTarget(null)}>
           <div style={modalCard} onClick={(e) => e.stopPropagation()}>
-            <div style={modalTitle}>
-              ロール管理: {roleTarget.display_name}
-            </div>
+            <div style={modalTitle}>ロール管理: {roleTarget.display_name}</div>
 
             <div style={{ marginBottom: "1rem" }}>
               <div
-                style={{ fontWeight: 600, fontSize: "0.85rem", marginBottom: "0.4rem" }}
+                style={{
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                  marginBottom: "0.4rem",
+                }}
               >
                 現在のロール
               </div>

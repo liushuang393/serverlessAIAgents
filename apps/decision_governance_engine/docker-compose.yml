@@ -4,12 +4,12 @@
 # PostgreSQL + Redis + バックエンド + フロントエンド
 #
 # ポート設定:
-#   1. .env を作成（自動生成: python -m control_plane.tools.port_manager decision_governance_engine）
-#   2. または下記デフォルト値を使用
+#   - frontend / backend の host / port は compose wrapper が app_config.json から注入
+#   - DB / Redis のポートのみ .env override を許容
 #
 # 使用方法:
 #   開発（ホットリロード）:
-#     docker-compose up -d
+#     conda run -n agentflow python scripts/compose.py publish
 #
 #   DB のみ起動:
 #     docker-compose up -d postgres-main redis
@@ -18,7 +18,7 @@
 #     docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 #
 #   停止:
-#     docker-compose down
+#     conda run -n agentflow python scripts/compose.py stop
 #
 #   データ永続化解除（ボリューム削除）:
 #     docker-compose down -v
@@ -90,12 +90,20 @@ services:
     container_name: dge-backend
     command:
       [
-        "sh",
-        "-c",
-        "exec uvicorn apps.decision_governance_engine.api:app --host ${DGE_HOST:-0.0.0.0} --port ${DGE_PORT:-8000}",
+        "python",
+        "-m",
+        "kernel.runtime.uvicorn_launcher",
+        "--config",
+        "apps/decision_governance_engine/app_config.json",
+        "--app",
+        "apps.decision_governance_engine.api:app",
+        "--host-env",
+        "DGE_HOST",
+        "--port-env",
+        "DGE_PORT",
       ]
     ports:
-      - "${API_PORT:-8001}:${DGE_PORT:-8000}"
+      - "${DGE_PORT}:${DGE_PORT}"
     environment:
       # LLM 設定（.env から読み込み）
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -107,8 +115,8 @@ services:
       # アプリ設定
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENABLE_RAG=${ENABLE_RAG:-true}
-      - DGE_HOST=${DGE_HOST:-0.0.0.0}
-      - DGE_PORT=${DGE_PORT:-8000}
+      - DGE_HOST=${DGE_HOST}
+      - DGE_PORT=${DGE_PORT}
       # データベース設定
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-dge}:${POSTGRES_PASSWORD:-dge_password}@postgres-main:5432/${POSTGRES_DB:-decision_governance}
       - REDIS_URL=redis://redis:6379/0
@@ -137,7 +145,7 @@ services:
           "CMD",
           "python",
           "-c",
-          'import os, urllib.request; urllib.request.urlopen(f''http://localhost:{os.environ.get("DGE_PORT", "8000")}/api/health'')',
+          'import os, urllib.request; urllib.request.urlopen(f''http://localhost:{os.environ["DGE_PORT"]}/api/health'')',
         ]
       interval: 30s
       timeout: 10s
@@ -162,7 +170,7 @@ services:
     #   開発: docker-compose.dev.yml  → 5174
     #   本番: docker-compose.prod.yml → 80
     ports:
-      - "${FRONTEND_PORT:-3001}:80"
+      - "${FRONTEND_PORT}:80"
     depends_on:
       backend:
         condition: service_healthy

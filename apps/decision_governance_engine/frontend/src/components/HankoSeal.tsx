@@ -5,7 +5,7 @@
  * 設計: SVGベース、縦書き対応、伝統的な朱色
  */
 
-import React from 'react';
+import React from "react";
 
 interface HankoSealProps {
   /** 表示する名前（姓名） */
@@ -20,7 +20,7 @@ interface HankoSealProps {
 
 /**
  * 日本式判子シールコンポーネント.
- * 
+ *
  * 名前を縦書きで表示し、伝統的な朱色（vermillion）で描画。
  */
 export const HankoSeal: React.FC<HankoSealProps> = ({
@@ -42,18 +42,18 @@ export const HankoSeal: React.FC<HankoSealProps> = ({
   };
 
   const surname = extractSurname(name);
-  
+
   // 縦書き用に文字を分割
-  const chars = surname.split('');
-  
+  const chars = surname.split("");
+
   // 朱色のバリエーション（リアルな印鑑風）
-  const vermillion = '#C53030';
-  const vermillionDark = '#9B2C2C';
-  const vermillionLight = '#E53E3E';
+  const vermillion = "#C53030";
+  const vermillionDark = "#9B2C2C";
+  const vermillionLight = "#E53E3E";
 
   return (
     <div
-      className={`inline-flex flex-col items-center ${animated ? 'animate-stamp' : ''}`}
+      className={`inline-flex flex-col items-center ${animated ? "animate-stamp" : ""}`}
       style={{ width: size }}
     >
       <svg
@@ -62,7 +62,9 @@ export const HankoSeal: React.FC<HankoSealProps> = ({
         height={size}
         className="drop-shadow-lg"
         style={{
-          filter: animated ? undefined : 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))',
+          filter: animated
+            ? undefined
+            : "drop-shadow(2px 2px 4px rgba(0,0,0,0.3))",
         }}
       >
         <defs>
@@ -82,7 +84,7 @@ export const HankoSeal: React.FC<HankoSealProps> = ({
               yChannelSelector="G"
             />
           </filter>
-          
+
           {/* グラデーション */}
           <radialGradient id="hanko-gradient" cx="30%" cy="30%" r="70%">
             <stop offset="0%" stopColor={vermillionLight} />
@@ -93,9 +95,23 @@ export const HankoSeal: React.FC<HankoSealProps> = ({
           <filter id="inner-shadow">
             <feOffset dx="0" dy="1" />
             <feGaussianBlur stdDeviation="1" result="offset-blur" />
-            <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
-            <feFlood floodColor={vermillionDark} floodOpacity="0.5" result="color" />
-            <feComposite operator="in" in="color" in2="inverse" result="shadow" />
+            <feComposite
+              operator="out"
+              in="SourceGraphic"
+              in2="offset-blur"
+              result="inverse"
+            />
+            <feFlood
+              floodColor={vermillionDark}
+              floodOpacity="0.5"
+              result="color"
+            />
+            <feComposite
+              operator="in"
+              in="color"
+              in2="inverse"
+              result="shadow"
+            />
             <feComposite operator="over" in="shadow" in2="SourceGraphic" />
           </filter>
         </defs>
@@ -227,7 +243,7 @@ export const HankoSeal: React.FC<HankoSealProps> = ({
 
 /**
  * 署名エリアコンポーネント.
- * 
+ *
  * 判子と署名者情報を組み合わせて表示。
  */
 interface SignatureAreaProps {
@@ -257,13 +273,11 @@ export const SignatureArea: React.FC<SignatureAreaProps> = ({
 
       {/* 署名情報 */}
       <div className="flex-1">
-        <div className="text-lg font-bold text-white mb-1">
-          {signerName}
-        </div>
+        <div className="text-lg font-bold text-white mb-1">{signerName}</div>
         {(department || position) && (
           <div className="text-sm text-slate-400">
             {department}
-            {department && position && ' / '}
+            {department && position && " / "}
             {position}
           </div>
         )}
@@ -285,4 +299,3 @@ export const SignatureArea: React.FC<SignatureAreaProps> = ({
     </div>
   );
 };
-

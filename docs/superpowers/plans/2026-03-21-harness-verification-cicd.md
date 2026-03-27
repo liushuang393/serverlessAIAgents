@@ -13,41 +13,45 @@
 ## 現状分析サマリ
 
 ### 既に存在するもの (✅)
-| ツール | ファイル | 統合先 |
-|--------|----------|--------|
-| レイヤー境界チェック | `scripts/check_layer_boundaries.py` | check.sh lint, pytest |
-| プロバイダ直接 import 禁止 | `scripts/check_no_direct_provider_calls.py` | check.sh lint, pytest |
-| 境界テスト (pytest) | `tests/contracts/test_layer_boundaries.py` | pytest |
-| 境界スクリプト統合テスト | `tests/integration/boundary/test_boundary_scripts.py` | pytest |
+
+| ツール                     | ファイル                                              | 統合先                |
+| -------------------------- | ----------------------------------------------------- | --------------------- |
+| レイヤー境界チェック       | `scripts/check_layer_boundaries.py`                   | check.sh lint, pytest |
+| プロバイダ直接 import 禁止 | `scripts/check_no_direct_provider_calls.py`           | check.sh lint, pytest |
+| 境界テスト (pytest)        | `tests/contracts/test_layer_boundaries.py`            | pytest                |
+| 境界スクリプト統合テスト   | `tests/integration/boundary/test_boundary_scripts.py` | pytest                |
 
 ### 不足しているもの (❌)
-| ギャップ | 影響 |
-|----------|------|
-| pre-commit に境界チェック hook なし | ローカルコミット時に違反が素通り |
-| GitHub Actions で境界スクリプト未直接呼出 | CI が pytest 経由の間接検出のみ |
-| App 品質検証ツールなし | 各 app のフレームワーク活用度が不明 |
-| ルールコンプライアンス総合レポートなし | AI/人間が全ルール遵守しているか一覧不能 |
-| code-rules にアーキ検証ツールの記載なし | 開発者がツールの存在を知らない |
+
+| ギャップ                                  | 影響                                    |
+| ----------------------------------------- | --------------------------------------- |
+| pre-commit に境界チェック hook なし       | ローカルコミット時に違反が素通り        |
+| GitHub Actions で境界スクリプト未直接呼出 | CI が pytest 経由の間接検出のみ         |
+| App 品質検証ツールなし                    | 各 app のフレームワーク活用度が不明     |
+| ルールコンプライアンス総合レポートなし    | AI/人間が全ルール遵守しているか一覧不能 |
+| code-rules にアーキ検証ツールの記載なし   | 開発者がツールの存在を知らない          |
 
 ### Apps Harness 活用状況
-| App | フレームワーク活用 | レイヤー準拠 | テスト | 品質 |
-|-----|-------------------|-------------|--------|------|
-| code_migration_assistant | ✅ PipelineEngine + @agent | ✅ | ✅ | Good |
-| decision_governance_engine | ✅ PipelineEngine + ResilientAgent | ✅ | ✅ | Good |
-| faq_system | ✅ SimpleEngine + AgentBlock + RAG | ✅ | ✅ | Good |
-| market_trend_monitor | ✅ PipelineEngine + create_flow | ✅ | ✅ | Good |
-| messaging_hub | ✅ Coordinator + ResilientAgent | ✅ | ✅ | Good |
-| design_skills_engine | ✅ Re-export (kernel) | ✅ | ❌ テストなし | Partial |
-| legacy_modernization_geo_platform | ✅ Supervisor 11 agents | ✅ | ✅ | Moderate |
-| orchestration_guardian | ⚠️ SimpleEngine 最小 | ✅ | ❌ テストなし | Minimal |
-| auth_service | ❌ モデルのみ | ❌ 構造不足 | ❌ | Critical |
-| dev_studio | ❌ プレースホルダー | ❌ 不完全 | ❌ | Critical |
+
+| App                               | フレームワーク活用                 | レイヤー準拠 | テスト        | 品質     |
+| --------------------------------- | ---------------------------------- | ------------ | ------------- | -------- |
+| code_migration_assistant          | ✅ PipelineEngine + @agent         | ✅           | ✅            | Good     |
+| decision_governance_engine        | ✅ PipelineEngine + ResilientAgent | ✅           | ✅            | Good     |
+| faq_system                        | ✅ SimpleEngine + AgentBlock + RAG | ✅           | ✅            | Good     |
+| market_trend_monitor              | ✅ PipelineEngine + create_flow    | ✅           | ✅            | Good     |
+| messaging_hub                     | ✅ Coordinator + ResilientAgent    | ✅           | ✅            | Good     |
+| design_skills_engine              | ✅ Re-export (kernel)              | ✅           | ❌ テストなし | Partial  |
+| legacy_modernization_geo_platform | ✅ Supervisor 11 agents            | ✅           | ✅            | Moderate |
+| orchestration_guardian            | ⚠️ SimpleEngine 最小               | ✅           | ❌ テストなし | Minimal  |
+| auth_service                      | ❌ モデルのみ                      | ❌ 構造不足  | ❌            | Critical |
+| dev_studio                        | ❌ プレースホルダー                | ❌ 不完全    | ❌            | Critical |
 
 ---
 
 ## ファイル構造
 
 ### 新規作成
+
 ```
 scripts/
   check_app_compliance.py       # App 品質 & フレームワーク活用度チェッカー
@@ -59,6 +63,7 @@ tests/
 ```
 
 ### 修正
+
 ```
 .pre-commit-config.yaml         # 境界チェック + App コンプライアンス hook 追加
 .github/workflows/quality-gate.yml  # 明示的な境界 & コンプライアンスステップ追加
@@ -74,10 +79,12 @@ code-rules/project/ci-cd-guidelines.md  # 検証パイプライン記載更新
 **目的:** 各 app がフレームワーク規約を守っているかを自動検証するスクリプト
 
 **Files:**
+
 - Create: `scripts/check_app_compliance.py`
 - Test: `tests/integration/boundary/test_app_compliance.py`
 
 ### 検証項目
+
 1. `app_config.json` 存在 & 必須フィールド (`name`, `version`, `agents`)
 2. エントリーポイント (`main.py` or `__init__.py`) 存在
 3. フレームワーク import パターン (kernel/harness/infrastructure からの import)
@@ -358,10 +365,12 @@ git commit -m "feat: Add app compliance checker for framework usage validation"
 **目的:** CLAUDE.md の全ルールカテゴリについて遵守状況を集計する統合レポーター
 
 **Files:**
+
 - Create: `scripts/check_rules_compliance.py`
 - Test: `tests/integration/boundary/test_rules_compliance.py`
 
 ### 検証項目
+
 1. レイヤー境界違反数 (既存スクリプト呼出)
 2. プロバイダ直接 import 違反数 (既存スクリプト呼出)
 3. ファイルサイズ違反 (1000行超)
@@ -703,6 +712,7 @@ git commit -m "feat: Add rules compliance reporter for comprehensive quality gat
 **目的:** ローカルコミット時に境界違反を防止
 
 **Files:**
+
 - Modify: `.pre-commit-config.yaml`
 
 - [ ] **Step 1: 追加する hook を確認**
@@ -710,30 +720,30 @@ git commit -m "feat: Add rules compliance reporter for comprehensive quality gat
 以下の local hooks を `.pre-commit-config.yaml` の Python セクション末尾に追加:
 
 ```yaml
-  # ========================================
-  # Python: アーキテクチャ境界チェック
-  # ========================================
-  - repo: local
-    hooks:
-      # NOTE: language: system は $PATH 上の python を使う。
-      # conda 環境の python を確実に使うため entry に conda run を指定。
-      # pre-commit 自体が language: python の場合は default_language_version が効くが、
-      # language: system では効かないため明示的に conda run を使う。
-      - id: check-layer-boundaries
-        name: "Arch: Layer boundary check"
-        language: system
-        entry: conda run --no-banner -n agentflow python scripts/check_layer_boundaries.py
-        pass_filenames: false
-        types: [python]
-        always_run: true
+# ========================================
+# Python: アーキテクチャ境界チェック
+# ========================================
+- repo: local
+  hooks:
+    # NOTE: language: system は $PATH 上の python を使う。
+    # conda 環境の python を確実に使うため entry に conda run を指定。
+    # pre-commit 自体が language: python の場合は default_language_version が効くが、
+    # language: system では効かないため明示的に conda run を使う。
+    - id: check-layer-boundaries
+      name: "Arch: Layer boundary check"
+      language: system
+      entry: conda run --no-banner -n agentflow python scripts/check_layer_boundaries.py
+      pass_filenames: false
+      types: [python]
+      always_run: true
 
-      - id: check-no-direct-provider
-        name: "Arch: Provider SDK direct import check"
-        language: system
-        entry: conda run --no-banner -n agentflow python scripts/check_no_direct_provider_calls.py
-        pass_filenames: false
-        types: [python]
-        always_run: true
+    - id: check-no-direct-provider
+      name: "Arch: Provider SDK direct import check"
+      language: system
+      entry: conda run --no-banner -n agentflow python scripts/check_no_direct_provider_calls.py
+      pass_filenames: false
+      types: [python]
+      always_run: true
 ```
 
 - [ ] **Step 2: .pre-commit-config.yaml を編集**
@@ -762,6 +772,7 @@ git commit -m "feat: Add architecture boundary checks to pre-commit hooks"
 **目的:** CI/CD で境界スクリプトを直接呼び出し、pytest 間接検出への依存を排除
 
 **Files:**
+
 - Modify: `.github/workflows/quality-gate.yml`
 
 - [ ] **Step 1: 追加するステップを確認**
@@ -769,16 +780,16 @@ git commit -m "feat: Add architecture boundary checks to pre-commit hooks"
 Lint (Ruff) と Type check の間に以下を挿入:
 
 ```yaml
-      - name: Architecture boundary check
-        run: |
-          python scripts/check_layer_boundaries.py
-          python scripts/check_no_direct_provider_calls.py
+- name: Architecture boundary check
+  run: |
+    python scripts/check_layer_boundaries.py
+    python scripts/check_no_direct_provider_calls.py
 
-      - name: App compliance check
-        run: python scripts/check_app_compliance.py
+- name: App compliance check
+  run: python scripts/check_app_compliance.py
 
-      - name: Rules compliance check
-        run: python scripts/check_rules_compliance.py --json
+- name: Rules compliance check
+  run: python scripts/check_rules_compliance.py --json
 ```
 
 - [ ] **Step 2: quality-gate.yml を編集**
@@ -855,10 +866,10 @@ NOTE: 既存 lint.yml は `actions/setup-python@v6` を使用 (quality-gate は 
 `.github/workflows/lint.yml` の `Run Ruff (lint)` ステップの後に以下を挿入:
 
 ```yaml
-      - name: Architecture boundary check
-        run: |
-          python scripts/check_layer_boundaries.py
-          python scripts/check_no_direct_provider_calls.py
+- name: Architecture boundary check
+  run: |
+    python scripts/check_layer_boundaries.py
+    python scripts/check_no_direct_provider_calls.py
 ```
 
 - [ ] **Step 4: コミット**
@@ -875,6 +886,7 @@ git commit -m "feat: Add explicit architecture & compliance checks to CI/CD"
 **目的:** ローカル `./check.sh all` で App コンプライアンスもチェックされるようにする
 
 **Files:**
+
 - Modify: `check.sh`
 
 - [ ] **Step 1: check.sh の do_lint() 関数末尾に追加**
@@ -918,6 +930,7 @@ git commit -m "feat: Integrate app compliance check into check.sh"
 **目的:** AI/開発者が検証ツールの存在と使い方を把握できるようにする
 
 **Files:**
+
 - Modify: `code-rules/CLAUDE.md`
 
 - [ ] **Step 1: 「使用ツール」セクションに追加**
@@ -939,19 +952,21 @@ git commit -m "feat: Integrate app compliance check into check.sh"
 
 ## ツール一覧
 
-| ツール | スクリプト | 検証内容 | 統合先 |
-|--------|-----------|---------|--------|
-| レイヤー境界チェック | `scripts/check_layer_boundaries.py` | 7層の import 方向ルール | check.sh, pre-commit, CI |
-| プロバイダ直接 import 禁止 | `scripts/check_no_direct_provider_calls.py` | LLM SDK 直接 import 禁止 | check.sh, pre-commit, CI |
-| App コンプライアンス | `scripts/check_app_compliance.py` | 各 app のフレームワーク活用度 | check.sh, CI |
-| ルールコンプライアンス | `scripts/check_rules_compliance.py` | CLAUDE.md ルール総合遵守 | check.sh, CI |
+| ツール                     | スクリプト                                  | 検証内容                      | 統合先                   |
+| -------------------------- | ------------------------------------------- | ----------------------------- | ------------------------ |
+| レイヤー境界チェック       | `scripts/check_layer_boundaries.py`         | 7層の import 方向ルール       | check.sh, pre-commit, CI |
+| プロバイダ直接 import 禁止 | `scripts/check_no_direct_provider_calls.py` | LLM SDK 直接 import 禁止      | check.sh, pre-commit, CI |
+| App コンプライアンス       | `scripts/check_app_compliance.py`           | 各 app のフレームワーク活用度 | check.sh, CI             |
+| ルールコンプライアンス     | `scripts/check_rules_compliance.py`         | CLAUDE.md ルール総合遵守      | check.sh, CI             |
 
 ## 実行方法
 
 ### 一括実行
+
 ./check.sh all
 
 ### 個別実行
+
 conda run -n agentflow python scripts/check_layer_boundaries.py
 conda run -n agentflow python scripts/check_no_direct_provider_calls.py
 conda run -n agentflow python scripts/check_app_compliance.py
@@ -962,10 +977,12 @@ conda run -n agentflow python scripts/check_rules_compliance.py --json --strict
 ## CI/CD 統合
 
 ### pre-commit (ローカル)
+
 - `check-layer-boundaries`: コミット前にレイヤー境界違反を検出
 - `check-no-direct-provider`: コミット前にプロバイダ直接 import を検出
 
 ### GitHub Actions (CI)
+
 - `quality-gate.yml`: Lint → **Architecture boundary** → **App compliance** → **Rules compliance** → Type check → Security → Tests
 - 境界違反は pytest 経由の間接検出ではなく、スクリプト直接呼出で明示的にチェック
 
@@ -973,13 +990,13 @@ conda run -n agentflow python scripts/check_rules_compliance.py --json --strict
 
 `scripts/check_rules_compliance.py` の `THRESHOLDS` で管理:
 
-| カテゴリ | 閾値 | 説明 |
-|---------|------|------|
-| layer_boundary_violations | 25 | レイヤー境界違反数 (段階的に 0 へ) |
-| provider_direct_imports | 0 | プロバイダ直接 import (即時ゼロ) |
-| file_size_violations | 5 | 1000行超ファイル数 |
-| type_ignore_without_reason | 20 | 理由なし type: ignore |
-| cast_usage | 10 | cast() 使用数 |
+| カテゴリ                   | 閾値 | 説明                               |
+| -------------------------- | ---- | ---------------------------------- |
+| layer_boundary_violations  | 25   | レイヤー境界違反数 (段階的に 0 へ) |
+| provider_direct_imports    | 0    | プロバイダ直接 import (即時ゼロ)   |
+| file_size_violations       | 5    | 1000行超ファイル数                 |
+| type_ignore_without_reason | 20   | 理由なし type: ignore              |
+| cast_usage                 | 10   | cast() 使用数                      |
 
 ## AI コーディング助手向け
 
@@ -1005,6 +1022,7 @@ git commit -m "docs: Add architecture validation tools documentation to code-rul
 **目的:** CI/CD ガイドラインにアーキ検証ステージを正式に記載
 
 **Files:**
+
 - Modify: `code-rules/project/ci-cd-guidelines.md`
 
 - [ ] **Step 1: ci-cd-guidelines.md を読む**
@@ -1020,16 +1038,19 @@ Run: 対象ファイルの「品質ゲート」セクションを確認
 
 **実行タイミング:** Lint 後、Type check 前
 **ツール:**
+
 - `python scripts/check_layer_boundaries.py` - 7層境界ルール
 - `python scripts/check_no_direct_provider_calls.py` - プロバイダ隔離
 - `python scripts/check_app_compliance.py` - App フレームワーク準拠
 - `python scripts/check_rules_compliance.py` - ルール総合遵守
 
 **ブロッキング条件:**
+
 - レイヤー境界違反 > 25 (段階的に 0 へ削減)
 - プロバイダ直接 import > 0 (即時ブロック)
 
 **非ブロッキング (レポートのみ):**
+
 - App コンプライアンス (改善追跡用)
 - ルールコンプライアンス (トレンド監視)
 ```

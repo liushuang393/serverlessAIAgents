@@ -54,7 +54,7 @@ def gateway() -> MessageGateway:
     """Create gateway fixture."""
     hub = WebSocketHub()
     chatbot = ChatBotSkill()
-    chatbot._llm = MockLLM()  # type: ignore[attr-defined]
+    chatbot._llm = MockLLM()
     return MessageGateway(hub, chatbot)
 
 

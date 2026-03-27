@@ -20,6 +20,7 @@
 ## 🏗️ 7コア層 + Apps外層遵守
 
 ### レイヤー境界の厳格遵守
+
 AgentFlow の7コア層 + Apps外層における依存方向を厳守します。
 
 ```python
@@ -41,6 +42,7 @@ class AgentBlock:  # Agent層
 ```
 
 ### インターフェース経由の結合
+
 層間結合は必ずインターフェースを経由します。
 
 ```python
@@ -65,6 +67,7 @@ class PublishService:
 ## 🌐 プロトコル統合パターン
 
 ### 4プロトコルの統一操作
+
 MCP/A2A/AG-UI/A2UI の4プロトコルを統一APIで操作します。
 
 ```python
@@ -87,6 +90,7 @@ await adapter.update_component("a2ui", component_id, {"props": new_props})
 ```
 
 ### @auto_adapt デコレータ使用
+
 プロトコル自動変換を活用します。
 
 ```python
@@ -117,6 +121,7 @@ a2a_result = await agent.run_via_a2a(a2a_message)
 ## 🔌 統一Provider使用
 
 ### 松耦合Provider API
+
 具体的なプロバイダー実装を知らずにサービスを使用します。
 
 ```python
@@ -142,6 +147,7 @@ value = await cache.get("key")
 ```
 
 ### 環境変数ベース設定
+
 環境変数から自動検出・設定を行います。
 
 ```bash
@@ -181,6 +187,7 @@ vdb = get_vectordb()  # PINECONE_API_KEY があれば Pinecone、
 ## 🤖 Agent開発パターン
 
 ### @agent デコレータ優先
+
 最もシンプルなAgent定義方式を使用します。
 
 ```python
@@ -220,6 +227,7 @@ class QAAgent:
 ```
 
 ### AgentBlock 基底クラス使用
+
 複雑なAgentには基底クラスを使用します。
 
 ```python
@@ -267,6 +275,7 @@ class ComplexAgent(AgentBlock):
 ## ⚡ 非同期I/O強制
 
 ### 全てのI/Oを非同期化
+
 ブロッキングI/Oを一切禁止します。
 
 ```python
@@ -296,6 +305,7 @@ class BadDataLoader:
 ```
 
 ### async/await パターン強制
+
 全てのメソッドを非同期化します。
 
 ```python
@@ -340,6 +350,7 @@ class AsyncService:
 ## 🧬 型安全強化
 
 ### 100% 型アノテーション
+
 全ての関数/メソッドに型アノテーションを付けます。
 
 ```python
@@ -375,6 +386,7 @@ class CodeGenerator:
 ```
 
 ### Protocol 活用
+
 動的構造にはProtocolを使用します。
 
 ```python
@@ -414,6 +426,7 @@ async def execute_tool(tool: Tool, payload: dict[str, Any]) -> dict[str, Any]:
 ## 🧠 Skills自動進化対応
 
 ### Skills エンジン統合
+
 越用越厉害の自動進化システムに対応します。
 
 ```python
@@ -449,6 +462,7 @@ class SkillAwareAgent(AgentBlock):
 ```
 
 ### Skill 定義パターン
+
 再利用可能なSkillを定義します。
 
 ```python
@@ -493,6 +507,7 @@ class PDFExtractorSkill:
 ## ✅ 自動化チェック
 
 ### AgentFlow 固有検証スクリプト
+
 ```python
 #!/usr/bin/env python3
 # scripts/validate_agentflow_patterns.py
@@ -645,6 +660,7 @@ if __name__ == "__main__":
 ```
 
 ### 7コア層 + Apps外層依存検証
+
 ```python
 #!/usr/bin/env python3
 # scripts/validate_layer_dependencies.py
@@ -769,14 +785,14 @@ if __name__ == "__main__":
 
 ## 📋 AgentFlow Python 固有ルール チートシート
 
-| ルール | 必須 | 例 | 理由 |
-|--------|------|-----|------|
-| **7コア層遵守** | ✅ | 上位→下位のみ | アーキテクチャ分離 |
-| **統一Provider** | ✅ | `get_llm()` | 松耦合設計 |
-| **@agent優先** | ✅ | `@agent class MyAgent` | シンプルさ |
-| **非同期強制** | ✅ | `async def run()` | スケーラビリティ |
-| **100%型アノテーション** | ✅ | `def func(arg: Type) -> Return` | 型安全 |
-| **Skills統合** | ✅ | `SkillEngine(auto_learn=True)` | 自動進化 |
-| **Protocol活用** | ✅ | `class Tool(Protocol)` | 動的構造 |
+| ルール                   | 必須 | 例                              | 理由               |
+| ------------------------ | ---- | ------------------------------- | ------------------ |
+| **7コア層遵守**          | ✅   | 上位→下位のみ                   | アーキテクチャ分離 |
+| **統一Provider**         | ✅   | `get_llm()`                     | 松耦合設計         |
+| **@agent優先**           | ✅   | `@agent class MyAgent`          | シンプルさ         |
+| **非同期強制**           | ✅   | `async def run()`               | スケーラビリティ   |
+| **100%型アノテーション** | ✅   | `def func(arg: Type) -> Return` | 型安全             |
+| **Skills統合**           | ✅   | `SkillEngine(auto_learn=True)`  | 自動進化           |
+| **Protocol活用**         | ✅   | `class Tool(Protocol)`          | 動的構造           |
 
-*最終更新: 2026-01-19 | BizCore 7コア層 + Apps外層 & 4プロトコル統合*
+_最終更新: 2026-01-19 | BizCore 7コア層 + Apps外層 & 4プロトコル統合_

@@ -25,4 +25,3 @@ triggers:
 - **validate_input**: 入力データのバリデーション
 - **extract_keywords**: 記事からキーワードを抽出
 - **generate_report_skeleton**: トレンドレポートの骨格を生成
-

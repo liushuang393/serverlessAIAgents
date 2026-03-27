@@ -65,7 +65,7 @@ class TestSkillMetadata:
     def test_from_dict_non_dict_raises(self) -> None:
         """辞書以外の入力で TypeError が発生することをテスト."""
         with pytest.raises(TypeError, match="must be a dict"):
-            SkillMetadata.from_dict("not a dict")  # type: ignore[arg-type]
+            SkillMetadata.from_dict("not a dict")
 
     def test_from_dict_claude_code_cli_kebab_case(self) -> None:
         """Claude Code CLI kebab-case fields are parsed correctly."""

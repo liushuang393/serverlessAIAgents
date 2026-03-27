@@ -3,6 +3,7 @@
 import ast
 from pathlib import Path
 
+
 # plugins/packs/ は外部プラグインのため除外
 EXCLUDE_PREFIXES = {"kernel/plugins/packs"}
 
@@ -27,7 +28,6 @@ def test_full_kernel_no_top_level_infrastructure_import() -> None:
                 and node.col_offset == 0
             ):
                 violations.append(f"{py_file}:{node.lineno}: from {node.module}")
-    assert violations == [], (
-        f"infrastructure トップレベル import が {len(violations)} 箇所残存:\n"
-        + "\n".join(violations)
+    assert violations == [], f"infrastructure トップレベル import が {len(violations)} 箇所残存:\n" + "\n".join(
+        violations
     )

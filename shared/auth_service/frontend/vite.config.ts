@@ -6,7 +6,9 @@ import { defineConfig } from "vite";
 const appConfig = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "../app_config.json"), "utf-8"),
 );
-const backendUrl = appConfig.runtime?.urls?.backend ?? `http://localhost:${appConfig.ports?.api ?? 8010}`;
+const backendUrl =
+  appConfig.runtime?.urls?.backend ??
+  `http://localhost:${appConfig.ports?.api ?? 8010}`;
 const frontendPort = appConfig.ports?.frontend ?? 3010;
 const frontendHost = appConfig.runtime?.hosts?.frontend ?? "0.0.0.0";
 

@@ -12,33 +12,34 @@
 
 ```json
 {
-    "phase_1": {
-        "name": "検証フェーズ（30日間）",
-        "prohibition": "この期間に本格構築を開始してはならない",
-        "focus": "仮説検証のみ"
-    }
+  "phase_1": {
+    "name": "検証フェーズ（30日間）",
+    "prohibition": "この期間に本格構築を開始してはならない",
+    "focus": "仮説検証のみ"
+  }
 }
 ```
 
 ### 2. 各フェーズに「やらないこと」を含める
 
 全てのフェーズに以下を含めること:
+
 - 実施内容
 - **やらないこと（禁止事項）**
 - 停止条件
 
 ```json
 {
-    "phases": [
-        {
-            "name": "フェーズ1: 制約マッピング",
-            "duration_days": 14,
-            "actions": ["対象国の通信規制調査", "既存SaaSの制約比較"],
-            "prohibitions": ["ベンダー選定を行わない", "見積もりを取らない"],
-            "success_criteria": ["規制要件の一覧化完了"],
-            "stop_conditions": ["規制が想定より緩い場合 → SaaS再検討"]
-        }
-    ]
+  "phases": [
+    {
+      "name": "フェーズ1: 制約マッピング",
+      "duration_days": 14,
+      "actions": ["対象国の通信規制調査", "既存SaaSの制約比較"],
+      "prohibitions": ["ベンダー選定を行わない", "見積もりを取らない"],
+      "success_criteria": ["規制要件の一覧化完了"],
+      "stop_conditions": ["規制が想定より緩い場合 → SaaS再検討"]
+    }
+  ]
 }
 ```
 
@@ -48,16 +49,16 @@
 
 ```json
 {
-    "abort_conditions": [
-        {
-            "condition": "2社以上のSaaSが規制要件を満たすと判明",
-            "action": "自社構築を中止し、SaaS比較に切り替え"
-        },
-        {
-            "condition": "初期見積もりが予算の2倍を超える",
-            "action": "スコープ縮小または中止を検討"
-        }
-    ]
+  "abort_conditions": [
+    {
+      "condition": "2社以上のSaaSが規制要件を満たすと判明",
+      "action": "自社構築を中止し、SaaS比較に切り替え"
+    },
+    {
+      "condition": "初期見積もりが予算の2倍を超える",
+      "action": "スコープ縮小または中止を検討"
+    }
+  ]
 }
 ```
 
@@ -78,29 +79,28 @@
 
 ```json
 {
-    "abort_conditions": [
-        {
-            "condition": "中止条件",
-            "action": "中止時のアクション"
-        }
-    ],
-    "phases": [
-        {
-            "phase_id": 1,
-            "name": "フェーズ名（具体的に）",
-            "duration_days": 14,
-            "actions": ["具体的アクション1", "具体的アクション2"],
-            "prohibitions": ["やらないこと1", "やらないこと2"],
-            "deliverables": ["成果物1"],
-            "success_criteria": ["成功基準1"],
-            "stop_conditions": ["停止条件1"]
-        }
-    ],
-    "resource_requirements": {
-        "team_size": 3,
-        "key_roles": ["役割1"],
-        "estimated_budget": "予算"
+  "abort_conditions": [
+    {
+      "condition": "中止条件",
+      "action": "中止時のアクション"
     }
+  ],
+  "phases": [
+    {
+      "phase_id": 1,
+      "name": "フェーズ名（具体的に）",
+      "duration_days": 14,
+      "actions": ["具体的アクション1", "具体的アクション2"],
+      "prohibitions": ["やらないこと1", "やらないこと2"],
+      "deliverables": ["成果物1"],
+      "success_criteria": ["成功基準1"],
+      "stop_conditions": ["停止条件1"]
+    }
+  ],
+  "resource_requirements": {
+    "team_size": 3,
+    "key_roles": ["役割1"],
+    "estimated_budget": "予算"
+  }
 }
 ```
-

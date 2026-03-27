@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Manifest-driven Docker wrapper for the GEO platform."""
+"""GEO Platform 用の manifest 駆動 Docker ラッパー。"""
 
 from __future__ import annotations
 
@@ -16,13 +16,8 @@ APP_CONFIG_PATH = APP_DIR / "app_config.json"
 COMPOSE_PATH = APP_DIR / "docker-compose.yml"
 
 
-def main() -> int:
-    """Run the requested compose action."""
-    if len(sys.argv) != 2 or sys.argv[1] not in {"publish", "start", "stop"}:
-        print("usage: compose.py [publish|start|stop]", file=sys.stderr)
-        return 2
-
-    action = sys.argv[1]
+def _build_compose_env() -> dict[str, str]:
+    """Compose 実行に必要な host / port / URL を解決する。"""
     runtime = resolve_app_runtime(
         APP_CONFIG_PATH,
         env=os.environ,
@@ -30,13 +25,28 @@ def main() -> int:
         backend_port_env="GEO_PLATFORM_PORT",
         backend_url_env="GEO_PLATFORM_PUBLIC_BASE_URL",
     )
+    backend_host = runtime.hosts.backend
+    backend_port = runtime.ports.api
+    backend_url = runtime.urls.backend
+    if backend_host is None or backend_port is None or backend_url is None:
+        msg = "GEO Platform の backend host / port / URL は app_config.json または明示 env で指定してください。"
+        raise RuntimeError(msg)
+
     env = os.environ.copy()
-    if runtime.hosts.backend is not None:
-        env.setdefault("GEO_PLATFORM_HOST", runtime.hosts.backend)
-    if runtime.ports.api is not None:
-        env.setdefault("GEO_PLATFORM_PORT", str(runtime.ports.api))
-    if runtime.urls.backend is not None:
-        env.setdefault("GEO_PLATFORM_PUBLIC_BASE_URL", runtime.urls.backend)
+    env["GEO_PLATFORM_HOST"] = backend_host
+    env["GEO_PLATFORM_PORT"] = str(backend_port)
+    env["GEO_PLATFORM_PUBLIC_BASE_URL"] = backend_url
+    return env
+
+
+def main() -> int:
+    """要求された compose アクションを実行する。"""
+    if len(sys.argv) != 2 or sys.argv[1] not in {"publish", "start", "stop"}:
+        print("usage: compose.py [publish|start|stop]", file=sys.stderr)
+        return 2
+
+    action = sys.argv[1]
+    env = _build_compose_env()
 
     command = ["docker", "compose", "-f", str(COMPOSE_PATH)]
     if action == "publish":

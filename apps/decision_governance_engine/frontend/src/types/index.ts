@@ -52,9 +52,9 @@ export interface ServerHistoryItem {
   id: string;
   request_id: string;
   question: string;
-  decision_role: 'GO' | 'NO_GO' | 'DELAY' | 'PILOT';
+  decision_role: "GO" | "NO_GO" | "DELAY" | "PILOT";
   confidence: number | null;
-  mode: 'FAST' | 'STANDARD' | 'AUDIT';
+  mode: "FAST" | "STANDARD" | "AUDIT";
   created_at: string;
 }
 
@@ -132,7 +132,7 @@ export interface DecisionRequest {
 
 /** 拒否レスポンス */
 export interface RejectionResponse {
-  status: 'rejected';
+  status: "rejected";
   reason?: string;
   message?: string;
   suggested_rephrase?: string;
@@ -140,7 +140,7 @@ export interface RejectionResponse {
 
 /** 成功レスポンス */
 export interface DecisionResponse {
-  status: 'success';
+  status: "success";
   /** 履歴照会・PDF出力用のリクエストID（UUID） */
   request_id?: string;
   report_id: string;
@@ -155,44 +155,50 @@ export type DecisionAPIResponse = DecisionResponse | RejectionResponse;
 // ========================================
 
 /** 問題タイプ */
-export type ProblemType = 'TRADE_OFF' | 'TIMING' | 'RESOURCE' | 'RISK' | 'STRATEGY_DIRECTION' | 'CONSTRAINT_DRIVEN';
+export type ProblemType =
+  | "TRADE_OFF"
+  | "TIMING"
+  | "RESOURCE"
+  | "RISK"
+  | "STRATEGY_DIRECTION"
+  | "CONSTRAINT_DRIVEN";
 
 /** 問題の本質的性質 (v3.0) */
 export type ProblemNatureType =
-  | 'CONSTRAINT_DRIVEN'       // 制約主導型
-  | 'OPPORTUNITY_DRIVEN'      // 機会主導型
-  | 'RISK_MITIGATION'         // リスク軽減型
-  | 'OPTIMIZATION'            // 最適化型
-  | 'EXPLORATION'             // 探索型
-  | 'UNKNOWN';
+  | "CONSTRAINT_DRIVEN" // 制約主導型
+  | "OPPORTUNITY_DRIVEN" // 機会主導型
+  | "RISK_MITIGATION" // リスク軽減型
+  | "OPTIMIZATION" // 最適化型
+  | "EXPLORATION" // 探索型
+  | "UNKNOWN";
 
 /** 本質導出プロセス (v3.0) */
 export interface EssenceDerivation {
-  surface_problem: string;      // 表面的問題
-  underlying_why: string;       // 一段深い理由
-  root_constraint: string;      // 根本制約
-  essence_statement: string;    // 本質の一文
+  surface_problem: string; // 表面的問題
+  underlying_why: string; // 一段深い理由
+  root_constraint: string; // 根本制約
+  essence_statement: string; // 本質の一文
 }
 
 /** 既存代替手段 (v3.0) */
 export interface ExistingAlternative {
-  name: string;                 // 代替手段名
-  why_not_viable: string;       // 使えない理由
-  specific_constraint: string;  // 具体的制約
+  name: string; // 代替手段名
+  why_not_viable: string; // 使えない理由
+  specific_constraint: string; // 具体的制約
 }
 
 /** 因果齿轮 (v3.0) */
 export interface CausalGear {
-  name: string;                 // Gear名
-  description: string;          // 説明
-  leverage: 'HIGH' | 'MEDIUM' | 'LOW';  // テコ効果
+  name: string; // Gear名
+  description: string; // 説明
+  leverage: "HIGH" | "MEDIUM" | "LOW"; // テコ効果
 }
 
 /** 死穴 (v3.0) */
 export interface DeathTrap {
-  action: string;               // 禁忌行動
-  reason: string;               // 理由
-  severity: 'FATAL' | 'SEVERE' | 'MODERATE' | 'CRITICAL';  // 深刻度
+  action: string; // 禁忌行動
+  reason: string; // 理由
+  severity: "FATAL" | "SEVERE" | "MODERATE" | "CRITICAL"; // 深刻度
 }
 
 /** 制約境界条件 (v3.1) */
@@ -233,21 +239,21 @@ export interface DaoSelfCheckResult {
   ambiguous_metrics: string[];
   constraint_conflicts: string[];
   evidence_gaps: string[];
-  overall_status: 'PASS' | 'WARNING' | 'FATAL';
+  overall_status: "PASS" | "WARNING" | "FATAL";
 }
 
 /** 道（Dao）出力 v3.1 */
 export interface DaoOutput {
   problem_type: ProblemType;
-  problem_nature?: ProblemNatureType;  // v3.0
+  problem_nature?: ProblemNatureType; // v3.0
   essence: string;
-  essence_derivation?: EssenceDerivation;  // v3.0
-  existing_alternatives?: ExistingAlternative[];  // v3.0
+  essence_derivation?: EssenceDerivation; // v3.0
+  existing_alternatives?: ExistingAlternative[]; // v3.0
   immutable_constraints: string[];
   hidden_assumptions: string[];
-  causal_gears?: CausalGear[];  // v3.0
-  bottleneck_gear?: string | number;  // v3.0
-  death_traps?: DeathTrap[];    // v3.0
+  causal_gears?: CausalGear[]; // v3.0
+  bottleneck_gear?: string | number; // v3.0
+  death_traps?: DeathTrap[]; // v3.0
   // v3.1
   constraint_boundaries?: ConstraintBoundary[];
   solution_routes?: SolutionRoute[];
@@ -258,14 +264,14 @@ export interface DaoOutput {
 
 /** 戦略タイプ (v3.0) */
 export type StrategyType =
-  | 'PHASED_INVESTMENT'
-  | 'ALL_IN'
-  | 'PARTNERSHIP'
-  | 'WAIT_AND_SEE'
-  | 'PIVOT'
-  | 'BUILD'
-  | 'BUY'
-  | 'HYBRID';
+  | "PHASED_INVESTMENT"
+  | "ALL_IN"
+  | "PARTNERSHIP"
+  | "WAIT_AND_SEE"
+  | "PIVOT"
+  | "BUILD"
+  | "BUY"
+  | "HYBRID";
 
 /** 条件付き評価 (v3.1) */
 export interface ConditionalEvaluation {
@@ -280,12 +286,12 @@ export interface RecommendedPath {
   path_id: string;
   name: string;
   description: string;
-  strategy_type?: StrategyType;  // v3.0
+  strategy_type?: StrategyType; // v3.0
   pros: string[];
   cons: string[];
   success_probability: number;
-  time_to_value?: string;      // v3.0
-  reversibility?: string;      // v3.0
+  time_to_value?: string; // v3.0
+  reversibility?: string; // v3.0
   // v3.1
   conditional_evaluation?: ConditionalEvaluation;
   risk_concentration?: string;
@@ -345,7 +351,7 @@ export interface FaSelfCheckResult {
   missing_intermediate: string[];
   missing_gates: string[];
   appearance_precision: string[];
-  overall_status: 'PASS' | 'WARNING' | 'FAIL';
+  overall_status: "PASS" | "WARNING" | "FAIL";
 }
 
 /** 法（Fa）出力 v3.1 */
@@ -374,23 +380,23 @@ export interface Phase {
 
 /** 文脈特化行動 (v3.0) */
 export interface ContextSpecificAction {
-  action: string;              // 行動
-  why_this_context: string;    // この文脈での理由
-  expected_output: string;     // 期待出力
+  action: string; // 行動
+  why_this_context: string; // この文脈での理由
+  expected_output: string; // 期待出力
 }
 
 /** 単一検証ポイント (v3.0) */
 export interface SingleValidationPoint {
-  validation_target: string;   // 検証対象
-  success_criteria: string;    // 成功基準
-  failure_action: string;      // 失敗時行動
+  validation_target: string; // 検証対象
+  success_criteria: string; // 成功基準
+  failure_action: string; // 失敗時行動
 }
 
 /** 撤退基準 (v3.0) */
 export interface ExitCriteria {
-  checkpoint: string;          // チェックポイント
-  exit_trigger: string;        // 撤退トリガー
-  exit_action: string;         // 撤退時行動
+  checkpoint: string; // チェックポイント
+  exit_trigger: string; // 撤退トリガー
+  exit_action: string; // 撤退時行動
 }
 
 /** フォーカス (v3.0) */
@@ -461,11 +467,11 @@ export interface ShuOutput {
   phases: Phase[];
   first_action: string;
   dependencies: string[];
-  cut_list?: string[];                              // v3.0 切り捨てリスト
-  context_specific_actions?: ContextSpecificAction[];  // v3.0
-  single_validation_point?: SingleValidationPoint;  // v3.0
-  exit_criteria?: ExitCriteria;                     // v3.0
-  rhythm_control?: RhythmControl;                   // v3.0
+  cut_list?: string[]; // v3.0 切り捨てリスト
+  context_specific_actions?: ContextSpecificAction[]; // v3.0
+  single_validation_point?: SingleValidationPoint; // v3.0
+  exit_criteria?: ExitCriteria; // v3.0
+  rhythm_control?: RhythmControl; // v3.0
   // v3.1 新フィールド
   poc_definition_of_done?: PoCDefinitionOfDone;
   two_stage_rocket?: TwoStageRocket;
@@ -482,23 +488,23 @@ export interface Implementation {
 
 /** ドメイン固有技術 (v3.0) */
 export interface DomainSpecificTechnology {
-  technology_name: string;     // 技術名（具体名詞）
-  category: string;            // カテゴリ
-  why_required: string;        // 必要理由
-  alternatives: string[];      // 代替技術
+  technology_name: string; // 技術名（具体名詞）
+  category: string; // カテゴリ
+  why_required: string; // 必要理由
+  alternatives: string[]; // 代替技術
 }
 
 /** 規制対応事項 (v3.0) */
 export interface RegulatoryConsideration {
-  region: string;              // 地域
-  regulation: string;          // 規制名
-  requirement: string;         // 要件
-  implementation_impact: string;  // 実装影響
+  region: string; // 地域
+  regulation: string; // 規制名
+  requirement: string; // 要件
+  implementation_impact: string; // 実装影響
 }
 
 /** 地理的考慮事項 (v3.0) */
 export interface GeographicConsideration {
-  region: string;              // 地域
+  region: string; // 地域
   latency_requirement: string; // レイテンシ要件
   infrastructure_need: string; // インフラ要件
 }
@@ -549,9 +555,9 @@ export interface QiOutput {
   tool_recommendations: string[];
   integration_points: string[];
   technical_debt_warnings: string[];
-  domain_technologies?: DomainSpecificTechnology[];     // v3.0
-  regulatory_considerations?: RegulatoryConsideration[];  // v3.0
-  geographic_considerations?: GeographicConsideration[];  // v3.0
+  domain_technologies?: DomainSpecificTechnology[]; // v3.0
+  regulatory_considerations?: RegulatoryConsideration[]; // v3.0
+  geographic_considerations?: GeographicConsideration[]; // v3.0
   // v3.1 新フィールド
   poc_minimal_architecture?: PoCMinimalArchitecture;
   expansion_stages?: ExpansionStage[];
@@ -560,7 +566,7 @@ export interface QiOutput {
 }
 
 /** 修正アクション分類 (v3.1) */
-export type ActionType = 'PATCH' | 'RECALC' | 'RERUN';
+export type ActionType = "PATCH" | "RECALC" | "RERUN";
 
 /** スコア改善見込み (v3.1) */
 export interface ScoreImprovement {
@@ -579,7 +585,7 @@ export interface MinimalPatch {
 
 /** 検証所見 v3.1（差分パッチ型） */
 export interface ReviewFinding {
-  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  severity: "CRITICAL" | "WARNING" | "INFO";
   category: string;
   description: string;
   affected_agent?: string;
@@ -624,7 +630,7 @@ export interface CheckpointItem {
 
 /** 検証出力 v3.1（差分パッチ型） */
 export interface ReviewOutput {
-  overall_verdict: 'PASS' | 'REVISE' | 'COACH';
+  overall_verdict: "PASS" | "REVISE" | "COACH";
   confidence_score: number;
   findings: ReviewFinding[];
   final_warnings: string[];
@@ -710,10 +716,10 @@ export interface CheckpointApplyResponse {
   threshold_pct: number;
   signature_eligible: boolean;
   applied_contributions: {
-    source: 'checkpoint' | 'finding' | 'llm_bonus';
+    source: "checkpoint" | "finding" | "llm_bonus";
     item_key: string;
     label: string;
-    target_metric: 'confidence' | 'feasibility' | 'both';
+    target_metric: "confidence" | "feasibility" | "both";
     confidence_boost_pct: number;
     feasibility_boost_pct: number;
     note?: string | null;
@@ -728,31 +734,31 @@ export interface ExecutiveSummary {
   key_risks: string[];
   first_step: string;
   estimated_impact: string;
-  essence_statement?: string;                // v3.0 本質の一文
-  strategic_prohibition_summary?: string;    // v3.0 戦略的禁止サマリー
-  exit_criteria_summary?: string;            // v3.0 撤退基準サマリー
+  essence_statement?: string; // v3.0 本質の一文
+  strategic_prohibition_summary?: string; // v3.0 戦略的禁止サマリー
+  exit_criteria_summary?: string; // v3.0 撤退基準サマリー
 }
 
 /** 提案書タイトル (v3.1) */
 export interface ProposalTitle {
-  title_ja: string;        // 日本語タイトル
-  title_en: string;        // 英語タイトル（システム用）
-  case_id: string;         // 案件ID
-  subtitle: string;        // サブタイトル
+  title_ja: string; // 日本語タイトル
+  title_en: string; // 英語タイトル（システム用）
+  case_id: string; // 案件ID
+  subtitle: string; // サブタイトル
 }
 
 /** 署名欄情報 (v3.1) */
 export interface SignatureBlock {
-  author_name: string;           // 作成者名
-  author_department: string;     // 作成者部署
-  author_position: string;       // 作成者役職
-  created_date: string;          // 作成日
-  approver_name?: string;        // 承認者名
-  approver_department?: string;  // 承認者部署
-  approver_position?: string;    // 承認者役職
-  approved_date?: string;        // 承認日
-  is_signed: boolean;            // 署名済みフラグ
-  signature_timestamp?: string;  // 署名タイムスタンプ
+  author_name: string; // 作成者名
+  author_department: string; // 作成者部署
+  author_position: string; // 作成者役職
+  created_date: string; // 作成日
+  approver_name?: string; // 承認者名
+  approver_department?: string; // 承認者部署
+  approver_position?: string; // 承認者役職
+  approved_date?: string; // 承認日
+  is_signed: boolean; // 署名済みフラグ
+  signature_timestamp?: string; // 署名タイムスタンプ
 }
 
 /** 提案書 v3.1 (旧: 決策レポート) */
@@ -760,14 +766,14 @@ export interface DecisionReport {
   report_id: string;
   created_at: string;
   version: string;
-  proposal_title?: ProposalTitle;  // v3.1 提案書タイトル
-  original_question?: string;      // v3.1 元の質問
-  signature_block?: SignatureBlock;  // v3.1 署名欄情報
+  proposal_title?: ProposalTitle; // v3.1 提案書タイトル
+  original_question?: string; // v3.1 元の質問
+  signature_block?: SignatureBlock; // v3.1 署名欄情報
   dao: DaoOutput;
   fa: FaOutput;
   shu: ShuOutput;
   qi: QiOutput;
-  review?: ReviewOutput;  // Optional: 最終ステージが未完了の場合 undefined
+  review?: ReviewOutput; // Optional: 最終ステージが未完了の場合 undefined
   executive_summary: ExecutiveSummary;
 }
 
@@ -777,24 +783,24 @@ export interface DecisionReport {
 
 /** AG-UI イベントタイプ */
 export type AGUIEventType =
-  | 'connection.established'
-  | 'resume.context'
-  | 'flow.start'
-  | 'flow.complete'
-  | 'flow.error'
-  | 'node.start'
-  | 'node.complete'
-  | 'node.error'
-  | 'progress'
-  | 'log'
-  | 'clarification.required'
-  | 'clarification.received';
+  | "connection.established"
+  | "resume.context"
+  | "flow.start"
+  | "flow.complete"
+  | "flow.error"
+  | "node.start"
+  | "node.complete"
+  | "node.error"
+  | "progress"
+  | "log"
+  | "clarification.required"
+  | "clarification.received";
 
 /** 補足質問 */
 export interface ClarificationQuestion {
   id: string;
   text: string;
-  type: 'text' | 'number' | 'select';
+  type: "text" | "number" | "select";
   required: boolean;
   options?: string[];
   placeholder?: string;
@@ -809,14 +815,13 @@ export interface AGUIEvent {
   node_name?: string;
   percentage?: number;
   message?: string;
-  error_message?: string;  // flow.error 用エラーメッセージ
+  error_message?: string; // flow.error 用エラーメッセージ
   data?: Record<string, unknown>;
   // flow.complete 用（AgentFlow 框架標準）
-  result_id?: string;  // 結果ID（ResultStore参照用）
-  result?: Record<string, unknown>;  // 完整結果（include_result=true時）
+  result_id?: string; // 結果ID（ResultStore参照用）
+  result?: Record<string, unknown>; // 完整結果（include_result=true時）
   // clarification.required 用
   original_question?: string;
   questions?: ClarificationQuestion[];
   timeout_seconds?: number;
 }
-

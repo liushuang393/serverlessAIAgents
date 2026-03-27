@@ -24,4 +24,4 @@ COPY apps/messaging_hub /app/apps/messaging_hub
 
 RUN pip install --no-cache-dir -e ".[apps]"
 
-CMD ["sh", "-c", "exec uvicorn apps.messaging_hub.main:app --host ${MSGHUB_HOST} --port ${MSGHUB_PORT}"]
+CMD ["python", "-m", "kernel.runtime.uvicorn_launcher", "--config", "apps/messaging_hub/app_config.json", "--app", "apps.messaging_hub.main:app", "--host-env", "MSGHUB_HOST", "--port-env", "MSGHUB_PORT"]

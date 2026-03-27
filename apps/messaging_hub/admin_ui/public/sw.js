@@ -7,10 +7,17 @@ const APP_SHELL = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
-const DEV_PATH_PREFIXES = ["/@vite", "/@react-refresh", "/src/", "/node_modules/"];
+const DEV_PATH_PREFIXES = [
+  "/@vite",
+  "/@react-refresh",
+  "/src/",
+  "/node_modules/",
+];
 
 function isDevOnlyRequest(requestUrl) {
-  return DEV_PATH_PREFIXES.some((prefix) => requestUrl.pathname.startsWith(prefix));
+  return DEV_PATH_PREFIXES.some((prefix) =>
+    requestUrl.pathname.startsWith(prefix),
+  );
 }
 
 function isStaticAsset(pathname) {
@@ -67,9 +74,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (!isStaticAsset(requestUrl.pathname)) {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(request)),
-    );
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
     return;
   }
 

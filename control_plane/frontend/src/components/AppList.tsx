@@ -4,62 +4,68 @@
  * 全登録 App をカード形式で表示。再スキャンボタン付き。
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { fetchPortConflicts, localStartApp, rebalancePorts } from '@/api/client';
-import { useAppStore } from '@/store/useAppStore';
-import type { AppListItem, AppStatus, PortConflictReport } from '@/types';
-import { AppHealthBadge } from './AppHealthBadge';
-import { AppCreateModal } from './AppCreateModal';
-import { CategoryNav, type CategoryId } from './CategoryNav';
-import { useI18n } from '../i18n';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  fetchPortConflicts,
+  localStartApp,
+  rebalancePorts,
+} from "@/api/client";
+import { useAppStore } from "@/store/useAppStore";
+import type { AppListItem, AppStatus, PortConflictReport } from "@/types";
+import { AppHealthBadge } from "./AppHealthBadge";
+import { AppCreateModal } from "./AppCreateModal";
+import { CategoryNav, type CategoryId } from "./CategoryNav";
+import { useI18n } from "../i18n";
 
 const getAppCategory = (app: AppListItem): CategoryId => {
   // 1. Explicit override by name for known apps
   const MANUAL_MAP: Record<string, CategoryId> = {
-    faq_system: 'core',
-    market_trend_monitor: 'core',
-    code_migration_assistant: 'studio',
-    migration_studio: 'studio',
-    design_skills_engine: 'studio',
-    decision_governance_engine: 'governance',
-    auth_service: 'ops',
-    messaging_hub: 'ops',
-    orchestration_guardian: 'ops',
-    platform: 'ops',
+    faq_system: "core",
+    market_trend_monitor: "core",
+    code_migration_assistant: "studio",
+    migration_studio: "studio",
+    design_skills_engine: "studio",
+    decision_governance_engine: "governance",
+    auth_service: "ops",
+    messaging_hub: "ops",
+    orchestration_guardian: "ops",
+    platform: "ops",
   };
   if (MANUAL_MAP[app.name]) return MANUAL_MAP[app.name];
 
   // 2. Map by business_base from backend
   const BASE_MAP: Record<string, CategoryId> = {
-    knowledge: 'core',
-    reasoning: 'core',
-    interaction: 'core',
-    media: 'studio',
-    governance: 'governance',
-    platform: 'ops',
-    operations: 'ops',
-    integration: 'ops',
-    custom: 'daily',
+    knowledge: "core",
+    reasoning: "core",
+    interaction: "core",
+    media: "studio",
+    governance: "governance",
+    platform: "ops",
+    operations: "ops",
+    integration: "ops",
+    custom: "daily",
   };
   if (app.business_base && BASE_MAP[app.business_base]) {
     return BASE_MAP[app.business_base];
   }
 
   // 3. Fallback to daily (日常作業) as requested by user
-  return 'daily';
+  return "daily";
 };
 
-type SharedServiceAction = 'start';
+type SharedServiceAction = "start";
 
 const SHARED_SERVICE_META: Record<string, { usage: string; usedBy: string }> = {
   auth_service: {
-    usage: 'Shared auth core for plugins and platform contracts (JWT/OAuth/MFA).',
-    usedBy: 'FAQ System, platform contracts.auth, plugin runtime guards',
+    usage:
+      "Shared auth core for plugins and platform contracts (JWT/OAuth/MFA).",
+    usedBy: "FAQ System, platform contracts.auth, plugin runtime guards",
   },
   design_skills_engine: {
-    usage: 'Shared generation engine used by design/image plugins and workflows.',
-    usedBy: 'Design-related plugins, app-level generation pipelines',
+    usage:
+      "Shared generation engine used by design/image plugins and workflows.",
+    usedBy: "Design-related plugins, app-level generation pipelines",
   },
 };
 
@@ -75,15 +81,21 @@ export function AppList() {
   const [rebalancing, setRebalancing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [conflicts, setConflicts] = useState<PortConflictReport | null>(null);
-  const [serviceActionLoading, setServiceActionLoading] = useState<Record<string, SharedServiceAction | null>>({});
-  const [serviceActionMessage, setServiceActionMessage] = useState<string | null>(null);
-  const [serviceActionError, setServiceActionError] = useState<string | null>(null);
-  const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | AppStatus>('all');
-  const [sortKey, setSortKey] = useState<'name' | 'api' | 'frontend'>('name');
-  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
+  const [serviceActionLoading, setServiceActionLoading] = useState<
+    Record<string, SharedServiceAction | null>
+  >({});
+  const [serviceActionMessage, setServiceActionMessage] = useState<
+    string | null
+  >(null);
+  const [serviceActionError, setServiceActionError] = useState<string | null>(
+    null,
+  );
+  const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | AppStatus>("all");
+  const [sortKey, setSortKey] = useState<"name" | "api" | "frontend">("name");
+  const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
   const [pinnedApps, setPinnedApps] = useState<string[]>(() => {
-    const saved = localStorage.getItem('bizcore_pinned_apps');
+    const saved = localStorage.getItem("bizcore_pinned_apps");
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -139,7 +151,7 @@ export function AppList() {
     try {
       const result = await localStartApp(appName);
       if (!result.success) {
-        throw new Error(result.error || result.stderr || 'start failed');
+        throw new Error(result.error || result.stderr || "start failed");
       }
       setServiceActionMessage(`${appName} service started`);
       await refresh();
@@ -158,11 +170,14 @@ export function AppList() {
       ? pinnedApps.filter((n) => n !== name)
       : [...pinnedApps, name];
     setPinnedApps(next);
-    localStorage.setItem('bizcore_pinned_apps', JSON.stringify(next));
+    localStorage.setItem("bizcore_pinned_apps", JSON.stringify(next));
   };
 
   const statusCounts = useMemo(() => {
-    const counts: Record<'healthy' | 'unhealthy' | 'unknown' | 'stopped', number> = {
+    const counts: Record<
+      "healthy" | "unhealthy" | "unknown" | "stopped",
+      number
+    > = {
       healthy: 0,
       unhealthy: 0,
       unknown: 0,
@@ -177,10 +192,10 @@ export function AppList() {
   const filteredApps = useMemo(() => {
     const lowerKeyword = keyword.trim().toLowerCase();
     const matches = apps.filter((app) => {
-      if (statusFilter !== 'all' && app.status !== statusFilter) {
+      if (statusFilter !== "all" && app.status !== statusFilter) {
         return false;
       }
-      if (activeCategory !== 'all') {
+      if (activeCategory !== "all") {
         const cat = getAppCategory(app);
         if (cat !== activeCategory) return false;
       }
@@ -190,12 +205,12 @@ export function AppList() {
       const haystack = [
         app.name,
         app.display_name,
-        app.description ?? '',
-        app.tags.join(' '),
-        app.urls?.backend ?? '',
-        app.urls?.frontend ?? '',
+        app.description ?? "",
+        app.tags.join(" "),
+        app.urls?.backend ?? "",
+        app.urls?.frontend ?? "",
       ]
-        .join(' ')
+        .join(" ")
         .toLowerCase();
       return haystack.includes(lowerKeyword);
     });
@@ -207,13 +222,19 @@ export function AppList() {
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
 
-      if (sortKey === 'api') {
-        return (a.ports.api ?? Number.MAX_SAFE_INTEGER) - (b.ports.api ?? Number.MAX_SAFE_INTEGER);
+      if (sortKey === "api") {
+        return (
+          (a.ports.api ?? Number.MAX_SAFE_INTEGER) -
+          (b.ports.api ?? Number.MAX_SAFE_INTEGER)
+        );
       }
-      if (sortKey === 'frontend') {
-        return (a.ports.frontend ?? Number.MAX_SAFE_INTEGER) - (b.ports.frontend ?? Number.MAX_SAFE_INTEGER);
+      if (sortKey === "frontend") {
+        return (
+          (a.ports.frontend ?? Number.MAX_SAFE_INTEGER) -
+          (b.ports.frontend ?? Number.MAX_SAFE_INTEGER)
+        );
       }
-      return a.display_name.localeCompare(b.display_name, 'ja');
+      return a.display_name.localeCompare(b.display_name, "ja");
     });
   }, [apps, keyword, statusFilter, sortKey, activeCategory, pinnedApps]);
 
@@ -222,9 +243,14 @@ export function AppList() {
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">{t('app_list.title')}</h1>
+          <h1 className="text-2xl font-bold text-slate-100">
+            {t("app_list.title")}
+          </h1>
           <p className="text-sm text-slate-500 mt-1">
-            {t('app_list.registered_count').replace(/{count}/g, String(totalApps))}
+            {t("app_list.registered_count").replace(
+              /{count}/g,
+              String(totalApps),
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -232,7 +258,7 @@ export function AppList() {
             onClick={() => setCreateOpen(true)}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            {t('app_list.add_app')}
+            {t("app_list.add_app")}
           </button>
           <button
             onClick={handleRefresh}
@@ -244,12 +270,15 @@ export function AppList() {
             ) : (
               <span>🔄</span>
             )}
-            {t('app_list.refresh')}
+            {t("app_list.refresh")}
           </button>
         </div>
       </div>
 
-      <CategoryNav activeCategory={activeCategory} onSelect={setActiveCategory} />
+      <CategoryNav
+        activeCategory={activeCategory}
+        onSelect={setActiveCategory}
+      />
 
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -257,47 +286,73 @@ export function AppList() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder={t('app_list.search_placeholder')}
+              placeholder={t("app_list.search_placeholder")}
               className="input pl-9"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+              🔍
+            </span>
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | AppStatus)}
+            onChange={(e) =>
+              setStatusFilter(e.target.value as "all" | AppStatus)
+            }
             className="input"
           >
-            <option value="all">{t('app_list.all_status')}</option>
-            <option value="healthy">{t('app_list.healthy')}</option>
-            <option value="unhealthy">{t('app_list.unhealthy')}</option>
-            <option value="unknown">{t('app_list.unknown')}</option>
-            <option value="stopped">{t('app_list.stopped')}</option>
+            <option value="all">{t("app_list.all_status")}</option>
+            <option value="healthy">{t("app_list.healthy")}</option>
+            <option value="unhealthy">{t("app_list.unhealthy")}</option>
+            <option value="unknown">{t("app_list.unknown")}</option>
+            <option value="stopped">{t("app_list.stopped")}</option>
           </select>
           <select
             value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as 'name' | 'api' | 'frontend')}
+            onChange={(e) =>
+              setSortKey(e.target.value as "name" | "api" | "frontend")
+            }
             className="input"
           >
-            <option value="name">{t('app_list.sort_name')}</option>
-            <option value="api">{t('app_list.sort_api')}</option>
-            <option value="frontend">{t('app_list.sort_fe')}</option>
+            <option value="name">{t("app_list.sort_name")}</option>
+            <option value="api">{t("app_list.sort_api")}</option>
+            <option value="frontend">{t("app_list.sort_fe")}</option>
           </select>
         </div>
         <div className="flex flex-wrap gap-2 text-xs text-slate-400">
           <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
-            🟢 {t('app_list.healthy_count').replace(/{count}/g, String(statusCounts.healthy))}
+            🟢{" "}
+            {t("app_list.healthy_count").replace(
+              /{count}/g,
+              String(statusCounts.healthy),
+            )}
           </span>
           <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
-            🔴 {t('app_list.unhealthy_count').replace(/{count}/g, String(statusCounts.unhealthy))}
+            🔴{" "}
+            {t("app_list.unhealthy_count").replace(
+              /{count}/g,
+              String(statusCounts.unhealthy),
+            )}
           </span>
           <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
-            ⚪ {t('app_list.unknown_count').replace(/{count}/g, String(statusCounts.unknown))}
+            ⚪{" "}
+            {t("app_list.unknown_count").replace(
+              /{count}/g,
+              String(statusCounts.unknown),
+            )}
           </span>
           <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
-            ⏹️ {t('app_list.stopped_count').replace(/{count}/g, String(statusCounts.stopped))}
+            ⏹️{" "}
+            {t("app_list.stopped_count").replace(
+              /{count}/g,
+              String(statusCounts.stopped),
+            )}
           </span>
           <span className="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-            ✨ {t('app_list.filtered_count').replace(/{count}/g, String(filteredApps.length))}
+            ✨{" "}
+            {t("app_list.filtered_count").replace(
+              /{count}/g,
+              String(filteredApps.length),
+            )}
           </span>
         </div>
       </div>
@@ -329,7 +384,9 @@ export function AppList() {
 
       {serviceActionMessage && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex items-center justify-between">
-          <span className="text-emerald-300 text-sm">{serviceActionMessage}</span>
+          <span className="text-emerald-300 text-sm">
+            {serviceActionMessage}
+          </span>
           <button
             onClick={() => setServiceActionMessage(null)}
             className="text-emerald-400 hover:text-emerald-300 text-xs"
@@ -344,20 +401,26 @@ export function AppList() {
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
           <div className="flex items-center justify-between gap-3 mb-2">
             <p className="text-amber-300 text-sm font-medium">
-              {t('app_list.port_conflict')}（{conflicts.conflicts.length}）
+              {t("app_list.port_conflict")}（{conflicts.conflicts.length}）
             </p>
             <button
               onClick={handleRebalance}
               disabled={rebalancing}
               className="px-3 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-50 text-amber-200 text-xs"
             >
-              {rebalancing ? t('app_list.resolving') : t('app_list.auto_resolve')}
+              {rebalancing
+                ? t("app_list.resolving")
+                : t("app_list.auto_resolve")}
             </button>
           </div>
           <div className="space-y-1">
             {conflicts.conflicts.slice(0, 4).map((item) => (
-              <p key={`${item.port_type}-${item.port}`} className="text-xs text-amber-200/80">
-                {item.port_type.toUpperCase()}:{item.port} → {item.apps.join(', ')}
+              <p
+                key={`${item.port_type}-${item.port}`}
+                className="text-xs text-amber-200/80"
+              >
+                {item.port_type.toUpperCase()}:{item.port} →{" "}
+                {item.apps.join(", ")}
               </p>
             ))}
           </div>
@@ -403,9 +466,12 @@ export function AppList() {
                     <AppHealthBadge status={app.status} />
                     <button
                       onClick={(e) => togglePin(app.name, e)}
-                      className={`text-lg transition-all duration-300 hover:scale-125 ${isPinned ? 'grayscale-0 opacity-100' : 'grayscale opacity-30 hover:opacity-100 hover:grayscale-0'
-                        }`}
-                      title={isPinned ? 'Unpin' : 'Pin to top'}
+                      className={`text-lg transition-all duration-300 hover:scale-125 ${
+                        isPinned
+                          ? "grayscale-0 opacity-100"
+                          : "grayscale opacity-30 hover:opacity-100 hover:grayscale-0"
+                      }`}
+                      title={isPinned ? "Unpin" : "Pin to top"}
                     >
                       📌
                     </button>
@@ -423,13 +489,19 @@ export function AppList() {
                     <p className="text-[10px] uppercase tracking-wider text-cyan-300 font-semibold">
                       Shared Service (Managed by Platform)
                     </p>
-                    <p className="text-[11px] text-slate-200">{sharedMeta.usage}</p>
-                    <p className="text-[11px] text-slate-400">Used by: {sharedMeta.usedBy}</p>
+                    <p className="text-[11px] text-slate-200">
+                      {sharedMeta.usage}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Used by: {sharedMeta.usedBy}
+                    </p>
                   </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 mt-4">
-                  <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">v{app.version}</span>
+                  <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">
+                    v{app.version}
+                  </span>
                   {app.ports.api && (
                     <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-300/80 rounded-full border border-indigo-500/20">
                       API:{app.ports.api}
@@ -440,7 +512,9 @@ export function AppList() {
                       FE:{app.ports.frontend}
                     </span>
                   )}
-                  <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">🤖 {app.agent_count}</span>
+                  <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">
+                    🤖 {app.agent_count}
+                  </span>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-slate-800/60 flex flex-wrap gap-1.5">
@@ -454,10 +528,14 @@ export function AppList() {
                       </span>
                     ))
                   ) : (
-                    <span className="text-[9px] text-slate-600 italic">no tags</span>
+                    <span className="text-[9px] text-slate-600 italic">
+                      no tags
+                    </span>
                   )}
                   {app.tags.length > 3 && (
-                    <span className="text-[9px] text-slate-600">+{app.tags.length - 3}</span>
+                    <span className="text-[9px] text-slate-600">
+                      +{app.tags.length - 3}
+                    </span>
                   )}
                 </div>
 
@@ -465,12 +543,14 @@ export function AppList() {
                   <div className="mt-3 flex items-center gap-2">
                     <button
                       onClick={(e) => {
-                        void handleSharedServiceAction(app.name, 'start', e);
+                        void handleSharedServiceAction(app.name, "start", e);
                       }}
                       disabled={actionLoading !== null}
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
                     >
-                      {actionLoading === 'start' ? 'Starting...' : 'Start Service'}
+                      {actionLoading === "start"
+                        ? "Starting..."
+                        : "Start Service"}
                     </button>
                     <button
                       onClick={(e) => {
@@ -516,13 +596,13 @@ export function AppList() {
         <div className="text-center py-16">
           <p className="text-4xl mb-4">📭</p>
           <p className="text-slate-400">
-            {apps.length === 0 ? t('app_list.no_apps') : t('app_list.no_match')}
+            {apps.length === 0 ? t("app_list.no_apps") : t("app_list.no_match")}
           </p>
           <button
             onClick={handleRefresh}
             className="mt-4 text-sm text-indigo-400 hover:text-indigo-300"
           >
-            {t('app_list.scan_apps')}
+            {t("app_list.scan_apps")}
           </button>
         </div>
       )}
@@ -532,7 +612,9 @@ export function AppList() {
         onClose={() => setCreateOpen(false)}
         onCreated={(created) => {
           refresh();
-          fetchPortConflicts().then((report) => setConflicts(report)).catch(() => { });
+          fetchPortConflicts()
+            .then((report) => setConflicts(report))
+            .catch(() => {});
           navigate(`/apps/${created.app_name}`);
         }}
       />

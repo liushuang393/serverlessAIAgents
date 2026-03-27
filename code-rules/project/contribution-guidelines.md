@@ -19,12 +19,14 @@
 ## 🎯 コントリビューションの種類
 
 ### コードコントリビューション
+
 - **新機能開発**: 新しい Agent、ツール、プロトコルの実装
 - **バグ修正**: 既存の不具合修正とテスト追加
 - **パフォーマンス改善**: 最適化と効率化
 - **リファクタリング**: コード品質改善と技術的負債解消
 
 ### 非コードコントリビューション
+
 - **ドキュメント**: ガイド、チュートリアル、API リファレンス
 - **テスト**: テストケース追加と品質向上
 - **翻訳**: 多言語対応（英語、日本語、中文）
@@ -32,6 +34,7 @@
 - **バグ報告**: 詳細な再現手順付き Issue
 
 ### コミュニティサポート
+
 - **質問回答**: GitHub Discussions での技術サポート
 - **コードレビュー**: プルリクエストのレビュー参加
 - **メンタリング**: 新規コントリビューターの指導
@@ -42,6 +45,7 @@
 ## 🛠️ 開発環境セットアップ
 
 ### 前提条件
+
 ```bash
 # Python バージョン確認
 python --version  # 3.13+ 必須
@@ -54,6 +58,7 @@ docker --version  # 開発環境用
 ```
 
 ### リポジトリクローン
+
 ```bash
 # HTTPS でクローン
 git clone https://github.com/liushuang393/serverlessAIAgents.git
@@ -68,6 +73,7 @@ git remote add upstream https://github.com/liushuang393/serverlessAIAgents.git
 ```
 
 ### Conda 環境セットアップ（推奨）
+
 ```bash
 # Conda 環境作成
 conda create -n agentflow python=3.13 -y
@@ -82,6 +88,7 @@ python -c "import agentflow; print(agentflow.__version__)"
 ```
 
 ### 仮想環境セットアップ（Conda なし）
+
 ```bash
 # 仮想環境作成
 python -m venv .venv
@@ -97,6 +104,7 @@ pip install -e ".[dev]"
 ```
 
 ### Pre-commit フックインストール
+
 ```bash
 # pre-commit インストール
 pip install pre-commit
@@ -109,22 +117,20 @@ pre-commit run --all-files
 ```
 
 ### IDE 設定
+
 ```json
 // .vscode/settings.json（VS Code 推奨）
 {
-    "python.defaultInterpreterPath": "./.venv/bin/python",
-    "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
-    "python.formatting.provider": "ruff",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.fixAll.ruff": true
-    },
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [
-        "--cov=agentflow",
-        "--cov-report=html"
-    ]
+  "python.defaultInterpreterPath": "./.venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "python.formatting.provider": "ruff",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.ruff": true
+  },
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["--cov=agentflow", "--cov-report=html"]
 }
 ```
 
@@ -133,6 +139,7 @@ pre-commit run --all-files
 ## 🔄 開発ワークフロー
 
 ### ブランチ戦略
+
 ```bash
 # 機能ブランチ作成
 git checkout -b feature/your-feature-name
@@ -148,6 +155,7 @@ git checkout -b docs/update-guide-name
 ```
 
 ### コミット規約
+
 ```bash
 # コミットメッセージ形式
 git commit -m "feat: 新しいワークフローエンジンを実装
@@ -170,6 +178,7 @@ ci:       CI/CD 変更
 ```
 
 ### 品質チェック実行
+
 ```bash
 # 全チェック実行（推奨）
 ./check.sh all
@@ -193,6 +202,7 @@ check.bat all
 ## 💻 コーディング規約
 
 ### 必須遵守事項
+
 - **型アノテーション 100% カバレッジ**
 - **Google スタイル Docstring**
 - **async/await パターン使用**
@@ -200,6 +210,7 @@ check.bat all
 - **テスト駆動開発**
 
 ### コード変更時のチェックリスト
+
 ```python
 # ✅ 新機能実装時のチェックリスト
 class NewFeatureImplementation:
@@ -227,6 +238,7 @@ class NewFeatureImplementation:
 ```
 
 ### テスト実装パターン
+
 ```python
 # ✅ TDD サイクル実装例
 import pytest
@@ -276,6 +288,7 @@ class TestWorkflowEngine:
 ## 🔄 プルリクエストプロセス
 
 ### PR 作成前の準備
+
 ```bash
 # 最新のメインブランチを取得
 git checkout main
@@ -293,50 +306,62 @@ git rebase main
 ```
 
 ### PR 説明テンプレート
+
 ```markdown
 ## 🎯 概要
+
 [変更の簡単な説明 - 何を実装/修正したか]
 
 ## 🔧 変更内容
+
 ### 実装した機能
+
 - [ ] 新しい Agent クラスを実装
 - [ ] ワークフロー実行ロジックを改善
 - [ ] エラーハンドリングを強化
 
 ### 技術的変更
+
 - [ ] 非同期処理を導入
 - [ ] 型アノテーションを追加
 - [ ] テストカバレッジを向上
 
 ## 🧪 テスト
+
 - [ ] ユニットテストを追加/更新
 - [ ] 統合テストを追加/更新
 - [ ] 手動テストを実施
 - [ ] パフォーマンステストを実施
 
 ## 📚 ドキュメント
+
 - [ ] コードドキュメントを更新
 - [ ] README を更新（必要な場合）
 - [ ] API ドキュメントを更新
 
 ## 🔍 レビューポイント
+
 - [ ] セキュリティ上の懸念はないか
 - [ ] パフォーマンスに影響はないか
 - [ ] 後方互換性を維持しているか
 - [ ] エラーハンドリングは適切か
 
 ## 🔗 関連 Issue
+
 Closes #123
 Related to #456
 
 ## 🚀 デプロイ・移行
+
 [必要な移行作業やデプロイ時の注意事項]
 
 ---
+
 **チェックリスト確認済み**: [ ] コード品質 | [ ] テスト | [ ] ドキュメント | [ ] セキュリティ
 ```
 
 ### PR サイズガイドライン
+
 ```python
 # ✅ 小さな PR を推奨
 class PRSizeGuidelines:
@@ -368,6 +393,7 @@ class PRSizeGuidelines:
 ## 👀 レビュープロセス
 
 ### レビュアーの役割
+
 ```python
 class CodeReviewer:
     """コードレビュアーのチェックポイント。"""
@@ -409,16 +435,20 @@ class CodeReviewer:
 ```
 
 ### レビューコメントテンプレート
-```markdown
+
+````markdown
 ## 🔍 レビューコメント
 
 ### ✅ 良い点
+
 - [明確で読みやすいコード構造]
 - [適切なエラーハンドリング]
 - [包括的なテストカバレッジ]
 
 ### 💡 改善提案
+
 **ファイル**: `agentflow/workflows/engine.py:45`
+
 ```python
 # 現在のコード
 if user.role == "admin":
@@ -426,24 +456,30 @@ if user.role == "admin":
 # 提案
 if user.has_permission("admin_action"):
 ```
+````
+
 **理由**: 権限チェックをメソッド化することで、再利用性と保守性が向上します。
 
 ### ❓ 確認事項
+
 1. **セキュリティ**: このエンドポイントは認証が必要か？
 2. **パフォーマンス**: 大量データ処理時にメモリリークの可能性はないか？
 3. **互換性**: 既存の API 利用者に影響はないか？
 
 ### 🚫 修正必須事項
+
 1. **重大なバグ**: `null` ポインタ参照の可能性あり
 2. **セキュリティ脆弱性**: SQL インジェクションのリスク
 3. **型エラー**: 戻り値の型アノテーションが不正確
 
 ### 🏷️ ラベル提案
+
 - `bug-fix` - バグ修正
 - `enhancement` - 機能改善
 - `documentation` - ドキュメント更新
 - `breaking-change` - 破壊的変更
-```
+
+````
 
 ### レビュアー割り当て
 ```python
@@ -472,13 +508,14 @@ def assign_reviewers(pr_labels: list[str], pr_size: str) -> list[str]:
 
     # 重複除去
     return list(set(reviewers))
-```
+````
 
 ---
 
 ## 🚀 リリースプロセス
 
 ### リリース準備
+
 ```bash
 # リリースブランチ作成
 git checkout -b release/v1.2.3
@@ -500,43 +537,54 @@ git push origin v1.2.3
 ```
 
 ### GitHub Release 作成
-```markdown
+
+````markdown
 ## Release v1.2.3
 
 ### 🎉 新機能
+
 - 新しいワークフローエンジンを実装
 - 非同期タスク実行をサポート
 - パフォーマンス監視機能を追加
 
 ### 🐛 バグ修正
+
 - メモリリーク問題を修正
 - エラーハンドリングを改善
 - 型チェックエラーを解消
 
 ### 📚 ドキュメント
+
 - API リファレンスを更新
 - インストールガイドを改善
 - チュートリアルを追加
 
 ### 🔄 内部変更
+
 - 依存関係を更新
 - CI/CD パイプラインを改善
 - テストカバレッジを向上
 
 ### 🙏 コントリビューター
+
 @contributor1, @contributor2, @contributor3
 
 ### 📦 インストール
+
 ```bash
 pip install agentflow==1.2.3
 ```
+````
 
 ### 🔗 移行ガイド
+
 [破壊的変更がある場合は移行ガイドへのリンク]
 
 ---
+
 **チェックサム**: `sha256:abc123...`
-```
+
+````
 
 ### リリース後フォローアップ
 ```python
@@ -568,25 +616,28 @@ class ReleaseFollowup:
         # パフォーマンス監視
         # ユーザーからのフィードバック収集
         pass
-```
+````
 
 ---
 
 ## 📞 サポートと連絡
 
 ### コントリビューションの始め方
+
 1. **リポジトリを探索**: 既存の Issue と PR を確認
 2. **質問する**: GitHub Discussions で質問
 3. **小さな変更から始める**: ドキュメント修正やテスト追加
 4. **メンターを探す**: 経験豊富なコントリビューターに相談
 
 ### コミュニケーションガイドライン
+
 - **敬意を払う**: すべてのコントリビューターに敬意を持って接する
 - **建設的なフィードバック**: 改善点を具体的に指摘
 - **オープンな議論**: 技術的決定を透明性を持って行う
 - **感謝の表明**: コントリビューションに感謝する
 
 ### コミュニティリソース
+
 - **GitHub Issues**: バグ報告と機能リクエスト
 - **GitHub Discussions**: 一般的な議論と質問
 - **Discord/Slack**: リアルタイムコミュニケーション
@@ -597,6 +648,7 @@ class ReleaseFollowup:
 ## 🎉 コントリビューションの表彰
 
 ### コントリビューター表彰制度
+
 ```python
 class ContributorRecognition:
     """コントリビューター表彰システム。"""
@@ -644,4 +696,4 @@ class ContributorRecognition:
 
 **あなたのコントリビューションが AgentFlow をより良くします！** 🚀
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+_最終更新: 2025-01-19 | バージョン: 1.0.0_

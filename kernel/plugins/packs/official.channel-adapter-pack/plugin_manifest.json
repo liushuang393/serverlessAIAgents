@@ -11,15 +11,8 @@
     "channel.signal"
   ],
   "risk_tier": "high",
-  "side_effects": [
-    "network.egress",
-    "message.send"
-  ],
-  "required_permissions": [
-    "network.egress",
-    "message.send",
-    "audit.write"
-  ],
+  "side_effects": ["network.egress", "message.send"],
+  "required_permissions": ["network.egress", "message.send", "audit.write"],
   "signature": {
     "algorithm": "ed25519",
     "issuer": "bizcore-official",
@@ -27,14 +20,7 @@
   },
   "compatibility": {
     "kernel": ">=2.0.0",
-    "product_lines": [
-      "assistant"
-    ]
+    "product_lines": ["assistant"]
   },
-  "tests_required": [
-    "unit",
-    "integration",
-    "security",
-    "channel-e2e"
-  ]
+  "tests_required": ["unit", "integration", "security", "channel-e2e"]
 }

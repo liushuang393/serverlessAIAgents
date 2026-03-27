@@ -20,7 +20,9 @@ test.describe("ログインスモーク", () => {
   test("ログイン後に入力画面へ遷移できる", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { name: "Decision Agent" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Decision Agent" }),
+    ).toBeVisible();
 
     const loginButton = page.getByRole("button", { name: /ログイン/ });
     await expect(loginButton).toBeDisabled();
@@ -33,7 +35,7 @@ test.describe("ログインスモーク", () => {
 
     await expect(page.getByText("解決したい問題・意思決定事項")).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /決策分析を開始する/ })
+      page.getByRole("button", { name: /決策分析を開始する/ }),
     ).toBeVisible();
   });
 });

@@ -19,6 +19,7 @@
 ## 🎯 テスト原則
 
 ### テスト駆動開発 (TDD)
+
 ```python
 # ✅ TDD サイクル: Red → Green → Refactor
 
@@ -52,6 +53,7 @@ class UserService:
 ```
 
 ### テストの品質基準
+
 - **信頼性**: 同じ条件で常に同じ結果
 - **保守性**: 変更に対する耐性
 - **高速性**: 迅速なフィードバック
@@ -62,6 +64,7 @@ class UserService:
 ## 🏗️ テスト構造
 
 ### ディレクトリ構造
+
 ```
 tests/
 ├── unit/                    # ユニットテスト（高速、独立）
@@ -85,6 +88,7 @@ tests/
 ```
 
 ### テストファイル命名
+
 ```python
 # ✅ 正しい: test_ で始まり、テスト対象を明確に
 tests/unit/test_agent_block.py          # AgentBlock のユニットテスト
@@ -101,6 +105,7 @@ tests/feature/workflow.py              # テストファイルとして不明確
 ## 📝 テスト命名
 
 ### テスト関数命名
+
 ```python
 # ✅ 正しい: test_ + メソッド名 + _ + シナリオ
 def test_execute_workflow_success():
@@ -122,6 +127,7 @@ def test_user_creation():             # 具体的なシナリオを指定
 ```
 
 ### テストクラス命名
+
 ```python
 # ✅ 正しい: Test + クラス名
 class TestAgentBlock:
@@ -152,6 +158,7 @@ class TestEmailValidation:
 ## 🧪 テストパターン
 
 ### Arrange-Act-Assert パターン
+
 ```python
 class TestWorkflowEngine:
     """WorkflowEngine のテスト。"""
@@ -180,6 +187,7 @@ class TestWorkflowEngine:
 ```
 
 ### Given-When-Then パターン
+
 ```python
 async def test_user_registration_process():
     """
@@ -210,6 +218,7 @@ async def test_user_registration_process():
 ```
 
 ### テーブル駆動テスト
+
 ```python
 class TestInputValidation:
     """入力検証のテスト。"""
@@ -246,6 +255,7 @@ class TestInputValidation:
 ## 🤖 モックとスタブ
 
 ### ユニットテストでのモック
+
 ```python
 from unittest.mock import AsyncMock, MagicMock
 
@@ -283,6 +293,7 @@ class TestAgentCoordinator:
 ```
 
 ### 外部サービスのリモック
+
 ```python
 import pytest
 from httpx import AsyncClient
@@ -333,6 +344,7 @@ class TestAPIService:
 ```
 
 ### フィクスチャの使用
+
 ```python
 # conftest.py
 import pytest
@@ -391,6 +403,7 @@ class TestWorkflowExecution:
 ## ▶️ テスト実行
 
 ### pytest 設定
+
 ```python
 # pytest.ini または pyproject.toml
 [tool:pytest]
@@ -418,6 +431,7 @@ markers = [
 ```
 
 ### テスト実行コマンド
+
 ```bash
 # 全テスト実行
 pytest
@@ -445,6 +459,7 @@ pytest -v -s
 ```
 
 ### CI/CD 統合
+
 ```yaml
 # .github/workflows/test.yml
 name: Test
@@ -480,11 +495,13 @@ jobs:
 ## 📊 カバレッジ要件
 
 ### カバレッジ目標
+
 - **ユニットテスト**: ≥ 80% コードカバレッジ
 - **統合テスト**: すべてのコアワークフローをカバー
 - **エンドツーエンドテスト**: 主要なユーザーシナリオをカバー
 
 ### カバレッジ除外
+
 ```toml
 # pyproject.toml
 [tool.coverage.run]
@@ -510,6 +527,7 @@ exclude_lines = [
 ```
 
 ### カバレッジレポート分析
+
 ```python
 # カバレッジレポートの確認
 pytest --cov=agentflow --cov-report=html
@@ -523,6 +541,7 @@ pytest --cov=agentflow --cov-fail-under=80
 ```
 
 ### カバレッジ改善戦略
+
 ```python
 # 1. テストされていないコードの特定
 pytest --cov=agentflow --cov-report=html
@@ -546,6 +565,7 @@ pytest --cov=agentflow --cov-report=term-missing
 ## 🔧 テストユーティリティ
 
 ### アサーション補助関数
+
 ```python
 # tests/utils/assertion_helpers.py
 from typing import Any, Dict
@@ -569,6 +589,7 @@ def assert_user_data(user: Dict[str, Any]) -> None:
 ```
 
 ### テストデータファクトリ
+
 ```python
 # tests/utils/test_data_factory.py
 from typing import Dict, Any
@@ -610,6 +631,7 @@ def create_test_workflow(name: str = "test-workflow") -> Dict[str, Any]:
 ## ✅ テスト品質チェック
 
 ### テストコード品質チェックリスト
+
 - [ ] テスト関数名が明確でシナリオを表現している
 - [ ] Arrange-Act-Assert パターンが使用されている
 - [ ] モック/スタブが適切に使用されている
@@ -619,6 +641,7 @@ def create_test_workflow(name: str = "test-workflow") -> Dict[str, Any]:
 - [ ] 非同期コードが適切にテストされている
 
 ### テスト実行チェックリスト
+
 - [ ] `pytest` で全テストが通る
 - [ ] カバレッジが 80% 以上
 - [ ] テストが高速に実行される（ユニットテスト < 100ms）
@@ -638,4 +661,4 @@ def create_test_workflow(name: str = "test-workflow") -> Dict[str, Any]:
 
 **優れたテストは、コードの信頼性と保守性を保証します。** 🧪
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+_最終更新: 2025-01-19 | バージョン: 1.0.0_

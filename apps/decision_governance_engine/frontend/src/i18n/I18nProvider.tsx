@@ -5,12 +5,12 @@
  * このファイルはアプリ固有のロケールファイル読み込みのみ担当する。
  * 対応ロケール: ja / en / zh
  */
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 import {
   I18nProvider as BaseProvider,
   detectBrowserLocale,
-} from '@bizcore/i18n';
-import type { Locale, Translations } from '@bizcore/i18n';
+} from "@bizcore/i18n";
+import type { Locale, Translations } from "@bizcore/i18n";
 
 /**
  * このアプリのロケール JSON ローダー。
@@ -34,4 +34,3 @@ export function I18nProvider({ children }: { readonly children: ReactNode }) {
     </BaseProvider>
   );
 }
-

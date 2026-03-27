@@ -12,13 +12,13 @@
 
 ## 2. 技術スタックと更新対象
 
-| 領域 | 技術 | 主なディレクトリ | 更新ツール |
-|------|------|------------------|------------|
-| バックエンド | Python 3.13+, FastAPI, Pydantic, Ruff, mypy, pytest | `/`, `agentflow/`, `apps/*/` | pip, Dependabot (pip) |
-| フロントエンド | React, Vite, TypeScript, ESLint, Prettier | `studio/`, `apps/*/frontend`, `agentflow/sdk/frontend` | npm, Dependabot (npm) |
-| CI/CD | GitHub Actions | `.github/workflows/` | Dependabot (github-actions) |
-| AI 関連 | LLM クライアント・プロバイダ、MCP/A2A 等 | `agentflow/` | pip（他と同一） |
-| コンテナ | Docker | `agentflow/deploy/templates` | Dependabot (docker) |
+| 領域           | 技術                                                | 主なディレクトリ                                       | 更新ツール                  |
+| -------------- | --------------------------------------------------- | ------------------------------------------------------ | --------------------------- |
+| バックエンド   | Python 3.13+, FastAPI, Pydantic, Ruff, mypy, pytest | `/`, `agentflow/`, `apps/*/`                           | pip, Dependabot (pip)       |
+| フロントエンド | React, Vite, TypeScript, ESLint, Prettier           | `studio/`, `apps/*/frontend`, `agentflow/sdk/frontend` | npm, Dependabot (npm)       |
+| CI/CD          | GitHub Actions                                      | `.github/workflows/`                                   | Dependabot (github-actions) |
+| AI 関連        | LLM クライアント・プロバイダ、MCP/A2A 等            | `agentflow/`                                           | pip（他と同一）             |
+| コンテナ       | Docker                                              | `agentflow/deploy/templates`                           | Dependabot (docker)         |
 
 ※ Next.js を採用する App がある場合は上表に追記し、同様に npm グループで管理する。
 
@@ -76,4 +76,4 @@
 
 ---
 
-*最終更新: 2026-02-19 | バージョン: 1.0.0*
+_最終更新: 2026-02-19 | バージョン: 1.0.0_

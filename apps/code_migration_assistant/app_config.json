@@ -22,11 +22,7 @@
     {
       "name": "LegacyAnalysisAgent",
       "module": "apps.code_migration_assistant.agents.legacy_analysis_agent",
-      "capabilities": [
-        "parsing",
-        "analysis",
-        "migration"
-      ],
+      "capabilities": ["parsing", "analysis", "migration"],
       "business_base": "operations",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -34,10 +30,7 @@
     {
       "name": "MigrationDesignAgent",
       "module": "apps.code_migration_assistant.agents.migration_design_agent",
-      "capabilities": [
-        "migration_design",
-        "architecture"
-      ],
+      "capabilities": ["migration_design", "architecture"],
       "business_base": "operations",
       "pattern": "pipeline_stage",
       "agent_type": "executor"
@@ -45,10 +38,7 @@
     {
       "name": "CodeTransformationAgent",
       "module": "apps.code_migration_assistant.agents.code_transformation_agent",
-      "capabilities": [
-        "code_transform",
-        "migration"
-      ],
+      "capabilities": ["code_transform", "migration"],
       "business_base": "operations",
       "pattern": "executor",
       "agent_type": "executor"
@@ -56,9 +46,7 @@
     {
       "name": "TestSynthesisAgent",
       "module": "apps.code_migration_assistant.agents.test_synthesis_agent",
-      "capabilities": [
-        "test_generation"
-      ],
+      "capabilities": ["test_generation"],
       "business_base": "operations",
       "pattern": "executor",
       "agent_type": "executor"
@@ -66,10 +54,7 @@
     {
       "name": "DifferentialVerificationAgent",
       "module": "apps.code_migration_assistant.agents.differential_verification_agent",
-      "capabilities": [
-        "verification",
-        "review"
-      ],
+      "capabilities": ["verification", "review"],
       "business_base": "governance",
       "pattern": "reviewer",
       "agent_type": "reviewer"
@@ -77,11 +62,7 @@
     {
       "name": "QualityGateAgent",
       "module": "apps.code_migration_assistant.agents.quality_gate_agent",
-      "capabilities": [
-        "quality_gate",
-        "validation",
-        "compliance"
-      ],
+      "capabilities": ["quality_gate", "validation", "compliance"],
       "business_base": "governance",
       "pattern": "gatekeeper",
       "agent_type": "gatekeeper"
@@ -89,9 +70,7 @@
     {
       "name": "LimitedFixerAgent",
       "module": "apps.code_migration_assistant.agents.limited_fixer_agent",
-      "capabilities": [
-        "auto_fix"
-      ],
+      "capabilities": ["auto_fix"],
       "business_base": "operations",
       "pattern": "executor",
       "agent_type": "executor"
@@ -99,10 +78,7 @@
     {
       "name": "ComplianceReporterAgent",
       "module": "apps.code_migration_assistant.agents.compliance_reporter_agent",
-      "capabilities": [
-        "reporting",
-        "audit"
-      ],
+      "capabilities": ["reporting", "audit"],
       "business_base": "governance",
       "pattern": "reporter",
       "agent_type": "reporter"
@@ -110,12 +86,7 @@
     {
       "name": "CodeMigrationAgent",
       "module": "apps.code_migration_assistant.agent",
-      "capabilities": [
-        "migration",
-        "cobol",
-        "java",
-        "transform"
-      ],
+      "capabilities": ["migration", "cobol", "java", "transform"],
       "business_base": "operations",
       "pattern": "coordinator",
       "agent_type": "planner"
@@ -123,10 +94,7 @@
     {
       "name": "CodeMigrationEngine",
       "module": "apps.code_migration_assistant.engine",
-      "capabilities": [
-        "orchestration",
-        "pipeline"
-      ],
+      "capabilities": ["orchestration", "pipeline"],
       "business_base": "operations",
       "pattern": "coordinator",
       "agent_type": "planner"
@@ -137,11 +105,7 @@
       "pattern": "pipeline"
     },
     "mcp": {
-      "tools": [
-        "cobol_parser",
-        "java_generator",
-        "code_validator"
-      ]
+      "tools": ["cobol_parser", "java_generator", "code_validator"]
     },
     "rag": {
       "enabled": true,
@@ -169,10 +133,7 @@
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": [
-      "qdrant",
-      "vector_store"
-    ]
+    "external": ["qdrant", "vector_store"]
   },
   "runtime": {
     "urls": {
@@ -200,22 +161,13 @@
       "stop": "docker compose -f docker-compose.yml down"
     }
   },
-  "tags": [
-    "cobol",
-    "code-transform",
-    "java",
-    "legacy",
-    "migration",
-    "rag"
-  ],
+  "tags": ["cobol", "code-transform", "java", "legacy", "migration", "rag"],
   "contracts": {
     "rag": {
       "enabled": true,
       "pattern": null,
       "provider": "qdrant",
-      "collections": [
-        "code_migration_assistant_knowledge"
-      ],
+      "collections": ["code_migration_assistant_knowledge"],
       "data_sources": [],
       "chunk_strategy": "recursive",
       "chunk_size": 800,
@@ -229,13 +181,9 @@
     },
     "auth": {
       "enabled": true,
-      "providers": [
-        "api_key"
-      ],
+      "providers": ["api_key"],
       "allow_anonymous": false,
-      "required_scopes": [
-        "api"
-      ],
+      "required_scopes": ["api"],
       "session_ttl_minutes": 60
     },
     "llm": {
@@ -275,10 +223,7 @@
           }
         }
       },
-      "allowed_modalities": [
-        "embedding",
-        "text"
-      ],
+      "allowed_modalities": ["embedding", "text"],
       "extra_model_refs": [
         {
           "provider": "openai",
@@ -296,9 +241,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -338,10 +281,7 @@
     "vector_db_url": null,
     "vector_db_collection": null,
     "vector_db_api_key_env": null,
-    "mcp_servers": [
-      "filesystem",
-      "git"
-    ],
+    "mcp_servers": ["filesystem", "git"],
     "agents": [],
     "app_template": "ops_automation_runner"
   },
@@ -359,11 +299,7 @@
       "consumer_group": "evolution-validator-v1",
       "max_retries": 5
     },
-    "scope_policy": [
-      "tenant_app",
-      "tenant_product_line",
-      "global_verified"
-    ],
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
       "high_complexity_threshold": 0.7,

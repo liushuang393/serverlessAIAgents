@@ -16,10 +16,7 @@ type AppConfig = {
   };
 };
 
-function parsePort(
-  value: string | number | undefined,
-  fallback: number,
-): number {
+function parsePort(value: string | number | undefined): number | undefined {
   if (typeof value === "number" && Number.isInteger(value) && value > 0) {
     return value;
   }
@@ -29,7 +26,31 @@ function parsePort(
       return parsed;
     }
   }
-  return fallback;
+  return undefined;
+}
+
+function requirePort(
+  name: string,
+  envValue: string | undefined,
+  manifestValue: number | undefined,
+): number {
+  const resolved = parsePort(envValue ?? manifestValue);
+  if (resolved !== undefined) {
+    return resolved;
+  }
+  throw new Error(`${name} が app_config.json または env にありません。`);
+}
+
+function requireHost(
+  name: string,
+  envValue: string | undefined,
+  manifestValue: string | null | undefined,
+): string {
+  const resolved = envValue?.trim() || manifestValue?.trim();
+  if (resolved) {
+    return resolved;
+  }
+  throw new Error(`${name} が app_config.json または env にありません。`);
 }
 
 function normalizeProxyHost(host: string | null | undefined): string {
@@ -51,21 +72,28 @@ if (fs.existsSync(appConfigPath)) {
   }
 }
 
-const apiPort = parsePort(
+const apiPort = requirePort(
+  "MSGHUB_PORT",
   process.env.MSGHUB_PORT,
-  appConfig.ports?.api ?? 8004,
+  appConfig.ports?.api,
 );
-const frontendPort = parsePort(
+const frontendPort = requirePort(
+  "MSGHUB_FRONTEND_PORT",
   process.env.MSGHUB_FRONTEND_PORT,
-  appConfig.ports?.frontend ?? 3001,
+  appConfig.ports?.frontend,
 );
 const backendHost = normalizeProxyHost(
-  process.env.MSGHUB_HOST ?? appConfig.runtime?.hosts?.backend,
+  requireHost(
+    "MSGHUB_HOST",
+    process.env.MSGHUB_HOST,
+    appConfig.runtime?.hosts?.backend,
+  ),
 );
-const frontendHost =
-  process.env.MSGHUB_FRONTEND_HOST ??
-  appConfig.runtime?.hosts?.frontend ??
-  "0.0.0.0";
+const frontendHost = requireHost(
+  "MSGHUB_FRONTEND_HOST",
+  process.env.MSGHUB_FRONTEND_HOST,
+  appConfig.runtime?.hosts?.frontend,
+);
 const targetOrigin = `http://${backendHost}:${apiPort}`;
 
 export default defineConfig({

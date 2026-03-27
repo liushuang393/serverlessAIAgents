@@ -12,13 +12,13 @@
 
 ```json
 {
-    "strategic_prohibitions": [
-        {
-            "prohibition": "⛔ 全リソースを一点集中してはならない",
-            "reason": "検証前の全力投資は撤退時の損失が大きい",
-            "violation_consequence": "失敗時の再起が不可能になる"
-        }
-    ]
+  "strategic_prohibitions": [
+    {
+      "prohibition": "⛔ 全リソースを一点集中してはならない",
+      "reason": "検証前の全力投資は撤退時の損失が大きい",
+      "violation_consequence": "失敗時の再起が不可能になる"
+    }
+  ]
 }
 ```
 
@@ -30,11 +30,11 @@
 
 ```json
 {
-    "differentiation_axis": {
-        "axis_name": "運用統制性（勝負する軸）",
-        "not_this_axis": "コスト効率（勝負しない軸）",
-        "reasoning": "SaaSより高コストでも、法規制対応の確実性で選ばれる"
-    }
+  "differentiation_axis": {
+    "axis_name": "運用統制性（勝負する軸）",
+    "not_this_axis": "コスト効率（勝負しない軸）",
+    "reasoning": "SaaSより高コストでも、法規制対応の確実性で選ばれる"
+  }
 }
 ```
 
@@ -42,12 +42,12 @@
 
 稳健型（CONSERVATIVE）と激进型（AGGRESSIVE）の2パスのみ。
 
-| 項目 | 稳健型 | 激进型 |
-|-----|-------|-------|
+| 項目       | 稳健型       | 激进型     |
+| ---------- | ------------ | ---------- |
 | 戦略タイプ | CONSERVATIVE | AGGRESSIVE |
-| 初期投資 | 小 | 大 |
-| リスク | 低 | 高 |
-| 可逆性 | 高 | 低 |
+| 初期投資   | 小           | 大         |
+| リスク     | 低           | 高         |
+| 可逆性     | 高           | 低         |
 
 ## 禁止事項
 
@@ -67,45 +67,44 @@
 
 ```json
 {
-    "strategic_prohibitions": [
-        {
-            "prohibition": "禁止事項",
-            "reason": "理由",
-            "violation_consequence": "違反した場合の結果"
-        }
-    ],
-    "differentiation_axis": {
-        "axis_name": "勝負する軸",
-        "not_this_axis": "勝負しない軸",
-        "reasoning": "理由"
+  "strategic_prohibitions": [
+    {
+      "prohibition": "禁止事項",
+      "reason": "理由",
+      "violation_consequence": "違反した場合の結果"
+    }
+  ],
+  "differentiation_axis": {
+    "axis_name": "勝負する軸",
+    "not_this_axis": "勝負しない軸",
+    "reasoning": "理由"
+  },
+  "recommended_paths": [
+    {
+      "path_id": "A",
+      "name": "稳健型: 〇〇",
+      "strategy_type": "CONSERVATIVE",
+      "description": "説明",
+      "pros": ["メリット1"],
+      "cons": ["デメリット1"],
+      "applicability": "適用条件"
     },
-    "recommended_paths": [
-        {
-            "path_id": "A",
-            "name": "稳健型: 〇〇",
-            "strategy_type": "CONSERVATIVE",
-            "description": "説明",
-            "pros": ["メリット1"],
-            "cons": ["デメリット1"],
-            "applicability": "適用条件"
-        },
-        {
-            "path_id": "B",
-            "name": "激进型: △△",
-            "strategy_type": "AGGRESSIVE",
-            "description": "説明",
-            "pros": ["メリット1"],
-            "cons": ["デメリット1"],
-            "applicability": "適用条件"
-        }
-    ],
-    "rejected_paths": [
-        {
-            "name": "不推奨パス名",
-            "rejection_reason": "却下理由"
-        }
-    ],
-    "decision_criteria": ["判断基準1", "判断基準2"]
+    {
+      "path_id": "B",
+      "name": "激进型: △△",
+      "strategy_type": "AGGRESSIVE",
+      "description": "説明",
+      "pros": ["メリット1"],
+      "cons": ["デメリット1"],
+      "applicability": "適用条件"
+    }
+  ],
+  "rejected_paths": [
+    {
+      "name": "不推奨パス名",
+      "rejection_reason": "却下理由"
+    }
+  ],
+  "decision_criteria": ["判断基準1", "判断基準2"]
 }
 ```
-

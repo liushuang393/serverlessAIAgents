@@ -4,9 +4,9 @@
  * 目的: Vitest のグローバル設定
  */
 
-import { expect, afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
+import { expect, afterEach } from "vitest";
+import { cleanup } from "@testing-library/react";
+import * as matchers from "@testing-library/jest-dom/matchers";
 
 // jest-dom マッチャーを追加
 expect.extend(matchers);
@@ -22,4 +22,3 @@ globalThis.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
-

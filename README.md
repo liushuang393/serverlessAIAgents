@@ -210,7 +210,7 @@ INFRA --> PROVIDER
 ## クイックスタート
 
 > 各アプリ（FAQ System、Decision Governance Engine 等）の DB 構築・ローカル起動・Docker 発布手順は、各アプリの README.md を参照してください。
-> FastAPI 系 app のローカル起動は、原則として各 app の `scripts/dev.py` または `app_config.json` の `runtime.commands.backend_dev` を使ってください。これらの helper は `明示指定 > app_config.json` の優先順位で host / port を解決し、コード側の第3既定値を持たずに `uvicorn` を起動します。
+> FastAPI 系 app のローカル起動は、原則として各 app の `scripts/dev.py` または `app_config.json` の `runtime.commands.backend_dev` を使ってください。これらの helper は共通 launcher を使い、`明示指定 > app_config.json` の優先順位で host / port を解決し、コード側の第3既定値を持たずに `uvicorn` を起動します。
 > ここでは共通基盤（auth_service + control_plane）の起動手順のみ記載します。
 
 ### 前提条件

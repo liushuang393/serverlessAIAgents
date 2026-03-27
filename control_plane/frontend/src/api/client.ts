@@ -5,7 +5,7 @@
  * Vite dev server のプロキシ経由で API にアクセスする。
  */
 
-import axios from 'axios';
+import axios from "axios";
 import type {
   AgentListResponse,
   AgentStatsResponse,
@@ -61,13 +61,13 @@ import type {
   SkillListResponse,
   SkillStatsResponse,
   TagsResponse,
-} from '@/types';
+} from "@/types";
 
 /** axios インスタンス（通常 API 用） */
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: "/api",
   timeout: 60_000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
 
 /**
@@ -77,19 +77,19 @@ const api = axios.create({
  * タイムアウトを 15 分に設定。
  */
 const longRunningApi = axios.create({
-  baseURL: '/api',
+  baseURL: "/api",
   timeout: 900_000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
 
 /** OpenAPI 等 /api 以外のルート参照用 */
 const rootApi = axios.create({
   timeout: 10_000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
 
 const inflightRequests = new Map<string, Promise<unknown>>();
-const FRAMEWORK_APPS_BASE = '/studios/framework/apps';
+const FRAMEWORK_APPS_BASE = "/studios/framework/apps";
 
 async function withInflightDedup<T>(
   key: string,
@@ -134,7 +134,9 @@ export async function fetchApps(
 /** App 概要統計を取得 */
 export async function fetchSummary(): Promise<AppSummaryResponse> {
   return withInflightDedup(`${FRAMEWORK_APPS_BASE}/summary`, async () => {
-    const { data } = await api.get<AppSummaryResponse>(`${FRAMEWORK_APPS_BASE}/summary`);
+    const { data } = await api.get<AppSummaryResponse>(
+      `${FRAMEWORK_APPS_BASE}/summary`,
+    );
     return data;
   });
 }
@@ -152,9 +154,12 @@ export async function fetchAppDetail(
   const waitForHealth = options.waitForHealth ?? false;
   const key = `${FRAMEWORK_APPS_BASE}/${appName}?wait_for_health=${waitForHealth}`;
   return withInflightDedup(key, async () => {
-    const { data } = await api.get<AppDetail>(`${FRAMEWORK_APPS_BASE}/${appName}`, {
-      params: { wait_for_health: waitForHealth },
-    });
+    const { data } = await api.get<AppDetail>(
+      `${FRAMEWORK_APPS_BASE}/${appName}`,
+      {
+        params: { wait_for_health: waitForHealth },
+      },
+    );
     return data;
   });
 }
@@ -163,41 +168,56 @@ export async function fetchAppDetail(
 export async function fetchAppHealth(
   appName: string,
 ): Promise<HealthCheckResult> {
-  return withInflightDedup(`${FRAMEWORK_APPS_BASE}/${appName}/health`, async () => {
-    const { data } = await api.get<HealthCheckResult>(
-      `${FRAMEWORK_APPS_BASE}/${appName}/health`,
-    );
-    return data;
-  });
+  return withInflightDedup(
+    `${FRAMEWORK_APPS_BASE}/${appName}/health`,
+    async () => {
+      const { data } = await api.get<HealthCheckResult>(
+        `${FRAMEWORK_APPS_BASE}/${appName}/health`,
+      );
+      return data;
+    },
+  );
 }
 
 /** App publish（docker compose up -d --build） — 長時間操作 */
 export async function publishApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/publish`);
+  const { data } = await longRunningApi.post<AppActionResponse>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/publish`,
+  );
   return data;
 }
 
 /** App start（docker compose up -d） — 長時間操作 */
 export async function startApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/start`);
+  const { data } = await longRunningApi.post<AppActionResponse>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/start`,
+  );
   return data;
 }
 
 /** App stop（docker compose down） — 長時間操作 */
 export async function stopApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/stop`);
+  const { data } = await longRunningApi.post<AppActionResponse>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/stop`,
+  );
   return data;
 }
 
 /** App restart（stop -> start） — 長時間操作 */
 export async function restartApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/restart`);
+  const { data } = await longRunningApi.post<AppActionResponse>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/restart`,
+  );
   return data;
 }
 
 /** App ローカル開発起動（バックエンド・フロントエンドをローカルで起動） */
-export async function localStartApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/local-start`);
+export async function localStartApp(
+  appName: string,
+): Promise<AppActionResponse> {
+  const { data } = await longRunningApi.post<AppActionResponse>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/local-start`,
+  );
   return data;
 }
 
@@ -205,9 +225,10 @@ export async function localStartApp(appName: string): Promise<AppActionResponse>
 export async function fetchAppCLIStatus(
   appName: string,
 ): Promise<{ app_name: string; status: Record<string, unknown> }> {
-  const { data } = await api.get<{ app_name: string; status: Record<string, unknown> }>(
-    `${FRAMEWORK_APPS_BASE}/${appName}/cli/status`,
-  );
+  const { data } = await api.get<{
+    app_name: string;
+    status: Record<string, unknown>;
+  }>(`${FRAMEWORK_APPS_BASE}/${appName}/cli/status`);
   return data;
 }
 
@@ -215,56 +236,76 @@ export async function fetchAppCLIStatus(
 export async function setupAppCLI(
   appName: string,
 ): Promise<{ app_name: string; setup: Record<string, unknown> }> {
-  const { data } = await longRunningApi.post<{ app_name: string; setup: Record<string, unknown> }>(
-    `${FRAMEWORK_APPS_BASE}/${appName}/cli/setup`,
-  );
+  const { data } = await longRunningApi.post<{
+    app_name: string;
+    setup: Record<string, unknown>;
+  }>(`${FRAMEWORK_APPS_BASE}/${appName}/cli/setup`);
   return data;
 }
 
 /** App 一覧を再スキャン */
 export async function refreshApps(): Promise<RefreshResponse> {
-  const { data } = await api.post<RefreshResponse>(`${FRAMEWORK_APPS_BASE}/refresh`);
+  const { data } = await api.post<RefreshResponse>(
+    `${FRAMEWORK_APPS_BASE}/refresh`,
+  );
   return data;
 }
 
 /** app_config マニフェスト標準化 */
-export async function migrateManifests(dryRun = true): Promise<ManifestMigrationReport> {
-  const { data } = await api.post<ManifestMigrationReport>(`${FRAMEWORK_APPS_BASE}/migrate-manifests`, {
-    dry_run: dryRun,
-  });
+export async function migrateManifests(
+  dryRun = true,
+): Promise<ManifestMigrationReport> {
+  const { data } = await api.post<ManifestMigrationReport>(
+    `${FRAMEWORK_APPS_BASE}/migrate-manifests`,
+    {
+      dry_run: dryRun,
+    },
+  );
   return data;
 }
 
 /** App 作成オプション取得 */
 export async function fetchAppCreateOptions(): Promise<AppCreateOptionsResponse> {
-  const { data } = await api.get<AppCreateOptionsResponse>(`${FRAMEWORK_APPS_BASE}/create/options`);
+  const { data } = await api.get<AppCreateOptionsResponse>(
+    `${FRAMEWORK_APPS_BASE}/create/options`,
+  );
   return data;
 }
 
 /** 新規 App 作成 */
-export async function createApp(request: AppCreateRequest): Promise<AppCreateResponse> {
-  const { data } = await api.post<AppCreateResponse>(`${FRAMEWORK_APPS_BASE}/create`, request);
+export async function createApp(
+  request: AppCreateRequest,
+): Promise<AppCreateResponse> {
+  const { data } = await api.post<AppCreateResponse>(
+    `${FRAMEWORK_APPS_BASE}/create`,
+    request,
+  );
   return data;
 }
 
 /** ポート重複レポート */
 export async function fetchPortConflicts(): Promise<PortConflictReport> {
-  return withInflightDedup(`${FRAMEWORK_APPS_BASE}/ports/conflicts`, async () => {
-    const { data } = await api.get<PortConflictReport>(`${FRAMEWORK_APPS_BASE}/ports/conflicts`);
-    return data;
-  });
+  return withInflightDedup(
+    `${FRAMEWORK_APPS_BASE}/ports/conflicts`,
+    async () => {
+      const { data } = await api.get<PortConflictReport>(
+        `${FRAMEWORK_APPS_BASE}/ports/conflicts`,
+      );
+      return data;
+    },
+  );
 }
 
 /** 重複ポート再割当 */
-export async function rebalancePorts(
-  dryRun = true,
-): Promise<{
+export async function rebalancePorts(dryRun = true): Promise<{
   dry_run: boolean;
   updates?: Record<string, Record<string, number>>;
   updated_apps?: string[];
   total_updates: number;
 }> {
-  const { data } = await api.post(`${FRAMEWORK_APPS_BASE}/ports/rebalance`, { dry_run: dryRun });
+  const { data } = await api.post(`${FRAMEWORK_APPS_BASE}/ports/rebalance`, {
+    dry_run: dryRun,
+  });
   return data;
 }
 
@@ -274,49 +315,65 @@ export async function rebalancePorts(
 
 /** 全 Agent 一覧 */
 export async function fetchAgents(): Promise<AgentListResponse> {
-  const { data } = await api.get<AgentListResponse>('/studios/framework/agents');
+  const { data } = await api.get<AgentListResponse>(
+    "/studios/framework/agents",
+  );
   return data;
 }
 
 /** Agent 統計 */
 export async function fetchAgentStats(): Promise<AgentStatsResponse> {
-  const { data } = await api.get<AgentStatsResponse>('/studios/framework/agents/stats');
+  const { data } = await api.get<AgentStatsResponse>(
+    "/studios/framework/agents/stats",
+  );
   return data;
 }
 
 /** App 別 Agent グルーピング */
 export async function fetchAgentsByApp(): Promise<AgentsByAppResponse> {
-  const { data } = await api.get<AgentsByAppResponse>('/studios/framework/agents/by-app');
+  const { data } = await api.get<AgentsByAppResponse>(
+    "/studios/framework/agents/by-app",
+  );
   return data;
 }
 
 /** Agent pattern 別グルーピング */
 export async function fetchAgentsByPattern(): Promise<AgentsByPatternResponse> {
-  const { data } = await api.get<AgentsByPatternResponse>('/studios/framework/agents/by-pattern');
+  const { data } = await api.get<AgentsByPatternResponse>(
+    "/studios/framework/agents/by-pattern",
+  );
   return data;
 }
 
 /** Agent type 別グルーピング */
 export async function fetchAgentsByType(): Promise<AgentsByTypeResponse> {
-  const { data } = await api.get<AgentsByTypeResponse>('/studios/framework/agents/by-type');
+  const { data } = await api.get<AgentsByTypeResponse>(
+    "/studios/framework/agents/by-type",
+  );
   return data;
 }
 
 /** Agent type 定義 */
 export async function fetchAgentTypes(): Promise<AgentTypesResponse> {
-  const { data } = await api.get<AgentTypesResponse>('/studios/framework/agents/types');
+  const { data } = await api.get<AgentTypesResponse>(
+    "/studios/framework/agents/types",
+  );
   return data;
 }
 
 /** 業務基盤別 Agent グルーピング */
 export async function fetchAgentsByBusinessBase(): Promise<AgentsByBusinessBaseResponse> {
-  const { data } = await api.get<AgentsByBusinessBaseResponse>('/studios/framework/agents/by-business-base');
+  const { data } = await api.get<AgentsByBusinessBaseResponse>(
+    "/studios/framework/agents/by-business-base",
+  );
   return data;
 }
 
 /** App テンプレート一覧 */
 export async function fetchAppTemplates(): Promise<AppTemplatesResponse> {
-  const { data } = await api.get<AppTemplatesResponse>(`${FRAMEWORK_APPS_BASE}/templates`);
+  const { data } = await api.get<AppTemplatesResponse>(
+    `${FRAMEWORK_APPS_BASE}/templates`,
+  );
   return data;
 }
 
@@ -326,39 +383,52 @@ export async function fetchAppTemplates(): Promise<AppTemplatesResponse> {
 
 /** 全 Skill 一覧 */
 export async function fetchSkills(): Promise<SkillListResponse> {
-  const { data } = await api.get<SkillListResponse>('/studios/framework/skills');
+  const { data } = await api.get<SkillListResponse>(
+    "/studios/framework/skills",
+  );
   return data;
 }
 
 /** Skill 統計 */
 export async function fetchSkillStats(): Promise<SkillStatsResponse> {
-  const { data } = await api.get<SkillStatsResponse>('/studios/framework/skills/stats');
+  const { data } = await api.get<SkillStatsResponse>(
+    "/studios/framework/skills/stats",
+  );
   return data;
 }
 
 /** タグ一覧 */
 export async function fetchSkillTags(): Promise<TagsResponse> {
-  const { data } = await api.get<TagsResponse>('/studios/framework/skills/tags');
+  const { data } = await api.get<TagsResponse>(
+    "/studios/framework/skills/tags",
+  );
   return data;
 }
 
 /** タグ検索 */
 export async function searchSkills(tag: string): Promise<SkillListResponse> {
-  const { data } = await api.get<SkillListResponse>('/studios/framework/skills/search', {
-    params: { tag },
-  });
+  const { data } = await api.get<SkillListResponse>(
+    "/studios/framework/skills/search",
+    {
+      params: { tag },
+    },
+  );
   return data;
 }
 
 /** カテゴリ別グループ一覧 */
 export async function fetchSkillsGrouped(): Promise<SkillGroupedResponse> {
-  const { data } = await api.get<SkillGroupedResponse>('/studios/framework/skills/grouped');
+  const { data } = await api.get<SkillGroupedResponse>(
+    "/studios/framework/skills/grouped",
+  );
   return data;
 }
 
 /** Skill 詳細 */
 export async function fetchSkillDetail(name: string): Promise<SkillInfo> {
-  const { data } = await api.get<SkillInfo>(`/studios/framework/skills/${name}`);
+  const { data } = await api.get<SkillInfo>(
+    `/studios/framework/skills/${name}`,
+  );
   return data;
 }
 
@@ -368,36 +438,57 @@ export async function fetchSkillDetail(name: string): Promise<SkillInfo> {
 
 /** RAG 概要 */
 export async function fetchRAGOverview(): Promise<RAGOverviewResponse> {
-  const { data } = await api.get<RAGOverviewResponse>('/studios/framework/rag/overview');
+  const { data } = await api.get<RAGOverviewResponse>(
+    "/studios/framework/rag/overview",
+  );
   return data;
 }
 
 /** RAG 統計 */
 export async function fetchRAGStats(): Promise<RAGStatsResponse> {
-  const { data } = await api.get<RAGStatsResponse>('/studios/framework/rag/stats');
+  const { data } = await api.get<RAGStatsResponse>(
+    "/studios/framework/rag/stats",
+  );
   return data;
 }
 
 /** RAG 検索方式一覧 */
-export async function fetchRAGRetrievalMethods(): Promise<{ methods: RetrievalMethod[]; total: number }> {
-  const { data } = await api.get<{ methods: RetrievalMethod[]; total: number }>('/studios/framework/rag/retrieval-methods');
+export async function fetchRAGRetrievalMethods(): Promise<{
+  methods: RetrievalMethod[];
+  total: number;
+}> {
+  const { data } = await api.get<{ methods: RetrievalMethod[]; total: number }>(
+    "/studios/framework/rag/retrieval-methods",
+  );
   return data;
 }
 
 /** RAG パターン一覧 */
-export async function fetchRAGPatterns(): Promise<{ patterns: RAGPattern[]; total: number }> {
-  const { data } = await api.get<{ patterns: RAGPattern[]; total: number }>('/studios/framework/rag/patterns');
+export async function fetchRAGPatterns(): Promise<{
+  patterns: RAGPattern[];
+  total: number;
+}> {
+  const { data } = await api.get<{ patterns: RAGPattern[]; total: number }>(
+    "/studios/framework/rag/patterns",
+  );
   return data;
 }
 
 /** 全 App の RAG 設定一覧 */
-export async function fetchAppRAGConfigs(): Promise<{ apps: AppRAGConfig[]; total: number }> {
-  const { data } = await api.get<{ apps: AppRAGConfig[]; total: number }>('/studios/framework/rag/apps/configs');
+export async function fetchAppRAGConfigs(): Promise<{
+  apps: AppRAGConfig[];
+  total: number;
+}> {
+  const { data } = await api.get<{ apps: AppRAGConfig[]; total: number }>(
+    "/studios/framework/rag/apps/configs",
+  );
   return data;
 }
 
 /** App 単位 RAG 設定 */
-export async function fetchAppRAGConfig(appName: string): Promise<AppRAGConfig> {
+export async function fetchAppRAGConfig(
+  appName: string,
+): Promise<AppRAGConfig> {
   const { data } = await api.get<AppRAGConfig>(
     `/studios/framework/rag/apps/${appName}/config`,
   );
@@ -423,12 +514,15 @@ export async function setupQdrantLocal(): Promise<{
   qdrant_url: string | null;
   output: string;
 }> {
-  const { data } = await api.post('/studios/framework/rag/setup/qdrant');
+  const { data } = await api.post("/studios/framework/rag/setup/qdrant");
   return data;
 }
 
 /** App 単位 ingest run 一覧（Platform proxy） */
-export async function fetchAppRAGIngestRuns(appName: string, limit = 20): Promise<RAGIngestRunsResponse> {
+export async function fetchAppRAGIngestRuns(
+  appName: string,
+  limit = 20,
+): Promise<RAGIngestRunsResponse> {
   const { data } = await api.get<RAGIngestRunsResponse>(
     `/studios/framework/rag/apps/${appName}/ingest/runs`,
     { params: { limit } },
@@ -442,7 +536,9 @@ export async function fetchAppRAGIngestRuns(appName: string, limit = 20): Promis
 
 /** MCP 設定全体 */
 export async function fetchMCPConfig(): Promise<MCPConfigResponse> {
-  const { data } = await api.get<MCPConfigResponse>('/studios/framework/mcp/config');
+  const { data } = await api.get<MCPConfigResponse>(
+    "/studios/framework/mcp/config",
+  );
   return data;
 }
 
@@ -450,15 +546,17 @@ export async function fetchMCPConfig(): Promise<MCPConfigResponse> {
 export async function upsertMCPServer(
   server: MCPServerConfig,
 ): Promise<{ success: boolean; server: MCPServerConfig }> {
-  const { data } = await api.post<{ success: boolean; server: MCPServerConfig }>(
-    '/studios/framework/mcp/servers',
-    server,
-  );
+  const { data } = await api.post<{
+    success: boolean;
+    server: MCPServerConfig;
+  }>("/studios/framework/mcp/servers", server);
   return data;
 }
 
 /** MCP サーバー削除 */
-export async function deleteMCPServer(name: string): Promise<{ success: boolean; deleted: string }> {
+export async function deleteMCPServer(
+  name: string,
+): Promise<{ success: boolean; deleted: string }> {
   const { data } = await api.delete<{ success: boolean; deleted: string }>(
     `/studios/framework/mcp/servers/${name}`,
   );
@@ -469,10 +567,10 @@ export async function deleteMCPServer(name: string): Promise<{ success: boolean;
 export async function patchMCPLazyLoading(
   patch: Partial<MCPLazyLoadingConfig>,
 ): Promise<{ success: boolean; lazy_loading: MCPLazyLoadingConfig }> {
-  const { data } = await api.patch<{ success: boolean; lazy_loading: MCPLazyLoadingConfig }>(
-    '/studios/framework/mcp/lazy-loading',
-    patch,
-  );
+  const { data } = await api.patch<{
+    success: boolean;
+    lazy_loading: MCPLazyLoadingConfig;
+  }>("/studios/framework/mcp/lazy-loading", patch);
   return data;
 }
 
@@ -481,19 +579,29 @@ export async function patchMCPLazyLoading(
  * ============================================================ */
 
 export async function fetchLLMManagementOverview(): Promise<LLMManagementOverviewResponse> {
-  const { data } = await api.get<LLMManagementOverviewResponse>('/studios/framework/llm/overview');
-  return data;
-}
-
-export async function reloadLLMManagementConfig(): Promise<{ reloaded: boolean; gateway: Record<string, unknown> }> {
-  const { data } = await api.post<{ reloaded: boolean; gateway: Record<string, unknown> }>(
-    '/studios/framework/llm/reload',
+  const { data } = await api.get<LLMManagementOverviewResponse>(
+    "/studios/framework/llm/overview",
   );
   return data;
 }
 
-export async function fetchLLMProviders(): Promise<{ providers: LLMProviderConfigItem[] }> {
-  const { data } = await api.get<{ providers: LLMProviderConfigItem[] }>('/studios/framework/llm/providers');
+export async function reloadLLMManagementConfig(): Promise<{
+  reloaded: boolean;
+  gateway: Record<string, unknown>;
+}> {
+  const { data } = await api.post<{
+    reloaded: boolean;
+    gateway: Record<string, unknown>;
+  }>("/studios/framework/llm/reload");
+  return data;
+}
+
+export async function fetchLLMProviders(): Promise<{
+  providers: LLMProviderConfigItem[];
+}> {
+  const { data } = await api.get<{ providers: LLMProviderConfigItem[] }>(
+    "/studios/framework/llm/providers",
+  );
   return data;
 }
 
@@ -501,16 +609,18 @@ export async function updateLLMProviders(
   providers: LLMProviderConfigItem[],
 ): Promise<{ providers: LLMProviderConfigItem[] }> {
   const { data } = await api.put<{ providers: LLMProviderConfigItem[] }>(
-    '/studios/framework/llm/providers',
+    "/studios/framework/llm/providers",
     { providers },
   );
   return data;
 }
 
-export async function fetchLLMProviderRuntime(): Promise<{ providers_runtime: LLMProviderRuntimeStatus[] }> {
-  const { data } = await api.get<{ providers_runtime: LLMProviderRuntimeStatus[] }>(
-    '/studios/framework/llm/providers/runtime',
-  );
+export async function fetchLLMProviderRuntime(): Promise<{
+  providers_runtime: LLMProviderRuntimeStatus[];
+}> {
+  const { data } = await api.get<{
+    providers_runtime: LLMProviderRuntimeStatus[];
+  }>("/studios/framework/llm/providers/runtime");
   return data;
 }
 
@@ -534,26 +644,29 @@ export async function deleteLLMProviderSecret(
   return data;
 }
 
-export async function fetchLLMInferenceEngines(): Promise<{ inference_engines: LLMInferenceEngineConfigItem[] }> {
-  const { data } = await api.get<{ inference_engines: LLMInferenceEngineConfigItem[] }>(
-    '/studios/framework/llm/engines',
-  );
+export async function fetchLLMInferenceEngines(): Promise<{
+  inference_engines: LLMInferenceEngineConfigItem[];
+}> {
+  const { data } = await api.get<{
+    inference_engines: LLMInferenceEngineConfigItem[];
+  }>("/studios/framework/llm/engines");
   return data;
 }
 
 export async function updateLLMInferenceEngines(
   inferenceEngines: LLMInferenceEngineConfigItem[],
 ): Promise<{ inference_engines: LLMInferenceEngineConfigItem[] }> {
-  const { data } = await api.put<{ inference_engines: LLMInferenceEngineConfigItem[] }>(
-    '/studios/framework/llm/engines',
-    { inference_engines: inferenceEngines },
-  );
+  const { data } = await api.put<{
+    inference_engines: LLMInferenceEngineConfigItem[];
+  }>("/studios/framework/llm/engines", { inference_engines: inferenceEngines });
   return data;
 }
 
-export async function fetchLLMEngineStatus(): Promise<{ engine_status: LLMEngineRuntimeStatus[] }> {
+export async function fetchLLMEngineStatus(): Promise<{
+  engine_status: LLMEngineRuntimeStatus[];
+}> {
   const { data } = await api.get<{ engine_status: LLMEngineRuntimeStatus[] }>(
-    '/studios/framework/llm/engines/status',
+    "/studios/framework/llm/engines/status",
   );
   return data;
 }
@@ -578,21 +691,31 @@ export async function stopLLMEngine(
   return data;
 }
 
-export async function fetchLLMModels(): Promise<{ models: LLMModelConfigItem[] }> {
-  const { data } = await api.get<{ models: LLMModelConfigItem[] }>('/studios/framework/llm/models');
+export async function fetchLLMModels(): Promise<{
+  models: LLMModelConfigItem[];
+}> {
+  const { data } = await api.get<{ models: LLMModelConfigItem[] }>(
+    "/studios/framework/llm/models",
+  );
   return data;
 }
 
-export async function updateLLMModels(models: LLMModelConfigItem[]): Promise<{ models: LLMModelConfigItem[] }> {
+export async function updateLLMModels(
+  models: LLMModelConfigItem[],
+): Promise<{ models: LLMModelConfigItem[] }> {
   const { data } = await api.put<{ models: LLMModelConfigItem[] }>(
-    '/studios/framework/llm/models',
+    "/studios/framework/llm/models",
     { models },
   );
   return data;
 }
 
-export async function fetchLLMRegistry(): Promise<{ registry: Record<string, string> }> {
-  const { data } = await api.get<{ registry: Record<string, string> }>('/studios/framework/llm/registry');
+export async function fetchLLMRegistry(): Promise<{
+  registry: Record<string, string>;
+}> {
+  const { data } = await api.get<{ registry: Record<string, string> }>(
+    "/studios/framework/llm/registry",
+  );
   return data;
 }
 
@@ -600,15 +723,17 @@ export async function updateLLMRegistry(
   registry: Record<string, string>,
 ): Promise<{ registry: Record<string, string> }> {
   const { data } = await api.put<{ registry: Record<string, string> }>(
-    '/studios/framework/llm/registry',
+    "/studios/framework/llm/registry",
     { registry },
   );
   return data;
 }
 
-export async function fetchLLMRoutingPolicy(): Promise<{ routing_policy: LLMRoutingPolicyConfig }> {
+export async function fetchLLMRoutingPolicy(): Promise<{
+  routing_policy: LLMRoutingPolicyConfig;
+}> {
   const { data } = await api.get<{ routing_policy: LLMRoutingPolicyConfig }>(
-    '/studios/framework/llm/routing-policy',
+    "/studios/framework/llm/routing-policy",
   );
   return data;
 }
@@ -617,14 +742,16 @@ export async function updateLLMRoutingPolicy(
   routingPolicy: LLMRoutingPolicyConfig,
 ): Promise<{ routing_policy: LLMRoutingPolicyConfig }> {
   const { data } = await api.put<{ routing_policy: LLMRoutingPolicyConfig }>(
-    '/studios/framework/llm/routing-policy',
+    "/studios/framework/llm/routing-policy",
     { routing_policy: routingPolicy },
   );
   return data;
 }
 
 export async function fetchLLMCatalog(): Promise<LLMCatalogResponse> {
-  const { data } = await api.get<LLMCatalogResponse>('/studios/framework/llm/catalog');
+  const { data } = await api.get<LLMCatalogResponse>(
+    "/studios/framework/llm/catalog",
+  );
   return data;
 }
 
@@ -632,7 +759,7 @@ export async function runLLMPreflight(
   payload: LLMPreflightRequest,
 ): Promise<LLMPreflightReport> {
   const { data } = await api.post<LLMPreflightReport>(
-    '/studios/framework/llm/preflight',
+    "/studios/framework/llm/preflight",
     payload,
   );
   return data;
@@ -642,7 +769,7 @@ export async function switchLLM(
   payload: LLMSwitchRequest,
 ): Promise<LLMSwitchResponse> {
   const { data } = await api.post<LLMSwitchResponse>(
-    '/studios/framework/llm/switch',
+    "/studios/framework/llm/switch",
     payload,
   );
   return data;
@@ -652,19 +779,23 @@ export async function setupAndSwitchLLM(
   payload: LLMSetupAndSwitchRequest,
 ): Promise<LLMSetupAndSwitchResponse> {
   const { data } = await api.post<LLMSetupAndSwitchResponse>(
-    '/studios/framework/llm/setup-and-switch',
+    "/studios/framework/llm/setup-and-switch",
     payload,
   );
   return data;
 }
 
 export async function fetchLLMDiagnostics(): Promise<LLMDiagnosticsResponse> {
-  const { data } = await api.get<LLMDiagnosticsResponse>('/studios/framework/llm/diagnostics');
+  const { data } = await api.get<LLMDiagnosticsResponse>(
+    "/studios/framework/llm/diagnostics",
+  );
   return data;
 }
 
 export async function fetchOpenAPIPaths(): Promise<string[]> {
-  const { data } = await rootApi.get<{ paths?: Record<string, unknown> }>('/openapi.json');
+  const { data } = await rootApi.get<{ paths?: Record<string, unknown> }>(
+    "/openapi.json",
+  );
   const keys = Object.keys(data.paths ?? {});
   return keys;
 }

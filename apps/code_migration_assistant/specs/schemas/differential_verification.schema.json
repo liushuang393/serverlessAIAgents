@@ -13,14 +13,14 @@
     "extensions"
   ],
   "properties": {
-    "meta": {"type": "object"},
-    "equivalence": {"type": "boolean"},
-    "diffs": {"type": "array"},
-    "classification": {"type": "string"},
-    "confidence": {"type": "number"},
-    "evidence": {"type": "object"},
-    "unknowns": {"type": "array"},
-    "extensions": {"type": "object"}
+    "meta": { "type": "object" },
+    "equivalence": { "type": "boolean" },
+    "diffs": { "type": "array" },
+    "classification": { "type": "string" },
+    "confidence": { "type": "number" },
+    "evidence": { "type": "object" },
+    "unknowns": { "type": "array" },
+    "extensions": { "type": "object" }
   },
   "additionalProperties": true
 }

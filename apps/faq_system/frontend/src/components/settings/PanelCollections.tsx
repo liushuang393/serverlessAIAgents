@@ -4,11 +4,11 @@
  * KnowledgePanel の「コレクション」タブで使用される。
  * コレクション一覧のカード表示、新規作成、設定編集を行う。
  */
-import { useEffect, useState } from 'react';
-import { Plus, Database } from 'lucide-react';
-import { useI18n } from '../../i18n';
-import { useRAGStore } from '../../stores/ragStore';
-import type { CollectionInfo } from '../../api/rag';
+import { useEffect, useState } from "react";
+import { Plus, Database } from "lucide-react";
+import { useI18n } from "../../i18n";
+import { useRAGStore } from "../../stores/ragStore";
+import type { CollectionInfo } from "../../api/rag";
 
 // ---------------------------------------------------------------------------
 // プリセット定義
@@ -24,7 +24,11 @@ export interface PresetValues {
   min_similarity: number;
 }
 
-export type PresetKey = 'faq_precision' | 'balanced_knowledge' | 'long_doc_reasoning' | 'custom';
+export type PresetKey =
+  | "faq_precision"
+  | "balanced_knowledge"
+  | "long_doc_reasoning"
+  | "custom";
 
 export interface PresetDef {
   key: PresetKey;
@@ -35,51 +39,51 @@ export interface PresetDef {
 
 export const PRESETS: PresetDef[] = [
   {
-    key: 'faq_precision',
-    labelKey: 'knowledge_panel.pattern_faq_precision',
-    descriptionKey: 'knowledge_panel.pattern_faq_precision_desc',
+    key: "faq_precision",
+    labelKey: "knowledge_panel.pattern_faq_precision",
+    descriptionKey: "knowledge_panel.pattern_faq_precision_desc",
     values: {
-      chunk_strategy: 'sentence',
+      chunk_strategy: "sentence",
       chunk_size: 500,
       chunk_overlap: 80,
-      retrieval_method: 'hybrid',
-      reranker: 'cohere',
+      retrieval_method: "hybrid",
+      reranker: "cohere",
       top_k: 8,
       min_similarity: 0.25,
     },
   },
   {
-    key: 'balanced_knowledge',
-    labelKey: 'knowledge_panel.pattern_balanced',
-    descriptionKey: 'knowledge_panel.pattern_balanced_desc',
+    key: "balanced_knowledge",
+    labelKey: "knowledge_panel.pattern_balanced",
+    descriptionKey: "knowledge_panel.pattern_balanced_desc",
     values: {
-      chunk_strategy: 'recursive',
+      chunk_strategy: "recursive",
       chunk_size: 800,
       chunk_overlap: 120,
-      retrieval_method: 'hybrid',
-      reranker: 'bm25',
+      retrieval_method: "hybrid",
+      reranker: "bm25",
       top_k: 6,
       min_similarity: 0.2,
     },
   },
   {
-    key: 'long_doc_reasoning',
-    labelKey: 'knowledge_panel.pattern_long_doc',
-    descriptionKey: 'knowledge_panel.pattern_long_doc_desc',
+    key: "long_doc_reasoning",
+    labelKey: "knowledge_panel.pattern_long_doc",
+    descriptionKey: "knowledge_panel.pattern_long_doc_desc",
     values: {
-      chunk_strategy: 'markdown',
+      chunk_strategy: "markdown",
       chunk_size: 1200,
       chunk_overlap: 180,
-      retrieval_method: 'multi_query',
-      reranker: 'cross_encoder',
+      retrieval_method: "multi_query",
+      reranker: "cross_encoder",
       top_k: 10,
       min_similarity: 0.3,
     },
   },
   {
-    key: 'custom',
-    labelKey: 'knowledge_panel.pattern_custom',
-    descriptionKey: 'knowledge_panel.pattern_custom_desc',
+    key: "custom",
+    labelKey: "knowledge_panel.pattern_custom",
+    descriptionKey: "knowledge_panel.pattern_custom_desc",
     values: null,
   },
 ];
@@ -98,17 +102,27 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
   const { t } = useI18n();
   const isEdit = !!initial;
 
-  const [preset, setPreset] = useState<PresetKey>('custom');
-  const [collectionName, setCollectionName] = useState(initial?.collection_name ?? '');
-  const [displayName, setDisplayName] = useState(initial?.display_name ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
-  const [chunkStrategy, setChunkStrategy] = useState(initial?.chunk_strategy ?? 'recursive');
+  const [preset, setPreset] = useState<PresetKey>("custom");
+  const [collectionName, setCollectionName] = useState(
+    initial?.collection_name ?? "",
+  );
+  const [displayName, setDisplayName] = useState(initial?.display_name ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [chunkStrategy, setChunkStrategy] = useState(
+    initial?.chunk_strategy ?? "recursive",
+  );
   const [chunkSize, setChunkSize] = useState(initial?.chunk_size ?? 800);
-  const [chunkOverlap, setChunkOverlap] = useState(initial?.chunk_overlap ?? 120);
-  const [retrievalMethod, setRetrievalMethod] = useState(initial?.retrieval_method ?? 'semantic');
-  const [reranker, setReranker] = useState(initial?.reranker ?? 'none');
+  const [chunkOverlap, setChunkOverlap] = useState(
+    initial?.chunk_overlap ?? 120,
+  );
+  const [retrievalMethod, setRetrievalMethod] = useState(
+    initial?.retrieval_method ?? "semantic",
+  );
+  const [reranker, setReranker] = useState(initial?.reranker ?? "none");
   const [topK, setTopK] = useState(initial?.top_k ?? 5);
-  const [minSimilarity, setMinSimilarity] = useState(initial?.min_similarity ?? 0.2);
+  const [minSimilarity, setMinSimilarity] = useState(
+    initial?.min_similarity ?? 0.2,
+  );
 
   const applyPreset = (key: PresetKey) => {
     setPreset(key);
@@ -130,7 +144,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       chunk_size: chunkSize,
       chunk_overlap: chunkOverlap,
       retrieval_method: retrievalMethod,
-      reranker: reranker === 'none' ? null : reranker,
+      reranker: reranker === "none" ? null : reranker,
       top_k: topK,
       min_similarity: minSimilarity,
     };
@@ -147,7 +161,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {/* プリセット選択 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          {t('knowledge_panel.pattern_preset')}
+          {t("knowledge_panel.pattern_preset")}
         </h4>
         <div className="grid grid-cols-2 gap-2">
           {PRESETS.map((p) => (
@@ -158,12 +172,16 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
               onClick={() => applyPreset(p.key)}
               className={`p-2.5 rounded-xl border text-left transition-all ${
                 preset === p.key
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/10'
-                  : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'
+                  ? "border-[var(--primary)] bg-[var(--primary)]/10"
+                  : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
               }`}
             >
-              <p className="text-xs font-semibold text-white">{t(p.labelKey)}</p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{t(p.descriptionKey)}</p>
+              <p className="text-xs font-semibold text-white">
+                {t(p.labelKey)}
+              </p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                {t(p.descriptionKey)}
+              </p>
             </button>
           ))}
         </div>
@@ -173,28 +191,28 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {!isEdit && (
         <div>
           <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-            {t('knowledge_panel.basic_info')}
+            {t("knowledge_panel.basic_info")}
           </h4>
           <div className="space-y-2">
             <input
               data-testid="input-collection-name"
               value={collectionName}
               onChange={(e) => setCollectionName(e.target.value)}
-              placeholder={t('knowledge_panel.collection_name_placeholder')}
+              placeholder={t("knowledge_panel.collection_name_placeholder")}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)]"
             />
             <input
               data-testid="input-display-name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder={t('knowledge_panel.display_name_placeholder')}
+              placeholder={t("knowledge_panel.display_name_placeholder")}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)]"
             />
             <textarea
               data-testid="input-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t('knowledge_panel.description_placeholder')}
+              placeholder={t("knowledge_panel.description_placeholder")}
               rows={2}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)] resize-none"
             />
@@ -205,11 +223,13 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {/* チャンキング設定 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          {t('knowledge_panel.chunking_settings')}
+          {t("knowledge_panel.chunking_settings")}
         </h4>
         <div className="space-y-3">
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.chunk_strategy')}</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {t("knowledge_panel.chunk_strategy")}
+            </span>
             <select
               data-testid="select-chunk-strategy"
               value={chunkStrategy}
@@ -225,7 +245,8 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('knowledge_panel.chunk_size')}: <span data-testid="chunk-size-value">{chunkSize}</span>
+              {t("knowledge_panel.chunk_size")}:{" "}
+              <span data-testid="chunk-size-value">{chunkSize}</span>
             </span>
             <input
               data-testid="range-chunk-size"
@@ -240,7 +261,8 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('knowledge_panel.chunk_overlap')}: <span data-testid="chunk-overlap-value">{chunkOverlap}</span>
+              {t("knowledge_panel.chunk_overlap")}:{" "}
+              <span data-testid="chunk-overlap-value">{chunkOverlap}</span>
             </span>
             <input
               data-testid="range-chunk-overlap"
@@ -259,11 +281,13 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
       {/* 検索設定 */}
       <div>
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-          {t('knowledge_panel.retrieval_settings')}
+          {t("knowledge_panel.retrieval_settings")}
         </h4>
         <div className="space-y-3">
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.retrieval_method')}</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {t("knowledge_panel.retrieval_method")}
+            </span>
             <select
               data-testid="select-retrieval-method"
               value={retrievalMethod}
@@ -277,7 +301,9 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">{t('knowledge_panel.reranker')}</span>
+            <span className="text-xs text-[var(--text-muted)]">
+              {t("knowledge_panel.reranker")}
+            </span>
             <select
               data-testid="select-reranker"
               value={reranker}
@@ -292,7 +318,8 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('knowledge_panel.top_k')}: <span data-testid="top-k-value">{topK}</span>
+              {t("knowledge_panel.top_k")}:{" "}
+              <span data-testid="top-k-value">{topK}</span>
             </span>
             <input
               data-testid="range-top-k"
@@ -307,7 +334,10 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           </label>
           <label className="block">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('knowledge_panel.min_similarity')}: <span data-testid="min-similarity-value">{minSimilarity.toFixed(2)}</span>
+              {t("knowledge_panel.min_similarity")}:{" "}
+              <span data-testid="min-similarity-value">
+                {minSimilarity.toFixed(2)}
+              </span>
             </span>
             <input
               data-testid="range-min-similarity"
@@ -330,7 +360,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           onClick={onCancel}
           className="px-4 py-2 rounded-lg text-xs text-[var(--text-muted)] hover:bg-white/5 transition"
         >
-          {t('knowledge_panel.cancel')}
+          {t("knowledge_panel.cancel")}
         </button>
         <button
           type="button"
@@ -339,7 +369,7 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           disabled={!isEdit && !collectionName.trim()}
           className="px-4 py-2 rounded-lg bg-[var(--primary)] text-black text-xs font-semibold hover:opacity-90 transition disabled:opacity-50"
         >
-          {isEdit ? t('knowledge_panel.save') : t('knowledge_panel.create')}
+          {isEdit ? t("knowledge_panel.save") : t("knowledge_panel.create")}
         </button>
       </div>
     </div>
@@ -362,30 +392,31 @@ export function PanelCollections() {
     selectedCollection,
   } = useRAGStore();
 
-  const [mode, setMode] = useState<'list' | 'create' | 'edit'>('list');
-  const [editingCollection, setEditingCollection] = useState<CollectionInfo | null>(null);
+  const [mode, setMode] = useState<"list" | "create" | "edit">("list");
+  const [editingCollection, setEditingCollection] =
+    useState<CollectionInfo | null>(null);
 
   useEffect(() => {
     void fetchCollections();
   }, [fetchCollections]);
 
   const handleCardClick = (col: CollectionInfo) => {
-    if (selectedCollection === col.collection_name && mode === 'edit') {
+    if (selectedCollection === col.collection_name && mode === "edit") {
       // 同じカードを再クリックしたら閉じる
-      setMode('list');
+      setMode("list");
       setEditingCollection(null);
       selectCollection(null);
     } else {
       selectCollection(col.collection_name);
       setEditingCollection(col);
-      setMode('edit');
+      setMode("edit");
     }
   };
 
   const handleCreate = async (data: Partial<CollectionInfo>) => {
     try {
       await createCollection(data);
-      setMode('list');
+      setMode("list");
     } catch {
       // error handled by store
     }
@@ -395,7 +426,7 @@ export function PanelCollections() {
     if (!editingCollection) return;
     try {
       await updateCollection(editingCollection.collection_name, data);
-      setMode('list');
+      setMode("list");
       setEditingCollection(null);
     } catch {
       // error handled by store
@@ -403,7 +434,7 @@ export function PanelCollections() {
   };
 
   const handleCancel = () => {
-    setMode('list');
+    setMode("list");
     setEditingCollection(null);
     selectCollection(null);
   };
@@ -413,39 +444,42 @@ export function PanelCollections() {
       {/* ヘッダー + 新規作成ボタン */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-          {t('knowledge_panel.collection_list')}
+          {t("knowledge_panel.collection_list")}
         </h3>
         <button
           data-testid="btn-new-collection"
           type="button"
           onClick={() => {
-            setMode('create');
+            setMode("create");
             setEditingCollection(null);
             selectCollection(null);
           }}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium hover:bg-[var(--primary)]/20 transition border border-[var(--primary)]/20"
         >
           <Plus size={14} />
-          {t('knowledge_panel.new_collection')}
+          {t("knowledge_panel.new_collection")}
         </button>
       </div>
 
       {/* ローディング */}
       {collectionsLoading && collections.length === 0 && (
-        <div className="text-center py-8 text-[var(--text-muted)] text-sm">{t('knowledge_panel.loading')}</div>
+        <div className="text-center py-8 text-[var(--text-muted)] text-sm">
+          {t("knowledge_panel.loading")}
+        </div>
       )}
 
       {/* 空状態 */}
       {!collectionsLoading && collections.length === 0 && (
         <div className="text-center py-8 text-[var(--text-muted)] text-sm">
-          {t('knowledge_panel.no_collections')}
+          {t("knowledge_panel.no_collections")}
         </div>
       )}
 
       {/* コレクションカード一覧 */}
       <div data-testid="collection-card-list" className="space-y-2">
         {collections.map((col) => {
-          const isSelected = selectedCollection === col.collection_name && mode === 'edit';
+          const isSelected =
+            selectedCollection === col.collection_name && mode === "edit";
           return (
             <div key={col.collection_name}>
               <button
@@ -454,12 +488,15 @@ export function PanelCollections() {
                 onClick={() => handleCardClick(col)}
                 className={`w-full text-left p-3 rounded-xl border transition-all ${
                   isSelected
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/5'
-                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'
+                    ? "border-[var(--primary)] bg-[var(--primary)]/5"
+                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <Database size={14} className="text-indigo-400 flex-shrink-0" />
+                  <Database
+                    size={14}
+                    className="text-indigo-400 flex-shrink-0"
+                  />
                   <span className="text-sm font-medium text-white truncate">
                     {col.display_name || col.collection_name}
                   </span>
@@ -493,7 +530,7 @@ export function PanelCollections() {
       </div>
 
       {/* 新規作成フォーム */}
-      {mode === 'create' && (
+      {mode === "create" && (
         <div className="p-3 rounded-xl glass border border-white/5">
           <CollectionForm onSave={handleCreate} onCancel={handleCancel} />
         </div>

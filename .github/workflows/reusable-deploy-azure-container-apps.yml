@@ -82,4 +82,3 @@ jobs:
           containerAppEnvironment: ${{ inputs.environment-name }}
           imageToDeploy: ${{ env.IMAGE }}
           targetPort: 8080
-

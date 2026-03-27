@@ -135,10 +135,7 @@ export class ApiError extends Error {
 // 共通 fetch ラッパー
 // --------------------------------------------------------------------------
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -164,7 +161,10 @@ async function request<T>(
     try {
       const body = await res.json();
       if (body.detail) {
-        msg = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
+        msg =
+          typeof body.detail === "string"
+            ? body.detail
+            : JSON.stringify(body.detail);
       } else if (body.message) {
         msg = body.message;
       }
@@ -293,7 +293,9 @@ export async function removePermissionFromRole(
 export async function fetchUserRoles(
   userId: string,
 ): Promise<{ roles: string[] }> {
-  return request(`/auth/authorization/users/${encodeURIComponent(userId)}/roles`);
+  return request(
+    `/auth/authorization/users/${encodeURIComponent(userId)}/roles`,
+  );
 }
 
 export async function assignRoleToUser(

@@ -12,13 +12,13 @@
     "extensions"
   ],
   "properties": {
-    "meta": {"type": "object"},
-    "target_code": {"type": "string"},
-    "generated_files": {"type": "array"},
-    "rule_hits": {"type": "array"},
-    "warnings": {"type": "array"},
-    "unknowns": {"type": "array"},
-    "extensions": {"type": "object"}
+    "meta": { "type": "object" },
+    "target_code": { "type": "string" },
+    "generated_files": { "type": "array" },
+    "rule_hits": { "type": "array" },
+    "warnings": { "type": "array" },
+    "unknowns": { "type": "array" },
+    "extensions": { "type": "object" }
   },
   "additionalProperties": true
 }

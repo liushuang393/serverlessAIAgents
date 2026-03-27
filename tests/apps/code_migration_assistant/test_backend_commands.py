@@ -162,7 +162,7 @@ def test_command_result_event_is_streamed_without_polling(tmp_path: Path) -> Non
     task_id = "task-command-event"
     _make_runtime(task_id, tmp_path / task_id)
     ws = _WsSpy()
-    backend_app.task_websockets[task_id] = {ws}  # type: ignore[arg-type]
+    backend_app.task_websockets[task_id] = {ws}
 
     try:
         asyncio.run(
@@ -192,7 +192,7 @@ def test_approval_command_streams_approval_and_command_events(tmp_path: Path) ->
     task_id = "task-approval-event"
     runtime = _make_runtime(task_id, tmp_path / task_id)
     ws = _WsSpy()
-    backend_app.task_websockets[task_id] = {ws}  # type: ignore[arg-type]
+    backend_app.task_websockets[task_id] = {ws}
 
     pending = ApprovalRequest(action="design_review", reason="approval required")
     runtime.engine._approval_flow._pending[pending.id] = pending
@@ -342,7 +342,7 @@ def test_send_ws_event_supports_multi_subscribers() -> None:
     ws1 = _WsSpy()
     ws2 = _WsSpy()
     backend_app.task_websockets.clear()
-    backend_app.task_websockets[task_id] = {ws1, ws2}  # type: ignore[arg-type]
+    backend_app.task_websockets[task_id] = {ws1, ws2}
 
     event = {"event_type": "log", "flow_id": task_id, "message": "ok"}
     asyncio.run(backend_app._send_ws_event(task_id, event))
@@ -549,7 +549,7 @@ def test_redis_listener_forwards_remote_event_to_websocket() -> None:
     backend_app.task_websockets.clear()
     task_id = "task-redis-listener"
     ws = _WsSpy()
-    backend_app.task_websockets[task_id] = {ws}  # type: ignore[arg-type]
+    backend_app.task_websockets[task_id] = {ws}
 
     payload = {
         "task_id": task_id,

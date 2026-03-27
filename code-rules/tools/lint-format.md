@@ -20,6 +20,7 @@
 Ruff を統一のリンターおよびフォーマッターとして使用します。
 
 ### pyproject.toml 設定
+
 ```toml
 [tool.ruff]
 # 基本設定
@@ -121,6 +122,7 @@ docstring-code-line-length = 80
 ```
 
 ### Ruff 使用方法
+
 ```bash
 # チェックのみ
 ruff check .
@@ -148,6 +150,7 @@ ruff check . --exclude "tests/fixtures/*"
 Mypy を型チェッカーとして使用します。
 
 ### pyproject.toml 設定
+
 ```toml
 [tool.mypy]
 python_version = "3.10"
@@ -190,6 +193,7 @@ ignore_missing_imports = true
 ```
 
 ### Mypy 使用方法
+
 ```bash
 # 型チェック実行
 mypy agentflow
@@ -211,6 +215,7 @@ mypy --config-file pyproject.toml --show-config
 Pre-commit をコミット前の品質チェックに使用します。
 
 ### .pre-commit-config.yaml
+
 ```yaml
 repos:
   # Ruff (高速Pythonリンター)
@@ -234,7 +239,7 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+        args: ["--baseline", ".secrets.baseline"]
 
   # YAML フォーマット
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -265,6 +270,7 @@ repos:
 ```
 
 ### Pre-commit 使用方法
+
 ```bash
 # インストール
 pre-commit install
@@ -284,6 +290,7 @@ git commit -m "feat: add new feature"
 ## 🔄 CI/CD 統合
 
 ### GitHub Actions ワークフロー
+
 ```yaml
 # .github/workflows/ci.yml
 name: CI
@@ -299,38 +306,39 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pre-commit
-        key: pre-commit-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Run pre-commit hooks
-      run: |
-        pre-commit run --all-files --show-diff-on-failure
+      - name: Run pre-commit hooks
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
 
-    - name: Run tests with coverage
-      run: |
-        pip install -e ".[dev]"
-        pytest --cov=agentflow --cov-report=xml --cov-report=term-missing
+      - name: Run tests with coverage
+        run: |
+          pip install -e ".[dev]"
+          pytest --cov=agentflow --cov-report=xml --cov-report=term-missing
 
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
 ```
 
 ### 品質ゲート設定
+
 ```yaml
 # 品質チェックジョブ
 quality-gate:
@@ -338,28 +346,28 @@ quality-gate:
   needs: [test, quality]
 
   steps:
-  - name: Quality gate check
-    run: |
-      # カバレッジチェック
-      COVERAGE=$(python -c "import xml.etree.ElementTree as ET; print(float(ET.parse('coverage.xml').getroot().attrib['line-rate']) * 100)")
-      if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-        echo "❌ カバレッジが80%未満: ${COVERAGE}%"
-        exit 1
-      fi
+    - name: Quality gate check
+      run: |
+        # カバレッジチェック
+        COVERAGE=$(python -c "import xml.etree.ElementTree as ET; print(float(ET.parse('coverage.xml').getroot().attrib['line-rate']) * 100)")
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "❌ カバレッジが80%未満: ${COVERAGE}%"
+          exit 1
+        fi
 
-      # リントチェック
-      if ! ruff check .; then
-        echo "❌ リントチェック失敗"
-        exit 1
-      fi
+        # リントチェック
+        if ! ruff check .; then
+          echo "❌ リントチェック失敗"
+          exit 1
+        fi
 
-      # 型チェック
-      if ! mypy agentflow; then
-        echo "❌ 型チェック失敗"
-        exit 1
-      fi
+        # 型チェック
+        if ! mypy agentflow; then
+          echo "❌ 型チェック失敗"
+          exit 1
+        fi
 
-      echo "✅ 品質ゲート通過"
+        echo "✅ 品質ゲート通過"
 ```
 
 ---
@@ -367,6 +375,7 @@ quality-gate:
 ## 🤖 自動修正スクリプト
 
 ### 一括品質改善スクリプト
+
 ```bash
 #!/bin/bash
 # scripts/fix_code_quality.sh
@@ -409,6 +418,7 @@ echo "   必要に応じて手動修正を行ってください。"
 ```
 
 ### インクリメンタル修正スクリプト
+
 ```python
 #!/usr/bin/env python3
 # scripts/incremental_fix.py
@@ -480,6 +490,7 @@ if __name__ == "__main__":
 ```
 
 ### 品質ダッシュボード生成
+
 ```python
 #!/usr/bin/env python3
 # scripts/generate_quality_dashboard.py
@@ -558,6 +569,7 @@ if __name__ == "__main__":
 ## 🔍 品質チェック
 
 ### 品質チェックスクリプト
+
 ```bash
 #!/bin/bash
 # scripts/check_quality.sh
@@ -641,6 +653,7 @@ echo "🎉 全ての品質チェック通過！"
 ```
 
 ### 品質レポート生成
+
 ```python
 #!/usr/bin/env python3
 # scripts/generate_quality_report.py
@@ -840,11 +853,11 @@ if __name__ == "__main__":
 
 ## 📋 リンター & フォーマッター チートシート
 
-| ツール | 目的 | コマンド | CI |
-|--------|------|----------|-----|
-| **Ruff** | リント+フォーマット | `ruff check . --fix` | ✅ |
-| **Mypy** | 型チェック | `mypy agentflow` | ✅ |
-| **Pre-commit** | コミット前チェック | `pre-commit run --all-files` | ✅ |
-| **Bandit** | セキュリティ | `bandit -r agentflow` | ✅ |
+| ツール         | 目的                | コマンド                     | CI  |
+| -------------- | ------------------- | ---------------------------- | --- |
+| **Ruff**       | リント+フォーマット | `ruff check . --fix`         | ✅  |
+| **Mypy**       | 型チェック          | `mypy agentflow`             | ✅  |
+| **Pre-commit** | コミット前チェック  | `pre-commit run --all-files` | ✅  |
+| **Bandit**     | セキュリティ        | `bandit -r agentflow`        | ✅  |
 
-*最終更新: 2026-01-19 | Ruff + Mypy + Pre-commit 統合*
+_最終更新: 2026-01-19 | Ruff + Mypy + Pre-commit 統合_

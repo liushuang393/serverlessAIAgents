@@ -27,6 +27,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+import anyio
+
 from contracts.runtime.context import get_runtime_context
 from infrastructure.llm.gateway import LiteLLMGateway
 
@@ -250,8 +252,8 @@ class VoiceSkill:
 
         audio_data = await self.synthesize(text, voice=voice, speed=speed, output_format=output_format)
 
-        with open(output_path, "wb") as f:
-            f.write(audio_data)
+        async with await anyio.open_file(output_path, "wb") as f:
+            await f.write(audio_data)
 
         return output_path
 
@@ -320,12 +322,12 @@ class VoiceSkill:
             return audio_data
 
         if audio_path:
-            path = Path(audio_path)
-            if not path.exists():
+            path = anyio.Path(audio_path)
+            if not await path.exists():
                 msg = f"Audio file not found: {path}"
                 raise ValueError(msg)
-            with open(path, "rb") as f:
-                return f.read()
+            async with await anyio.open_file(path, "rb") as f:
+                return await f.read()
 
         if audio_base64:
             return base64.b64decode(audio_base64)

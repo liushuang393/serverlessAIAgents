@@ -94,7 +94,7 @@ async def test_router_search_pipeline_builds_citations_and_extraction() -> None:
     result = await router.execute(
         WebRouterInput(
             request_id="search-1",
-                intent=WebIntent(intent=WebIntentType.SEARCH, query="agentflow web"),
+            intent=WebIntent(intent=WebIntentType.SEARCH, query="agentflow web"),
             constraints=QualityConstraints(structured_output=True),
             allowed_domains=["example.com"],
             blocked_domains=["blocked.com"],
@@ -209,11 +209,9 @@ async def test_site_crawl_provider_keeps_same_domain(monkeypatch: pytest.MonkeyP
 
         async def get(self, url: str) -> _FakeResponse:
             _ = url
-            return _FakeResponse(
-                '<a href="/page-2">same</a><a href="https://outside.com/page">outside</a>'
-            )
+            return _FakeResponse('<a href="/page-2">same</a><a href="https://outside.com/page">outside</a>')
 
-    monkeypatch.setattr("infrastructure.providers.web.crawl.adapters.get_fetch_provider", lambda: _FakeFetchProvider())
+    monkeypatch.setattr("infrastructure.providers.web.crawl.adapters.get_fetch_provider", _FakeFetchProvider)
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: _FakeAsyncClient())
 
     provider = SiteCrawlProvider()

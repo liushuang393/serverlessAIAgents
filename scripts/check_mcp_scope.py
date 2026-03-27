@@ -1,14 +1,21 @@
 """scripts/check_mcp_scope.py — MCP が integration 層を超えていないかチェック."""
+
 from __future__ import annotations
 
 import argparse
 import ast
+import json
 import sys
 from pathlib import Path
 
+
 ALLOWED_DIRS = {
-    "kernel/protocols", "contracts/protocol",
-    "apps", "control_plane", "tests", "plugins",
+    "kernel/protocols",
+    "contracts/protocol",
+    "apps",
+    "control_plane",
+    "tests",
+    "plugins",
 }
 
 
@@ -41,7 +48,6 @@ def main() -> int:
 
     violations = check_mcp_scope(Path(args.root))
     if args.json:
-        import json
         print(json.dumps({"violations": violations, "count": len(violations)}))
     else:
         for v in violations:

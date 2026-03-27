@@ -18,7 +18,13 @@
     "validator_queue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["backend", "redis_url", "stream_key", "consumer_group", "max_retries"],
+      "required": [
+        "backend",
+        "redis_url",
+        "stream_key",
+        "consumer_group",
+        "max_retries"
+      ],
       "properties": {
         "backend": { "type": "string", "enum": ["redis_stream", "none"] },
         "redis_url": { "type": ["string", "null"] },
@@ -38,21 +44,49 @@
     "retrieval": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["high_confidence_skip_threshold", "high_complexity_threshold", "low_confidence_threshold"],
+      "required": [
+        "high_confidence_skip_threshold",
+        "high_complexity_threshold",
+        "low_confidence_threshold"
+      ],
       "properties": {
-        "high_confidence_skip_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
-        "high_complexity_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
-        "low_confidence_threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+        "high_confidence_skip_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "high_complexity_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "low_confidence_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "suspicion": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["max_age_days", "failure_streak_threshold", "performance_drop_ratio"],
+      "required": [
+        "max_age_days",
+        "failure_streak_threshold",
+        "performance_drop_ratio"
+      ],
       "properties": {
         "max_age_days": { "type": "integer", "minimum": 1, "maximum": 3650 },
-        "failure_streak_threshold": { "type": "integer", "minimum": 1, "maximum": 20 },
-        "performance_drop_ratio": { "type": "number", "minimum": 0.01, "maximum": 1 }
+        "failure_streak_threshold": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "performance_drop_ratio": {
+          "type": "number",
+          "minimum": 0.01,
+          "maximum": 1
+        }
       }
     }
   }

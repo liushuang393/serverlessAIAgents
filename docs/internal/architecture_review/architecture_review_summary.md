@@ -25,15 +25,15 @@
 
 ## Scorecard
 
-| Dimension | Score | Comment |
-| --- | ---: | --- |
-| Cohesion | 56 | `shared`、`control_plane`、`kernel` 都有职责堆积 |
-| Coupling | 44 | 已出现 `shared -> control_plane/apps`, `kernel -> control_plane` |
-| Pattern Fit | 61 | governance pipeline 与 contract-first 是优点，部分 registry 过薄或过厚 |
-| Extensibility | 58 | provider 扩展较清晰，plugin 扩展成本偏高 |
-| Maintainability | 49 | 多个热点文件过大，边界模糊提升认知成本 |
-| Plugin / Modularity | 52 | 有骨架，但缺统一 plugin lifecycle |
-| Overall | 53 | 架构可救且值得保留，但必须做收口 |
+| Dimension           | Score | Comment                                                                |
+| ------------------- | ----: | ---------------------------------------------------------------------- |
+| Cohesion            |    56 | `shared`、`control_plane`、`kernel` 都有职责堆积                       |
+| Coupling            |    44 | 已出现 `shared -> control_plane/apps`, `kernel -> control_plane`       |
+| Pattern Fit         |    61 | governance pipeline 与 contract-first 是优点，部分 registry 过薄或过厚 |
+| Extensibility       |    58 | provider 扩展较清晰，plugin 扩展成本偏高                               |
+| Maintainability     |    49 | 多个热点文件过大，边界模糊提升认知成本                                 |
+| Plugin / Modularity |    52 | 有骨架，但缺统一 plugin lifecycle                                      |
+| Overall             |    53 | 架构可救且值得保留，但必须做收口                                       |
 
 ## Top 10 Problems
 

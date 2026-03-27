@@ -7,7 +7,7 @@ version: "2.2.0"
 description: |
   企業の意思決定を支援するマルチエージェントシステム v2.2。
   認知→門番→診断→道（本質）→法（戦略）→術（計画）→器（実装）→検証の8層で構造化された分析を提供。
-  
+
   v2.2新機能:
   - CognitiveGateAgent（認知前処理）追加：評価対象・動機・評価軸・不可逆性を検査
   v2.0新機能:
@@ -66,9 +66,9 @@ agents:
       - essence
       - immutable_constraints
       - hidden_assumptions
-      - causal_gears        # NEW: 因果齿轮
-      - bottleneck_gear     # NEW: 瓶颈齿轮
-      - death_traps         # NEW: 死穴（禁忌）
+      - causal_gears # NEW: 因果齿轮
+      - bottleneck_gear # NEW: 瓶颈齿轮
+      - death_traps # NEW: 死穴（禁忌）
 
   fa:
     name: FaAgent
@@ -80,14 +80,14 @@ agents:
       use_rag: false
       max_recommended_paths: 2
     outputs:
-      - recommended_paths     # 推奨パス（稳健型 + 激进型）
-      - rejected_paths        # 不推奨パス
-      - decision_criteria     # 判断基準
-      - path_comparison       # NEW: 比較マトリックス
+      - recommended_paths # 推奨パス（稳健型 + 激进型）
+      - rejected_paths # 不推奨パス
+      - decision_criteria # 判断基準
+      - path_comparison # NEW: 比較マトリックス
     strategy_types:
-      - CONSERVATIVE  # 稳健型
-      - AGGRESSIVE    # 激进型
-      - BALANCED      # バランス型
+      - CONSERVATIVE # 稳健型
+      - AGGRESSIVE # 激进型
+      - BALANCED # バランス型
 
   shu:
     name: ShuAgent
@@ -125,7 +125,7 @@ agents:
         - 最悪ケースの想定があるか
         - 撤退条件が定義されているか
         - 最初の一歩が明日実行可能か
-        - 死穴（禁忌）が回避されているか  # NEW
+        - 死穴（禁忌）が回避されているか # NEW
 
 # Workflow定義
 workflow:
@@ -153,8 +153,8 @@ workflow:
       agent: qi
     - name: verification
       agent: review
-      on_coach: interactive_improvement  # COACHの場合はユーザーと対話して改善指導
-      on_revise: rollback  # REVISEの場合は該当Agentに回退
+      on_coach: interactive_improvement # COACHの場合はユーザーと対話して改善指導
+      on_revise: rollback # REVISEの場合は該当Agentに回退
       description: 検証 + コーチング型改善指導（REJECT廃止、課題があればCOACHモードで改善ループ）
 
 # Studio UI（React Flow）用ノード定義
@@ -302,10 +302,10 @@ output:
   version: "2.0"
   include_sections:
     - executive_summary
-    - clarification_diagnosis  # NEW
+    - clarification_diagnosis # NEW
     - dao_analysis
-    - causal_gears             # NEW
-    - death_traps              # NEW
+    - causal_gears # NEW
+    - death_traps # NEW
     - fa_strategy
     - shu_plan
     - qi_implementation

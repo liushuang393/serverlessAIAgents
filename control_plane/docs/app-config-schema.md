@@ -24,15 +24,47 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
   "version": "1.0.0",
   "icon": "💬",
   "ports": { "api": 8001, "frontend": null, "db": 5433, "redis": null },
-  "entry_points": { "api_module": "apps.faq_system.main:app", "health": "/health" },
-  "agents": [{ "name": "FAQAgent", "module": null, "capabilities": ["rag", "faq"], "business_base": "knowledge", "pattern": "specialist" }],
+  "entry_points": {
+    "api_module": "apps.faq_system.main:app",
+    "health": "/health"
+  },
+  "agents": [
+    {
+      "name": "FAQAgent",
+      "module": null,
+      "capabilities": ["rag", "faq"],
+      "business_base": "knowledge",
+      "pattern": "specialist"
+    }
+  ],
   "services": {},
   "dependencies": { "database": "postgresql", "redis": false, "external": [] },
   "runtime": {
-    "urls": { "backend": null, "frontend": null, "health": null, "database": null },
+    "urls": {
+      "backend": null,
+      "frontend": null,
+      "health": null,
+      "database": null
+    },
     "hosts": { "backend": "0.0.0.0", "frontend": null },
-    "database": { "kind": null, "url": null, "host": null, "port": null, "name": null, "user": null, "password": null, "password_env": null, "note": null },
-    "commands": { "backend_dev": null, "frontend_dev": null, "publish": null, "start": null, "stop": null }
+    "database": {
+      "kind": null,
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": null,
+      "frontend_dev": null,
+      "publish": null,
+      "start": null,
+      "stop": null
+    }
   },
   "contracts": {
     "auth": {
@@ -46,9 +78,34 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
       "token_policy": {},
       "session_ttl_minutes": 60
     },
-    "rag": { "enabled": true, "pattern": null, "provider": null, "collections": ["faq_system_knowledge"], "data_sources": [], "chunk_strategy": "recursive", "chunk_size": 800, "chunk_overlap": 120, "retrieval_method": "hybrid", "embedding_model": null, "rerank_model": null, "default_top_k": 5, "score_threshold": null, "indexing_schedule": null },
-    "skills": { "auto_install": false, "hot_reload": true, "allowed_sources": [], "default_skills": [] },
-    "release": { "strategy": "manual", "targets": [], "environments": ["dev"], "require_approval": true }
+    "rag": {
+      "enabled": true,
+      "pattern": null,
+      "provider": null,
+      "collections": ["faq_system_knowledge"],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": ["dev"],
+      "require_approval": true
+    }
   },
   "product_line": "faq",
   "surface_profile": "business",
@@ -66,7 +123,7 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
     "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
-      "high_complexity_threshold": 0.70,
+      "high_complexity_threshold": 0.7,
       "low_confidence_threshold": 0.55
     },
     "suspicion": {
@@ -76,7 +133,11 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
     }
   },
   "plugin_bindings": [
-    { "id": "official.enterprise-connector-pack", "version": "1.0.0", "config": {} }
+    {
+      "id": "official.enterprise-connector-pack",
+      "version": "1.0.0",
+      "config": {}
+    }
   ],
   "security_mode": null,
   "blueprint": {
@@ -188,13 +249,27 @@ RAG 概要サービスの抽出優先度は以下。
           "interactive_login": ["codex", "login"]
         },
         "diagnostic_mode": "read_only",
-        "diagnostic_command": ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only"],
+        "diagnostic_command": [
+          "codex",
+          "exec",
+          "--skip-git-repo-check",
+          "--sandbox",
+          "read-only"
+        ],
         "repair_mode": "workspace_write",
-        "repair_command": ["codex", "exec", "--skip-git-repo-check", "--sandbox", "workspace-write"]
+        "repair_command": [
+          "codex",
+          "exec",
+          "--skip-git-repo-check",
+          "--sandbox",
+          "workspace-write"
+        ]
       },
       "claude": {
         "executable": "claude",
-        "install_commands": [["npm", "install", "-g", "@anthropic-ai/claude-code"]],
+        "install_commands": [
+          ["npm", "install", "-g", "@anthropic-ai/claude-code"]
+        ],
         "auth": {
           "status": ["claude", "auth", "status", "--json"],
           "api_key_env": "ANTHROPIC_API_KEY",

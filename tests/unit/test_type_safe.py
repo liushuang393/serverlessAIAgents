@@ -1,11 +1,11 @@
 """type_safe ユーティリティの単体テスト."""
 
-from enum import Enum
+from enum import StrEnum
 
 from kernel.core.type_safe import safe_enum, safe_float, safe_int
 
 
-class _Mode(str, Enum):
+class _Mode(StrEnum):
     A = "A"
     B = "B"
 

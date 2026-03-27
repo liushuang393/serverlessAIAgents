@@ -85,4 +85,3 @@ jobs:
           name: test-screenshots
           path: ${{ inputs.working-directory }}/test-results/
           retention-days: 7
-

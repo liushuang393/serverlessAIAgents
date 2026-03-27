@@ -11,12 +11,12 @@
     "extensions"
   ],
   "properties": {
-    "meta": {"type": "object"},
-    "test_cases": {"type": "array"},
-    "golden_master": {"type": "object"},
-    "evidence": {"type": "object"},
-    "unknowns": {"type": "array"},
-    "extensions": {"type": "object"}
+    "meta": { "type": "object" },
+    "test_cases": { "type": "array" },
+    "golden_master": { "type": "object" },
+    "evidence": { "type": "object" },
+    "unknowns": { "type": "array" },
+    "extensions": { "type": "object" }
   },
   "additionalProperties": true
 }

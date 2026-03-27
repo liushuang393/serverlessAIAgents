@@ -9,7 +9,7 @@
 ## 機能
 
 - PDF ファイルの読み込み
-{% if enable_ocr %}- OCR による文字認識 (対応言語: {{ supported_languages | join(', ') }}){% endif %}
+  {% if enable_ocr %}- OCR による文字認識 (対応言語: {{ supported_languages | join(', ') }}){% endif %}
 - 請求書データの抽出
 - {{ database_type | upper }} データベースへの保存
 - JSON/CSV 形式での出力
@@ -66,19 +66,20 @@ agentflow run . --input '{"pdf_path": "invoice.pdf", "output_format": "json"}'
 SQLite データベースは `invoices.db` に保存されます。
 {% elif database_type == 'postgresql' %}
 PostgreSQL 接続情報を環境変数で設定してください：
+
 - `POSTGRES_HOST`
 - `POSTGRES_PORT`
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
 - `POSTGRES_DB`
-{% elif database_type == 'mysql' %}
-MySQL 接続情報を環境変数で設定してください：
+  {% elif database_type == 'mysql' %}
+  MySQL 接続情報を環境変数で設定してください：
 - `MYSQL_HOST`
 - `MYSQL_PORT`
 - `MYSQL_USER`
 - `MYSQL_PASSWORD`
 - `MYSQL_DB`
-{% endif %}
+  {% endif %}
 
 ## プロトコル対応
 
@@ -95,4 +96,3 @@ MIT License
 ## 作成者
 
 {{ author }} <{{ email }}>
-
