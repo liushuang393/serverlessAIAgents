@@ -25,8 +25,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_AUTH_BASE_DIR = Path(__file__).resolve().parent.parent.parent
-_AUTH_DATA_DIR = _AUTH_BASE_DIR / "data"
+_AUTH_SERVICE_DIR = Path(__file__).resolve().parent.parent  # shared/auth_service/
+_AUTH_DATA_DIR = _AUTH_SERVICE_DIR / "data"
+_AUTH_DATA_DIR.mkdir(parents=True, exist_ok=True)
 _AUTH_DB_PATH = _AUTH_DATA_DIR / "auth_service.db"
 _AUTH_DEFAULT_URL = f"sqlite+aiosqlite:///{_AUTH_DB_PATH}"
 

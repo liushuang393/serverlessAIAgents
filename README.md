@@ -204,19 +204,22 @@ INFRA --> PROVIDER
 
 ## クイックスタート
 
+> 各アプリ（FAQ System、Decision Governance Engine 等）の DB 構築・ローカル起動・Docker 発布手順は、各アプリの README.md を参照してください。
+> ここでは共通基盤（auth_service + control_plane）の起動手順のみ記載します。
+
 ### 前提条件
 
 | ツール | バージョン | 用途 |
 |---|---|---|
 | Python | 3.13+ | バックエンド実行 |
 | conda | 任意 | 推奨仮想環境（`agentflow`） |
-| Docker + Docker Compose | 任意 | DB・ミドルウェア起動 |
+| Docker + Docker Compose | 最新 | DB・コンテナ起動 |
 | Node.js | 18+ | フロントエンド起動 |
 
 ### 1. 環境セットアップ
 
 ```bash
-# conda 環境（推奨）
+# conda 環境の作成と有効化（推奨）
 conda create -n agentflow python=3.13 -y
 conda activate agentflow
 
@@ -224,62 +227,84 @@ conda activate agentflow
 pip install -e ".[apps,dev]"
 ```
 
-### 2. Docker でデータベースを起動
+### 2. auth_service（認証基盤）
+
+auth_service は SQLite（ローカル開発）と PostgreSQL（Docker/本番）の両方に対応しています。
+
+#### ローカル起動（SQLite 自動作成・DB 手順不要）
 
 ```bash
-# auth_service 用 PostgreSQL（ポート 5438）
-cd shared/auth_service && docker compose up auth-db -d && cd ../..
+conda activate agentflow
 
-# faq_system 用 PostgreSQL（ポート 5433）+ Qdrant（ポート 6333）
-cd apps/faq_system && docker compose up faq-db qdrant -d && cd ../..
-```
-
-### 3. 各サービスをローカル起動
-
-ターミナルを 3 つ開き、それぞれ `conda activate agentflow` を実行してから以下を実行します。
-
-#### auth_service（ポート 8010）
-
-```bash
+# auth_service 起動（ポート 8010）
 python -m shared.auth_service.main
 # ヘルスチェック: curl http://localhost:8010/health
+
+# フロントエンド起動（別ターミナル・ポート 3000）
+cd shared/auth_service/frontend && npm install && npm run dev
 ```
 
-#### faq_system（ポート 8005）
+> SQLite の場合、`shared/auth_service/data/auth_service.db` が自動作成されます。
+> PostgreSQL を使用する場合は環境変数 `AUTH_DATABASE_URL` を設定してください。
+
+#### Docker 起動（PostgreSQL）
 
 ```bash
-python -m apps.faq_system.main
-# ヘルスチェック: curl http://localhost:8005/api/health
-# API ドキュメント: http://localhost:8005/docs
+cd shared/auth_service
+
+# 全サービス起動（DB + API + 管理画面）
+docker compose up --build -d
+
+# ヘルスチェック
+curl http://localhost:8010/health
+
+# 停止
+docker compose down
 ```
 
-#### dev_studio / control_plane（ポート 8900）
+| サービス | URL | 説明 |
+|---|---|---|
+| auth API | http://localhost:8010 | 認証 API（docs: /docs） |
+| auth Admin UI | http://localhost:3010 | 管理画面 |
+| auth DB | localhost:5438 | PostgreSQL |
+
+### 3. control_plane（プラットフォーム管理）
+
+control_plane は SQLite をデフォルト DB として使用し、DB 手順不要で起動できます。
+
+#### ローカル起動（SQLite 自動作成）
 
 ```bash
+conda activate agentflow
+
+# control_plane 起動（ポート 8900）
 python -m control_plane.main serve
 # ヘルスチェック: curl http://localhost:8900/health
-```
 
-### 4. フロントエンド起動（任意）
-
-```bash
-# auth_service フロントエンド（ポート 3000）
-cd shared/auth_service/frontend && npm install && npm run dev
-
-# faq_system フロントエンド（ポート 3004）
-cd apps/faq_system/frontend && npm install && npm run dev
-
-# control_plane フロントエンド（ポート 3200）
+# フロントエンド起動（別ターミナル・ポート 3200）
 cd control_plane/frontend && npm install && npm run dev
 ```
 
-### サービス一覧
+> SQLite の場合、`control_plane/data/control_plane.db` が自動作成されます。
+> PostgreSQL を使用する場合は環境変数 `PLATFORM_DATABASE_URL` を設定してください。
 
-| サービス | バックエンド | フロントエンド | 説明 |
-|---|---|---|---|
-| auth_service | http://localhost:8010 | http://localhost:3000 | 認証・ユーザー管理 |
-| faq_system | http://localhost:8005 | http://localhost:3004 | RAG ベース FAQ・ナレッジ管理 |
-| dev_studio | http://localhost:8900 | http://localhost:3200 | 開発支援・コントロールプレーン |
+### サービス一覧（共通基盤）
+
+| サービス | バックエンド | フロントエンド | DB | 説明 |
+|---|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | SQLite（ローカル）/ PostgreSQL:5438（Docker） | 認証・ユーザー管理 |
+| control_plane | http://localhost:8900 | http://localhost:3200 | SQLite（自動作成） | プラットフォーム管理 |
+
+### アプリ別 README
+
+| アプリ | README | 説明 |
+|---|---|---|
+| FAQ System | [apps/faq_system/README.md](apps/faq_system/README.md) | RAG ベース FAQ・ナレッジ管理 |
+| Decision Governance Engine | [apps/decision_governance_engine/README.md](apps/decision_governance_engine/README.md) | 意思決定支援 |
+| Code Migration Assistant | [apps/code_migration_assistant/README.md](apps/code_migration_assistant/README.md) | コード移行支援 |
+| Market Trend Monitor | [apps/market_trend_monitor/README.md](apps/market_trend_monitor/README.md) | 市場トレンド監視 |
+| Messaging Hub | [apps/messaging_hub/README.md](apps/messaging_hub/README.md) | メッセージング統合 |
+| Dev Studio | [apps/dev_studio/README.md](apps/dev_studio/README.md) | 開発支援 |
 
 ---
 

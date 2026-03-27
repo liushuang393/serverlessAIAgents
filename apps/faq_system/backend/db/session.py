@@ -28,8 +28,9 @@ if TYPE_CHECKING:
 # 環境変数ヘルパー
 # ---------------------------------------------------------------------------
 
-_FAQ_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+_FAQ_BASE_DIR = Path(__file__).resolve().parent.parent.parent  # apps/faq_system/
 _FAQ_DATA_DIR = _FAQ_BASE_DIR / "data"
+_FAQ_DATA_DIR.mkdir(parents=True, exist_ok=True)
 _FAQ_DB_PATH = _FAQ_DATA_DIR / "faq_system.db"
 _FAQ_DEFAULT_URL = f"sqlite+aiosqlite:///{_FAQ_DB_PATH}"
 

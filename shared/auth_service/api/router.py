@@ -542,15 +542,13 @@ async def oauth2_callback(
     code: str,
     state: str | None = None,
     redirect_uri: str | None = None,
-    response: Response | None = None,
 ) -> AuthResponse | Response:
     """OAuth2 コールバック処理.
 
     redirect_uri が指定されている場合、認証成功後にそのURLへ
     トークンを付与してリダイレクトする（SSO フロー）。
     """
-    if response is None:
-        response = Response()
+    response = Response()
 
     settings = get_settings()
     identity: ExternalIdentity | None = None

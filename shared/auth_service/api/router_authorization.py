@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
@@ -45,8 +45,7 @@ from shared.auth_service.models.authorization import (
 )
 
 
-if TYPE_CHECKING:
-    from shared.auth_service.api.schemas import UserInfo
+from shared.auth_service.api.schemas import UserInfo
 
 
 logger = logging.getLogger(__name__)

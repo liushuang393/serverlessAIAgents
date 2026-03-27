@@ -166,16 +166,86 @@ INFRA --> PROVIDER
 
 ## Quick Start
 
+> For app-specific setup (FAQ System, Decision Governance Engine, etc.), see each app's README.md.
+> This section covers only the shared infrastructure (auth_service + control_plane).
+
+### Prerequisites
+
+| Tool | Version | Purpose |
+|---|---|---|
+| Python | 3.13+ | Backend runtime |
+| conda | Any | Recommended virtual environment (`agentflow`) |
+| Docker + Docker Compose | Latest | DB and container startup |
+| Node.js | 18+ | Frontend development |
+
+### 1. Environment Setup
+
 ```bash
-# Environment setup
-python3 -m pip install -e ".[apps,dev]"
+# Create and activate conda environment (recommended)
+conda create -n agentflow python=3.13 -y
+conda activate agentflow
 
-# Start backend (local dev port 8001)
-python3 -m control_plane.main serve --port 8001
+# Install dependencies
+pip install -e ".[apps,dev]"
+```
 
-# Start frontend (separate terminal)
+### 2. auth_service (Authentication)
+
+Supports both SQLite (local dev) and PostgreSQL (Docker/production).
+
+#### Local Start (SQLite, no DB setup needed)
+
+```bash
+conda activate agentflow
+
+# Start auth_service (port 8010)
+python -m shared.auth_service.main
+# Health check: curl http://localhost:8010/health
+
+# Start frontend (separate terminal, port 3000)
+cd shared/auth_service/frontend && npm install && npm run dev
+```
+
+#### Docker Start (PostgreSQL)
+
+```bash
+cd shared/auth_service
+docker compose up --build -d
+# Health check: curl http://localhost:8010/health
+# Stop: docker compose down
+```
+
+### 3. control_plane (Platform Management)
+
+Uses SQLite by default, no DB setup needed.
+
+#### Local Start
+
+```bash
+conda activate agentflow
+
+# Start control_plane (port 8900)
+python -m control_plane.main serve
+# Health check: curl http://localhost:8900/health
+
+# Start frontend (separate terminal, port 3200)
 cd control_plane/frontend && npm install && npm run dev
 ```
+
+### Service Overview
+
+| Service | Backend | Frontend | Description |
+|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | Authentication & user management |
+| control_plane | http://localhost:8900 | http://localhost:3200 | Platform management |
+
+### App-specific READMEs
+
+| App | README | Description |
+|---|---|---|
+| FAQ System | [apps/faq_system/README.md](apps/faq_system/README.md) | RAG-based FAQ & knowledge management |
+| Decision Governance Engine | [apps/decision_governance_engine/README.md](apps/decision_governance_engine/README.md) | Decision support system |
+| Code Migration Assistant | [apps/code_migration_assistant/README.md](apps/code_migration_assistant/README.md) | Code migration support |
 
 ---
 

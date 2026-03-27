@@ -47,8 +47,10 @@ from control_plane.services.port_allocator import PortAllocatorService
 from control_plane.services.tenant_dashboard import get_tenant_dashboard
 
 
+from control_plane.schemas.provisioning_schemas import AppCreateRequest
+
+
 if TYPE_CHECKING:
-    from control_plane.schemas.provisioning_schemas import AppCreateRequest
     from control_plane.services.app_config_event_store import AppConfigEventStore
     from control_plane.services.app_discovery import AppDiscoveryService
 

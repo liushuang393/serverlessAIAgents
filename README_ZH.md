@@ -166,16 +166,86 @@ INFRA --> PROVIDER
 
 ## 快速开始
 
+> 各应用（FAQ System、Decision Governance Engine 等）的 DB 构建・本地启动・Docker 部署步骤，请参考各应用的 README.md。
+> 此处仅记载共享基础设施（auth_service + control_plane）的启动步骤。
+
+### 前提条件
+
+| 工具 | 版本 | 用途 |
+|---|---|---|
+| Python | 3.13+ | 后端运行 |
+| conda | 任意 | 推荐虚拟环境（`agentflow`） |
+| Docker + Docker Compose | 最新 | DB・容器启动 |
+| Node.js | 18+ | 前端开发 |
+
+### 1. 环境搭建
+
 ```bash
-# 环境搭建
-python3 -m pip install -e ".[apps,dev]"
+# 创建并激活 conda 环境（推荐）
+conda create -n agentflow python=3.13 -y
+conda activate agentflow
 
-# 后端启动（本地开发端口 8001）
-python3 -m control_plane.main serve --port 8001
+# 安装依赖
+pip install -e ".[apps,dev]"
+```
 
-# 前端启动（另开终端）
+### 2. auth_service（认证基础设施）
+
+支持 SQLite（本地开发）和 PostgreSQL（Docker/生产）。
+
+#### 本地启动（SQLite 自动创建，无需 DB 步骤）
+
+```bash
+conda activate agentflow
+
+# 启动 auth_service（端口 8010）
+python -m shared.auth_service.main
+# 健康检查: curl http://localhost:8010/health
+
+# 启动前端（另开终端，端口 3000）
+cd shared/auth_service/frontend && npm install && npm run dev
+```
+
+#### Docker 启动（PostgreSQL）
+
+```bash
+cd shared/auth_service
+docker compose up --build -d
+# 健康检查: curl http://localhost:8010/health
+# 停止: docker compose down
+```
+
+### 3. control_plane（平台管理）
+
+默认使用 SQLite，无需 DB 步骤。
+
+#### 本地启动
+
+```bash
+conda activate agentflow
+
+# 启动 control_plane（端口 8900）
+python -m control_plane.main serve
+# 健康检查: curl http://localhost:8900/health
+
+# 启动前端（另开终端，端口 3200）
 cd control_plane/frontend && npm install && npm run dev
 ```
+
+### 服务一览
+
+| 服务 | 后端 | 前端 | 说明 |
+|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | 认证・用户管理 |
+| control_plane | http://localhost:8900 | http://localhost:3200 | 平台管理 |
+
+### 各应用 README
+
+| 应用 | README | 说明 |
+|---|---|---|
+| FAQ System | [apps/faq_system/README.md](apps/faq_system/README.md) | 基于 RAG 的 FAQ・知识管理 |
+| Decision Governance Engine | [apps/decision_governance_engine/README.md](apps/decision_governance_engine/README.md) | 决策支持系统 |
+| Code Migration Assistant | [apps/code_migration_assistant/README.md](apps/code_migration_assistant/README.md) | 代码迁移支持 |
 
 ---
 

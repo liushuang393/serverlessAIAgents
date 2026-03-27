@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -20,14 +20,11 @@ from shared.auth_service.api.schemas_authorization import (
     UserAdminResponse,
     UserUpdateRequest,
 )
+from shared.auth_service.api.schemas import UserInfo
 from shared.auth_service.core.authorization import get_authorization_service
 from shared.auth_service.core.password import PasswordManager
 from shared.auth_service.db.session import get_db_session
 from shared.auth_service.models.user import UserAccount
-
-
-if TYPE_CHECKING:
-    from shared.auth_service.api.schemas import UserInfo
 
 
 logger = logging.getLogger(__name__)

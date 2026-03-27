@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, HTTPException
 
 
+from control_plane.schemas.provisioning_schemas import (
+    MCPLazyLoadingPatchRequest,
+    MCPServerUpsertRequest,
+)
+
+
 if TYPE_CHECKING:
-    from control_plane.schemas.provisioning_schemas import (
-        MCPLazyLoadingPatchRequest,
-        MCPServerUpsertRequest,
-    )
     from control_plane.services.mcp_registry import MCPRegistryService
 
 
