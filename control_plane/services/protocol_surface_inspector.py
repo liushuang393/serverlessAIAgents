@@ -93,9 +93,9 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
         )
 
     def _is_protocols_module(self, lowered: str, sub: str = "") -> bool:
-        """Check if module matches agentflow.protocols or kernel.protocols."""
+        """Check if module matches kernel.protocols."""
         target = f".protocols.{sub}" if sub else ".protocols"
-        return f"agentflow{target}" in lowered or f"kernel{target}" in lowered
+        return f"kernel{target}" in lowered
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:

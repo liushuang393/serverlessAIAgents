@@ -1,6 +1,6 @@
 """MCP Tool 単体テスト.
 
-agentflow/protocols/mcp_tool.py のテスト。
+kernel/protocols/mcp_tool.py のテスト。
 """
 
 import pytest

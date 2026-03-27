@@ -14,7 +14,7 @@
 ルール:
   - 各層は自層以下＋ contracts のみ eager import 可
   - TYPE_CHECKING / 関数内ローカルインポートは境界違反に含めない
-  - kernel は agentflow への eager import 禁止（TYPE_CHECKING / ローカルは許可）
+  - 各層は上位層への eager import 禁止（TYPE_CHECKING / ローカルは許可）
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ FORBIDDEN_IMPORTS: dict[str, set[str]] = {
     "contracts": {"infrastructure", "shared", "kernel", "harness", "domain", "control_plane", "apps"},
     "infrastructure": {"shared", "kernel", "harness", "domain", "control_plane", "apps"},
     "shared": {"kernel", "harness", "domain", "control_plane", "apps"},
-    "kernel": {"harness", "domain", "control_plane", "apps", "agentflow"},
+    "kernel": {"harness", "domain", "control_plane", "apps"},
     "harness": {"control_plane", "apps"},
     "domain": {"control_plane", "apps"},
     "control_plane": {"apps"},

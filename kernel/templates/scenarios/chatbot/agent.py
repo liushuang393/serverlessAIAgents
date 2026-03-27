@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
+from kernel.agents.agent_block import AgentBlock
 
 
 class {{ agent_name | replace('-', '_') | title | replace('_', '') }}Agent(AgentBlock):

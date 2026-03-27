@@ -48,43 +48,6 @@ def test_no_layer_boundary_violations() -> None:
     pytest.fail(msg)
 
 
-def test_no_agentflow_imports_in_layers() -> None:
-    """7コア層ディレクトリが agentflow.* を eager import していないことを検証."""
-
-    layer_dirs = ["contracts", "infrastructure", "shared", "kernel", "harness", "domain", "control_plane"]
-    violations: list[str] = []
-
-    for layer in layer_dirs:
-        layer_path = ROOT / layer
-        if not layer_path.exists():
-            continue
-        for py_file in layer_path.rglob("*.py"):
-            try:
-                source = py_file.read_text(encoding="utf-8")
-                tree = ast.parse(source)
-            except (SyntaxError, UnicodeDecodeError, OSError):
-                continue
-
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module:
-                    if node.module.split(".")[0] == "agentflow":
-                        # TYPE_CHECKING / 関数内は許容
-                        if _is_top_level_eager(node, tree):
-                            rel = py_file.relative_to(ROOT)
-                            violations.append(f"{rel}:{node.lineno}: {node.module}")
-                elif isinstance(node, ast.Import):
-                    for alias in node.names:
-                        if alias.name.split(".")[0] == "agentflow":
-                            if _is_top_level_eager(node, tree):
-                                rel = py_file.relative_to(ROOT)
-                                violations.append(f"{rel}:{node.lineno}: {alias.name}")
-
-    if violations:
-        msg = "Layers still import from kernel.*:\n"
-        for v in violations:
-            msg += f"  {v}\n"
-        pytest.fail(msg)
-
 
 def _is_top_level_eager(node: ast.AST, tree: ast.Module) -> bool:
     """ノードがトップレベル eager import かどうかを判定."""

@@ -1,4 +1,4 @@
-"""agentflow.task.task_state 後方互換shim. 実体は kernel.state.task_state."""
+"""kernel.task.task_state — kernel.state.task_state への再エクスポート."""
 
 from kernel.state.task_state import (
     TASK_TRANSITIONS,

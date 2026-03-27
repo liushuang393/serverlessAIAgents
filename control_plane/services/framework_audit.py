@@ -34,9 +34,9 @@ _ENGINE_MARKERS: dict[str, re.Pattern[str]] = {
     "simple": re.compile(r"SimpleEngine", re.IGNORECASE),
 }
 
-_FRAMEWORK_IMPORT_RE = re.compile(r"(^|\n)\s*(from|import)\s+agentflow\b")
+_FRAMEWORK_IMPORT_RE = re.compile(r"(^|\n)\s*(from|import)\s+(kernel|infrastructure|contracts)\b")
 _RAG_SURFACE_RE = re.compile(r"\brag\b|vector|retriev|knowledge", re.IGNORECASE)
-_SKILLS_SURFACE_RE = re.compile(r"\bskill\b|agentflow\.skills|SKILL\.md", re.IGNORECASE)
+_SKILLS_SURFACE_RE = re.compile(r"\bskill\b|kernel\.skills|SKILL\.md", re.IGNORECASE)
 _AUTH_ENFORCEMENT_RE = re.compile(
     r"Depends\(\s*require_auth|_require_api_key\(|_require_http_api_key\(|"
     r"_require_ws_api_key\(|_verify_api_key\(|APIKeyHeader|HTTPBearer|Security\(",
@@ -179,7 +179,7 @@ class FrameworkAuditService:
             else:
                 executable_declared = True
 
-            if module.startswith(("apps.", "agentflow.")):
+            if module.startswith(("apps.", "kernel.")):
                 module_path = Path(*module.split("."))
                 file_path = module_path.with_suffix(".py")
                 package_path = module_path / "__init__.py"
@@ -745,7 +745,7 @@ class FrameworkAuditService:
                     severity="warning",
                     code="SKILLS_DECLARED_BUT_SURFACE_MISSING",
                     message="Skills 利用宣言はあるが、Skills 実装シグナルが検出できません",
-                    hint="agentflow.skills の利用コードまたは宣言を見直してください",
+                    hint="kernel.skills の利用コードまたは宣言を見直してください",
                 ),
             )
 
@@ -913,7 +913,7 @@ class FrameworkAuditService:
     ) -> list[FrameworkAuditIssue]:
         issues: list[FrameworkAuditIssue] = []
         modules = [agent.module for agent in app_config.agents if isinstance(agent.module, str)]
-        if any(module.startswith("agentflow.") for module in modules):
+        if any(module.startswith(("kernel.", "infrastructure.", "contracts.")) for module in modules):
             return issues
 
         if not source_text:
@@ -926,8 +926,8 @@ class FrameworkAuditService:
                 FrameworkAuditIssue(
                     severity="warning",
                     code="FRAMEWORK_IMPORT_NOT_FOUND",
-                    message="agentflow フレームワーク import が検出できませんでした",
-                    hint="agentflow の Engine/Agent/Provider API 利用を確認してください",
+                    message="フレームワーク import が検出できませんでした",
+                    hint="kernel / infrastructure / contracts の Engine/Agent/Provider API 利用を確認してください",
                 ),
             )
         return issues

@@ -4,11 +4,10 @@ A2ATaskManager のオブザーバーとして登録され、
 タスクイベントが発火するたびに AG-UI / A2UI イベントに変換して配信する。
 Agent 開発者はこのクラスを意識する必要なし。
 
-既存活用（変更不要）:
-- agentflow/protocols/agui_events.py — AGUIEvent, FlowStartEvent 等
-- agentflow/protocols/a2ui/emitter.py — A2UIEmitter.emit_component()
-- agentflow/protocols/a2ui/components.py — A2UIComponent
-- agentflow/api/sse_emitter.py — SSEEmitter
+- kernel/protocols/agui_events.py — AGUIEvent, FlowStartEvent 等
+- kernel/protocols/a2ui/emitter.py — A2UIEmitter.emit_component()
+- kernel/protocols/a2ui/components.py — A2UIComponent
+- kernel/api/sse_emitter.py — SSEEmitter
 """
 
 from __future__ import annotations

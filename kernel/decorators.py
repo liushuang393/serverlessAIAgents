@@ -1,4 +1,4 @@
-"""agentflow.decorators 後方互換shim. 実体は kernel.agents.decorators."""
+"""kernel.decorators — kernel.agents.decorators への再エクスポート."""
 
 from kernel.agents.decorators import auto_adapt
 

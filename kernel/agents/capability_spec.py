@@ -1,7 +1,4 @@
-"""互換 shim — agentflow.core.capability_spec.
-
-本体は kernel.core.capability_spec に移行済み。後方互換のため re-export する。
-"""
+"""kernel.agents.capability_spec — kernel.core.capability_spec への再エクスポート."""
 
 from kernel.core.capability_spec import (
     AgentCapabilitySpec,
