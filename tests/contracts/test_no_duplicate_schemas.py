@@ -79,7 +79,5 @@ def test_no_duplicate_core_schemas() -> None:
         )
         print(msg)
 
-    # --- 段階的解消 ---
-    # 現在は既知の重複が存在するため警告のみ。
-    # 重複解消が完了したら以下のコメントを外して厳格化する:
-    # assert violations == [], msg
+    # --- 段階的解消 → 厳格化完了 ---
+    assert violations == [], msg

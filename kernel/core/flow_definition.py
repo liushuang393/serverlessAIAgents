@@ -7,9 +7,9 @@
 - YAML設定ファイルからの読み込み
 
 使用例:
-    >>> from kernel.core.flow_definition import FlowDefinition, AgentDefinition
+    >>> from kernel.core.flow_definition import KernelFlowDefinition, AgentDefinition
     >>>
-    >>> flow = FlowDefinition(
+    >>> flow = KernelFlowDefinition(
     ...     flow_id="decision-engine",
     ...     name="Decision Governance Engine",
     ...     agents=[
@@ -23,7 +23,7 @@
     >>> print(flow.to_typescript())
     >>>
     >>> # YAMLから読み込み
-    >>> flow = FlowDefinition.from_yaml("path/to/agent_definitions.yaml")
+    >>> flow = KernelFlowDefinition.from_yaml("path/to/agent_definitions.yaml")
 """
 
 import logging
@@ -95,7 +95,7 @@ class AgentDefinition(BaseModel):
         }
 
 
-class FlowDefinition(BaseModel):
+class KernelFlowDefinition(BaseModel):
     """Flow定義（前後端共通）.
 
     フロー全体の定義。含まれるAgentリストを管理。
@@ -108,14 +108,14 @@ class FlowDefinition(BaseModel):
     agents: list[AgentDefinition] = Field(default_factory=list, description="Agent定義リスト")
 
     @classmethod
-    def from_yaml(cls, yaml_path: str | Path) -> "FlowDefinition":
+    def from_yaml(cls, yaml_path: str | Path) -> "KernelFlowDefinition":
         """YAMLファイルからFlowDefinitionを生成.
 
         Args:
             yaml_path: YAMLファイルパス
 
         Returns:
-            FlowDefinition インスタンス
+            KernelFlowDefinition インスタンス
 
         Raises:
             FileNotFoundError: ファイルが見つからない場合
@@ -138,14 +138,14 @@ class FlowDefinition(BaseModel):
         return cls.from_dict(data)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "FlowDefinition":
+    def from_dict(cls, data: dict[str, Any]) -> "KernelFlowDefinition":
         """辞書からFlowDefinitionを生成.
 
         Args:
             data: 辞書データ
 
         Returns:
-            FlowDefinition インスタンス
+            KernelFlowDefinition インスタンス
         """
         # agents リストを AgentDefinition に変換
         agents = [AgentDefinition(**agent_data) for agent_data in data.get("agents", [])]
@@ -191,8 +191,8 @@ class FlowDefinition(BaseModel):
         )
 
     @classmethod
-    def from_contract(cls, contract: ContractFlowDefinition) -> "FlowDefinition":
-        """新契約モデルから legacy FlowDefinition を復元する."""
+    def from_contract(cls, contract: ContractFlowDefinition) -> "KernelFlowDefinition":
+        """新契約モデルから legacy KernelFlowDefinition を復元する."""
         return cls(
             flow_id=contract.flow_id,
             name=contract.name,
@@ -299,7 +299,7 @@ class FlowDefinition(BaseModel):
             StageConfig用の辞書リスト
 
         使用例:
-            >>> flow = FlowDefinition.from_yaml("agents.yaml")
+            >>> flow = KernelFlowDefinition.from_yaml("agents.yaml")
             >>> agents = flow.instantiate_all_agents(llm_client=llm)
             >>> stages = flow.to_stage_configs(agents)
             >>> engine = PipelineEngine(stages=stages)
@@ -437,6 +437,10 @@ class FlowDefinition(BaseModel):
         path.write_text(self.to_typescript(), encoding="utf-8")
 
 
+# 後方互換エイリアス: 旧名 FlowDefinition を維持
+FlowDefinition = KernelFlowDefinition
+
+
 class FlowDefinitionRegistry:
     """Flow定義レジストリ.
 
@@ -460,7 +464,7 @@ class FlowDefinitionRegistry:
 
     def __init__(self) -> None:
         """初期化."""
-        self._definitions: dict[str, FlowDefinition] = {}
+        self._definitions: dict[str, KernelFlowDefinition] = {}
 
     @classmethod
     def get_instance(cls) -> "FlowDefinitionRegistry":
@@ -474,31 +478,31 @@ class FlowDefinitionRegistry:
         """シングルトンインスタンスをリセット（テスト用）."""
         cls._instance = None
 
-    def register(self, definition: FlowDefinition) -> None:
+    def register(self, definition: KernelFlowDefinition) -> None:
         """Flow定義を登録.
 
         Args:
-            definition: FlowDefinition インスタンス
+            definition: KernelFlowDefinition インスタンス
         """
         self._definitions[definition.flow_id] = definition
         self._logger.info(f"Registered flow: {definition.flow_id}")
 
-    def get(self, flow_id: str) -> FlowDefinition | None:
+    def get(self, flow_id: str) -> KernelFlowDefinition | None:
         """Flow定義を取得.
 
         Args:
             flow_id: Flow ID
 
         Returns:
-            FlowDefinition または None
+            KernelFlowDefinition または None
         """
         return self._definitions.get(flow_id)
 
-    def list_all(self) -> list[FlowDefinition]:
+    def list_all(self) -> list[KernelFlowDefinition]:
         """全Flow定義を取得.
 
         Returns:
-            FlowDefinition リスト
+            KernelFlowDefinition リスト
         """
         return list(self._definitions.values())
 
@@ -520,7 +524,7 @@ class FlowDefinitionRegistry:
         if path.is_file():
             # 単一ファイル
             try:
-                flow = FlowDefinition.from_yaml(path)
+                flow = KernelFlowDefinition.from_yaml(path)
                 self.register(flow)
                 loaded_count = 1
             except Exception as e:
@@ -529,14 +533,14 @@ class FlowDefinitionRegistry:
             # ディレクトリ配下の全 YAML
             for yaml_file in path.glob("*.yaml"):
                 try:
-                    flow = FlowDefinition.from_yaml(yaml_file)
+                    flow = KernelFlowDefinition.from_yaml(yaml_file)
                     self.register(flow)
                     loaded_count += 1
                 except Exception as e:
                     self._logger.exception(f"Failed to load {yaml_file}: {e}")
             for yml_file in path.glob("*.yml"):
                 try:
-                    flow = FlowDefinition.from_yaml(yml_file)
+                    flow = KernelFlowDefinition.from_yaml(yml_file)
                     self.register(flow)
                     loaded_count += 1
                 except Exception as e:
