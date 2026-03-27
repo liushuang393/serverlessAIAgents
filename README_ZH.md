@@ -236,12 +236,33 @@ python -m control_plane.main serve
 cd control_plane/frontend && npm install && npm run dev
 ```
 
+### 4. dev_studio（开发支持）
+
+代码生成・CI/CD 配置・质量分析等开发支持工具。
+
+#### 本地启动
+
+```bash
+conda activate agentflow
+python -m apps.dev_studio.main
+# 健康检查: curl http://localhost:8011/health
+```
+
+#### Docker 启动
+
+```bash
+cd apps/dev_studio
+docker compose up --build -d
+# 健康检查: curl http://localhost:8011/health
+# 停止: docker compose down
+```
+
 ### 服务一览
 
-| 服务          | 后端                  | 前端                  | 说明           |
-| ------------- | --------------------- | --------------------- | -------------- |
-| auth_service  | http://localhost:8010 | http://localhost:3000 | 认证・用户管理 |
-| control_plane | http://localhost:8900 | http://localhost:3200 | 平台管理       |
+| 服务 | 后端 | 前端 | 说明 |
+|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | 认证・用户管理 |
+| control_plane | http://localhost:8900 | http://localhost:3200 | 平台管理 |
 
 ### 各应用 README
 

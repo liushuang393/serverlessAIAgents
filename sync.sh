@@ -18,9 +18,30 @@ else
     echo "ℹ️  コミットなし（変更なし）"
 fi
 
-# リモートの変更を取り込む（rebase）
+# リモートの変更を取り込む
 echo "⬇️  リモートから取得中..."
-git pull
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+git fetch origin
+
+# ローカルとリモートの分岐を確認
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse "origin/$BRANCH")
+BASE=$(git merge-base HEAD "origin/$BRANCH")
+
+if [ "$LOCAL" = "$REMOTE" ]; then
+    echo "ℹ️  既に最新"
+elif [ "$LOCAL" = "$BASE" ]; then
+    # ローカルが遅れている → fast-forward で安全に取り込む
+    echo "⬇️  fast-forward で取り込み..."
+    git merge --ff-only "origin/$BRANCH"
+elif [ "$REMOTE" = "$BASE" ]; then
+    # リモートが遅れている → push するだけ
+    echo "ℹ️  リモートが遅れている（push で解決）"
+else
+    # 分岐している → マージで統合（ローカルの変更を失わない）
+    echo "⚠️  ブランチが分岐しています。マージで統合します..."
+    git merge "origin/$BRANCH" -m "merge: sync remote changes $(date '+%Y-%m-%d %H:%M')"
+fi
 
 # リモートへプッシュ
 echo "⬆️  リモートへプッシュ中..."

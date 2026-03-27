@@ -236,12 +236,33 @@ python -m control_plane.main serve
 cd control_plane/frontend && npm install && npm run dev
 ```
 
+### 4. dev_studio (Developer Tools)
+
+Code generation, CI/CD configuration, and quality analysis tools.
+
+#### Local Start
+
+```bash
+conda activate agentflow
+python -m apps.dev_studio.main
+# Health check: curl http://localhost:8011/health
+```
+
+#### Docker Start
+
+```bash
+cd apps/dev_studio
+docker compose up --build -d
+# Health check: curl http://localhost:8011/health
+# Stop: docker compose down
+```
+
 ### Service Overview
 
-| Service       | Backend               | Frontend              | Description                      |
-| ------------- | --------------------- | --------------------- | -------------------------------- |
-| auth_service  | http://localhost:8010 | http://localhost:3000 | Authentication & user management |
-| control_plane | http://localhost:8900 | http://localhost:3200 | Platform management              |
+| Service | Backend | Frontend | Description |
+|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | Authentication & user management |
+| control_plane | http://localhost:8900 | http://localhost:3200 | Platform management |
 
 ### App-specific READMEs
 

@@ -4,6 +4,8 @@ WORKDIR /frontend
 COPY apps/legacy_modernization_geo_platform/frontend/package*.json ./
 RUN npm ci
 COPY apps/legacy_modernization_geo_platform/frontend/ ./
+# vite.config.ts が ../app_config.json を参照するためコピー
+COPY apps/legacy_modernization_geo_platform/app_config.json /app_config.json
 RUN npm run build
 
 FROM python:3.13-slim AS python-deps

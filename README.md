@@ -303,12 +303,41 @@ cd control_plane/frontend && npm install && npm run dev
 > SQLite の場合、`control_plane/data/control_plane.db` が自動作成されます。
 > PostgreSQL を使用する場合は環境変数 `PLATFORM_DATABASE_URL` を設定してください。
 
+### 4. dev_studio（開発支援）
+
+dev_studio はコード生成・CI/CD 設定・品質分析などの開発支援ツールです。
+
+#### ローカル起動
+
+```bash
+conda activate agentflow
+
+# dev_studio 起動（ポート 8011）
+python -m apps.dev_studio.main
+# ヘルスチェック: curl http://localhost:8011/health
+```
+
+#### Docker 起動
+
+```bash
+cd apps/dev_studio
+
+# ビルド & 起動
+docker compose up --build -d
+
+# ヘルスチェック
+curl http://localhost:8011/health
+
+# 停止
+docker compose down
+```
+
 ### サービス一覧（共通基盤）
 
-| サービス      | バックエンド          | フロントエンド        | DB                                            | 説明                 |
-| ------------- | --------------------- | --------------------- | --------------------------------------------- | -------------------- |
-| auth_service  | http://localhost:8010 | http://localhost:3000 | SQLite（ローカル）/ PostgreSQL:5438（Docker） | 認証・ユーザー管理   |
-| control_plane | http://localhost:8900 | http://localhost:3200 | SQLite（自動作成）                            | プラットフォーム管理 |
+| サービス | バックエンド | フロントエンド | DB | 説明 |
+|---|---|---|---|---|
+| auth_service | http://localhost:8010 | http://localhost:3000 | SQLite（ローカル）/ PostgreSQL:5438（Docker） | 認証・ユーザー管理 |
+| control_plane | http://localhost:8900 | http://localhost:3200 | SQLite（自動作成） | プラットフォーム管理 |
 
 ### アプリ別 README
 
