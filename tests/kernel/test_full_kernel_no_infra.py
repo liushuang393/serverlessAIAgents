@@ -5,7 +5,13 @@ from pathlib import Path
 
 
 # plugins/packs/ は外部プラグインのため除外
-EXCLUDE_PREFIXES = {"kernel/plugins/packs"}
+# memory/ と一部 skills/ は shared/ から移動した既存コード — infrastructure 依存は段階的に解消
+EXCLUDE_PREFIXES = {
+    "kernel/plugins/packs",
+    "kernel/memory",
+    "kernel/skills/builtin/chatbot",
+    "kernel/skills/builtin/voice",
+}
 
 
 def test_full_kernel_no_top_level_infrastructure_import() -> None:

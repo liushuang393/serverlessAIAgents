@@ -9,7 +9,7 @@ from infrastructure.memory.types import (
     MemoryStability,
     MemoryType,
 )
-from shared.memory.importance_adjuster import ImportanceAdjuster
+from kernel.memory.importance_adjuster import ImportanceAdjuster
 
 
 class TestImportanceAdjuster:

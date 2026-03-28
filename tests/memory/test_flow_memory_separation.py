@@ -6,7 +6,7 @@ import pytest
 
 from infrastructure.memory.types import MemoryEntry, MemoryType
 from kernel.flow.context import FlowContext
-from shared.memory.memory_manager import MemoryManager
+from kernel.memory.memory_manager import MemoryManager
 
 
 @pytest.mark.asyncio

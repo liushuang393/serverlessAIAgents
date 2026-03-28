@@ -11,7 +11,7 @@ from infrastructure.memory.types import (
     MemoryStability,
     MemoryType,
 )
-from shared.memory.memory_distiller import MemoryDistiller
+from kernel.memory.memory_distiller import MemoryDistiller
 
 
 class TestMemoryDistiller:

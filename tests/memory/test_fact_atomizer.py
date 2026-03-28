@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from shared.memory.fact_atomizer import AtomicFact, FactAtomizer, IngestionResult
+from kernel.memory.fact_atomizer import AtomicFact, FactAtomizer, IngestionResult
 
 
 class TestHeuristicGate:

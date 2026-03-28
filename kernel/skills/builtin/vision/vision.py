@@ -26,19 +26,24 @@ import base64
 import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
-from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
+import anyio
 import httpx
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
 
 def _get_llm_func() -> Any:
-    """LLM ファクトリを遅延取得して境界違反を回避する."""
-    from kernel import get_llm as kernel_get_llm
+    """遅延インポート: kernel.get_llm（L2→L3 違反回避）."""
+    from kernel import get_llm as _get_llm
 
-    return kernel_get_llm
+    return _get_llm
 
 
 class VisionProvider(StrEnum):
@@ -328,13 +333,13 @@ class VisionSkill:
             return {"type": "url", "url": image_url}
 
         if image_path:
-            path = Path(image_path)
-            if not path.exists():
+            path = anyio.Path(image_path)
+            if not await path.exists():
                 msg = f"Image file not found: {path}"
                 raise ValueError(msg)
 
-            with open(path, "rb") as f:
-                data = base64.b64encode(f.read()).decode()
+            async with await anyio.open_file(path, "rb") as f:
+                data = base64.b64encode(await f.read()).decode()
 
             # MIME タイプを推定
             suffix = path.suffix.lower()

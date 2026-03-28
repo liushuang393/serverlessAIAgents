@@ -4,7 +4,7 @@ import datetime
 
 import pytest
 
-from shared.memory.enhanced_memory import EnhancedMemoryManager, MemoryConfig
+from kernel.memory.enhanced_memory import EnhancedMemoryManager, MemoryConfig
 
 
 @pytest.mark.asyncio

@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from kernel.flow.graph import FlowGraph
-    from shared.memory.memory_manager import MemoryManager
+    from kernel.memory.memory_manager import MemoryManager
 
 
 class MemoryAccessor:

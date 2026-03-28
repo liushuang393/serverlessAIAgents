@@ -5,7 +5,7 @@
 
 import pytest
 
-from shared.memory import MemoryManager
+from kernel.memory import MemoryManager
 
 
 @pytest.mark.asyncio
@@ -198,7 +198,7 @@ async def test_long_term_memory_delete() -> None:
     import datetime
 
     from infrastructure.memory.types import MemoryEntry, MemoryType
-    from shared.memory.long_term_memory import LongTermMemory
+    from kernel.memory.long_term_memory import LongTermMemory
 
     ltm = LongTermMemory(enable_auto_consolidation=False)
     await ltm.start()

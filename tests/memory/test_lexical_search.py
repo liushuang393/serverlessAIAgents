@@ -9,8 +9,8 @@ from datetime import datetime
 
 from infrastructure.memory.types import MemoryEntry, MemorySemanticLevel, MemoryType
 from infrastructure.memory.vector_search import VectorSearch
-from shared.memory.context_builder import ContextBuilder, MemoryNeedLevel
-from shared.memory.memory_manager import MemoryManager
+from kernel.memory.context_builder import ContextBuilder, MemoryNeedLevel
+from kernel.memory.memory_manager import MemoryManager
 
 
 def _make_entry(entry_id: str, content: str, topic: str = "test") -> MemoryEntry:

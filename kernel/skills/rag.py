@@ -18,8 +18,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from shared.memory.memory_manager import MemoryManager
-from shared.memory.types import CompressionConfig
+from kernel.memory.memory_manager import MemoryManager
+from kernel.memory.types import CompressionConfig
 
 
 if TYPE_CHECKING:

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from shared.memory.knowledge import (
+from kernel.memory.knowledge import (
     InMemoryKnowledgeStore,
     KnowledgeEntry,
     KnowledgeManager,

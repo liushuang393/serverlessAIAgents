@@ -1,12 +1,26 @@
-"""後方互換: shared/skills/builtin/bi_analytics/ からの re-export."""
+"""BI Analytics スキル."""
 
-from kernel.skills.builtin._compat import register_submodule_alias
+from __future__ import annotations
 
-
-register_submodule_alias(
-    "kernel.skills.builtin.bi_analytics",
-    "shared.skills.builtin.bi_analytics",
-    ["analyzer", "connector", "visualizer"],
+from kernel.skills.builtin.bi_analytics.analyzer import AnalysisResult, BIAnalyzer
+from kernel.skills.builtin.bi_analytics.connector import (
+    ConnectionConfig,
+    ConnectorType,
+    DataConnector,
+    DataFrame,
+    MemoryConnector,
 )
+from kernel.skills.builtin.bi_analytics.visualizer import Chart, ChartGenerator, ChartType
 
-from shared.skills.builtin.bi_analytics import *  # noqa: F403
+__all__ = [
+    "AnalysisResult",
+    "BIAnalyzer",
+    "Chart",
+    "ChartGenerator",
+    "ChartType",
+    "ConnectionConfig",
+    "ConnectorType",
+    "DataConnector",
+    "DataFrame",
+    "MemoryConnector",
+]

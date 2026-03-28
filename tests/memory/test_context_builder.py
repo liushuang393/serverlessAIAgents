@@ -5,12 +5,12 @@ import datetime
 import pytest
 
 from infrastructure.memory.types import MemoryEntry, MemorySemanticLevel, MemoryStability, MemoryType
-from shared.memory.context_builder import (
+from kernel.memory.context_builder import (
     ContextBuilder,
     MemoryBudget,
     MemoryNeedLevel,
 )
-from shared.memory.memory_manager import MemoryManager
+from kernel.memory.memory_manager import MemoryManager
 
 
 def _make_entry(

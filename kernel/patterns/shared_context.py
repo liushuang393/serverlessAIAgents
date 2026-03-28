@@ -50,7 +50,7 @@ class SharedContext:
 
         # 記憶システムを初期化
         if self._enable_memory:
-            from shared.memory import MemoryManager
+            from kernel.memory import MemoryManager
 
             self._memory_manager = MemoryManager(enable_vector_search=enable_vector_search, embedding_dim=embedding_dim)
 
