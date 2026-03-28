@@ -333,8 +333,8 @@ class MCPToolProvider(ToolProvider):
     async def initialize(self, config: Any = None) -> None:
         """初期化（MCPClientを接続）."""
         try:
-            from kernel.protocols.mcp_client import MCPClient
-            from kernel.protocols.mcp_config import MCPConfig
+            from kernel.protocols.mcp.client import MCPClient
+            from kernel.protocols.mcp.config import MCPConfig
 
             if config:
                 self._client = MCPClient(config)

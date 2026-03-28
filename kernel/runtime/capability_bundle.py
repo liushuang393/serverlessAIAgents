@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from kernel.protocols.mcp_client import MCPClient
+    from kernel.protocols.mcp.client import MCPClient
     from kernel.skills.gateway import SkillGateway
     from shared.rag.rag_pipeline import RAGPipeline
 

@@ -433,7 +433,7 @@ class ToolCatalogManager:
 
         count = 0
         try:
-            from kernel.protocols.mcp_lazy_client import LazyMCPClient
+            from kernel.protocols.mcp.lazy_client import LazyMCPClient
 
             client = LazyMCPClient(mcp_config)
             await client.connect()

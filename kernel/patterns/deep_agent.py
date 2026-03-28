@@ -41,8 +41,8 @@ from pydantic import BaseModel, Field
 from kernel.agents.agent_block import AgentBlock
 from kernel.patterns.coordinator import CoordinationPattern, CoordinatorBase
 from kernel.patterns.shared_context import SharedContext
-from kernel.protocols.mcp_client import MCPClient
-from kernel.protocols.mcp_lazy_client import LazyMCPClient, ToolSearchResult
+from kernel.protocols.mcp.client import MCPClient
+from kernel.protocols.mcp.lazy_client import LazyMCPClient, ToolSearchResult
 from kernel.skills import Skill, SkillRegistry
 from kernel.skills.engine import SkillEngine
 
@@ -50,7 +50,7 @@ from kernel.skills.engine import SkillEngine
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from kernel.protocols.mcp_config import MCPConfig
+    from kernel.protocols.mcp.config import MCPConfig
 
 
 # =============================================================================

@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     )
     from kernel.planner import ExecutionPlan, PlannerAgent, PlannerConfig, PlanStep, StepStatus, StepType
     from kernel.plugins import KernelPluginRegistry
-    from kernel.protocols.mcp_tool import MCPTool, MCPToolClient, MCPToolRequest, MCPToolResponse
+    from kernel.protocols.mcp.tool import MCPTool, MCPToolClient, MCPToolRequest, MCPToolResponse
     from kernel.reporter import (
         ChartData,
         ExecutiveSummary,

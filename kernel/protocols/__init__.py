@@ -46,10 +46,10 @@ from kernel.protocols.agui_events import (
 )
 
 # MCP 関連は遅延インポート（mcp パッケージはオプション依存）
-from kernel.protocols.mcp_config import LazyLoadingConfig, MCPConfig, MCPServerConfig
+from kernel.protocols.mcp.config import LazyLoadingConfig, MCPConfig, MCPServerConfig
 
 # MCP Tool - 工具基底クラスとクライアント
-from kernel.protocols.mcp_tool import (
+from kernel.protocols.mcp.tool import (
     MCPTool,
     MCPToolClient,
     MCPToolRequest,
