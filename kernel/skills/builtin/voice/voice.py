@@ -30,7 +30,6 @@ from typing import Any
 import anyio
 
 from contracts.runtime.context import get_runtime_context
-from infrastructure.llm.gateway import LiteLLMGateway
 
 
 logger = logging.getLogger(__name__)
@@ -112,6 +111,8 @@ class VoiceSkill:
         """
         self._config = config or VoiceConfig()
         self._logger = logging.getLogger("voice_skill")
+        from infrastructure.llm.gateway import LiteLLMGateway
+
         self._gateway = LiteLLMGateway()
 
     async def transcribe(

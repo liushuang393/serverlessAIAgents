@@ -120,3 +120,5 @@ layer_test_output.txt
 .gitignore
 .gitignore
 pytest_output.txt
+memory/knowledge/knowledge.json
+memory/knowledge/knowledge.json
