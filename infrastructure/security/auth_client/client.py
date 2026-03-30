@@ -168,7 +168,14 @@ class AuthClient:
 
     @staticmethod
     def _auth_me_to_remote_user(data: dict[str, Any]) -> RemoteUser:
-        """auth/me レスポンスを RemoteUser へ変換する."""
+        """auth/me レスポンスを RemoteUser へ変換する.
+
+        auth_service のレスポンスは {"success": true, "user": {...}} 形式の
+        ネスト構造を返す場合があるため、"user" キーが存在すればそちらを参照する。
+        """
+        # ネストされた "user" キーがあればそちらを使う
+        if "user" in data and isinstance(data.get("user"), dict):
+            data = data["user"]
         role = str(data.get("role", "employee"))
         return RemoteUser(
             user_id=str(data.get("user_id", data.get("id", ""))),

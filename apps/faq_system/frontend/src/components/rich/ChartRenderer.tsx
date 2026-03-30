@@ -70,14 +70,14 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ chart }) => {
 };
 
 /** バックエンドの chart 構造を ECharts option に変換 */
-function buildOption(chart: Record<string, unknown>): echarts.EChartsOption {
+function buildOption(chart: Record<string, unknown>): echarts.EChartsCoreOption {
   const chartType = (chart.type as string) || "bar";
   const title = (chart.title as string) || "";
   const rawData = (chart.data as Record<string, unknown>) || {};
   const labels = (rawData.labels as string[]) || [];
   const datasets = (rawData.datasets as Array<Record<string, unknown>>) || [];
 
-  const baseOption: echarts.EChartsOption = {
+  const baseOption: echarts.EChartsCoreOption = {
     backgroundColor: "transparent",
     title: title
       ? {

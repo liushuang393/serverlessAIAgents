@@ -82,7 +82,17 @@ def _get_auth_service() -> AuthService:
 def _get_auth_client() -> AuthClient:
     global _faq_auth_client
     if _faq_auth_client is None:
-        _faq_auth_client = AuthClient()
+        # auth_service が発行した JWT を検証するため、issuer/audience は
+        # auth_service 側の値（既定: "auth-service"）を使用する。
+        # FAQ 固有の FAQ_JWT_ISSUER/FAQ_JWT_AUDIENCE はローカル認証用であり、
+        # auth_service 連携時には使わない。
+        _faq_auth_client = AuthClient(
+            base_url=os.getenv("AUTH_SERVICE_URL", ""),
+            jwt_secret=os.getenv("AUTH_SERVICE_JWT_SECRET", ""),
+            jwt_algorithm=os.getenv("AUTH_SERVICE_JWT_ALGORITHM", "HS256"),
+            jwt_issuer=os.getenv("AUTH_SERVICE_JWT_ISSUER", "auth-service"),
+            jwt_audience=os.getenv("AUTH_SERVICE_JWT_AUDIENCE", "auth-service"),
+        )
     return _faq_auth_client
 
 

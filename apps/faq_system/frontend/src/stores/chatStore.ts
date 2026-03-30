@@ -345,16 +345,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         // rich_response / chart / data / sql / suggestions をメッセージに保存
         const richResponse =
           data.rich_response && typeof data.rich_response === "object"
-            ? (data.rich_response as ChatMessage["rich_response"])
+            ? (data.rich_response as unknown as ChatMessage["rich_response"])
             : undefined;
         const suggestions = Array.isArray(data.suggestions)
           ? data.suggestions.map((s) =>
-              typeof s === "string"
-                ? { text: s }
-                : (s as ChatMessage["suggestions"] extends (infer T)[]
-                    ? T
-                    : never),
-            )
+            typeof s === "string"
+              ? { text: s }
+              : (s as ChatMessage["suggestions"] extends (infer T)[]
+                ? T
+                : never),
+          )
           : undefined;
         msgs[msgs.length - 1] = {
           ...last,

@@ -41,6 +41,11 @@ RUN pip install --no-cache-dir -e ".[apps]"
 # ---------------------------------------------------------------------------
 FROM base AS production
 
+# 実行時システム依存関係 (healthcheck 用 curl 等)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # 非 root ユーザー作成
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 

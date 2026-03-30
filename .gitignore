@@ -122,3 +122,4 @@ layer_test_output.txt
 pytest_output.txt
 memory/knowledge/knowledge.json
 memory/knowledge/knowledge.json
+.bizcore/*

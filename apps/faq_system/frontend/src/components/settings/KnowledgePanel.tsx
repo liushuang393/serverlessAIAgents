@@ -18,7 +18,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useI18n } from "../../i18n";
-import { useRAGStore } from "../../stores/ragStore";
+import { useRAGStore, type RAGTab } from "../../stores/ragStore";
 import { PanelAccess } from "./PanelAccess";
 import { PanelCollections } from "./PanelCollections";
 import { PanelDocuments } from "./PanelDocuments";
@@ -78,9 +78,8 @@ export const KnowledgePanel = ({
   return (
     <div
       data-testid="knowledge-panel"
-      className={`fixed top-0 right-0 h-full w-[480px] max-w-[90vw] z-50 glass border-l border-white/5 shadow-2xl transition-transform duration-300 ease-in-out ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}
+      className={`fixed top-0 right-0 h-full w-[480px] max-w-[90vw] z-50 glass border-l border-white/5 shadow-2xl transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
     >
       {/* ヘッダー */}
       <div className="flex items-center justify-between p-4 border-b border-white/5">
@@ -104,12 +103,11 @@ export const KnowledgePanel = ({
         {tabs.map(({ key, i18nKey, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 transition-all ${
-              activeTab === key
-                ? "border-[var(--primary)] text-[var(--primary)] bg-white/5"
-                : "border-transparent text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03]"
-            }`}
+            onClick={() => setActiveTab(key as RAGTab)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 transition-all ${activeTab === key
+              ? "border-[var(--primary)] text-[var(--primary)] bg-white/5"
+              : "border-transparent text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03]"
+              }`}
           >
             <Icon size={14} />
             {t(i18nKey)}
