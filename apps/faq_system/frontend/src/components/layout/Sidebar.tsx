@@ -36,11 +36,11 @@ const truncateTitle = (title: string, maxLen: number): string => {
     .Segmenter;
   const segments = segmenterCtor
     ? Array.from(
-        new segmenterCtor("ja", { granularity: "grapheme" }).segment(
-          normalized,
-        ),
-        (part) => part.segment,
-      )
+      new segmenterCtor("ja", { granularity: "grapheme" }).segment(
+        normalized,
+      ),
+      (part) => part.segment,
+    )
     : Array.from(normalized);
 
   if (segments.length <= maxLen) return normalized;
@@ -75,11 +75,10 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
   return (
     <div
-      className={`h-full glass border-r border-white/5 flex flex-col text-white z-20 overflow-hidden relative transition-all duration-300 ease-in-out ${
-        isOpen
-          ? "w-[var(--sidebar-width)] min-w-[var(--sidebar-width)]"
-          : "w-[var(--sidebar-collapsed-width)] min-w-[var(--sidebar-collapsed-width)]"
-      }`}
+      className={`h-full glass border-r border-white/5 flex flex-col text-white z-20 overflow-hidden relative transition-all duration-300 ease-in-out ${isOpen
+        ? "w-[var(--sidebar-width)] min-w-[var(--sidebar-width)]"
+        : "w-[var(--sidebar-collapsed-width)] min-w-[var(--sidebar-collapsed-width)]"
+        }`}
     >
       {!isOpen && (
         <div className="absolute top-4 left-[3px] z-30">
@@ -101,19 +100,19 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         <div className="absolute -top-20 -left-20 w-40 h-40 bg-[var(--primary)]/10 blur-[80px] rounded-full pointer-events-none" />
 
         {/* Logo/Header */}
-        <div className="p-6 pb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center shadow-[0_0_12px_var(--primary-glow)]">
-              <MessageCircle size={14} className="text-black" />
+        <div className="pt-12 px-8 pb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary)] flex items-center justify-center shadow-[0_0_15px_var(--primary-glow)]">
+              <MessageCircle size={16} className="text-black" />
             </div>
-            <span className="font-bold text-sm tracking-tight">
+            <span className="font-bold text-sm tracking-tight text-white/90">
               FAQ Intelligence
             </span>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={onToggle}
-              className="text-[var(--text-muted)] hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5"
+              className="text-[var(--text-muted)] hover:text-white transition-all p-2 rounded-xl hover:bg-white/5 active:scale-95"
               title={t("sidebar.collapse") ?? "サイドバーを閉じる"}
             >
               <PanelLeftClose size={24} />
@@ -122,13 +121,13 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         </div>
 
         {/* Action Area */}
-        <div className="p-4">
+        <div className="px-6 mt-6 pb-4">
           <button
             onClick={createSession}
-            className="w-full bg-[var(--primary)]/10 border border-[var(--primary)]/20 rounded-2xl p-4 flex items-center justify-center gap-3 hover:bg-[var(--primary)]/20 transition-all text-sm font-bold text-[var(--primary)] shadow-lg group"
+            className="w-full bg-[var(--primary)]/10 border border-[var(--primary)]/20 rounded-2xl p-5 flex items-center justify-center gap-3 hover:bg-[var(--primary)]/20 transition-all text-sm font-bold text-[var(--primary)] shadow-lg group active:scale-[0.98]"
           >
             <Plus
-              size={18}
+              size={20}
               className="group-hover:rotate-90 transition-transform duration-300"
             />
             {t("chat.new_chat")}
@@ -136,15 +135,14 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         </div>
 
         {/* ナビゲーション */}
-        <div className="px-4 space-y-1">
+        <div className="px-6 space-y-2 mt-4">
           <button
             type="button"
             onClick={() => navigate("/")}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
-              location.pathname === "/"
-                ? "bg-white/5 text-white border border-white/10"
-                : "text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03] border border-transparent"
-            }`}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${location.pathname === "/"
+              ? "bg-white/5 text-white border border-white/10"
+              : "text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03] border border-transparent"
+              }`}
           >
             <MessageCircle size={15} />
             {t("sidebar.chat")}
@@ -152,8 +150,8 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         </div>
 
         {/* Navigation / History */}
-        <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1 custom-scrollbar">
-          <div className="flex items-center justify-between px-2 py-3">
+        <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3 custom-scrollbar">
+          <div className="flex items-center justify-between px-2 py-4 mt-2">
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">
               {t("sidebar.history")}
             </span>
@@ -176,15 +174,14 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           {sessions.map((session) => (
             <div
               key={session.session_id}
-              className={`group relative flex items-center gap-3 rounded-2xl text-sm transition-all border ${
-                currentSessionId === session.session_id
-                  ? "bg-white/5 border-white/10 text-white shadow-lg shadow-black/20"
-                  : "hover:bg-white/[0.03] border-transparent text-[var(--text-dim)] hover:text-white"
-              }`}
+              className={`group relative flex items-center gap-3 rounded-2xl text-sm transition-all border ${currentSessionId === session.session_id
+                ? "bg-white/5 border-white/10 text-white shadow-lg shadow-black/20"
+                : "hover:bg-white/[0.03] border-transparent text-[var(--text-dim)] hover:text-white"
+                }`}
             >
               <button
                 type="button"
-                className="flex-1 flex items-center gap-3 p-3.5 bg-transparent border-none text-left text-inherit cursor-pointer"
+                className="flex-1 flex items-center gap-3.5 p-4 bg-transparent border-none text-left text-inherit cursor-pointer"
                 onClick={() => selectSession(session.session_id)}
               >
                 <Hash
@@ -192,7 +189,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                   className={`flex-shrink-0 ${currentSessionId === session.session_id ? "text-[var(--primary)]" : "text-[var(--text-muted)]"}`}
                 />
                 <span
-                  className="flex-1 truncate pr-6 font-medium"
+                  className="flex-1 truncate pr-6 font-medium tracking-tight text-white/80"
                   title={session.title}
                 >
                   {truncateTitle(session.title || t("chat.new_chat"), 17)}
@@ -222,11 +219,10 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
               ) : (
                 <button
                   type="button"
-                  className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${
-                    currentSessionId === session.session_id
-                      ? "text-red-400/50"
-                      : "text-[var(--text-muted)]"
-                  }`}
+                  className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${currentSessionId === session.session_id
+                    ? "text-red-400/50"
+                    : "text-[var(--text-muted)]"
+                    }`}
                   onClick={() => setPendingDeleteId(session.session_id)}
                 >
                   <Trash2 size={14} />
@@ -237,26 +233,26 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
         </div>
 
         {/* User Profile Area */}
-        <div className="p-4 mt-auto">
-          <div className="glass rounded-2xl p-3.5 flex items-center gap-3 border border-white/5 shadow-2xl">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary)]/40 to-[var(--primary)]/10 flex items-center justify-center text-xs font-bold border border-[var(--primary)]/20">
+        <div className="p-8 mt-auto">
+          <div className="glass rounded-2xl p-6 flex items-center gap-4 border border-white/5 shadow-2xl">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)]/40 to-[var(--primary)]/10 flex items-center justify-center text-xs font-bold border border-[var(--primary)]/20 shadow-inner">
               {user?.username?.substring(0, 2).toUpperCase() || "??"}
             </div>
             <div className="flex-1 overflow-hidden min-w-0">
-              <div className="text-sm font-semibold truncate text-white">
+              <div className="text-sm font-bold truncate text-white/95">
                 {user?.display_name || user?.username || "User"}
               </div>
-              <div className="text-[10px] text-[var(--text-muted)] truncate uppercase tracking-wider font-medium">
+              <div className="text-[10px] text-[var(--text-muted)] truncate uppercase tracking-widest font-semibold mt-0.5">
                 {user?.role || "Member"}
               </div>
             </div>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="p-2 rounded-xl hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-all border border-transparent hover:border-red-500/20 disabled:opacity-50"
+              className="p-2.5 rounded-xl hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-400 transition-all border border-transparent hover:border-red-500/20 disabled:opacity-50 active:scale-90"
               title="Sign out"
             >
-              <LogOut size={15} />
+              <LogOut size={16} />
             </button>
           </div>
         </div>

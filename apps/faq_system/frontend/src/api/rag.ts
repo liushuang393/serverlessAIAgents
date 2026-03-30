@@ -257,16 +257,36 @@ export const ragApi = {
       async_mode: asyncMode,
     }),
 
-  // アクセス制御
+  // アクセス制御（読み取り専用）
   getAccessMatrix: () =>
     get<{ matrix: Record<string, Record<string, boolean>> }>("/access/matrix"),
 
-  updateAccessRoles: (collectionName: string, allowedRoles: string[]) =>
-    patch<{
-      updated: boolean;
-      collection_name: string;
-      matrix: Record<string, Record<string, boolean>>;
-    }>(`/access/collections/${collectionName}/roles`, {
-      allowed_roles: allowedRoles,
-    }),
+  // KB 権限管理（admin 専用・auth_service 連携）
+  listRoles: () => get<{ roles: RoleInfo[] }>("/roles"),
+
+  updateKBPermissions: (roleName: string, data: UpdateKBPermissionsData) =>
+    patch<{ updated: boolean; role_name: string; kb_permissions: KBPermission[] }>(
+      `/roles/${roleName}/kb-permissions`,
+      data,
+    ),
 };
+
+/** KB 権限 */
+export interface KBPermission {
+  kb_type: string;
+  action: string;
+}
+
+/** ロール情報型（auth_service ロール + FAQ KB 権限） */
+export interface RoleInfo {
+  role_name: string;
+  display_name: string;
+  description: string;
+  is_system: boolean;
+  kb_permissions: KBPermission[];
+}
+
+/** KB 権限更新データ */
+export interface UpdateKBPermissionsData {
+  kb_permissions: KBPermission[];
+}

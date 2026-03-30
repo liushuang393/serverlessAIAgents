@@ -81,7 +81,7 @@ export const RegisterForm = () => {
           "radial-gradient(ellipse at 80% 100%, hsl(170, 30%, 12%) 0%, var(--bg-main) 60%)",
       }}
     >
-      <div className="w-full max-w-[500px] glass card-shadow rounded-3xl p-10 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-[560px] glass card-shadow rounded-3xl p-12 md:p-16 flex flex-col gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-4">
           <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center border border-white/10 shadow-lg">
@@ -98,7 +98,7 @@ export const RegisterForm = () => {
         </div>
 
         {/* Form */}
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
           {error && (
             <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-center gap-3">
               <AlertCircle size={18} className="flex-shrink-0" />
@@ -106,7 +106,7 @@ export const RegisterForm = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">
                 {t("auth.username")}
@@ -139,7 +139,7 @@ export const RegisterForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">
                 {t("auth.email")}
@@ -170,7 +170,7 @@ export const RegisterForm = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">
                 {t("register.department")}

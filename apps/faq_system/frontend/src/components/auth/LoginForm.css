@@ -60,8 +60,8 @@
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px;
-  gap: 40px;
+  padding: 32px;
+  gap: 60px;
   align-items: center;
 }
 
@@ -70,8 +70,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 40px 32px;
+  gap: 40px;
+  padding: 60px 48px;
 }
 
 .login-brand-badge {
@@ -105,14 +105,14 @@
 .login-brand-signals {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 .login-signal-card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
-  padding: 16px 20px;
+  padding: 20px 24px;
 }
 .login-signal-card h3 {
   font-size: 14px;
@@ -144,16 +144,16 @@
 /* ── 4. ログインカード (右列) ─────────────────────────────────────── */
 .login-card {
   width: 100%;
-  max-width: 460px;
+  max-width: 500px;
   background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
-  padding: 40px;
+  padding: 60px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 40px;
 }
 
 .login-card-header {
@@ -206,7 +206,7 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 24px;
 }
 
 .login-error-banner {
@@ -232,7 +232,7 @@
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 .login-field label {
   font-size: 13px;

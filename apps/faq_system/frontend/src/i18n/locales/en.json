@@ -194,6 +194,7 @@
     "tab_ingest": "Ingest History",
     "tab_retrieval": "Retrieval",
     "tab_access": "Access",
+    "tab_role_management": "Role Management",
     "close": "Close",
     "collection_list": "Collections",
     "new_collection": "New Collection",
@@ -263,5 +264,12 @@
     "no_data": "No data available",
     "error_prefix": "Error",
     "edit": "Edit"
+  },
+  "role_manager": {
+    "title": "KB Permission Management",
+    "system_role": "System",
+    "edit_perms": "Edit Permissions",
+    "auth_service_note": "Roles are managed by the authentication service (auth_service). Here you can only configure KB access permissions for each role.",
+    "go_to_auth_service": "Go to Auth Service"
   }
 }

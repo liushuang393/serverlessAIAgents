@@ -21,10 +21,10 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-5 flex flex-col gap-2">
-      <Icon size={20} className={color} />
-      <p className="text-2xl font-bold text-white">{value}</p>
-      <p className="text-xs text-[var(--text-muted)]">{label}</p>
+    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-7 flex flex-col gap-3 shadow-sm hover:bg-white/[0.05] transition-all">
+      <Icon size={24} className={color} />
+      <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+      <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">{label}</p>
     </div>
   );
 }
@@ -49,7 +49,7 @@ export function KBDashboard() {
   const lastIngest = ingestRuns[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12">
       {/* 統計カード */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
@@ -106,7 +106,7 @@ export function KBDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {collections.slice(0, 6).map((col) => (
             <button
               key={col.collection_name}
@@ -115,17 +115,19 @@ export function KBDashboard() {
                 useRAGStore.getState().selectCollection(col.collection_name);
                 setActiveTab("documents");
               }}
-              className="text-left rounded-xl bg-white/[0.03] border border-white/5 p-4 hover:bg-white/[0.06] hover:border-[var(--primary)]/20 transition-all"
+              className="text-left rounded-xl bg-white/[0.03] border border-white/5 p-6 hover:bg-white/[0.06] hover:border-[var(--primary)]/20 transition-all group"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <Database size={14} className="text-indigo-400" />
-                <span className="text-sm font-medium text-white truncate">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-[var(--primary)]/10 transition-colors">
+                  <Database size={16} className="text-indigo-400" />
+                </div>
+                <span className="text-sm font-semibold text-white truncate">
                   {col.display_name || col.collection_name}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                <span>{col.document_count} docs</span>
-                <span className="font-mono">{col.chunk_strategy}</span>
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)] px-1">
+                <span className="font-medium">{col.document_count} docs</span>
+                <span className="font-mono bg-white/5 px-2 py-0.5 rounded-md">{col.chunk_strategy}</span>
               </div>
             </button>
           ))}
@@ -150,17 +152,16 @@ export function KBDashboard() {
             {ingestRuns.slice(0, 3).map((run) => (
               <div
                 key={run.run_id}
-                className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] border border-white/5 text-xs"
+                className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 text-xs hover:bg-white/[0.04] transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2 py-0.5 rounded-full ${
-                      run.status === "completed"
+                    className={`px-2 py-0.5 rounded-full ${run.status === "completed"
                         ? "text-emerald-400 bg-emerald-500/10"
                         : run.status === "failed"
                           ? "text-rose-400 bg-rose-500/10"
                           : "text-blue-400 bg-blue-500/10"
-                    }`}
+                      }`}
                   >
                     {run.status}
                   </span>

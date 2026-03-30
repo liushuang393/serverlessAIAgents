@@ -194,6 +194,7 @@
     "tab_ingest": "导入历史",
     "tab_retrieval": "检索设置",
     "tab_access": "访问",
+    "tab_role_management": "角色管理",
     "close": "关闭",
     "collection_list": "集合列表",
     "new_collection": "新建集合",
@@ -263,5 +264,12 @@
     "no_data": "暂无数据",
     "error_prefix": "错误",
     "edit": "编辑"
+  },
+  "role_manager": {
+    "title": "KB 权限管理",
+    "system_role": "系统",
+    "edit_perms": "编辑权限",
+    "auth_service_note": "角色的添加和删除由认证系统（auth_service）管理。此处仅可配置各角色的 KB 访问权限。",
+    "go_to_auth_service": "前往认证系统管理"
   }
 }

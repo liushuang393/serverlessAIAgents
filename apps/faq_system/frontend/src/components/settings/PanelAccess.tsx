@@ -1,13 +1,13 @@
 /**
- * アクセス制御パネル.
+ * アクセス制御パネル（読み取り専用）.
  *
- * ロール x KB タイプのアクセスマトリクスを表形式で表示する。
- * admin ロールの場合のみ「編集」ボタンを表示（将来拡張用）。
+ * ロール × KB タイプのアクセスマトリクスを表形式で表示する。
+ * 全ユーザー閲覧のみ。権限の変更はロール管理画面（admin 専用）で行う。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import { Shield, Pencil, Save, X } from "lucide-react";
+import { Shield } from "lucide-react";
 import { useI18n } from "../../i18n";
 import { ragApi } from "../../api/rag";
 
@@ -35,25 +35,12 @@ function getCurrentUserRole(): string {
   return "guest";
 }
 
-/** マトリクスのディープコピーを生成 */
-function cloneMatrix(m: AccessMatrix): AccessMatrix {
-  const copy: AccessMatrix = {};
-  for (const [role, perms] of Object.entries(m)) {
-    copy[role] = { ...perms };
-  }
-  return copy;
-}
-
 export function PanelAccess(): JSX.Element {
   const { t } = useI18n();
   const [matrix, setMatrix] = useState<AccessMatrix | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<AccessMatrix | null>(null);
-  const [saving, setSaving] = useState(false);
   const currentRole = getCurrentUserRole();
-  const isAdmin = currentRole === "admin";
 
   useEffect(() => {
     let cancelled = false;
@@ -77,58 +64,6 @@ export function PanelAccess(): JSX.Element {
       cancelled = true;
     };
   }, []);
-
-  /** 編集モード開始 */
-  const startEditing = useCallback(() => {
-    if (matrix) {
-      setDraft(cloneMatrix(matrix));
-      setEditing(true);
-    }
-  }, [matrix]);
-
-  /** 編集モードキャンセル */
-  const cancelEditing = useCallback(() => {
-    setDraft(null);
-    setEditing(false);
-  }, []);
-
-  /** チェックボックス切替 */
-  const togglePermission = useCallback((role: string, kb: string) => {
-    setDraft((prev) => {
-      if (!prev) return prev;
-      const next = cloneMatrix(prev);
-      next[role] = next[role] ?? {};
-      next[role][kb] = !next[role][kb];
-      return next;
-    });
-  }, []);
-
-  /** 保存: KB タイプごとに許可ロール一覧を送信 */
-  const handleSave = useCallback(async () => {
-    if (!draft) return;
-    setSaving(true);
-    setError(null);
-    try {
-      let latestMatrix: AccessMatrix | null = null;
-      for (const kb of KB_TYPES) {
-        const allowedRoles = Object.entries(draft)
-          .filter(([, perms]) => perms[kb])
-          .map(([role]) => role);
-        const resp = await ragApi.updateAccessRoles(kb, allowedRoles);
-        latestMatrix = resp.matrix;
-      }
-      if (latestMatrix) {
-        setMatrix(latestMatrix);
-      }
-      setEditing(false);
-      setDraft(null);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      setError(message);
-    } finally {
-      setSaving(false);
-    }
-  }, [draft]);
 
   if (loading) {
     return (
@@ -160,8 +95,7 @@ export function PanelAccess(): JSX.Element {
     );
   }
 
-  const displayMatrix = editing && draft ? draft : matrix;
-  const roles = Object.keys(displayMatrix);
+  const roles = Object.keys(matrix);
 
   return (
     <div data-testid="panel-access" className="space-y-4">
@@ -184,14 +118,7 @@ export function PanelAccess(): JSX.Element {
         </div>
       </div>
 
-      {/* 保存エラー */}
-      {error && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400">
-          {t("knowledge_panel.error_prefix")}: {error}
-        </div>
-      )}
-
-      {/* マトリクス表 */}
+      {/* マトリクス表（読み取り専用） */}
       <div className="rounded-xl glass border border-white/5 overflow-hidden">
         <table data-testid="access-matrix-table" className="w-full text-sm">
           <thead>
@@ -217,18 +144,10 @@ export function PanelAccess(): JSX.Element {
               >
                 <td className="px-4 py-3 font-medium text-white">{role}</td>
                 {KB_TYPES.map((kb) => {
-                  const allowed = displayMatrix[role]?.[kb] ?? false;
+                  const allowed = matrix[role]?.[kb] ?? false;
                   return (
                     <td key={kb} className="text-center px-4 py-3">
-                      {editing ? (
-                        <input
-                          type="checkbox"
-                          checked={allowed}
-                          onChange={() => togglePermission(role, kb)}
-                          className="rounded border-white/20 cursor-pointer"
-                          aria-label={`${role} ${kb} ${allowed ? "allowed" : "denied"}`}
-                        />
-                      ) : allowed ? (
+                      {allowed ? (
                         <span
                           className="text-emerald-400"
                           aria-label={`${role} ${kb} allowed`}
@@ -251,45 +170,6 @@ export function PanelAccess(): JSX.Element {
           </tbody>
         </table>
       </div>
-
-      {/* admin 用アクションボタン */}
-      {isAdmin && (
-        <div className="flex justify-end gap-2">
-          {editing ? (
-            <>
-              <button
-                data-testid="btn-cancel-access"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-all"
-                onClick={cancelEditing}
-                disabled={saving}
-              >
-                <X size={12} />
-                {t("knowledge_panel.cancel")}
-              </button>
-              <button
-                data-testid="btn-save-access"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium border border-[var(--primary)]/20 hover:bg-[var(--primary)]/20 transition-all disabled:opacity-50"
-                onClick={() => void handleSave()}
-                disabled={saving}
-              >
-                <Save size={12} />
-                {saving
-                  ? t("knowledge_panel.saving")
-                  : t("knowledge_panel.save")}
-              </button>
-            </>
-          ) : (
-            <button
-              data-testid="btn-edit-access"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-all"
-              onClick={startEditing}
-            >
-              <Pencil size={12} />
-              {t("knowledge_panel.edit")}
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ from apps.faq_system.backend.db.models import (
     KnowledgeBaseSetting,
     PasswordResetToken,
     ProxyAuthNonce,
+    RoleKBPermission,
     UserAccount,
 )
 from apps.faq_system.backend.db.session import (
@@ -24,6 +25,7 @@ __all__ = [
     "KnowledgeBaseSetting",
     "PasswordResetToken",
     "ProxyAuthNonce",
+    "RoleKBPermission",
     "UserAccount",
     "close_db",
     "ensure_database_ready",

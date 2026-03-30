@@ -68,7 +68,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </div>
 
           {/* 言語設定セクション */}
-          <section className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-3">
+          <section className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 space-y-4">
             <div className="flex items-center gap-3">
               <Globe size={18} className="text-[var(--primary)]" />
               <h2 className="text-base font-semibold text-white">
@@ -82,14 +82,14 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </section>
 
           {/* ユーザー情報セクション */}
-          <section className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-3">
+          <section className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 space-y-4">
             <div className="flex items-center gap-3">
               <User size={18} className="text-[var(--primary)]" />
               <h2 className="text-base font-semibold text-white">
                 {t("settings.profile")}
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <InfoRow
                 label={t("settings.username")}
                 value={user?.username ?? "-"}
@@ -107,14 +107,14 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </section>
 
           {/* システム情報セクション */}
-          <section className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-3">
+          <section className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 space-y-4">
             <div className="flex items-center gap-3">
               <Server size={18} className="text-[var(--primary)]" />
               <h2 className="text-base font-semibold text-white">
                 {t("settings.system")}
               </h2>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <InfoRow label={t("settings.version")} value="2.0.0" />
               <InfoRow
                 label={t("settings.app_name")}
@@ -124,7 +124,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </section>
 
           {/* セキュリティセクション */}
-          <section className="bg-white/[0.02] rounded-2xl p-5 border border-white/5 space-y-3">
+          <section className="bg-white/[0.02] rounded-2xl p-8 border border-white/5 space-y-4">
             <div className="flex items-center gap-3">
               <Shield size={18} className="text-[var(--primary)]" />
               <h2 className="text-base font-semibold text-white">
@@ -144,7 +144,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 /** 情報表示行コンポーネント */
 function InfoRow({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/5">
+    <div className="p-4 bg-white/[0.02] rounded-xl border border-white/5 shadow-sm">
       <div className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
         {label}
       </div>

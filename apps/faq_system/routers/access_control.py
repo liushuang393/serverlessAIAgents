@@ -1,14 +1,21 @@
-"""コレクション別アクセス制御 API."""
+"""コレクション別アクセス制御 API（読み取り専用）.
+
+role_kb_permissions テーブルからマトリクスを取得。
+ロール定義は auth_service 側で管理される。
+KB 権限の変更は /api/roles/{role_name}/kb-permissions エンドポイントで行う。
+"""
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
 
-from apps.faq_system.backend.auth.dependencies import require_auth, require_role
-from apps.faq_system.backend.security.permission_config import KBPermission, PermissionConfig
+from apps.faq_system.backend.auth.dependencies import require_auth
+from apps.faq_system.backend.db.models import RoleKBPermission
+from apps.faq_system.backend.db.session import get_db_session
 
 
 if TYPE_CHECKING:
@@ -16,57 +23,66 @@ if TYPE_CHECKING:
 else:
     UserInfo = Any
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["AccessControl"])
 
-# ---------------------------------------------------------------------------
-# シングルトン PermissionConfig
-# ---------------------------------------------------------------------------
-
-_permission_config: PermissionConfig | None = None
-
-
-def _get_permission_config() -> PermissionConfig:
-    global _permission_config
-    if _permission_config is None:
-        _permission_config = PermissionConfig()
-    return _permission_config
-
-
-# ---------------------------------------------------------------------------
-# リクエスト / レスポンスモデル
-# ---------------------------------------------------------------------------
-
-
-class UpdateCollectionRolesRequest(BaseModel):
-    """コレクションのアクセス可能ロール更新リクエスト."""
-
-    allowed_roles: list[str] = Field(..., description="アクセス許可ロール一覧")
+# マトリクス表示対象の KB タイプ
+_KB_TYPES = ("internal", "external", "confidential")
 
 
 # ---------------------------------------------------------------------------
 # ヘルパー
 # ---------------------------------------------------------------------------
 
-# マトリクス表示対象の KB タイプ
-_KB_TYPES = ("internal", "external", "confidential")
 
+async def _build_matrix_from_db() -> dict[str, dict[str, bool]]:
+    """DB からロール × KB タイプのアクセスマトリクスを生成.
 
-def _build_matrix(config: PermissionConfig) -> dict[str, dict[str, bool]]:
-    """ロール x KB タイプのアクセスマトリクスを生成."""
+    role_kb_permissions テーブルの role_name（auth_service のロール名）を
+    キーとして、read 権限の有無をマトリクス化する。
+    """
     matrix: dict[str, dict[str, bool]] = {}
-    for role_name in config.list_roles():
-        role_perms = config.get_role_permissions(role_name)
-        if role_perms is None:
-            continue
-        row: dict[str, bool] = {}
-        for kb_type in _KB_TYPES:
-            try:
-                perm = KBPermission(f"{kb_type}:read")
-                row[kb_type] = perm in role_perms.kb_permissions
-            except ValueError:
-                row[kb_type] = False
-        matrix[role_name] = row
+    try:
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(RoleKBPermission).where(RoleKBPermission.action == "read"),
+            )
+            perms = list(result.scalars().all())
+
+            # ロール名ごとにグループ化
+            role_kb_map: dict[str, set[str]] = {}
+            for p in perms:
+                if p.role_name not in role_kb_map:
+                    role_kb_map[p.role_name] = set()
+                role_kb_map[p.role_name].add(p.kb_type)
+
+            for role_name, kb_types in role_kb_map.items():
+                row: dict[str, bool] = {}
+                for kb_type in _KB_TYPES:
+                    row[kb_type] = kb_type in kb_types
+                matrix[role_name] = row
+    except Exception:
+        logger.warning("DB からロール権限を読み込めません。フォールバック使用。", exc_info=True)
+        # DB 未初期化時のフォールバック
+        from apps.faq_system.backend.security.permission_config import (
+            KBPermission,
+            PermissionConfig,
+        )
+
+        config = PermissionConfig()
+        for role_name in config.list_roles():
+            role_perms = config.get_role_permissions(role_name)
+            if role_perms is None:
+                continue
+            row = {}
+            for kb_type in _KB_TYPES:
+                try:
+                    perm = KBPermission(f"{kb_type}:read")
+                    row[kb_type] = perm in role_perms.kb_permissions
+                except ValueError:
+                    row[kb_type] = False
+            matrix[role_name] = row
     return matrix
 
 
@@ -79,41 +95,6 @@ def _build_matrix(config: PermissionConfig) -> dict[str, dict[str, bool]]:
 async def get_access_matrix(
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
-    """ロール x KB タイプのアクセスマトリクスを返す（認証必須）."""
-    config = _get_permission_config()
-    matrix = _build_matrix(config)
+    """ロール x KB タイプのアクセスマトリクスを返す（認証必須・読み取り専用）."""
+    matrix = await _build_matrix_from_db()
     return {"matrix": matrix}
-
-
-@router.patch("/api/access/collections/{collection_name}/roles")
-async def update_collection_roles(
-    collection_name: str,
-    request: UpdateCollectionRolesRequest,
-    _user: UserInfo = Depends(require_role("admin")),
-) -> dict[str, Any]:
-    """コレクションのアクセス可能ロールを更新（admin のみ）."""
-    config = _get_permission_config()
-
-    # collection_name が既知の KB タイプか検証
-    if collection_name not in _KB_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown KB type: {collection_name}. Valid types: {', '.join(_KB_TYPES)}",
-        )
-
-    # 各ロールの kb_permissions を更新
-    read_perm = KBPermission(f"{collection_name}:read")
-    for role_name in config.list_roles():
-        role_perms = config.get_role_permissions(role_name)
-        if role_perms is None:
-            continue
-        if role_name in request.allowed_roles:
-            # 権限を付与
-            if read_perm not in role_perms.kb_permissions:
-                role_perms.kb_permissions.append(read_perm)
-        # 権限を削除
-        elif read_perm in role_perms.kb_permissions:
-            role_perms.kb_permissions.remove(read_perm)
-
-    matrix = _build_matrix(config)
-    return {"updated": True, "collection_name": collection_name, "matrix": matrix}

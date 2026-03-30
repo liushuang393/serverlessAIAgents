@@ -29,7 +29,7 @@ const AssistantRichContent: React.FC<{ message: ChatMessage }> = ({
   if (!hasRich) return null;
 
   return (
-    <div className="mt-2 space-y-1">
+    <div className="mt-4 space-y-6">
       {/* SQL クエリ表示 */}
       {hasSql && <CodeBlock language="sql" value={message.sql!} />}
 
@@ -92,11 +92,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
         {/* Avatar */}
         <div className="flex-shrink-0 mt-1">
           <div
-            className={`w-8 h-8 flex items-center justify-center rounded-lg border ${
-              isUser
+            className={`w-8 h-8 flex items-center justify-center rounded-lg border ${isUser
                 ? "bg-white/5 border-white/10 text-white"
                 : "bg-[var(--primary)]/10 border-[var(--primary)]/20 text-[var(--primary)]"
-            }`}
+              }`}
           >
             {isUser ? <User size={16} /> : <Sparkles size={16} />}
           </div>
@@ -114,11 +113,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           </div>
 
           <div
-            className={`p-4 rounded-2xl ${
-              isUser
-                ? "bg-[var(--bg-card)] text-white border border-white/5 rounded-tr-sm shadow-lg"
+            className={`p-5 md:p-6 rounded-2xl ${isUser
+                ? "bg-[var(--bg-card)] text-white border border-white/5 rounded-tr-sm shadow-xl"
                 : "bg-transparent text-[var(--text-main)] leading-relaxed rounded-tl-sm"
-            }`}
+              }`}
           >
             {/* メイン Markdown コンテンツ */}
             <div className="markdown-content">

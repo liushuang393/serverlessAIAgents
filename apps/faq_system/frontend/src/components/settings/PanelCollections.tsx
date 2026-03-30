@@ -163,23 +163,22 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
         <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
           {t("knowledge_panel.pattern_preset")}
         </h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-4">
           {PRESETS.map((p) => (
             <button
               key={p.key}
               type="button"
               data-testid={`preset-${p.key}`}
               onClick={() => applyPreset(p.key)}
-              className={`p-2.5 rounded-xl border text-left transition-all ${
-                preset === p.key
-                  ? "border-[var(--primary)] bg-[var(--primary)]/10"
-                  : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
-              }`}
+              className={`p-4 rounded-xl border text-left transition-all ${preset === p.key
+                ? "border-[var(--primary)] bg-[var(--primary)]/10 shadow-sm"
+                : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                }`}
             >
-              <p className="text-xs font-semibold text-white">
+              <p className="text-xs font-bold text-white">
                 {t(p.labelKey)}
               </p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+              <p className="text-[10px] text-[var(--text-muted)] mt-1 tracking-tight">
                 {t(p.descriptionKey)}
               </p>
             </button>
@@ -193,28 +192,28 @@ function CollectionForm({ initial, onSave, onCancel }: CollectionFormProps) {
           <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
             {t("knowledge_panel.basic_info")}
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <input
               data-testid="input-collection-name"
               value={collectionName}
               onChange={(e) => setCollectionName(e.target.value)}
               placeholder={t("knowledge_panel.collection_name_placeholder")}
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)]"
+              className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:border-[var(--primary)]/50 transition-colors"
             />
             <input
               data-testid="input-display-name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder={t("knowledge_panel.display_name_placeholder")}
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)]"
+              className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:border-[var(--primary)]/50 transition-colors"
             />
             <textarea
               data-testid="input-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("knowledge_panel.description_placeholder")}
-              rows={2}
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-[var(--text-muted)] resize-none"
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:border-[var(--primary)]/50 transition-colors resize-none"
             />
           </div>
         </div>
@@ -485,32 +484,29 @@ export function PanelCollections() {
               <button
                 type="button"
                 data-testid={`collection-card-${col.collection_name}`}
-                onClick={() => handleCardClick(col)}
-                className={`w-full text-left p-3 rounded-xl border transition-all ${
-                  isSelected
-                    ? "border-[var(--primary)] bg-[var(--primary)]/5"
-                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
-                }`}
+                onClick={handleCardClick.bind(null, col)}
+                className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected
+                  ? "border-[var(--primary)] bg-[var(--primary)]/5 shadow-[0_0_15px_rgba(94,234,212,0.1)]"
+                  : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10"
+                  }`}
               >
-                <div className="flex items-center gap-2">
-                  <Database
-                    size={14}
-                    className="text-indigo-400 flex-shrink-0"
-                  />
-                  <span className="text-sm font-medium text-white truncate">
-                    {col.display_name || col.collection_name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1.5 ml-[22px]">
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-[var(--text-muted)]">
-                    {col.document_count} docs
-                  </span>
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-[var(--text-muted)]">
-                    {col.chunk_strategy}
-                  </span>
-                  <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-[var(--text-muted)]">
-                    {col.retrieval_method}
-                  </span>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center transition-colors">
+                    <Database size={18} className="text-indigo-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-semibold text-white block truncate">
+                      {col.display_name || col.collection_name}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[10px] bg-white/5 px-2.5 py-1 rounded text-[var(--text-muted)] font-medium">
+                        {col.document_count} docs
+                      </span>
+                      <span className="text-[10px] bg-white/5 px-2.5 py-1 rounded text-[var(--text-muted)] font-mono">
+                        {col.chunk_strategy}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </button>
 

@@ -146,7 +146,7 @@ export const ChatWindow = () => {
     >
       {/* Top Bar / Header Info */}
       <div
-        className={`w-full h-14 shrink-0 glass flex items-center justify-between pr-8 z-10 border-b border-white/5 ${sidebarOpen ? "pl-[62px]" : "pl-10"}`}
+        className={`w-full h-16 shrink-0 glass flex items-center justify-between pr-10 z-10 border-b border-white/5 ${sidebarOpen ? "pl-[72px]" : "pl-12"}`}
       >
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
@@ -165,24 +165,23 @@ export const ChatWindow = () => {
           </div>
         </div>
         {/* 設定ボタン（右上） */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsKnowledgePanelOpen((prev) => !prev)}
-            className={`p-2 rounded-xl transition-all border ${
-              isKnowledgePanelOpen
-                ? "text-[var(--primary)] bg-white/5 border-white/10"
-                : "text-[var(--text-muted)] hover:text-white border-transparent hover:border-white/10 hover:bg-white/5"
-            }`}
+            className={`p-2.5 rounded-xl transition-all border shadow-sm ${isKnowledgePanelOpen
+              ? "text-[var(--primary)] bg-[var(--primary)]/10 border-[var(--primary)]/30 shadow-[0_0_15px_rgba(94,234,212,0.2)]"
+              : "text-[var(--text-muted)] hover:text-white border-white/5 hover:border-white/20 hover:bg-white/5"
+              }`}
             title="ナレッジベース"
           >
-            <Database size={16} />
+            <Database size={18} />
           </button>
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-xl hover:bg-white/5 text-[var(--text-muted)] hover:text-white transition-all border border-transparent hover:border-white/10"
+            className="p-2.5 rounded-xl hover:bg-white/5 text-[var(--text-muted)] hover:text-white transition-all border border-white/5 hover:border-white/20 shadow-sm"
             title={t("sidebar.settings")}
           >
-            <Settings size={16} />
+            <Settings size={18} />
           </button>
         </div>
       </div>
@@ -197,9 +196,9 @@ export const ChatWindow = () => {
         onClose={() => setIsKnowledgePanelOpen(false)}
       />
 
-      {/* Messages Area - 3列レイアウト（15px / 中央 / 15px） */}
+      {/* Messages Area - 3列レイアウト（幅広マージン / 中央 / 幅広マージン） */}
       <div className="flex-1 min-h-0 overflow-y-auto w-full custom-scrollbar">
-        <div className="grid w-full grid-cols-[15px_minmax(0,1fr)_15px]">
+        <div className="grid w-full grid-cols-[32px_minmax(0,1fr)_32px] md:grid-cols-[64px_minmax(0,1fr)_64px] lg:grid-cols-[1fr_minmax(0,960px)_1fr]">
           <div className="col-start-2">
             <div style={chatLaneStyle} className="flex flex-col gap-8 pb-8">
               {messages.length === 0 ? (
@@ -219,16 +218,16 @@ export const ChatWindow = () => {
                     {t("chat.welcome_subtitle")}
                   </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-2xl px-4">
                     {quickActions.map((item) => (
                       <button
                         key={item.label}
                         onClick={() => setInput(item.label)}
-                        className="glass p-4 rounded-2xl flex items-start gap-3.5 hover:bg-white/5 text-left transition-all group border border-white/5 hover:border-white/10"
+                        className="glass p-6 rounded-2xl flex items-start gap-4 hover:bg-white/5 text-left transition-all group border border-white/5 hover:border-white/10 shadow-sm"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/15 flex-shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/15 flex-shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
                           <item.icon
-                            size={16}
+                            size={18}
                             className="text-[var(--primary)]"
                           />
                         </div>
@@ -257,19 +256,19 @@ export const ChatWindow = () => {
         </div>
       </div>
 
-      {/* Input Area - 3列レイアウト（15px / 中央 / 15px） */}
+      {/* Input Area - 3列レイアウト */}
       <div
-        className="shrink-0 w-full pt-6 pb-6 border-t border-white/5"
+        className="shrink-0 w-full pt-8 pb-8 border-t border-white/5"
         style={{
           background:
             "linear-gradient(to top, var(--bg-main) 85%, rgba(0,0,0,0.0))",
         }}
       >
-        <div className="grid w-full grid-cols-[15px_minmax(0,1fr)_15px]">
+        <div className="grid w-full grid-cols-[32px_minmax(0,1fr)_32px] md:grid-cols-[64px_minmax(0,1fr)_64px] lg:grid-cols-[1fr_minmax(0,960px)_1fr]">
           <div className="col-start-2">
-            <div style={chatLaneStyle} className="flex flex-col gap-3">
-              <div className="flex items-end gap-2 sm:gap-3">
-                <div className="flex-1 glass rounded-[20px] border border-white/10 px-4 py-2 shadow-2xl focus-within:border-[var(--primary)]/45 focus-within:shadow-[0_0_0_1px_rgba(94,234,212,0.25),0_10px_34px_rgba(0,0,0,0.45)] transition-all">
+            <div style={chatLaneStyle} className="flex flex-col gap-4">
+              <div className="flex items-end gap-3 sm:gap-4">
+                <div className="flex-1 glass rounded-[24px] border border-white/10 px-6 py-3 shadow-2xl focus-within:border-[var(--primary)]/45 focus-within:shadow-[0_0_0_1px_rgba(94,234,212,0.25),0_10px_34px_rgba(0,0,0,0.45)] transition-all">
                   <textarea
                     ref={textareaRef}
                     rows={1}
@@ -289,11 +288,10 @@ export const ChatWindow = () => {
                 <button
                   onClick={() => handleSubmit()}
                   disabled={!canSend}
-                  className={`h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-2xl border mb-0.5 shrink-0 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 ${
-                    canSend
-                      ? "bg-gradient-to-br from-[#6ee7dc] via-[#3fd9d0] to-[#2cbec0] text-sky-50 border-white/40 shadow-[0_10px_28px_rgba(56,189,248,0.35)] hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
-                      : "bg-white/[0.04] text-[var(--text-muted)] border-white/10 opacity-60 cursor-not-allowed"
-                  }`}
+                  className={`h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-2xl border mb-0.5 shrink-0 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 ${canSend
+                    ? "bg-gradient-to-br from-[#6ee7dc] via-[#3fd9d0] to-[#2cbec0] text-sky-50 border-white/40 shadow-[0_10px_28px_rgba(56,189,248,0.35)] hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]"
+                    : "bg-white/[0.04] text-[var(--text-muted)] border-white/10 opacity-60 cursor-not-allowed"
+                    }`}
                 >
                   {isStreaming ? (
                     <Loader2 size={20} className="animate-spin text-sky-50" />

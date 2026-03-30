@@ -232,6 +232,26 @@ class IngestionCheckpoint(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class RoleKBPermission(Base):
+    """ロール × KB 権限テーブル.
+
+    auth_service のロール名をキーとして、
+    KB タイプ（internal / external / confidential）×
+    アクション（read / write）の組み合わせを管理する。
+    ロール定義自体は auth_service 側で管理される。
+    """
+
+    __tablename__ = "role_kb_permissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    role_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    kb_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    action: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+Index("ix_role_kb_permissions_unique", RoleKBPermission.role_name, RoleKBPermission.kb_type, RoleKBPermission.action, unique=True)
+
 Index("ix_chat_messages_session_created", ChatMessage.session_id, ChatMessage.created_at)
 Index("ix_auth_sessions_user_active", AuthSession.user_id, AuthSession.revoked_at)
 Index("ix_ingestion_runs_app_started", IngestionRun.app_name, IngestionRun.started_at)

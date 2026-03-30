@@ -194,6 +194,7 @@
     "tab_ingest": "取込み履歴",
     "tab_retrieval": "検索設定",
     "tab_access": "アクセス",
+    "tab_role_management": "ロール管理",
     "close": "閉じる",
     "collection_list": "コレクション一覧",
     "new_collection": "新規コレクション",
@@ -263,5 +264,12 @@
     "no_data": "データがありません",
     "error_prefix": "エラー",
     "edit": "編集"
+  },
+  "role_manager": {
+    "title": "KB 権限管理",
+    "system_role": "システム",
+    "edit_perms": "権限編集",
+    "auth_service_note": "ロールの追加・削除は認証システム（auth_service）で管理されています。ここでは各ロールの KB アクセス権限のみ設定できます。",
+    "go_to_auth_service": "認証システム管理画面へ"
   }
 }

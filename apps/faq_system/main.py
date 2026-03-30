@@ -84,6 +84,7 @@ from apps.faq_system.routers import (
 )
 from apps.faq_system.routers.access_control import router as access_control_router
 from apps.faq_system.routers.collections import router as collections_router
+from apps.faq_system.routers.role_management import router as role_management_router
 from apps.faq_system.routers.dependencies import (
     start_rag_ingestion_scheduler,
     stop_rag_ingestion_scheduler,
@@ -254,6 +255,7 @@ app.include_router(agents_router)
 app.include_router(ws_router)
 app.include_router(misc_router)
 app.include_router(access_control_router)
+app.include_router(role_management_router)
 
 
 # =============================================================================

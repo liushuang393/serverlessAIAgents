@@ -18,7 +18,8 @@ export type RAGTab =
   | "documents"
   | "retrieval"
   | "ingest"
-  | "access";
+  | "access"
+  | "role_management";
 
 interface RAGState {
   // タブ
