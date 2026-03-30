@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 _PRIMARY_GATEWAY_RELATIVE_PATH = Path(".bizcore") / "llm_gateway.yaml"
-_LEGACY_GATEWAY_RELATIVE_PATH = Path(".agentflow") / "llm_gateway.yaml"
 _DOTENV_RELATIVE_PATH = Path(".env")
 
 _AVAILABLE_STATUS = Literal["available", "unavailable"]
@@ -23,10 +22,8 @@ _MODEL_TYPE = Literal["text", "embedding", "image", "speech_to_text", "text_to_s
 
 
 def _default_gateway_relative_path() -> Path:
-    """Resolve the preferred gateway path with legacy fallback."""
-    legacy = _LEGACY_GATEWAY_RELATIVE_PATH
-    primary = _PRIMARY_GATEWAY_RELATIVE_PATH
-    return legacy if legacy.exists() and not primary.exists() else primary
+    """既定の gateway 設定パスを返す."""
+    return _PRIMARY_GATEWAY_RELATIVE_PATH
 
 
 class ProviderConfig(BaseModel):

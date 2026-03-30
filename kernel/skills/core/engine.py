@@ -42,18 +42,14 @@ def _get_llm(**kwargs: Any) -> Any:
 
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"
-_LEGACY_CONFIG_DIR_NAME = ".agentflow"
 
 
 def _default_skill_dirs() -> list[Path]:
-    """Return default skill directories with legacy compatibility."""
+    """Return default skill directories."""
     return [
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
         Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
-        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
     ]
 
 
@@ -135,8 +131,7 @@ class SkillEngine:
         2. ~/.bizcore/skills/ (グローバル)
         3. ~/.bizcore/learned_skills/ (学習済み)
         4. .bizcore/skills/ (プロジェクト)
-        5. 旧 .agentflow 配下（互換）
-        6. extra_dirs (追加指定)
+        5. extra_dirs (追加指定)
         """
         # デフォルトパスから読み込み（builtin/ 含む）
         default_skills = self._loader.load_default_paths()

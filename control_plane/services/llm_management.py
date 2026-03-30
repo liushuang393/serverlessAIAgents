@@ -549,6 +549,4 @@ def get_default_llm_management_service() -> LLMManagementService:
 
 
 def _resolve_default_gateway_config_path() -> Path:
-    primary = Path.cwd() / ".bizcore" / "llm_gateway.yaml"
-    legacy = Path.cwd() / ".agentflow" / "llm_gateway.yaml"
-    return primary if primary.exists() or not legacy.exists() else legacy
+    return Path.cwd() / ".bizcore" / "llm_gateway.yaml"

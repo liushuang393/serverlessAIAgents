@@ -33,10 +33,8 @@ logger = logging.getLogger(__name__)
 
 
 def _default_result_store_path() -> Path:
-    """Resolve the preferred results directory with legacy fallback."""
-    primary = Path(".bizcore") / "results"
-    legacy = Path(".agentflow") / "results"
-    return legacy if legacy.exists() and not primary.exists() else primary
+    """既定の結果保存ディレクトリを返す."""
+    return Path(".bizcore") / "results"
 
 
 class FlowResult(BaseModel):

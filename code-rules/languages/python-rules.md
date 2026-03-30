@@ -218,7 +218,7 @@ async def execute_with_callback(
 
 > **2026-02-21 追加**: AIが最も犯しやすい型エラーをパターン化しました。
 > コードを出力するたびに以下をセルフチェックしてください。
-> 詳細 → [CLAUDE.md 最重要警告](../CLAUDE.md#critical-python-型エラー-最重要警告全-ai-エージェント必読)
+> 詳細 → [code-rules/AGENTS.md の型エラー最重要警告](../AGENTS.md)
 > AI弱点集 → [ai-weakness.md P-1〜P-10](../global/ai-weakness.md#python型エラー最重要最頻出)
 
 ### 違反パターン早見表

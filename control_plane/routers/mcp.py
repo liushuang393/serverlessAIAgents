@@ -6,12 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 
+from control_plane.schemas import provisioning_schemas  # noqa: TC001
+
 
 if TYPE_CHECKING:
-    from control_plane.schemas.provisioning_schemas import (
-        MCPLazyLoadingPatchRequest,
-        MCPServerUpsertRequest,
-    )
     from control_plane.services.mcp_registry import MCPRegistryService
 
 
@@ -57,7 +55,9 @@ async def list_mcp_servers() -> dict[str, Any]:
 
 
 @router.post("/servers")
-async def upsert_mcp_server(server: MCPServerUpsertRequest) -> dict[str, Any]:
+async def upsert_mcp_server(
+    server: provisioning_schemas.MCPServerUpsertRequest,
+) -> dict[str, Any]:
     """MCP サーバーを追加または更新."""
     updated = _get_registry().upsert_server(server)
     return {
@@ -86,7 +86,9 @@ async def delete_mcp_server(name: str) -> dict[str, Any]:
 
 
 @router.patch("/lazy-loading")
-async def patch_lazy_loading(patch: MCPLazyLoadingPatchRequest) -> dict[str, Any]:
+async def patch_lazy_loading(
+    patch: provisioning_schemas.MCPLazyLoadingPatchRequest,
+) -> dict[str, Any]:
     """lazy_loading 設定を部分更新."""
     updated = _get_registry().patch_lazy_loading(patch)
     return {

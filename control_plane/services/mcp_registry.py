@@ -33,9 +33,7 @@ class MCPRegistryService:
 
     @staticmethod
     def _resolve_default_config_path() -> Path:
-        primary = Path.cwd() / ".bizcore" / "protocols" / "mcp.yaml"
-        legacy = Path.cwd() / ".agentflow" / "protocols" / "mcp.yaml"
-        return primary if primary.exists() or not legacy.exists() else legacy
+        return Path.cwd() / ".bizcore" / "protocols" / "mcp.yaml"
 
     @property
     def config_path(self) -> Path:

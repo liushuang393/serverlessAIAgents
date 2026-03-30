@@ -581,10 +581,10 @@ jobs:
 **実行タイミング:** Lint 後、Type check 前
 **ツール:**
 
-- `python scripts/check_layer_boundaries.py` - 7層境界ルール
-- `python scripts/check_no_direct_provider_calls.py` - プロバイダ隔離
-- `python scripts/check_app_compliance.py` - App フレームワーク準拠
-- `python scripts/check_rules_compliance.py` - ルール総合遵守
+- `conda run -n agentflow python scripts/check_layer_boundaries.py` - 7層境界ルール
+- `conda run -n agentflow python scripts/check_no_direct_provider_calls.py` - プロバイダ隔離
+- `conda run -n agentflow python scripts/check_app_compliance.py` - App フレームワーク準拠
+- `conda run -n agentflow python scripts/check_rules_compliance.py` - ルール総合遵守
 
 **ブロッキング条件:**
 

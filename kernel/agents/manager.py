@@ -15,14 +15,11 @@ from kernel.core.metadata import AgentMetadata
 
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"
-_LEGACY_CONFIG_DIR_NAME = ".agentflow"
 
 
 def _default_registry_path() -> Path:
-    """Resolve the default registry path with legacy fallback."""
-    primary = Path.home() / _PRIMARY_CONFIG_DIR_NAME / "registry"
-    legacy = Path.home() / _LEGACY_CONFIG_DIR_NAME / "registry"
-    return legacy if legacy.exists() and not primary.exists() else primary
+    """既定のレジストリパスを返す."""
+    return Path.home() / _PRIMARY_CONFIG_DIR_NAME / "registry"
 
 
 class AgentInfo:

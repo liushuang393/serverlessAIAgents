@@ -77,14 +77,13 @@ git remote add upstream https://github.com/liushuang393/serverlessAIAgents.git
 ```bash
 # Conda 環境作成
 conda create -n agentflow python=3.13 -y
-conda activate agentflow
 
 # 開発用依存関係インストール
-pip install -e ".[dev]"
+conda run -n agentflow pip install -e ".[dev]"
 
 # インストール確認
-agentflow --version
-python -c "import agentflow; print(agentflow.__version__)"
+conda run -n agentflow agentflow --version
+conda run -n agentflow python -c "import agentflow; print(agentflow.__version__)"
 ```
 
 ### 仮想環境セットアップ（Conda なし）

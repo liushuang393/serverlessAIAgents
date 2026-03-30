@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """ルールコンプライアンス総合レポーター.
 
-CLAUDE.md の主要ルールカテゴリごとに違反数を集計し、
+Layer 0 / 詳細規約の主要ルールカテゴリごとに違反数を集計し、
 CI/CD 品質ゲートとして機能する。
 
 Usage:
-  python scripts/check_rules_compliance.py
-  python scripts/check_rules_compliance.py --json
-  python scripts/check_rules_compliance.py --strict
+  conda run -n agentflow python scripts/check_rules_compliance.py
+  conda run -n agentflow python scripts/check_rules_compliance.py --json
+  conda run -n agentflow python scripts/check_rules_compliance.py --strict
 """
 
 from __future__ import annotations

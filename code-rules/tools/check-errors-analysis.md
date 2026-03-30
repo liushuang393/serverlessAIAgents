@@ -67,17 +67,16 @@
 
 | エラーコード      | 件数目安 | 対処方法                                                                                                              |
 | ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
-| **unused-ignore** | 数件     | `python scripts/fix_mypy_safe.py` で不要な `# type: ignore` を削除。`--dry-run` で事前確認可。                        |
+| **unused-ignore** | 数件     | `conda run -n agentflow python scripts/fix_mypy_safe.py` で不要な `# type: ignore` を削除。`--dry-run` で事前確認可。 |
 | **valid-type**    | 数件     | 型注釈で `callable` を使わず `from typing import Callable` の `Callable[[Arg], Ret]` を使う。1 ファイルずつ手動修正。 |
 
 上記以外の MyPy エラーには **mypy 公式の --fix はない**。手動修正または AI が [mypy-avoid-patterns](../global/mypy-avoid-patterns.md) に従って新規・修正コードを書くことで再発防止する。
 
 ```bash
 # 安全な自動修正の実行例
-conda activate agentflow
-python scripts/fix_mypy_safe.py --dry-run   # 削除対象のみ表示
-python scripts/fix_mypy_safe.py             # 実行
-mypy agentflow --strict --ignore-missing-imports  # 確認
+conda run -n agentflow python scripts/fix_mypy_safe.py --dry-run
+conda run -n agentflow python scripts/fix_mypy_safe.py
+conda run -n agentflow mypy agentflow --strict --ignore-missing-imports
 ```
 
 ## 4. 自動修正できない MyPy エラー（AI ルールで再発防止）
@@ -128,12 +127,11 @@ mypy agentflow --strict --ignore-missing-imports  # 確認
 型エラー解消の進捗を確認するときは、以下でコード別・ファイル別のサマリーを出せる。
 
 ```bash
-conda activate agentflow
-python scripts/mypy_error_summary.py
+conda run -n agentflow python scripts/mypy_error_summary.py
 ```
 
 ## 8. 参照
 
 - 型エラーを減らすための AI 向けルール: [Mypy 回避パターン（AI 向け）](../global/mypy-avoid-patterns.md)
 - リンター・フォーマット: [lint-format.md](lint-format.md)
-- コミット前チェック一覧: [CLAUDE.md コンプライアンス確認](../CLAUDE.md#-コンプライアンス確認)
+- コミット前チェック一覧: [code-rules/AGENTS.md](../AGENTS.md)

@@ -28,6 +28,7 @@ _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 
 # デフォルトのビルトインスキルディレクトリ
 _DEFAULT_SKILLS_DIR = "kernel/skills/builtin"
+_PRIMARY_CONFIG_DIR_NAME = ".bizcore"
 
 # ------------------------------------------------------------------
 # 利用シナリオベースのカテゴリ定義
@@ -252,16 +253,20 @@ class SkillCatalogService:
         _skills: スキル名 → SkillInfo のマッピング
     """
 
-    def __init__(self, skills_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        skills_dir: Path | None = None,
+        skills_dirs: list[Path] | None = None,
+    ) -> None:
         """初期化.
 
         Args:
             skills_dir: スキルディレクトリの絶対パス。
                         省略時はカレントディレクトリ配下のデフォルトパスを使用。
+            skills_dirs: スキルディレクトリの一覧。指定時は skills_dir より優先。
         """
-        if skills_dir is None:
-            skills_dir = Path.cwd() / _DEFAULT_SKILLS_DIR
-        self._skills_dir = skills_dir
+        resolved_dirs = skills_dirs or ([skills_dir] if skills_dir is not None else self._default_skill_dirs())
+        self._skills_dirs = [path.resolve() for path in resolved_dirs]
         self._skills: dict[str, SkillInfo] = {}
         self._capability_registry = CapabilityRegistry()
 
@@ -273,12 +278,17 @@ class SkillCatalogService:
         """
         self._skills.clear()
 
-        if not self._skills_dir.is_dir():
-            _logger.warning("スキルディレクトリが存在しません: %s", self._skills_dir)
-            return 0
+        scanned_any = False
+        for skills_dir in self._skills_dirs:
+            if not skills_dir.is_dir():
+                continue
+            scanned_any = True
+            for skill_md in sorted(skills_dir.glob("*/SKILL.md")):
+                self._parse_skill_md(skill_md)
 
-        for skill_md in sorted(self._skills_dir.glob("*/SKILL.md")):
-            self._parse_skill_md(skill_md)
+        if not scanned_any:
+            _logger.warning("スキルディレクトリが存在しません: %s", self._skills_dirs)
+            return 0
 
         _logger.info("SkillCatalog スキャン完了: %d 件検出", len(self._skills))
         return len(self._skills)
@@ -471,3 +481,14 @@ class SkillCatalogService:
         if isinstance(value, list):
             return [str(v) for v in value]
         return [str(value)]
+
+    @staticmethod
+    def _default_skill_dirs() -> list[Path]:
+        """既定のスキル検索パスを返す."""
+        cwd = Path.cwd()
+        home = Path.home()
+        return [
+            cwd / _DEFAULT_SKILLS_DIR,
+            home / _PRIMARY_CONFIG_DIR_NAME / "skills",
+            cwd / _PRIMARY_CONFIG_DIR_NAME / "skills",
+        ]

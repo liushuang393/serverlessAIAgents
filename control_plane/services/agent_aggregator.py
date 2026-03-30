@@ -6,12 +6,16 @@ import logging
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 
+from control_plane.schemas.capability_schemas import CapabilitySpec
 from control_plane.services.agent_taxonomy import AgentTaxonomyService
 from control_plane.services.app_discovery import AppDiscoveryService
 from control_plane.services.capability_registry import CapabilityRegistry
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from control_plane.schemas.app_config_schemas import CapabilityItem
     from control_plane.services.app_discovery import AppDiscoveryService
 
 
@@ -128,10 +132,11 @@ class AgentAggregatorService:
             )
             for agent_info in app_config.agents:
                 canonical = self._capability_registry.canonicalize_many(agent_info.capabilities)
-                capability_names = [item.id for item in canonical]
+                canonical_ids = [item.id for item in canonical]
+                legacy_capabilities = self._extract_legacy_capabilities(agent_info.capabilities)
                 agent_business_base = self._taxonomy.infer_agent_business_base(
                     raw_business_base=agent_info.business_base,
-                    capabilities=capability_names,
+                    capabilities=canonical_ids,
                     fallback_app_base=app_business_base,
                 )
                 agent_pattern = self._taxonomy.infer_agent_pattern(
@@ -156,7 +161,7 @@ class AgentAggregatorService:
                         app_icon=app_config.icon,
                         module=agent_info.module,
                         capabilities=[item.model_dump() for item in canonical],
-                        capabilities_legacy=capability_names,
+                        capabilities_legacy=legacy_capabilities,
                         business_base=agent_business_base,
                         agent_type=agent_type,
                         agent_pattern=agent_pattern,
@@ -192,6 +197,20 @@ class AgentAggregatorService:
                     results.append(agent)
                     break
         return results
+
+    @staticmethod
+    def _extract_legacy_capabilities(
+        capabilities: Iterable[CapabilityItem],
+    ) -> list[str]:
+        """後方互換検索用のレガシー capability 文字列を抽出する."""
+        legacy: list[str] = []
+        for capability in capabilities:
+            if isinstance(capability, CapabilitySpec):
+                continue
+            normalized = capability.strip().lower()
+            if normalized:
+                legacy.append(normalized)
+        return legacy
 
     def group_by_app(self) -> list[dict[str, Any]]:
         """App 別にグルーピング.

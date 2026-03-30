@@ -746,8 +746,8 @@ $security_output
 $test_output
 \`\`\`
 
-## 参照: CLAUDE.md ルール
-- 型安全性・async-first・safe_enum: \`code-rules/CLAUDE.md\`
+## 参照: AGENTS.md ルール
+- 型安全性・async-first・safe_enum: \`code-rules/AGENTS.md\`
 EOF
 
     echo ""

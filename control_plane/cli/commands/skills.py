@@ -18,6 +18,7 @@ from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
+from infrastructure.cli_native import CLINativeService
 from kernel.skills import (
     Skill,
     SkillLoader,
@@ -30,42 +31,26 @@ from kernel.skills import (
 console = Console()
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"
-_LEGACY_CONFIG_DIR_NAME = ".agentflow"
 
 
 def _project_skill_dir() -> Path:
-    primary = Path(_PRIMARY_CONFIG_DIR_NAME) / "skills"
-    legacy = Path(_LEGACY_CONFIG_DIR_NAME) / "skills"
-    if primary.exists() or not legacy.exists():
-        return primary
-    return legacy
+    return Path(_PRIMARY_CONFIG_DIR_NAME) / "skills"
 
 
 def _global_skill_dir() -> Path:
-    primary = Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills"
-    legacy = Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills"
-    if primary.exists() or not legacy.exists():
-        return primary
-    return legacy
+    return Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills"
 
 
 def _learned_skill_dir() -> Path:
-    primary = Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills"
-    legacy = Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills"
-    if primary.exists() or not legacy.exists():
-        return primary
-    return legacy
+    return Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills"
 
 
 def get_skill_dirs() -> list[Path]:
     """Skill ディレクトリ一覧を取得."""
     dirs = [
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
         Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
-        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
     ]
     return [d for d in dirs if d.exists()]
 
@@ -82,6 +67,11 @@ def load_all_skills() -> list[Skill]:
         skills.extend(loaded)
 
     return skills
+
+
+def _cli_native_service() -> CLINativeService:
+    """CLI-Native service を返す."""
+    return CLINativeService(workspace_root=Path.cwd())
 
 
 def discover_skill_dirs(source: Path) -> list[Path]:
@@ -533,5 +523,106 @@ def mount(
             f"[dim]Skills:[/dim] {', '.join(mounted)}",
             title="Mount Success",
             border_style="green",
+        )
+    )
+
+
+@skills.command(name="cli-native-list")
+@click.pass_context
+def cli_native_list(ctx: click.Context) -> None:
+    """登録済み CLI-Native harness を一覧表示する."""
+    del ctx
+    manifests = _cli_native_service().list_manifests()
+    if not manifests:
+        console.print("[yellow]No CLI-Native harnesses found.[/yellow]")
+        return
+
+    table = Table(title="CLI-Native Harnesses", show_header=True, header_style="bold cyan")
+    table.add_column("Harness ID", style="green")
+    table.add_column("Software")
+    table.add_column("CLI")
+    table.add_column("State", style="yellow")
+    table.add_column("Risk", style="magenta")
+
+    for manifest in manifests:
+        table.add_row(
+            manifest.harness_id,
+            manifest.software_name,
+            manifest.cli_command,
+            manifest.install_state,
+            manifest.risk_profile,
+        )
+    console.print(table)
+
+
+@skills.command(name="cli-native-import")
+@click.argument("harness_path", type=click.Path(exists=True, path_type=Path))
+@click.option("--harness-id", help="登録用 harness_id")
+@click.option("--software-name", help="表示用 software 名")
+@click.option("--force/--no-force", default=True, help="既存登録の上書き可否")
+@click.pass_context
+def cli_native_import(
+    ctx: click.Context,
+    harness_path: Path,
+    harness_id: str | None,
+    software_name: str | None,
+    force: bool,
+) -> None:
+    """agent-harness を import する."""
+    del ctx
+    manifest = _cli_native_service().import_harness(
+        harness_path=harness_path,
+        harness_id=harness_id,
+        software_name=software_name,
+        force=force,
+    )
+    console.print(
+        Panel(
+            f"[green]✓ Imported CLI-Native harness[/green]\n\n"
+            f"[dim]Harness:[/dim] {manifest.harness_id}\n"
+            f"[dim]CLI:[/dim] {manifest.cli_command}\n"
+            f"[dim]State:[/dim] {manifest.install_state}\n"
+            f"[dim]Shim Skill:[/dim] {manifest.shim_skill_path}",
+            title="CLI-Native Import",
+            border_style="green",
+        )
+    )
+
+
+@skills.command(name="cli-native-build")
+@click.argument("software_name")
+@click.argument("source_path", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--runtime-cli",
+    type=click.Choice(["codex", "claude"]),
+    default=None,
+    help="使用する外部 CLI",
+)
+@click.option("--execute/--dry-run", default=False, help="build 計画のみ返すか、実行するか")
+@click.pass_context
+def cli_native_build(
+    ctx: click.Context,
+    software_name: str,
+    source_path: Path,
+    runtime_cli: str | None,
+    execute: bool,
+) -> None:
+    """CLI-Anything build ジョブを計画または実行する."""
+    del ctx
+    result = _cli_native_service().plan_build(
+        software_name=software_name,
+        source_path=source_path,
+        runtime_cli=runtime_cli,
+        dry_run=not execute,
+    )
+    console.print(
+        Panel(
+            f"[bold]Software:[/bold] {result.get('software_name', software_name)}\n"
+            f"[bold]Runtime CLI:[/bold] {result['runtime_cli']}\n"
+            f"[bold]Repo Ref:[/bold] {result['repo_ref']}\n"
+            f"[bold]Output:[/bold] {result['output_dir']}\n"
+            f"[bold]Command:[/bold] {' '.join(result['planned_command'])}",
+            title="CLI-Native Build Plan" if result["dry_run"] else "CLI-Native Build",
+            border_style="cyan" if result["dry_run"] else ("green" if result["success"] else "red"),
         )
     )

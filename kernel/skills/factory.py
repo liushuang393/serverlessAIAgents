@@ -13,7 +13,9 @@ Example:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
+from typing import Any
 
 from kernel.skills.gateway import (
     GatewayConfig,
@@ -22,6 +24,75 @@ from kernel.skills.gateway import (
     SkillDefinition,
     SkillGateway,
 )
+
+
+def _risk_level_from_profile(profile: str) -> RiskLevel:
+    """文字列プロファイルを RiskLevel へ変換する."""
+    mapping = {
+        "low": RiskLevel.LOW,
+        "medium": RiskLevel.MEDIUM,
+        "high": RiskLevel.HIGH,
+        "critical": RiskLevel.CRITICAL,
+    }
+    return mapping.get(profile.strip().lower(), RiskLevel.HIGH)
+
+
+def register_cli_native_skills(
+    gateway: SkillGateway,
+    *,
+    workspace_path: Path,
+) -> int:
+    """登録済み CLI-Native harness を SkillGateway に追加する."""
+    from infrastructure.cli_native import CLINativeService
+
+    cli_native_service = CLINativeService(workspace_root=workspace_path)
+    registered = 0
+
+    for manifest in cli_native_service.list_manifests():
+        normalized_software_name = re.sub(r"[^a-z0-9]+", "_", manifest.software_name.strip().lower()).strip("_")
+        tool_name = f"cli_native_{normalized_software_name or 'software'}_execute"
+
+        async def _handler(
+            subcommand: str,
+            args: list[str] | None = None,
+            project_path: str | None = None,
+            dry_run: bool = False,
+            *,
+            _service: CLINativeService = cli_native_service,
+            _harness_id: str = manifest.harness_id,
+        ) -> dict[str, Any]:
+            return _service.execute_harness(
+                harness_id=_harness_id,
+                subcommand=subcommand,
+                args=args,
+                project_path=project_path,
+                dry_run=dry_run,
+            )
+
+        gateway.register_skill(
+            SkillDefinition(
+                name=tool_name,
+                description=f"CLI-native execute tool for {manifest.software_name}",
+                category=SkillCategory.OS_EXECUTE,
+                risk_level=_risk_level_from_profile(manifest.risk_profile),
+                handler=_handler,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "subcommand": {"type": "string", "description": "<group> <command> 形式の実行対象"},
+                        "args": {"type": "array", "items": {"type": "string"}, "description": "CLI 引数一覧"},
+                        "project_path": {"type": "string", "description": "--project に渡すパス"},
+                        "dry_run": {"type": "boolean", "description": "実行せずコマンド計画のみ返す"},
+                    },
+                    "required": ["subcommand"],
+                },
+                requires_confirmation=True,
+                allowed_in_isolated=True,
+                allowed_in_real_machine=True,
+            )
+        )
+        registered += 1
+    return registered
 
 
 def create_skill_gateway(
@@ -278,5 +349,7 @@ def create_skill_gateway(
             allowed_in_isolated=True,
         )
     )
+
+    register_cli_native_skills(gateway, workspace_path=workspace)
 
     return gateway

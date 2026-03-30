@@ -66,13 +66,13 @@
 - 依存関係を更新した場合（Dependabot マージ含む）は、必ず **`./check.sh all`** を実行する。
 - フロントエンド（React/TS）を触った場合は **studio のビルド**（`cd studio && npm run build`）および **ESLint / TypeScript** が通ることを確認する。
 - バックエンド（Python）を触った場合は **ruff / mypy / pytest** が通ることを確認する。
-- 詳細なチェック項目は **CLAUDE.md の「コミット前チェック」** に記載し、本ファイルからは「依存更新時も同じチェックを適用する」と参照する。
+- 詳細なチェック項目は **`code-rules/AGENTS.md` の「コミット前チェック」** に記載し、本ファイルからは「依存更新時も同じチェックを適用する」と参照する。
 
 ## 6. 関連ドキュメント
 
 - [CI/CD ガイドライン](ci-cd-guidelines.md)
 - [リポジトリ構造](repo-structure.md)
-- ルート **CLAUDE.md**：コミット前チェック一覧・自動化コマンド
+- [code-rules/AGENTS.md](../AGENTS.md)：コミット前チェック一覧・自動化コマンド
 
 ---
 

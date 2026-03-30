@@ -2,7 +2,8 @@
 
 > **プロジェクト**: AgentFlow — MCP/A2A/AG-UI/A2UI 統一インターフェース AI エージェントフレームワーク
 > **このファイルは常時ロードされる最小必須ルールセットです。**
-> 詳細な規約は `code-rules/CLAUDE.md`（詳細参照版）に集約されています。
+> ルート `AGENTS.md` と `CLAUDE.md` は同一内容の Layer 0 ミラーです。
+> 詳細な規約は `code-rules/AGENTS.md`（詳細参照版）に集約されています。
 
 ---
 
@@ -45,7 +46,7 @@
 ## 📚 サブルール索引（タスク別参照ガイド）
 
 > **以下のタスクに該当する場合、作業前に対応ファイルを必ず読むこと。**
-> パスはすべてリポジトリルート基準。詳細規約全体 → [`code-rules/CLAUDE.md`](code-rules/CLAUDE.md)
+> パスはすべてリポジトリルート基準。詳細規約全体 → [`code-rules/AGENTS.md`](code-rules/AGENTS.md)
 
 ### 🐍 Python 言語・型安全
 
@@ -60,8 +61,8 @@
 | ファイル                                                                   | 概要                                                                  | 利用場面                                     |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
 | [`code-rules/project/architecture.md`](code-rules/project/architecture.md) | 7コア層+Apps の依存方向・レイヤ分離・設計原則                         | 層構造・依存関係・設計判断に関わるとき       |
-| [`code-rules/CLAUDE.md` § 3〜12](code-rules/CLAUDE.md)                     | Agent/Engine/Flow/HITL の Public API 設計規約とシナリオ別構成例       | AgentFlow の Public API を設計・実装するとき |
-| [`code-rules/CLAUDE.md` § 15](code-rules/CLAUDE.md)                        | `app_config.json` の `agents[]` 登録フォーマットと DoD チェックリスト | 新規 Agent を追加・登録するとき              |
+| [`code-rules/AGENTS.md` § フレームワーク概要](code-rules/AGENTS.md#-agentflow-フレームワーク概要) | Agent/Engine/Flow/HITL の Public API 設計規約とシナリオ別構成例       | AgentFlow の Public API を設計・実装するとき |
+| [`code-rules/AGENTS.md` § 15](code-rules/AGENTS.md#15-agent-登録標準app_configjson--ai-必読) | `app_config.json` の `agents[]` 登録フォーマットと DoD チェックリスト | 新規 Agent を追加・登録するとき              |
 | [`code-rules/global/principles.md`](code-rules/global/principles.md)       | 品質優先・インクリメンタル改善・設計原則などの開発方針                | 設計・実装方針を確認したいとき               |
 
 ### 🧪 品質・テスト・CI
@@ -90,4 +91,4 @@
 ./check.sh all --no-type-check  # 型エラー解消中は他チェックのみ
 ```
 
-> 詳細なチェック項目・コマンド一覧 → [`code-rules/CLAUDE.md`（コンプライアンス確認セクション）](code-rules/CLAUDE.md)
+> 詳細なチェック項目・コマンド一覧 → [`code-rules/AGENTS.md`](code-rules/AGENTS.md)

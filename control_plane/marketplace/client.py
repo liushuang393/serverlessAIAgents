@@ -56,9 +56,7 @@ class MarketplaceClient:
         # ディレクトリ作成は install() などの実際の使用時まで遅延する
         # これにより初期化時のパーミッションエラーを防ぐ
         if install_dir is None:
-            primary = Path.home() / ".bizcore" / "agents"
-            legacy = Path.home() / ".agentflow" / "agents"
-            install_dir = primary if primary.exists() or not legacy.exists() else legacy
+            install_dir = Path.home() / ".bizcore" / "agents"
         self.install_dir = install_dir
 
         self.registry = registry or LocalRegistry()

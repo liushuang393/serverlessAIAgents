@@ -41,14 +41,12 @@ if TYPE_CHECKING:
 
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"
-_LEGACY_CONFIG_DIR_NAME = ".agentflow"
 
 
 def _user_skill_dirs() -> list[Path]:
     """Return user skill directories in preferred order."""
     return [
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
     ]
 
 

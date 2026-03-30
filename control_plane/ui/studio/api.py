@@ -68,19 +68,9 @@ def create_app(
 
     # デフォルトディレクトリ
     if agents_dir is None:
-        primary_agents_dir = Path.home() / ".bizcore" / "agents"
-        legacy_agents_dir = Path.home() / ".agentflow" / "agents"
-        agents_dir = (
-            primary_agents_dir if primary_agents_dir.exists() or not legacy_agents_dir.exists() else legacy_agents_dir
-        )
+        agents_dir = Path.home() / ".bizcore" / "agents"
     if workflows_dir is None:
-        primary_workflows_dir = Path.home() / ".bizcore" / "workflows"
-        legacy_workflows_dir = Path.home() / ".agentflow" / "workflows"
-        workflows_dir = (
-            primary_workflows_dir
-            if primary_workflows_dir.exists() or not legacy_workflows_dir.exists()
-            else legacy_workflows_dir
-        )
+        workflows_dir = Path.home() / ".bizcore" / "workflows"
 
     # ディレクトリを作成
     agents_dir.mkdir(parents=True, exist_ok=True)

@@ -39,9 +39,7 @@ class LocalRegistry:
             registry_path: レジストリファイルのパス (デフォルト: ~/.bizcore/registry.yaml)
         """
         if registry_path is None:
-            primary = Path.home() / ".bizcore" / "registry.yaml"
-            legacy = Path.home() / ".agentflow" / "registry.yaml"
-            registry_path = primary if primary.exists() or not legacy.exists() else legacy
+            registry_path = Path.home() / ".bizcore" / "registry.yaml"
 
         self.registry_path = registry_path
         self._ensure_registry_exists()

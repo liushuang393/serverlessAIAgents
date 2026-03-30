@@ -11,7 +11,7 @@
 | レイヤー境界チェック       | `scripts/check_layer_boundaries.py`         | 7層の import 方向ルール       | check.sh, pre-commit, CI |
 | プロバイダ直接 import 禁止 | `scripts/check_no_direct_provider_calls.py` | LLM SDK 直接 import 禁止      | check.sh, pre-commit, CI |
 | App コンプライアンス       | `scripts/check_app_compliance.py`           | 各 app のフレームワーク活用度 | check.sh, CI             |
-| ルールコンプライアンス     | `scripts/check_rules_compliance.py`         | CLAUDE.md ルール総合遵守      | check.sh, CI             |
+| ルールコンプライアンス     | `scripts/check_rules_compliance.py`         | Layer 0 / 詳細規約の総合遵守  | check.sh, CI             |
 
 ## 実行方法
 

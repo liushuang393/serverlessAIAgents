@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field
 
 from contracts.base import ContractModel
@@ -39,3 +41,36 @@ class SkillManifest(ContractModel):
 
     # 機能フラグ
     enabled: bool = Field(True, description="スキルが有効かどうか")
+
+
+class CLIHarnessManifest(ContractModel):
+    """CLI-Native harness の canonical 契約.
+
+    CLI-Anything 等で生成された agent-native CLI harness を
+    Framework 内で一貫した形式で登録・公開する。
+    """
+
+    harness_id: str = Field(..., description="Harness 識別子")
+    software_name: str = Field(..., description="対象ソフトウェア名")
+    source_ref: str = Field(..., description="生成元 ref または import 元識別子")
+    package_dir: str = Field(..., description="管理対象 package ディレクトリ")
+    cli_command: str = Field(..., description="実行する console script 名")
+    skill_md_path: str = Field(..., description="元の SKILL.md パス")
+    command_groups: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="トップレベル command group とその subcommand 一覧",
+    )
+    install_state: Literal["pending", "installed", "failed", "build_planned"] = Field(
+        default="pending",
+        description="install/import/build の状態",
+    )
+    risk_profile: Literal["low", "medium", "high", "critical"] = Field(
+        default="high",
+        description="既定のリスクプロファイル",
+    )
+    description: str = Field(default="", description="Harness の説明")
+    shim_skill_path: str = Field(default="", description="生成した shim skill のパス")
+    command_options: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="`group` / `group subcommand` 単位の許可 option 一覧",
+    )

@@ -43,18 +43,14 @@ def _get_llm(**kwargs: Any) -> Any:
 
 
 _PRIMARY_CONFIG_DIR_NAME = ".bizcore"
-_LEGACY_CONFIG_DIR_NAME = ".agentflow"
 
 
 def _default_skill_dirs() -> list[Path]:
-    """Return default skill directories with legacy compatibility."""
+    """Return default skill directories."""
     return [
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "skills",
         Path.home() / _PRIMARY_CONFIG_DIR_NAME / "learned_skills",
         Path(_PRIMARY_CONFIG_DIR_NAME) / "skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "skills",
-        Path.home() / _LEGACY_CONFIG_DIR_NAME / "learned_skills",
-        Path(_LEGACY_CONFIG_DIR_NAME) / "skills",
     ]
 
 

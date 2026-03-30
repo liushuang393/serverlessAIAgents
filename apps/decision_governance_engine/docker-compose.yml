@@ -132,8 +132,8 @@ services:
       - .:/app/apps/decision_governance_engine:ro
       # 知識ベース
       - ./knowledge:/app/apps/decision_governance_engine/knowledge:ro
-      # LLM Gateway 設定（ホスト側の .agentflow/llm_gateway.yaml を SSoT として使用）
-      - ../../.agentflow/llm_gateway.yaml:/app/.bizcore/llm_gateway.yaml:ro
+      # LLM Gateway 設定（ホスト側の .bizcore/llm_gateway.yaml を SSoT として使用）
+      - ../../.bizcore/llm_gateway.yaml:/app/.bizcore/llm_gateway.yaml:ro
     depends_on:
       postgres-main:
         condition: service_healthy

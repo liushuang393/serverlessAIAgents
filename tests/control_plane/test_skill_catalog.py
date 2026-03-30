@@ -101,6 +101,35 @@ class TestScan:
         await catalog.scan()
         assert catalog.get_skill("invalid_skill") is None
 
+    @pytest.mark.asyncio
+    async def test_scan_uses_default_project_and_global_skill_dirs(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """デフォルト検索で .bizcore / legacy skill dir を拾う."""
+        project_skill_dir = tmp_path / ".bizcore" / "skills" / "project-skill"
+        global_skill_dir = tmp_path / "home" / ".bizcore" / "skills" / "global-skill"
+        project_skill_dir.mkdir(parents=True)
+        global_skill_dir.mkdir(parents=True)
+        (project_skill_dir / "SKILL.md").write_text(
+            "---\nname: chatbot\ndescription: project skill\ntags: [chat]\n---\n",
+            encoding="utf-8",
+        )
+        (global_skill_dir / "SKILL.md").write_text(
+            "---\nname: rag\ndescription: global skill\ntags: [retrieval]\n---\n",
+            encoding="utf-8",
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+        catalog = SkillCatalogService()
+        count = await catalog.scan()
+
+        assert count == 2
+        assert {skill.name for skill in catalog.list_skills()} == {"chatbot", "rag"}
+
 
 class TestListSkills:
     """list_skills() メソッドのテスト."""

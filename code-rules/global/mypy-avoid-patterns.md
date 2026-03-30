@@ -5,7 +5,7 @@
 
 ## 0. エラー件数別の優先ルール（本リポジトリの実態）
 
-以下は `python scripts/mypy_error_summary.py` で集計したコード別件数に基づく。**AI は新規・修正コードでこれらを絶対に発生させないこと。**
+以下は `conda run -n agentflow python scripts/mypy_error_summary.py` で集計したコード別件数に基づく。**AI は新規・修正コードでこれらを絶対に発生させないこと。**
 
 | コード              | 件数目安 | 禁止（やってはいけないこと）                                                                           | すること                                                                                                  |
 | ------------------- | -------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -21,7 +21,7 @@
 | **no-untyped-def**  | 34       | 公開関数・メソッドに型アノテーションを付けない。                                                       | すべての public な `def` に引数型と `-> 戻り型` を付ける。                                                |
 | **valid-type**      | 7        | 型注釈で `callable` を使う。                                                                           | `from typing import Callable` し、`Callable[[Arg], Ret]` を使う。                                         |
 | **override**        | 4        | サブクラスでメソッドの戻り型を基底と異なる型にする。                                                   | オーバーライドの戻り型は基底と同一または共変にする。                                                      |
-| **unused-ignore**   | 9        | 修正後も不要な `# type: ignore` を残す。                                                               | 不要になったら削除。`python scripts/fix_mypy_safe.py` で一括削除可。                                      |
+| **unused-ignore**   | 9        | 修正後も不要な `# type: ignore` を残す。                                                               | 不要になったら削除。`conda run -n agentflow python scripts/fix_mypy_safe.py` で一括削除可。               |
 
 ---
 
@@ -136,11 +136,11 @@ def load_json(path: Path) -> dict[str, Any]:
 
 ## 4. 自動修正ツール
 
-- **unused-ignore の一括削除**: `python scripts/fix_mypy_safe.py`（`--dry-run` で事前確認）
-- **エラー件数サマリー**: `python scripts/mypy_error_summary.py`
+- **unused-ignore の一括削除**: `conda run -n agentflow python scripts/fix_mypy_safe.py`（`--dry-run` で事前確認）
+- **エラー件数サマリー**: `conda run -n agentflow python scripts/mypy_error_summary.py`
 - 詳細: [check-errors-analysis.md](../tools/check-errors-analysis.md)
 
 ## 5. 参照
 
 - エラー分類と自動可/不可: [check-errors-analysis.md](../tools/check-errors-analysis.md)
-- 品質ゲート・コミット前チェック: [CLAUDE.md コンプライアンス確認](../CLAUDE.md#-コンプライアンス確認)
+- 品質ゲート・コミット前チェック: [code-rules/AGENTS.md](../AGENTS.md)

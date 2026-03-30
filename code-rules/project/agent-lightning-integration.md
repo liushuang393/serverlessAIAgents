@@ -8,7 +8,7 @@
 
 この文書は以下の階層で適用する。
 
-1. 親規約（最上位）: `code-rules/CLAUDE.md`
+1. 親規約（最上位）: `code-rules/AGENTS.md`
 2. 設計規約（上位）: `code-rules/project/architecture.md`
 3. 本規約（本書）: `code-rules/project/agent-lightning-integration.md`
 4. 実装詳細（参考）: `docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md`

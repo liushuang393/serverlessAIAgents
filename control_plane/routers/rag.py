@@ -26,11 +26,11 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from control_plane.schemas import rag_schemas  # noqa: TC001
 from control_plane.services.rag_config_store import RagConfigStore, get_rag_config_store
 
 
 if TYPE_CHECKING:
-    from control_plane.schemas.rag_schemas import RAGConfigPatchRequest
     from control_plane.services.rag_overview import RAGOverviewService
 
 
@@ -192,7 +192,7 @@ async def get_rag_app_config(app_name: str) -> dict[str, Any]:
 @router.patch("/apps/{app_name}/config")
 async def patch_rag_app_config(
     app_name: str,
-    patch: RAGConfigPatchRequest,
+    patch: rag_schemas.RAGConfigPatchRequest,
 ) -> dict[str, Any]:
     """App の RAG 設定を更新し app_config.json に保存する.
 
