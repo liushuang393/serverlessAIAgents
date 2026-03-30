@@ -124,6 +124,62 @@ class AgentSpec:
 
 
 @dataclass
+class SystemSpec:
+    """複数 Agent を束ねるシステム仕様."""
+
+    name: str
+    description: str
+    goal: str = ""
+    template_id: str = "multi_agent_system"
+    agents: list[AgentSpec] = field(default_factory=list)
+    flows: list[dict[str, Any]] = field(default_factory=list)
+    shared_skills: list[str] = field(default_factory=list)
+    shared_tools: list[str] = field(default_factory=list)
+    execution_mode: str = "coordinator"
+    confidence: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """辞書に変換."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "goal": self.goal,
+            "template_id": self.template_id,
+            "agents": [agent.to_dict() for agent in self.agents],
+            "flows": self.flows,
+            "shared_skills": self.shared_skills,
+            "shared_tools": self.shared_tools,
+            "execution_mode": self.execution_mode,
+            "confidence": self.confidence,
+            "metadata": self.metadata,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SystemSpec:
+        """辞書から作成."""
+        agents_payload = data.get("agents", [])
+        agents = [
+            agent if isinstance(agent, AgentSpec) else AgentSpec.from_dict(agent)
+            for agent in agents_payload
+            if isinstance(agent, dict) or isinstance(agent, AgentSpec)
+        ]
+        return cls(
+            name=data["name"],
+            description=data.get("description", ""),
+            goal=data.get("goal", ""),
+            template_id=data.get("template_id", "multi_agent_system"),
+            agents=agents,
+            flows=data.get("flows", []),
+            shared_skills=data.get("shared_skills", []),
+            shared_tools=data.get("shared_tools", []),
+            execution_mode=data.get("execution_mode", "coordinator"),
+            confidence=data.get("confidence", 0.0),
+            metadata=data.get("metadata", {}),
+        )
+
+
+@dataclass
 class CapabilityGap:
     """能力缺口.
 
@@ -435,6 +491,7 @@ __all__ = [
     "GapAnalysis",
     "GapType",
     "SynthesisResult",
+    "SystemSpec",
     "TestCase",
     "TestResult",
     "TestSuiteResult",

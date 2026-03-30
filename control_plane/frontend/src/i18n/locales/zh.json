@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "仪表盘",
+    "builder": "Builder",
     "apps": "应用",
     "agents": "代理",
     "orchestration": "编排",
@@ -12,6 +13,66 @@
     "llm_management": "LLM 管理",
     "settings": "设置",
     "logout": "退出登录"
+  },
+  "builder": {
+    "badge": "AI Agent Builder",
+    "title": "Builder",
+    "subtitle": "从模板和目标开始，生成 Agent 或 AI System 规格，完成校验、代码预览，并物化为 app。",
+    "side_title": "Drafts",
+    "empty_drafts": "还没有保存的草稿。",
+    "empty_spec": "请先在 Step 1 生成 spec。",
+    "empty_generated": "还没有生成代码。请先校验 spec 再执行 codegen。",
+    "files": "Generated Files",
+    "preview": "Preview",
+    "phase2": "高级画布编辑会放到 phase 2。v1 先收敛在 wizard-first 的 spec 与代码落地流程。",
+    "delete": "删除",
+    "load_draft": "载入",
+    "no_goal": "尚未填写目标。",
+    "steps": {
+      "step1": "Template + Goal",
+      "step2": "Spec + Validate",
+      "step3": "Preview + Materialize"
+    },
+    "kind": {
+      "agent": "Single Agent",
+      "system": "Multi-Agent System"
+    },
+    "labels": {
+      "name": "Display Name",
+      "app_name": "App Name",
+      "goal": "Goal",
+      "output": "Output",
+      "entry": "Entry Point"
+    },
+    "placeholders": {
+      "name": "OpsReviewSystem",
+      "goal": "例如：接收变更请求，生成执行计划，完成复核，并返回结构化结果",
+      "entry": "codegen 后显示"
+    },
+    "actions": {
+      "generate_spec": "生成 Spec",
+      "save_draft": "保存 Draft",
+      "validate": "Validate",
+      "generate_code": "生成代码",
+      "preview": "刷新 Preview",
+      "download": "下载 Bundle",
+      "materialize": "物化为 App"
+    },
+    "status": {
+      "spec_ready": "spec 已生成。",
+      "validated": "validation 已更新。",
+      "validation_failed": "validation 返回了错误。",
+      "generated": "代码预览已更新。",
+      "draft_saved": "draft 已保存。",
+      "draft_deleted": "draft 已删除。",
+      "draft_loaded": "draft 已载入。"
+    },
+    "errors": {
+      "goal_required": "Goal 为必填项。",
+      "spec_required": "请先生成 spec。",
+      "app_name_required": "App Name 为必填项。",
+      "generated_required": "需要先生成代码。"
+    }
   },
   "dash": {
     "title": "Dashboard",

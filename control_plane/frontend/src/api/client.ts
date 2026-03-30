@@ -13,6 +13,15 @@ import type {
   AgentsByAppResponse,
   AgentsByBusinessBaseResponse,
   AgentsByPatternResponse,
+  BuilderCreateAgentResponse,
+  BuilderCreateSystemResponse,
+  BuilderDraft,
+  BuilderGenerateResponse,
+  BuilderMaterializeResponse,
+  BuilderOutputType,
+  BuilderSpecKind,
+  BuilderTemplate,
+  BuilderValidationResult,
   AgentTypesResponse,
   AppRAGConfig,
   AppRAGConfigPatchRequest,
@@ -798,4 +807,146 @@ export async function fetchOpenAPIPaths(): Promise<string[]> {
   );
   const keys = Object.keys(data.paths ?? {});
   return keys;
+}
+
+export async function fetchBuilderTemplates(): Promise<{
+  templates: BuilderTemplate[];
+  total: number;
+}> {
+  const { data } = await api.get<{ templates: BuilderTemplate[]; total: number }>(
+    "/studios/framework/dev-studio/wizard/templates",
+  );
+  return data;
+}
+
+export async function createBuilderAgent(payload: {
+  description: string;
+  name?: string;
+}): Promise<BuilderCreateAgentResponse> {
+  const { data } = await api.post<BuilderCreateAgentResponse>(
+    "/studios/framework/dev-studio/wizard/create",
+    {
+      description: payload.description,
+      name: payload.name,
+      auto_test: false,
+      auto_publish: false,
+    },
+  );
+  return data;
+}
+
+export async function createBuilderSystem(payload: {
+  description: string;
+  name?: string;
+  template_id?: string;
+}): Promise<BuilderCreateSystemResponse> {
+  const { data } = await api.post<BuilderCreateSystemResponse>(
+    "/studios/framework/dev-studio/wizard/create-system",
+    payload,
+  );
+  return data;
+}
+
+export async function validateBuilderSpec(payload: {
+  spec_kind: BuilderSpecKind;
+  spec: Record<string, unknown>;
+}): Promise<BuilderValidationResult> {
+  const { data } = await api.post<BuilderValidationResult>(
+    "/studios/framework/dev-studio/wizard/validate",
+    payload,
+  );
+  return data;
+}
+
+export async function generateBuilderCode(payload: {
+  spec_kind: BuilderSpecKind;
+  spec: Record<string, unknown>;
+  output_type: BuilderOutputType;
+  app_name: string;
+  framework: string;
+}): Promise<BuilderGenerateResponse> {
+  const { data } = await api.post<BuilderGenerateResponse>(
+    "/studios/framework/dev-studio/codegen/generate",
+    payload,
+  );
+  return data;
+}
+
+export async function listBuilderDrafts(): Promise<{
+  drafts: BuilderDraft[];
+  total: number;
+}> {
+  const { data } = await api.get<{ drafts: BuilderDraft[]; total: number }>(
+    "/studios/framework/builder/drafts",
+  );
+  return data;
+}
+
+export async function createBuilderDraft(payload: {
+  name: string;
+  template_id: string;
+  goal: string;
+  spec_kind: BuilderSpecKind;
+  spec: Record<string, unknown>;
+  generated_files: Record<string, string>;
+  status:
+    | "draft"
+    | "validated"
+    | "generated"
+    | "materialized"
+    | "failed";
+}): Promise<BuilderDraft> {
+  const { data } = await api.post<{ draft: BuilderDraft }>(
+    "/studios/framework/builder/drafts",
+    payload,
+  );
+  return data.draft;
+}
+
+export async function updateBuilderDraft(
+  draftId: string,
+  payload: {
+    name: string;
+    template_id: string;
+    goal: string;
+    spec_kind: BuilderSpecKind;
+    spec: Record<string, unknown>;
+    generated_files: Record<string, string>;
+    status:
+      | "draft"
+      | "validated"
+      | "generated"
+      | "materialized"
+      | "failed";
+  },
+): Promise<BuilderDraft> {
+  const { data } = await api.patch<{ draft: BuilderDraft }>(
+    `/studios/framework/builder/drafts/${draftId}`,
+    payload,
+  );
+  return data.draft;
+}
+
+export async function deleteBuilderDraft(draftId: string): Promise<void> {
+  await api.delete(`/studios/framework/builder/drafts/${draftId}`);
+}
+
+export async function materializeBuilderApp(payload: {
+  name: string;
+  display_name?: string;
+  description: string;
+  icon: string;
+  template_id: string;
+  goal: string;
+  spec_kind: BuilderSpecKind;
+  spec: Record<string, unknown>;
+  generated_files: Record<string, string>;
+  output_type: BuilderOutputType;
+  framework: string;
+}): Promise<BuilderMaterializeResponse> {
+  const { data } = await api.post<BuilderMaterializeResponse>(
+    "/studios/framework/dev-studio/materialize",
+    payload,
+  );
+  return data;
 }

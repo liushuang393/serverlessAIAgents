@@ -1,6 +1,6 @@
-# BizCore Studio
+# BizCore Studio (Legacy / Experimental)
 
-> 注意: この `studio/` はフロントエンド専用です。  
+> 注意: この `studio/` は legacy / experimental UI です。正式な入口は `control_plane/frontend` の `/builder` です。  
 > バックエンド API は `control_plane/ui/studio/`（FastAPI）にあります。
 
 BizCore のビジュアルワークフローエディタ。React + TypeScript + React Flow で構築された Web アプリケーション。
@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-開発サーバーは `http://localhost:3000` で起動します。
+開発サーバーは `http://localhost:3201` で起動します。
 
 ### ビルド
 
@@ -111,7 +111,7 @@ const { workflow, updateWorkflow, selectedNode, setSelectedNode } =
 - `GET /api/workflows/{id}` - ワークフロー取得
 - `PUT /api/workflows/{id}` - ワークフロー保存
 
-Vite の proxy 設定により、`/api` と `/ws` のリクエストは `http://localhost:8000` にプロキシされます。
+Vite の proxy 設定により、`/api` と `/ws` のリクエストは `http://localhost:8012` にプロキシされます。
 
 ## キーボードショートカット
 

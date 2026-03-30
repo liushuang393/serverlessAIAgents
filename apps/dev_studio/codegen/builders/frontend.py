@@ -32,7 +32,7 @@ class FrontendBuilder(BaseBuilder):
         # Package files
         files["package.json"] = self._generate_package_json(workflow, options)
         files["tsconfig.json"] = self._generate_tsconfig()
-        files["vite.config.ts"] = self._generate_vite_config()
+        files["vite.config.ts"] = self._generate_vite_config(options)
 
         # Source files
         files["src/main.tsx"] = self._generate_main()
@@ -115,7 +115,7 @@ class FrontendBuilder(BaseBuilder):
         }
         return json.dumps(config, indent=2)
 
-    def _generate_vite_config(self) -> str:
+    def _generate_vite_config(self, options: CodeGenOptions) -> str:
         """vite.config.ts を生成."""
         return """import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -123,16 +123,21 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: __FRONTEND_PORT__,
+    host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:__BACKEND_PORT__',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\\/api/, ''),
       },
     },
   },
 });
-"""
+""".replace("__FRONTEND_PORT__", str(options.frontend_port)).replace(
+            "__BACKEND_PORT__",
+            str(options.backend_port),
+        )
 
     def _generate_main(self) -> str:
         """main.tsx を生成."""
@@ -596,7 +601,7 @@ npm install
 ## Development
 
 ```bash
-npm run dev
+npm run dev -- --port {options.frontend_port}
 ```
 
 ## Build
@@ -607,7 +612,7 @@ npm run build
 
 ## Configuration
 
-Edit `vite.config.ts` to change the API proxy target.
+Generated proxy target: `http://localhost:{options.backend_port}`.
 
 ---
 

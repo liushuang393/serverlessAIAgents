@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
+    "builder": "Builder",
     "apps": "Apps",
     "agents": "Agents",
     "orchestration": "Orchestration",
@@ -12,6 +13,66 @@
     "llm_management": "LLM Management",
     "settings": "Settings",
     "logout": "Logout"
+  },
+  "builder": {
+    "badge": "AI Agent Builder",
+    "title": "Builder",
+    "subtitle": "Start from a template and a goal, shape the Agent or AI system spec, validate it, generate code, and materialize it as an app.",
+    "side_title": "Drafts",
+    "empty_drafts": "No saved drafts yet.",
+    "empty_spec": "Generate a spec in Step 1 first.",
+    "empty_generated": "No generated code yet. Validate the spec and run codegen.",
+    "files": "Generated Files",
+    "preview": "Preview",
+    "phase2": "Advanced canvas editing stays in phase 2. v1 focuses on wizard-first spec authoring and code landing.",
+    "delete": "Delete",
+    "load_draft": "Load",
+    "no_goal": "No goal yet.",
+    "steps": {
+      "step1": "Template + Goal",
+      "step2": "Spec + Validate",
+      "step3": "Preview + Materialize"
+    },
+    "kind": {
+      "agent": "Single Agent",
+      "system": "Multi-Agent System"
+    },
+    "labels": {
+      "name": "Display Name",
+      "app_name": "App Name",
+      "goal": "Goal",
+      "output": "Output",
+      "entry": "Entry Point"
+    },
+    "placeholders": {
+      "name": "OpsReviewSystem",
+      "goal": "Example: accept change requests, plan the execution, review the result, and return a structured answer",
+      "entry": "Shown after codegen"
+    },
+    "actions": {
+      "generate_spec": "Generate Spec",
+      "save_draft": "Save Draft",
+      "validate": "Validate",
+      "generate_code": "Generate Code",
+      "preview": "Refresh Preview",
+      "download": "Download Bundle",
+      "materialize": "Materialize App"
+    },
+    "status": {
+      "spec_ready": "Spec generated.",
+      "validated": "Validation updated.",
+      "validation_failed": "Validation returned errors.",
+      "generated": "Code preview updated.",
+      "draft_saved": "Draft saved.",
+      "draft_deleted": "Draft deleted.",
+      "draft_loaded": "Draft loaded."
+    },
+    "errors": {
+      "goal_required": "Goal is required.",
+      "spec_required": "Generate the spec first.",
+      "app_name_required": "App Name is required.",
+      "generated_required": "Generated code is required."
+    }
   },
   "dash": {
     "title": "Dashboard",

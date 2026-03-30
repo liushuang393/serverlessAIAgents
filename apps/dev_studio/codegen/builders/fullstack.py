@@ -90,8 +90,8 @@ class FullstackBuilder(BaseBuilder):
 make dev
 
 # Or separately:
-make dev-backend  # Backend on port 8000
-make dev-frontend # Frontend on port 5173
+make dev-backend  # Backend on port {options.backend_port}
+make dev-frontend # Frontend on port {options.frontend_port}
 ```
 
 ### Production
@@ -104,8 +104,8 @@ docker compose up --build
 ## API Documentation
 
 Once running, visit:
-- API Docs: http://localhost:8000/docs
-- Frontend: http://localhost:5173
+- API Docs: http://localhost:{options.backend_port}/docs
+- Frontend: http://localhost:{options.frontend_port}
 
 ## Configuration
 
@@ -140,14 +140,14 @@ services:
     build: ./backend
     container_name: {options.app_name}-backend
     ports:
-      - "8000:8000"
+      - "{options.backend_port}:{options.backend_port}"
     environment:
       - DEBUG=false
     env_file:
       - ./backend/.env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:{options.backend_port}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -156,7 +156,7 @@ services:
     build: ./frontend
     container_name: {options.app_name}-frontend
     ports:
-      - "3000:80"
+      - "{options.frontend_port}:80"
     depends_on:
       - backend
     restart: unless-stopped
@@ -176,7 +176,7 @@ dev:
 	@make -j2 dev-backend dev-frontend
 
 dev-backend:
-	cd backend && uvicorn app:app --reload --port 8000
+	cd backend && uvicorn app:app --reload --port {options.backend_port}
 
 dev-frontend:
 	cd frontend && npm run dev

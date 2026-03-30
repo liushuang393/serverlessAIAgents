@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "ダッシュボード",
+    "builder": "Builder",
     "apps": "アプリ",
     "agents": "エージェント",
     "orchestration": "オーケストレーション",
@@ -12,6 +13,66 @@
     "llm_management": "LLM 管理",
     "settings": "設定",
     "logout": "ログアウト"
+  },
+  "builder": {
+    "badge": "AI Agent Builder",
+    "title": "Builder",
+    "subtitle": "テンプレートと目標から Agent / AI System の仕様を作り、検証し、コード化して app として物化します。",
+    "side_title": "Drafts",
+    "empty_drafts": "保存済み draft はまだありません。",
+    "empty_spec": "まず Step 1 で spec を生成してください。",
+    "empty_generated": "生成コードはまだありません。spec を検証してから codegen を実行します。",
+    "files": "Generated Files",
+    "preview": "Preview",
+    "phase2": "高度な canvas 編集は phase 2 で提供します。v1 は wizard-first で spec と code landing を優先します。",
+    "delete": "削除",
+    "load_draft": "読み込む",
+    "no_goal": "目標は未設定です。",
+    "steps": {
+      "step1": "Template + Goal",
+      "step2": "Spec + Validate",
+      "step3": "Preview + Materialize"
+    },
+    "kind": {
+      "agent": "Single Agent",
+      "system": "Multi-Agent System"
+    },
+    "labels": {
+      "name": "Display Name",
+      "app_name": "App Name",
+      "goal": "Goal",
+      "output": "Output",
+      "entry": "Entry Point"
+    },
+    "placeholders": {
+      "name": "OpsReviewSystem",
+      "goal": "例: 社内の変更依頼を受付し、実行計画を立て、レビューして結果を返す AI system",
+      "entry": "codegen 後に表示されます"
+    },
+    "actions": {
+      "generate_spec": "Spec を生成",
+      "save_draft": "Draft を保存",
+      "validate": "Validate",
+      "generate_code": "Code を生成",
+      "preview": "Preview を更新",
+      "download": "Bundle をダウンロード",
+      "materialize": "App として物化"
+    },
+    "status": {
+      "spec_ready": "spec を生成しました。",
+      "validated": "validation を更新しました。",
+      "validation_failed": "validation でエラーがあります。",
+      "generated": "code preview を更新しました。",
+      "draft_saved": "draft を保存しました。",
+      "draft_deleted": "draft を削除しました。",
+      "draft_loaded": "draft を読み込みました。"
+    },
+    "errors": {
+      "goal_required": "Goal は必須です。",
+      "spec_required": "Spec を先に生成してください。",
+      "app_name_required": "App Name は必須です。",
+      "generated_required": "生成済みコードが必要です。"
+    }
   },
   "dash": {
     "title": "Dashboard",

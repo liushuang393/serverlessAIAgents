@@ -179,19 +179,19 @@ class CodeGenerator(ICodeGenerator):
             return (
                 "src/App.tsx",
                 "npm run build",
-                "npm run dev",
+                f"npm run dev -- --host 0.0.0.0 --port {options.frontend_port}",
             )
         if output_type == CodeOutputType.BACKEND:
             return (
                 "app.py",
                 None,
-                "uvicorn app:app --host 0.0.0.0 --port 8000",
+                f"uvicorn app:app --host 0.0.0.0 --port {options.backend_port}",
             )
         # FULLSTACK
         return (
             "backend/app.py",
             "cd frontend && npm run build",
-            "uvicorn backend.app:app --host 0.0.0.0 --port 8000",
+            f"uvicorn backend.app:app --host 0.0.0.0 --port {options.backend_port}",
         )
 
 

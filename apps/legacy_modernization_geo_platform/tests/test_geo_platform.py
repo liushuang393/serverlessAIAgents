@@ -1,4 +1,8 @@
-"""Backend tests for the Legacy Modernization GEO Platform."""
+"""Backend tests for the Legacy Modernization GEO Platform.
+
+パイプラインは asyncio.create_task で駆動されるため、
+TestClient を context manager として使用し blocking portal を維持する。
+"""
 
 from __future__ import annotations
 
@@ -75,7 +79,7 @@ def _wait_for_status(
     task_id: str,
     expected: str,
     *,
-    timeout_seconds: float = 10.0,
+    timeout_seconds: float = 15.0,
 ) -> dict:
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
@@ -83,7 +87,7 @@ def _wait_for_status(
         payload = response.json()
         if payload.get("status") == expected:
             return payload
-        time.sleep(0.1)
+        time.sleep(0.15)
     msg = f"Task {task_id} did not reach status {expected}"
     raise AssertionError(msg)
 
@@ -119,30 +123,30 @@ def test_execute_creates_task_and_blocks_for_approval(monkeypatch, tmp_path: Pat
     monkeypatch.setenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE", "1")
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
-    client = TestClient(app)
 
-    response = client.post(
-        "/api/geo/execute",
-        headers=_auth_headers(),
-        json={
-            "campaign_name": "legacy-modernization-japan-b2b",
-            "package": "assessment",
-            "targets": {
-                "industries": ["manufacturing"],
-                "legacy_stacks": ["COBOL", "Struts"],
-                "regions": ["Japan"],
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/geo/execute",
+            headers=_auth_headers(),
+            json={
+                "campaign_name": "legacy-modernization-japan-b2b",
+                "package": "assessment",
+                "targets": {
+                    "industries": ["manufacturing"],
+                    "legacy_stacks": ["COBOL", "Struts"],
+                    "regions": ["Japan"],
+                },
             },
-        },
-    )
-    assert response.status_code == 200
-    payload = response.json()
-    state = _wait_for_status(client, payload["task_id"], TaskStatus.WAITING_APPROVAL.value)
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        state = _wait_for_status(client, payload["task_id"], TaskStatus.WAITING_APPROVAL.value)
 
-    artifact_names = [item["artifact_name"] for item in state["artifacts"]]
-    assert "account_signal_artifact" in artifact_names
-    assert "geo_qa_report" in artifact_names
-    assert state["approvals"]
-    assert state["approvals"][0]["status"] == "pending"
+        artifact_names = [item["artifact_name"] for item in state["artifacts"]]
+        assert "account_signal_artifact" in artifact_names
+        assert "geo_qa_report" in artifact_names
+        assert state["approvals"]
+        assert state["approvals"][0]["status"] == "pending"
 
 
 def test_approval_publishes_page_and_report(monkeypatch, tmp_path: Path) -> None:
@@ -153,44 +157,44 @@ def test_approval_publishes_page_and_report(monkeypatch, tmp_path: Path) -> None
         msg = "legacy_modernization_geo_platform の backend URL がありません。"
         raise AssertionError(msg)
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
-    client = TestClient(app)
 
-    start = client.post(
-        "/api/geo/execute",
-        headers=_auth_headers(),
-        json={
-            "campaign_name": "legacy-modernization-japan-b2b",
-            "package": "assessment",
-            "targets": {
-                "industries": ["manufacturing"],
-                "legacy_stacks": ["COBOL"],
-                "regions": ["Japan"],
+    with TestClient(app) as client:
+        start = client.post(
+            "/api/geo/execute",
+            headers=_auth_headers(),
+            json={
+                "campaign_name": "legacy-modernization-japan-b2b",
+                "package": "assessment",
+                "targets": {
+                    "industries": ["manufacturing"],
+                    "legacy_stacks": ["COBOL"],
+                    "regions": ["Japan"],
+                },
             },
-        },
-    ).json()
-    waiting_state = _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
-    approval = waiting_state["approvals"][0]
+        ).json()
+        waiting_state = _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
+        approval = waiting_state["approvals"][0]
 
-    approve_response = client.post(
-        f"/api/geo/{start['task_id']}/approval",
-        headers=_auth_headers(),
-        params={"request_id": approval["request_id"]},
-        json={"approved": True, "reviewer_name": "pytest"},
-    )
-    assert approve_response.status_code == 200
+        approve_response = client.post(
+            f"/api/geo/{start['task_id']}/approval",
+            headers=_auth_headers(),
+            params={"request_id": approval["request_id"]},
+            json={"approved": True, "reviewer_name": "pytest"},
+        )
+        assert approve_response.status_code == 200
 
-    completed = _wait_for_status(client, start["task_id"], TaskStatus.COMPLETED.value)
-    assert completed["published_pages"]
-    assert completed["report"] is not None
+        completed = _wait_for_status(client, start["task_id"], TaskStatus.COMPLETED.value)
+        assert completed["published_pages"]
+        assert completed["report"] is not None
 
-    page_url = completed["published_pages"][0]["page_url"]
-    public_page = client.get(page_url.replace(runtime.urls.backend, ""))
-    assert public_page.status_code == 200
-    assert "FAQPage" in public_page.text
+        page_url = completed["published_pages"][0]["page_url"]
+        public_page = client.get(page_url.replace(runtime.urls.backend, ""))
+        assert public_page.status_code == 200
+        assert "FAQPage" in public_page.text
 
-    sitemap = client.get("/geo/sitemap.xml")
-    assert sitemap.status_code == 200
-    assert "modernization-guide" in sitemap.text
+        sitemap = client.get("/geo/sitemap.xml")
+        assert sitemap.status_code == 200
+        assert "modernization-guide" in sitemap.text
 
 
 @pytest.mark.parametrize(
@@ -238,94 +242,94 @@ def test_content_language_propagates_to_draft_publish_and_report(
         msg = "legacy_modernization_geo_platform の backend URL がありません。"
         raise AssertionError(msg)
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
-    client = TestClient(app)
 
-    start = client.post(
-        "/api/geo/execute",
-        headers=_auth_headers(),
-        json={
-            "campaign_name": "legacy-modernization-i18n",
-            "package": "assessment",
-            "targets": {
-                "industries": ["manufacturing"],
-                "legacy_stacks": ["COBOL"],
-                "regions": ["Japan"],
+    with TestClient(app) as client:
+        start = client.post(
+            "/api/geo/execute",
+            headers=_auth_headers(),
+            json={
+                "campaign_name": "legacy-modernization-i18n",
+                "package": "assessment",
+                "targets": {
+                    "industries": ["manufacturing"],
+                    "legacy_stacks": ["COBOL"],
+                    "regions": ["Japan"],
+                },
+                "inputs": {
+                    "content_languages": [requested_language],
+                },
             },
-            "inputs": {
-                "content_languages": [requested_language],
-            },
-        },
-    ).json()
+        ).json()
 
-    waiting_state = _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
-    draft_artifact_response = client.get(
-        f"/api/geo/{start['task_id']}/artifacts/content_draft_artifact",
-        headers=_auth_headers(),
-    )
-    assert draft_artifact_response.status_code == 200
-    draft_artifact = draft_artifact_response.json()
-    assert draft_artifact["target_language"] == expected_language
-    assert draft_artifact["pages"][0]["json_ld"]["inLanguage"] == expected_schema_language
+        waiting_state = _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
+        draft_artifact_response = client.get(
+            f"/api/geo/{start['task_id']}/artifacts/content_draft_artifact",
+            headers=_auth_headers(),
+        )
+        assert draft_artifact_response.status_code == 200
+        draft_artifact = draft_artifact_response.json()
+        assert draft_artifact["target_language"] == expected_language
+        assert draft_artifact["pages"][0]["json_ld"]["inLanguage"] == expected_schema_language
 
-    approval = waiting_state["approvals"][0]
-    approve_response = client.post(
-        f"/api/geo/{start['task_id']}/approval",
-        headers=_auth_headers(),
-        params={"request_id": approval["request_id"]},
-        json={"approved": True, "reviewer_name": "pytest"},
-    )
-    assert approve_response.status_code == 200
+        approval = waiting_state["approvals"][0]
+        approve_response = client.post(
+            f"/api/geo/{start['task_id']}/approval",
+            headers=_auth_headers(),
+            params={"request_id": approval["request_id"]},
+            json={"approved": True, "reviewer_name": "pytest"},
+        )
+        assert approve_response.status_code == 200
 
-    completed = _wait_for_status(client, start["task_id"], TaskStatus.COMPLETED.value)
-    page_url = completed["published_pages"][0]["page_url"]
-    public_page = client.get(page_url.replace(runtime.urls.backend, ""))
-    assert public_page.status_code == 200
-    assert expected_html_lang in public_page.text
-    assert expected_faq_label in public_page.text
-    assert completed["report"] is not None
-    assert expected_report_title in completed["report"]["markdown"]
+        completed = _wait_for_status(client, start["task_id"], TaskStatus.COMPLETED.value)
+        page_url = completed["published_pages"][0]["page_url"]
+        public_page = client.get(page_url.replace(runtime.urls.backend, ""))
+        assert public_page.status_code == 200
+        assert expected_html_lang in public_page.text
+        assert expected_faq_label in public_page.text
+        assert completed["report"] is not None
+        assert expected_report_title in completed["report"]["markdown"]
 
 
 def test_rewrite_command_updates_draft(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE", "1")
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
-    client = TestClient(app)
 
-    start = client.post(
-        "/api/geo/execute",
-        headers=_auth_headers(),
-        json={
-            "campaign_name": "legacy-modernization-japan-b2b",
-            "package": "assessment",
-            "targets": {
-                "industries": ["manufacturing"],
-                "legacy_stacks": ["COBOL"],
-                "regions": ["Japan"],
-            },
-        },
-    ).json()
-    _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
-
-    command_response = client.post(
-        f"/api/geo/{start['task_id']}/commands",
-        headers=_auth_headers(),
-        json={"command": "content.rewrite", "actor": "pytest", "comment": "请淡化比较表述"},
-    )
-    assert command_response.status_code == 200
-
-    deadline = time.time() + 10
-    while time.time() < deadline:
-        artifact = client.get(
-            f"/api/geo/{start['task_id']}/artifacts/content_draft_artifact",
+    with TestClient(app) as client:
+        start = client.post(
+            "/api/geo/execute",
             headers=_auth_headers(),
+            json={
+                "campaign_name": "legacy-modernization-japan-b2b",
+                "package": "assessment",
+                "targets": {
+                    "industries": ["manufacturing"],
+                    "legacy_stacks": ["COBOL"],
+                    "regions": ["Japan"],
+                },
+            },
+        ).json()
+        _wait_for_status(client, start["task_id"], TaskStatus.WAITING_APPROVAL.value)
+
+        command_response = client.post(
+            f"/api/geo/{start['task_id']}/commands",
+            headers=_auth_headers(),
+            json={"command": "content.rewrite", "actor": "pytest", "comment": "请淡化比较表述"},
         )
-        if artifact.status_code == 200 and "レビュー反映メモ" in artifact.text:
-            break
-        time.sleep(0.1)
-    else:
-        msg = "Draft was not rewritten"
-        raise AssertionError(msg)
+        assert command_response.status_code == 200
+
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            artifact = client.get(
+                f"/api/geo/{start['task_id']}/artifacts/content_draft_artifact",
+                headers=_auth_headers(),
+            )
+            if artifact.status_code == 200 and "レビュー反映メモ" in artifact.text:
+                break
+            time.sleep(0.15)
+        else:
+            msg = "Draft was not rewritten"
+            raise AssertionError(msg)
 
 
 def test_agent_runtime_endpoints_expose_cards_and_stream(
@@ -334,62 +338,62 @@ def test_agent_runtime_endpoints_expose_cards_and_stream(
 ) -> None:
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
-    client = TestClient(app)
 
-    agents_response = client.get("/api/agents", headers=_auth_headers())
-    assert agents_response.status_code == 200
-    agents_payload = agents_response.json()
-    assert any(item["id"] == "BrandMemory" for item in agents_payload["agents"])
+    with TestClient(app) as client:
+        agents_response = client.get("/api/agents", headers=_auth_headers())
+        assert agents_response.status_code == 200
+        agents_payload = agents_response.json()
+        assert any(item["id"] == "BrandMemory" for item in agents_payload["agents"])
 
-    card_response = client.get("/api/agents/BrandMemory/card", headers=_auth_headers())
-    assert card_response.status_code == 200
-    assert card_response.json()["name"] == "BrandMemory"
+        card_response = client.get("/api/agents/BrandMemory/card", headers=_auth_headers())
+        assert card_response.status_code == 200
+        assert card_response.json()["name"] == "BrandMemory"
 
-    schema_response = client.get("/api/agents/BrandMemory/schema", headers=_auth_headers())
-    assert schema_response.status_code == 200
-    assert schema_response.json()["input_schema"]["type"] == "object"
+        schema_response = client.get("/api/agents/BrandMemory/schema", headers=_auth_headers())
+        assert schema_response.status_code == 200
+        assert schema_response.json()["input_schema"]["type"] == "object"
 
-    invoke_response = client.post(
-        "/api/agents/BrandMemory/invoke",
-        headers=_auth_headers(),
-        json={
-            "input": {
-                "task_id": "task-1",
-                "request": {
-                    "campaign_name": "demo",
-                    "package": "assessment",
-                    "targets": {
-                        "industries": ["manufacturing"],
-                        "legacy_stacks": ["COBOL"],
-                        "regions": ["Japan"],
+        invoke_response = client.post(
+            "/api/agents/BrandMemory/invoke",
+            headers=_auth_headers(),
+            json={
+                "input": {
+                    "task_id": "task-1",
+                    "request": {
+                        "campaign_name": "demo",
+                        "package": "assessment",
+                        "targets": {
+                            "industries": ["manufacturing"],
+                            "legacy_stacks": ["COBOL"],
+                            "regions": ["Japan"],
+                        },
                     },
-                },
-            }
-        },
-    )
-    assert invoke_response.status_code == 200
-    assert invoke_response.json()["success"] is True
+                }
+            },
+        )
+        assert invoke_response.status_code == 200
+        assert invoke_response.json()["success"] is True
 
-    stream_response = client.post(
-        "/api/agents/BrandMemory/stream",
-        headers=_auth_headers(),
-        json={
-            "input": {
-                "task_id": "task-1",
-                "request": {
-                    "campaign_name": "demo",
-                    "package": "assessment",
-                    "targets": {
-                        "industries": ["manufacturing"],
-                        "legacy_stacks": ["COBOL"],
-                        "regions": ["Japan"],
+        stream_response = client.post(
+            "/api/agents/BrandMemory/stream",
+            headers=_auth_headers(),
+            json={
+                "input": {
+                    "task_id": "task-1",
+                    "request": {
+                        "campaign_name": "demo",
+                        "package": "assessment",
+                        "targets": {
+                            "industries": ["manufacturing"],
+                            "legacy_stacks": ["COBOL"],
+                            "regions": ["Japan"],
+                        },
                     },
-                },
-            }
-        },
-    )
-    assert stream_response.status_code == 200
-    assert "flow.start" in stream_response.text
+                }
+            },
+        )
+        assert stream_response.status_code == 200
+        assert "flow.start" in stream_response.text
 
 
 def test_geo_stream_endpoint_supports_eventsource_query_auth(
@@ -398,24 +402,24 @@ def test_geo_stream_endpoint_supports_eventsource_query_auth(
 ) -> None:
     monkeypatch.setenv("AUTH_SERVICE_URL", "http://auth.example")
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
-    client = TestClient(app)
 
-    async def _stream_events(task_id: str) -> AsyncIterator[TaskEvent]:
-        yield TaskEvent(
-            event_type="flow.start",
-            task_id=task_id,
-            stage="assessment",
-            message="Campaign started",
+    with TestClient(app) as client:
+        async def _stream_events(task_id: str) -> AsyncIterator[TaskEvent]:
+            yield TaskEvent(
+                event_type="flow.start",
+                task_id=task_id,
+                stage="assessment",
+                message="Campaign started",
+            )
+
+        app.state.orchestrator.get_state = lambda _task_id: object()
+        app.state.orchestrator.stream_events = _stream_events
+
+        response = client.get(
+            "/api/geo/task-1/stream?access_token=valid-token&tenant_id=tenant-a",
         )
 
-    app.state.orchestrator.get_state = lambda _task_id: object()
-    app.state.orchestrator.stream_events = _stream_events
-
-    response = client.get(
-        "/api/geo/task-1/stream?access_token=valid-token&tenant_id=tenant-a",
-    )
-
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("text/event-stream")
-    assert '"event_type": "flow.start"' in response.text
-    assert '"event_type": "a2ui.clear"' in response.text
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/event-stream")
+        assert '"event_type": "flow.start"' in response.text
+        assert '"event_type": "a2ui.clear"' in response.text

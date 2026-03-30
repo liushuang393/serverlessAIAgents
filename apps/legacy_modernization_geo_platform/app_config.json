@@ -189,6 +189,30 @@
       "stop": "python apps/legacy_modernization_geo_platform/scripts/compose.py stop"
     }
   },
+  "flows": {
+    "assessment": {
+      "description": "GEO コンテンツ生成パイプライン（assessment パッケージ）",
+      "stages": [
+        {"agent": "BrandMemory", "stage": "brand_memory"},
+        {"agent": "DemandSignal", "stage": "demand_signal"},
+        {"agent": "AccountScore", "stage": "icp_scoring"},
+        {"agent": "QuestionGraph", "stage": "question_map"},
+        {"agent": "EvidenceMatrix", "stage": "evidence_collection"},
+        {"agent": "LegacySemantics", "stage": "legacy_semantics"},
+        {"agent": "ContentBlueprint", "stage": "strategy"},
+        {"agent": "ContentDraft", "stage": "content_composition"},
+        {"agent": "GeoQA", "stage": "geo_qa"},
+        {"agent": "Publishing", "stage": "publishing"},
+        {"agent": "ReportAssembler", "stage": "report"}
+      ],
+      "parallel_groups": [
+        ["BrandMemory", "DemandSignal"],
+        ["QuestionGraph", "LegacySemantics"]
+      ],
+      "approval_gate": "GeoQA",
+      "human_approval_required": true
+    }
+  },
   "tags": ["geo", "legacy-modernization", "growth", "publishing", "approval"],
   "contracts": {
     "auth": {

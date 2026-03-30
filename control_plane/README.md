@@ -76,6 +76,16 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 ### Framework
 
 - `GET /api/studios/framework/apps`
+- `GET /api/studios/framework/builder/drafts`
+- `POST /api/studios/framework/builder/drafts`
+- `PATCH /api/studios/framework/builder/drafts/{draft_id}`
+- `DELETE /api/studios/framework/builder/drafts/{draft_id}`
+- `GET /api/studios/framework/dev-studio/wizard/templates`
+- `POST /api/studios/framework/dev-studio/wizard/create`
+- `POST /api/studios/framework/dev-studio/wizard/create-system`
+- `POST /api/studios/framework/dev-studio/wizard/validate`
+- `POST /api/studios/framework/dev-studio/codegen/generate`
+- `POST /api/studios/framework/dev-studio/materialize`
 - `GET /api/studios/framework/agents`
 - `GET /api/studios/framework/skills`
 - `GET /api/studios/framework/rag/overview`

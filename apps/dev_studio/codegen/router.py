@@ -14,6 +14,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from apps.dev_studio.wizard.specs import normalize_spec_kind, workflow_from_spec
+
 
 _logger = logging.getLogger(__name__)
 
@@ -23,11 +25,15 @@ router = APIRouter(tags=["codegen"])
 class GenerateRequest(BaseModel):
     """コード生成リクエスト."""
 
-    workflow_name: str = Field(..., description="ワークフロー名")
+    workflow_name: str = Field("", description="ワークフロー名")
     workflow_description: str = Field("", description="ワークフロー説明")
     output_type: str = Field("fullstack", description="出力タイプ: frontend / backend / fullstack")
     app_name: str = Field("", description="アプリ名（省略時はワークフロー名から生成）")
     framework: str = Field("", description="フレームワーク（省略時は fastapi）")
+    spec_kind: str | None = Field(default=None, description="agent / system")
+    spec: dict[str, Any] | None = Field(default=None, description="builder 生成の spec")
+    backend_port: int | None = Field(default=None, description="生成コード用 backend port")
+    frontend_port: int | None = Field(default=None, description="生成コード用 frontend port")
 
 
 class GenerateResponse(BaseModel):
@@ -64,15 +70,31 @@ async def generate_code(request: GenerateRequest) -> GenerateResponse:
         output_type = type_map.get(request.output_type.lower(), CodeOutputType.FULLSTACK)
 
         # ワークフロー定義を構築（contracts.core.types.WorkflowDefinition 形式）
-        app_name = request.app_name or request.workflow_name.lower().replace(" ", "-")
-        workflow = WorkflowDefinition(
-            id=str(uuid.uuid4()),
-            name=request.workflow_name,
-            description=request.workflow_description,
-        )
+        spec_kind = normalize_spec_kind(request.spec_kind)
+        if request.spec is not None:
+            workflow = workflow_from_spec(spec_kind, request.spec)
+            workflow_name = workflow.name
+        else:
+            workflow_name = request.workflow_name.strip()
+            if not workflow_name:
+                raise ValueError("workflow_name または spec は必須です")
+            workflow = WorkflowDefinition(
+                id=str(uuid.uuid4()),
+                name=workflow_name,
+                description=request.workflow_description,
+            )
+            if request.spec_kind:
+                workflow.metadata["spec_kind"] = spec_kind
+
+        app_name = request.app_name or workflow.name.lower().replace(" ", "-")
 
         # オプションを設定
-        options = CodeGenOptions(app_name=app_name, framework=request.framework or "fastapi")
+        options = CodeGenOptions(
+            app_name=app_name,
+            framework=request.framework or "fastapi",
+            backend_port=request.backend_port or CodeGenOptions().backend_port,
+            frontend_port=request.frontend_port or CodeGenOptions().frontend_port,
+        )
 
         # コードを生成
         from apps.dev_studio.codegen.generator import CodeGenerator
@@ -87,7 +109,11 @@ async def generate_code(request: GenerateRequest) -> GenerateResponse:
             build_command=result.build_command,
             start_command=result.start_command,
             output_type=output_type.value,
-            metadata={"file_count": len(result.files)},
+            metadata={
+                "file_count": len(result.files),
+                "spec_kind": workflow.metadata.get("spec_kind", spec_kind),
+                "workflow_name": workflow.name,
+            },
         )
 
     except Exception as e:

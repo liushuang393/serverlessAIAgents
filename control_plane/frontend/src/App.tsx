@@ -13,6 +13,9 @@ import { Dashboard } from "@/components/Dashboard";
 const AppList = lazy(async () => ({
   default: (await import("@/components/AppList")).AppList,
 }));
+const Builder = lazy(async () => ({
+  default: (await import("@/components/Builder")).Builder,
+}));
 const AppDetail = lazy(async () => ({
   default: (await import("@/components/AppDetail")).AppDetail,
 }));
@@ -84,6 +87,7 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
+        <Route path="builder" element={withSuspense(<Builder />)} />
         <Route path="apps" element={withSuspense(<AppList />)} />
         <Route path="apps/:name" element={withSuspense(<AppDetail />)} />
         <Route path="agents" element={withSuspense(<AgentBrowser />)} />

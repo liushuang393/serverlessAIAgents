@@ -13,6 +13,7 @@ export function Layout() {
   /** ロケール変化時に再計算されるナビゲーション項目 */
   const navItems = [
     { to: "/", icon: "📊", label: t("nav.dashboard") },
+    { to: "/builder", icon: "🧱", label: t("nav.builder") },
     { to: "/apps", icon: "📦", label: t("nav.apps") },
     { to: "/agents", icon: "🤖", label: t("nav.agents") },
     { to: "/agent-orchestration", icon: "🔀", label: t("nav.orchestration") },

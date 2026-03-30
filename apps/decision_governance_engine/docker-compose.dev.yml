@@ -92,6 +92,8 @@ services:
       - VITE_DEBUG_MODE=true
       - FRONTEND_HOST=${FRONTEND_HOST}
       - FRONTEND_PORT=${FRONTEND_PORT}
+      - DGE_HOST=${DGE_HOST}
+      - DGE_PORT=${DGE_PORT}
       # Vite dev server の proxy target（容器内部ネットワーク経由）
       # ※ VITE_ プレフィックスだとブラウザ側に注入されてしまうため、
       #    PROXY_TARGET を使用（vite.config.ts の process.env.PROXY_TARGET で参照）

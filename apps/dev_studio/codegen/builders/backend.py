@@ -81,7 +81,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from workflow import workflow_runner
+try:
+    from .workflow import workflow_runner
+except ImportError:
+    from workflow import workflow_runner
 
 
 # =============================================================================
@@ -184,7 +187,7 @@ async def get_workflow_info():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port={options.backend_port})
 '''
 
     def _generate_workflow(
@@ -289,7 +292,7 @@ class Settings(BaseSettings):
 
     # Server
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = {options.backend_port}
 
     # LLM
     openai_api_key: str = ""
@@ -333,9 +336,9 @@ COPY . .
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 USER appuser
 
-EXPOSE 8000
+EXPOSE {options.backend_port}
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "{options.backend_port}"]
 """
 
     def _generate_docker_compose(self, options: CodeGenOptions) -> str:
@@ -347,7 +350,7 @@ services:
     build: .
     container_name: {options.app_name}
     ports:
-      - "8000:8000"
+      - "{options.backend_port}:{options.backend_port}"
     environment:
       - DEBUG=false
     env_file:
@@ -384,7 +387,7 @@ cp .env.example .env
 
 ```bash
 # Start server
-uvicorn app:app --reload
+uvicorn app:app --reload --port {options.backend_port}
 
 # Or with Docker
 docker compose up

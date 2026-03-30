@@ -60,10 +60,12 @@ def _include_legacy_routers(app: FastAPI) -> None:
     router_names = (
         "gallery_router",
         "components_router",
+        "builder_router",
         "publish_router",
         "dashboard_router",
         "apps_router",
         "agents_router",
+        "dev_studio_router",
         "skills_router",
         "rag_router",
         "mcp_router",
@@ -114,6 +116,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     init_app_services = _load_legacy_symbol("control_plane.api.routers", "init_app_services")
     init_agent_services = _load_legacy_symbol("control_plane.api.routers", "init_agent_services")
+    init_builder_services = _load_legacy_symbol("control_plane.api.routers", "init_builder_services")
+    init_dev_studio_services = _load_legacy_symbol("control_plane.api.routers", "init_dev_studio_services")
     init_skill_services = _load_legacy_symbol("control_plane.api.routers", "init_skill_services")
     init_rag_services = _load_legacy_symbol("control_plane.api.routers", "init_rag_services")
     init_mcp_services = _load_legacy_symbol("control_plane.api.routers", "init_mcp_services")
@@ -125,6 +129,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_tenant_invitation_services = _load_legacy_symbol(
         "control_plane.api.routers",
         "init_tenant_invitation_services",
+    )
+    init_builder_draft_store = _load_legacy_symbol(
+        "control_plane.services.builder_draft_store",
+        "init_builder_draft_store",
     )
     discovery = app_discovery_cls()
     lifecycle = app_lifecycle_cls()
@@ -141,6 +149,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     studio_service = studio_service_cls(discovery, lifecycle)
     init_studio_services(studio_service)
+    init_dev_studio_services(discovery)
+    init_builder_services(init_builder_draft_store())
 
     count = await discovery.scan()
     logger.info("Control plane 起動完了: %d 件の app を検出", count)

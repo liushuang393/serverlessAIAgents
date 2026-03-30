@@ -10,7 +10,7 @@
   "icon": "🛠️",
   "ports": {
     "api": 8011,
-    "frontend": 5173,
+    "frontend": null,
     "db": null,
     "redis": null
   },
@@ -21,12 +21,12 @@
   "runtime": {
     "urls": {
       "backend": "http://localhost:8011",
-      "frontend": "http://localhost:5173",
+      "frontend": null,
       "health": "http://localhost:8011/health"
     },
     "commands": {
       "backend_dev": "uvicorn apps.dev_studio.main:app --host 0.0.0.0 --port 8011 --reload",
-      "frontend_dev": "cd apps/dev_studio/frontend && npx serve -s . -p 5173",
+      "frontend_dev": null,
       "publish": "docker compose -f docker-compose.yml up -d --build",
       "start": "docker compose -f docker-compose.yml up -d",
       "stop": "docker compose -f docker-compose.yml down"

@@ -1,24 +1,43 @@
-"""External intelligence integration for GEO demand discovery."""
+"""External intelligence integration for GEO demand discovery.
+
+DI パターンにより decision_governance_engine への直接依存を排除。
+IntelligenceServiceProtocol を満たす任意のサービスを注入可能。
+"""
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
-
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from apps.decision_governance_engine.services.intelligence_service import (
-        IntelligenceResult,
-        IntelligenceService,
-    )
     from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# DI 用 Protocol（クロスアプリ依存を排除）
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class IntelligenceServiceProtocol(Protocol):
+    """IntelligenceService が満たすべき構造型."""
+
+    async def gather(self, query: str, topics: list[str] | None = None) -> Any: ...
+
+
+# ---------------------------------------------------------------------------
+# データクラス
+# ---------------------------------------------------------------------------
 
 
 @dataclass(slots=True)
 class NormalizedEvidenceSource:
-    """Normalized live-search result used across the GEO pipeline."""
+    """パイプライン全体で使用する正規化検索結果."""
 
     url: str
     title: str
@@ -33,17 +52,17 @@ class NormalizedEvidenceSource:
 
     @property
     def is_fresh(self) -> bool:
-        """Return whether the source is still considered fresh."""
+        """ソースがまだ新鮮とみなせるか."""
         anchor = _ensure_utc(self.published_at or self.retrieved_at)
         return datetime.now(UTC) - anchor <= timedelta(days=30)
 
     @property
     def citation_ready(self) -> bool:
-        """Return whether this source has enough metadata to quote safely."""
+        """引用に十分なメタデータを持つか."""
         return bool(self.url and self.summary and (self.snippet or self.title))
 
     def to_evidence_dict(self) -> dict[str, str | bool]:
-        """Convert the source into a JSON-serializable evidence payload."""
+        """JSON シリアライズ可能な evidence ペイロードに変換する."""
         return {
             "url": self.url,
             "title": self.title,
@@ -59,36 +78,45 @@ class NormalizedEvidenceSource:
 
 @dataclass(slots=True)
 class IntelligenceSnapshot:
-    """Aggregated result from the external search providers."""
+    """外部検索プロバイダからの集約結果."""
 
     sources: list[NormalizedEvidenceSource]
     warnings: list[str]
     primary_provider: str
 
 
+# ---------------------------------------------------------------------------
+# アダプター
+# ---------------------------------------------------------------------------
+
+
 class GeoIntelligenceAdapter:
-    """Wrap the shared intelligence service with GEO-specific defaults."""
+    """共有 Intelligence Service を GEO 固有デフォルトでラップする.
 
-    def __init__(self, service: IntelligenceService | None = None) -> None:
-        """Initialize the live intelligence adapter."""
+    service 引数で DI すると decision_governance_engine への依存なしに動作する。
+    service=None の場合、フォールバックとして decision_governance_engine を遅延インポートする。
+    Docker 等コンテナ環境では service を明示注入することを推奨する。
+    tool_gate を注入すると、外部 API 呼び出し前にガバナンス評価を挿入する。
+    """
+
+    def __init__(
+        self,
+        service: IntelligenceServiceProtocol | None = None,
+        *,
+        tool_gate: Any | None = None,
+    ) -> None:
         if service is None:
-            from apps.decision_governance_engine.services.intelligence_service import (
-                IntelligenceConfig,
-                IntelligenceService,
-            )
-
-            service = IntelligenceService(
-                IntelligenceConfig(
-                    provider_preference=["serpapi", "bing", "duckduckgo_search"],
-                    mode="STANDARD",
-                ),
-            )
-        self._service = service
+            service = _create_default_intelligence_service()
+        self._service: IntelligenceServiceProtocol = service
+        self._tool_gate = tool_gate
 
     async def gather_market_intelligence(self, request: GeoExecuteRequest) -> IntelligenceSnapshot:
-        """Collect normalized intelligence for the request."""
+        """リクエストに基づき正規化インテリジェンスを収集する."""
         if os.getenv("GEO_PLATFORM_USE_SAMPLE_INTELLIGENCE") == "1":
             return self._sample_snapshot(request)
+
+        await self._evaluate_tool_gate(request)
+
         queries = self._build_queries(request)
         sources: list[NormalizedEvidenceSource] = []
         warnings: list[str] = []
@@ -96,9 +124,10 @@ class GeoIntelligenceAdapter:
 
         for query in queries:
             result = await self._service.gather(query, topics=self._build_topics(request))
-            if primary_provider == "none" and result.provider:
-                primary_provider = result.provider
-            warnings.extend(result.warnings)
+            provider = getattr(result, "provider", "unknown")
+            if primary_provider == "none" and provider:
+                primary_provider = provider
+            warnings.extend(getattr(result, "warnings", []))
             sources.extend(self._normalize_result(result))
 
         deduplicated = self._deduplicate_sources(sources)
@@ -108,8 +137,30 @@ class GeoIntelligenceAdapter:
             primary_provider=primary_provider,
         )
 
+    async def _evaluate_tool_gate(self, request: GeoExecuteRequest) -> None:
+        """ToolGate によるガバナンス評価を実行する."""
+        if self._tool_gate is None:
+            return
+        from infrastructure.sandbox.tool_provider import RegisteredTool
+
+        tool_descriptor = RegisteredTool(
+            name="intelligence_service.gather",
+            description="外部検索プロバイダへのインテリジェンス収集",
+            provider_type="method",
+            operation_type="read",
+            risk_level="medium",
+        )
+        decision = await self._tool_gate.evaluate(
+            tool_descriptor,
+            tool_call_id=None,
+            arguments={"campaign_name": request.campaign_name},
+        )
+        if decision.decision not in {"allow", "allowed"}:
+            msg = f"ToolGate がインテリジェンス収集を拒否: {decision.reason}"
+            raise PermissionError(msg)
+
     def _build_queries(self, request: GeoExecuteRequest) -> list[str]:
-        """Build search queries from the execution request."""
+        """実行リクエストから検索クエリを構築する."""
         accounts = list(request.inputs.target_accounts)
         industries = list(request.targets.industries)
         stacks = list(request.targets.legacy_stacks)
@@ -127,28 +178,32 @@ class GeoIntelligenceAdapter:
         return queries
 
     def _build_topics(self, request: GeoExecuteRequest) -> list[str]:
-        """Build related topics for the intelligence service."""
+        """Intelligence Service 用の関連トピックを構築する."""
         topics = list(request.targets.legacy_stacks)
         topics.extend(request.inputs.target_services)
         topics.extend(request.targets.industries)
         return [item for item in topics if item][:5]
 
-    def _normalize_result(self, result: IntelligenceResult) -> list[NormalizedEvidenceSource]:
-        """Normalize the shared service response."""
+    def _normalize_result(self, result: Any) -> list[NormalizedEvidenceSource]:
+        """共有サービスのレスポンスを正規化する."""
         normalized: list[NormalizedEvidenceSource] = []
-        for item in result.evidence:
+        evidence_items = getattr(result, "evidence", [])
+        result_provider = getattr(result, "provider", "unknown")
+        for item in evidence_items:
+            reliability_raw = getattr(item, "reliability", "MEDIUM")
+            reliability_str = reliability_raw.value if hasattr(reliability_raw, "value") else str(reliability_raw)
             normalized.append(
                 NormalizedEvidenceSource(
-                    url=item.url,
-                    title=item.title,
-                    publisher=item.publisher or result.provider,
-                    summary=item.summary or item.snippet,
-                    snippet=item.snippet,
-                    reliability=item.reliability.value,
-                    published_at=item.published_at,
-                    retrieved_at=item.retrieved_at,
-                    provider=result.provider,
-                    tags=list(item.tags),
+                    url=getattr(item, "url", ""),
+                    title=getattr(item, "title", ""),
+                    publisher=getattr(item, "publisher", None) or result_provider,
+                    summary=getattr(item, "summary", None) or getattr(item, "snippet", ""),
+                    snippet=getattr(item, "snippet", ""),
+                    reliability=reliability_str,
+                    published_at=getattr(item, "published_at", None),
+                    retrieved_at=getattr(item, "retrieved_at", datetime.now(UTC)),
+                    provider=result_provider,
+                    tags=list(getattr(item, "tags", [])),
                 ),
             )
         return normalized
@@ -157,7 +212,7 @@ class GeoIntelligenceAdapter:
         self,
         sources: list[NormalizedEvidenceSource],
     ) -> list[NormalizedEvidenceSource]:
-        """Deduplicate results by URL while preserving order."""
+        """URL で重複排除し、順序を保持する."""
         seen: set[str] = set()
         deduplicated: list[NormalizedEvidenceSource] = []
         for source in sources:
@@ -168,7 +223,7 @@ class GeoIntelligenceAdapter:
         return deduplicated
 
     def _sample_snapshot(self, request: GeoExecuteRequest) -> IntelligenceSnapshot:
-        """Return deterministic intelligence for automated tests."""
+        """自動テスト用の決定論的インテリジェンスを返す."""
         stack = (request.targets.legacy_stacks or ["COBOL"])[0]
         industry = (request.targets.industries or ["manufacturing"])[0]
         now = datetime.now(UTC)
@@ -213,8 +268,59 @@ class GeoIntelligenceAdapter:
         return IntelligenceSnapshot(sources=sources, warnings=[], primary_provider="sample")
 
 
+# ---------------------------------------------------------------------------
+# ヘルパー
+# ---------------------------------------------------------------------------
+
+
+def _load_intelligence_providers() -> list[str]:
+    """app_config.json の services.intelligence.providers を読み取る."""
+    import json
+    from pathlib import Path
+
+    config_path = Path(__file__).resolve().parent.parent / "app_config.json"
+    if not config_path.is_file():
+        return ["serpapi", "bing", "duckduckgo_search"]
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        providers = config.get("services", {}).get("intelligence", {}).get("providers")
+        if isinstance(providers, list) and providers:
+            return [str(p) for p in providers]
+    except (json.JSONDecodeError, OSError):
+        logger.warning("app_config.json の intelligence 設定の読み取りに失敗しました")
+    return ["serpapi", "bing", "duckduckgo_search"]
+
+
+def _create_default_intelligence_service() -> IntelligenceServiceProtocol:
+    """decision_governance_engine から遅延ロードでデフォルトサービスを生成する.
+
+    app_config.json の services.intelligence.providers を正本として使用する。
+    Docker コンテナ等で decision_governance_engine が利用不可の場合は
+    ImportError を送出するため、呼び出し元で DI すること。
+    """
+    try:
+        from apps.decision_governance_engine.services.intelligence_service import (
+            IntelligenceConfig,
+            IntelligenceService,
+        )
+    except ImportError:
+        msg = (
+            "decision_governance_engine が見つかりません。"
+            "GeoIntelligenceAdapter(service=...) で IntelligenceServiceProtocol を"
+            "満たすサービスを明示注入してください。"
+        )
+        raise ImportError(msg) from None
+    providers = _load_intelligence_providers()
+    return IntelligenceService(
+        IntelligenceConfig(
+            provider_preference=providers,
+            mode="STANDARD",
+        ),
+    )
+
+
 def _ensure_utc(value: datetime) -> datetime:
-    """Normalize datetimes to timezone-aware UTC."""
+    """datetime を UTC タイムゾーン付きに正規化する."""
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)

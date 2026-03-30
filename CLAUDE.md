@@ -1,9 +1,9 @@
 # AgentFlow — AI ルール Layer 0（常時ロード）
 
 > **プロジェクト**: AgentFlow — MCP/A2A/AG-UI/A2UI 統一インターフェース AI エージェントフレームワーク
-> **このファイルは常時ロードされる最小必須ルールセットです。**
-> ルート `AGENTS.md` と `CLAUDE.md` は同一内容の Layer 0 ミラーです。
-> 詳細な規約は `code-rules/AGENTS.md`（詳細参照版）に集約されています。
+> **このファイルは常時ロードされる最小必須ルールセット（Layer 0）です。**
+> ルート `AGENTS.md` はこのファイルへのリダイレクトのみ（重複ロード防止）。
+> 詳細な規約は `code-rules/AGENTS.md`（Layer 1・詳細参照版）に集約されています。
 
 ---
 
@@ -75,12 +75,36 @@
 | [`code-rules/tools/check-errors-analysis.md`](code-rules/tools/check-errors-analysis.md)     | `./check.sh` の出力エラーを種別に分類し対処する手順ガイド                      | `check.sh` でエラーが出たとき                        |
 | [`code-rules/project/ci-cd-guidelines.md`](code-rules/project/ci-cd-guidelines.md)           | GitHub Actions・pre-commit フックの設定規約と変更手順                          | CI/CD・pre-commit を変更するとき                     |
 
+### 🎨 コードスタイル・命名・ドキュメント
+
+| ファイル                                                                                       | 概要                                        | 利用場面                             |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------ |
+| [`code-rules/global/naming-guidelines.md`](code-rules/global/naming-guidelines.md)             | 変数・関数・クラス・ファイル等の命名規約    | 新規コード作成・リネームするとき     |
+| [`code-rules/global/style-formatting.md`](code-rules/global/style-formatting.md)               | コードスタイル・インデント・フォーマット規約 | フォーマットの判断に迷ったとき       |
+| [`code-rules/global/documentation-standards.md`](code-rules/global/documentation-standards.md) | docstring・README・コメントの書き方規約     | ドキュメント・docstring を書くとき   |
+
+### 🔒 エラー処理・セキュリティ
+
+| ファイル                                                                             | 概要                                                 | 利用場面                                 |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------- | ---------------------------------------- |
+| [`code-rules/global/error-handling.md`](code-rules/global/error-handling.md)         | 例外処理・エラーハンドリングの設計規約               | try/except・エラー処理を設計するとき     |
+| [`code-rules/global/security-standards.md`](code-rules/global/security-standards.md) | 認証・認可・入力検証・秘密情報管理のセキュリティ規約 | セキュリティ関連の実装・レビューするとき |
+
+### ⚡ AgentFlow 固有・統合
+
+| ファイル                                                                                                 | 概要                                       | 利用場面                                              |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
+| [`code-rules/company-specific/agentflow-python.md`](code-rules/company-specific/agentflow-python.md)     | AgentFlow 固有の Python 実装パターン・規約 | AgentFlow コア層のコードを書くとき                    |
+| [`code-rules/project/agent-lightning-integration.md`](code-rules/project/agent-lightning-integration.md) | Agent Lightning 学習連携の統合規約         | `agentflow/run/`・`agentflow/engines/` を変更するとき |
+
 ### 📦 プロジェクト管理・構造
 
-| ファイル                                                                                     | 概要                                                         | 利用場面                                 |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------- |
-| [`code-rules/project/dependency-management.md`](code-rules/project/dependency-management.md) | Dependabot・pip/npm 依存更新の方針・グループ化・マージルール | 依存関係を更新・追加するとき             |
-| [`code-rules/project/repo-structure.md`](code-rules/project/repo-structure.md)               | ディレクトリ構成・ファイル配置・命名の規約                   | ファイル・ディレクトリ構造を変更するとき |
+| ファイル                                                                                                 | 概要                                                         | 利用場面                                 |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------- |
+| [`code-rules/project/dependency-management.md`](code-rules/project/dependency-management.md)             | Dependabot・pip/npm 依存更新の方針・グループ化・マージルール | 依存関係を更新・追加するとき             |
+| [`code-rules/project/repo-structure.md`](code-rules/project/repo-structure.md)                           | ディレクトリ構成・ファイル配置・命名の規約                   | ファイル・ディレクトリ構造を変更するとき |
+| [`code-rules/project/file-management.md`](code-rules/project/file-management.md)                         | ファイル作成・削除・移動のルールとサイズ管理                 | ファイル操作・整理するとき               |
+| [`code-rules/project/contribution-guidelines.md`](code-rules/project/contribution-guidelines.md)         | PR・コミット・レビューのコントリビューション規約             | PR 作成・コードレビューするとき          |
 
 ---
 

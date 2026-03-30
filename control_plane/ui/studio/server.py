@@ -23,7 +23,7 @@ class StudioServer:
     def __init__(
         self,
         host: str = "0.0.0.0",
-        port: int = 8000,
+        port: int = 8012,
         agents_dir: Path | None = None,
         workflows_dir: Path | None = None,
         reload: bool = False,
@@ -102,8 +102,8 @@ def main() -> None:
     parser.add_argument(
         "--port",
         type=int,
-        default=8000,
-        help="Port number (default: 8000)",
+        default=8012,
+        help="Port number (default: 8012)",
     )
     parser.add_argument(
         "--agents-dir",

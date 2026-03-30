@@ -196,6 +196,8 @@ class CodeGenOptions:
         include_readme: README を含める
         include_docker: Docker ファイルを含める
         framework: フレームワーク（react/vue/fastapi など）
+        backend_port: 生成コードで使用する既定 backend port
+        frontend_port: 生成コードで使用する既定 frontend port
     """
 
     app_name: str = ""
@@ -204,6 +206,8 @@ class CodeGenOptions:
     include_readme: bool = True
     include_docker: bool = False
     framework: str = "fastapi"
+    backend_port: int = 8012
+    frontend_port: int = 3201
 
 
 @dataclass

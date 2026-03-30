@@ -1269,3 +1269,103 @@ export interface LLMEngineDeployResponse {
   message: string;
   command: LLMSetupCommandResult | null;
 }
+
+export type BuilderSpecKind = "agent" | "system";
+export type BuilderOutputType = "frontend" | "backend" | "fullstack";
+
+export interface BuilderTemplate {
+  id: string;
+  kind: BuilderSpecKind;
+  name: string;
+  description: string;
+}
+
+export interface BuilderValidationResult {
+  valid: boolean;
+  status?: string;
+  errors: string[];
+  warnings: string[];
+  suggestions?: string[];
+  score: number;
+  details?: Record<string, unknown>;
+}
+
+export interface BuilderAgentSpec {
+  name: string;
+  description: string;
+  capabilities: string[];
+  required_skills?: string[];
+  required_tools?: string[];
+  system_prompt?: string;
+  engine_type: string;
+  confidence?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BuilderSystemFlow {
+  source: string;
+  target: string;
+  condition?: string;
+}
+
+export interface BuilderSystemSpec {
+  name: string;
+  description: string;
+  goal: string;
+  template_id: string;
+  agents: BuilderAgentSpec[];
+  flows: BuilderSystemFlow[];
+  shared_skills?: string[];
+  shared_tools?: string[];
+  execution_mode?: string;
+  confidence?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BuilderCreateAgentResponse {
+  success: boolean;
+  agent_spec?: BuilderAgentSpec;
+  generated_code?: string | null;
+  validation?: BuilderValidationResult | null;
+  error?: string | null;
+  duration_ms?: number;
+}
+
+export interface BuilderCreateSystemResponse {
+  success: boolean;
+  system_spec?: BuilderSystemSpec;
+  validation?: BuilderValidationResult | null;
+  generated_code?: string | null;
+  error?: string | null;
+}
+
+export interface BuilderGenerateResponse {
+  success: boolean;
+  files: Record<string, string>;
+  entry_point: string;
+  build_command?: string | null;
+  start_command?: string | null;
+  output_type: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface BuilderDraft {
+  id: string;
+  name: string;
+  template_id: string;
+  goal: string;
+  spec_kind: BuilderSpecKind;
+  spec: Record<string, unknown>;
+  generated_files: Record<string, string>;
+  status: "draft" | "validated" | "generated" | "materialized" | "failed";
+  updated_at: string;
+}
+
+export interface BuilderMaterializeResponse {
+  success: boolean;
+  app_name: string;
+  app_dir: string;
+  config_path: string;
+  files_written: string[];
+  ports: PortsConfig;
+}

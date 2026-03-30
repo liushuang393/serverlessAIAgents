@@ -292,11 +292,14 @@ control_plane は SQLite をデフォルト DB として使用し、DB 手順不
 conda activate agentflow
 
 # control_plane 起動（ポート 8900）
-python -m control_plane.main serve
+python -m control_plane.main serve --reload
 # ヘルスチェック: curl http://localhost:8900/health
 
-# フロントエンド起動（別ターミナル・ポート 3200）
+# 正式な Control Plane UI（別ターミナル・ポート 3200）
 cd control_plane/frontend && npm install && npm run dev
+
+# 旧 Studio UI は experimental 扱い
+# cd control_plane/ui/frontend && npm install && npm run dev
 ```
 
 > SQLite の場合、`control_plane/data/control_plane.db` が自動作成されます。

@@ -1,20 +1,27 @@
 """wizard ルーター.
 
 エンドポイント:
-    POST /create   - 自然言語記述から Agent を生成
-    POST /validate - Agent 仕様を検証
-    GET  /status   - 最後の生成ジョブのステータスを取得
+    POST /create         - 自然言語記述から Agent を生成
+    POST /create-system  - 自然言語記述から複数 Agent System を生成
+    POST /validate       - Agent / System 仕様を検証
 """
 
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from apps.dev_studio.wizard.models import WizardConfig
+from apps.dev_studio.wizard.models import AgentSpec, WizardConfig
+from apps.dev_studio.wizard.specs import (
+    build_agent_spec,
+    build_system_spec,
+    list_builder_templates,
+    normalize_spec_kind,
+    validate_builder_spec,
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -47,13 +54,34 @@ class CreateAgentResponse(BaseModel):
 
 
 class ValidateSpecRequest(BaseModel):
-    """Agent 仕様検証リクエスト."""
+    """Agent / System 仕様検証リクエスト."""
 
-    name: str = Field(..., description="Agent 名")
-    description: str = Field(..., description="Agent の説明")
+    spec_kind: Literal["agent", "system"] = Field(default="agent", description="仕様種別")
+    spec: dict[str, Any] | None = Field(default=None, description="builder 用の生 spec")
+
+    name: str = Field("", description="Agent 名")
+    description: str = Field("", description="Agent の説明")
     capabilities: list[str] = Field(default_factory=list, description="能力リスト")
     engine_type: str = Field("simple", description="Engine タイプ")
     system_prompt: str = Field("", description="システムプロンプト")
+
+
+class CreateSystemRequest(BaseModel):
+    """System 生成リクエスト."""
+
+    description: str = Field(..., description="System の自然言語記述")
+    name: str | None = Field(None, description="System 名")
+    template_id: str | None = Field(None, description="テンプレート ID")
+
+
+class CreateSystemResponse(BaseModel):
+    """System 生成レスポンス."""
+
+    success: bool
+    system_spec: dict[str, Any] | None = None
+    validation: dict[str, Any] | None = None
+    generated_code: str | None = None
+    error: str | None = None
 
 
 @router.post("/create", response_model=CreateAgentResponse)
@@ -96,8 +124,19 @@ async def create_agent(request: CreateAgentRequest) -> CreateAgentResponse:
         )
 
     except Exception as e:
-        _logger.exception(f"Agent 生成エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"Agent 生成失敗: {e}") from e
+        _logger.warning("AgentWizard fallback を使用します: %s", e)
+        fallback_spec = build_agent_spec(
+            description=request.description,
+            name=request.name,
+        )
+        validation = validate_builder_spec("agent", fallback_spec.to_dict()).to_dict()
+        return CreateAgentResponse(
+            success=True,
+            agent_spec=fallback_spec.to_dict(),
+            validation=validation,
+            error=None,
+            duration_ms=0.0,
+        )
 
 
 @router.post("/validate")
@@ -110,45 +149,47 @@ async def validate_spec(request: ValidateSpecRequest) -> dict[str, Any]:
     Returns:
         検証結果
     """
-    errors: list[str] = []
-    warnings: list[str] = []
+    spec_kind = normalize_spec_kind(request.spec_kind)
+    spec = request.spec
+    if spec is None:
+        spec = AgentSpec.from_dict(
+            {
+                "name": request.name,
+                "description": request.description,
+                "capabilities": request.capabilities,
+                "system_prompt": request.system_prompt,
+                "engine_type": request.engine_type,
+            }
+        ).to_dict()
 
-    if not request.name:
-        errors.append("Agent 名は必須です")
-    elif not request.name[0].isupper():
-        warnings.append("Agent 名は PascalCase を推奨します")
+    return validate_builder_spec(spec_kind, spec).to_dict()
 
-    if not request.description:
-        warnings.append("説明文を追加することを推奨します")
 
-    if not request.capabilities:
-        warnings.append("能力リストが空です")
-
-    valid_engines = {"simple", "pipeline", "gate", "rag"}
-    if request.engine_type not in valid_engines:
-        errors.append(f"不正な engine_type: {request.engine_type}。有効値: {valid_engines}")
-
-    score = max(0.0, 1.0 - len(errors) * 0.3 - len(warnings) * 0.1)
-
-    return {
-        "valid": len(errors) == 0,
-        "score": score,
-        "errors": errors,
-        "warnings": warnings,
-    }
+@router.post("/create-system", response_model=CreateSystemResponse)
+async def create_system(request: CreateSystemRequest) -> CreateSystemResponse:
+    """自然言語記述から System spec を生成する."""
+    try:
+        system_spec = build_system_spec(
+            description=request.description,
+            name=request.name,
+            template_id=request.template_id,
+        )
+        validation = validate_builder_spec("system", system_spec.to_dict()).to_dict()
+        return CreateSystemResponse(
+            success=True,
+            system_spec=system_spec.to_dict(),
+            validation=validation,
+        )
+    except Exception as e:
+        _logger.exception("System 生成エラー: %s", e)
+        raise HTTPException(status_code=500, detail=f"System 生成失敗: {e}") from e
 
 
 @router.get("/templates")
 async def list_templates() -> dict[str, Any]:
     """利用可能な Agent テンプレート一覧を返す."""
-    return {
-        "templates": [
-            {"id": "simple", "name": "Simple Agent", "description": "基本的な単一タスク Agent"},
-            {"id": "pipeline", "name": "Pipeline Agent", "description": "複数ステップを順次処理する Agent"},
-            {"id": "rag", "name": "RAG Agent", "description": "知識ベース検索と生成を組み合わせた Agent"},
-            {"id": "gate", "name": "Gate Agent", "description": "条件分岐ロジックを持つ Agent"},
-        ]
-    }
+    templates = list_builder_templates()
+    return {"templates": templates, "total": len(templates)}
 
 
 __all__ = ["router"]

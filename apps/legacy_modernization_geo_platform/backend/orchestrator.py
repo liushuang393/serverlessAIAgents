@@ -1,10 +1,14 @@
-"""Artifact-driven orchestration for the GEO Platform MVP."""
+"""Artifact-driven orchestration for the GEO Platform MVP.
+
+パイプライン制御・イベント配信・タスクライフサイクル管理を担当。
+承認ロジックは approval_handler、Agent 呼び出しは pipeline_stages に分離。
+パイプラインは asyncio.create_task で駆動し、並列ステージは asyncio.gather で実行する。
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -12,47 +16,43 @@ from uuid import uuid4
 
 from pydantic import BaseModel
 
-from apps.legacy_modernization_geo_platform.agents._models import (
-    ReportAssemblerOutput,
+from apps.legacy_modernization_geo_platform.backend.approval_handler import (
+    ApprovalContext,
+    ApprovalStatus,
+    PendingApproval,
+    apply_rewrite,
+    create_approval_flow,
+    handle_approval_loop,
 )
 from apps.legacy_modernization_geo_platform.backend.intelligence import (
     GeoIntelligenceAdapter,
 )
+from apps.legacy_modernization_geo_platform.backend.pipeline_stages import (
+    execute_artifact_agent,
+    execute_report_agent,
+    summarize_artifact,
+)
 from apps.legacy_modernization_geo_platform.backend.publisher import GeoPublisher
 from apps.legacy_modernization_geo_platform.backend.qa import GeoQualityGate
-from apps.legacy_modernization_geo_platform.backend.reporting import build_campaign_report
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountScoreArtifact,
-    AccountScoreEntry,
     AccountSignalArtifact,
     ApprovalRecord,
     ApprovalRequest,
-    ApprovalStatus,
-    ArtifactMeta,
     BrandMemoryArtifact,
-    CampaignReport,
     ContentBlueprintArtifact,
-    ContentBlueprintPage,
     ContentDraftArtifact,
-    ContentDraftPage,
     EvidenceMatrixArtifact,
-    EvidenceMatrixEntry,
-    FAQEntry,
-    FunnelCluster,
     GeoExecuteRequest,
     GeoQAReport,
     LegacySemanticsArtifact,
-    PersonaQuestionSet,
     PublishManifest,
     QuestionGraphArtifact,
-    SignalEntry,
     TaskCommandRequest,
     TaskEvent,
     TaskStateResponse,
     TaskStatus,
-    normalize_content_language,
 )
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -60,65 +60,31 @@ if TYPE_CHECKING:
 
     from fastapi import WebSocket
 
-    from apps.legacy_modernization_geo_platform.backend.intelligence import IntelligenceSnapshot
     from apps.legacy_modernization_geo_platform.backend.repository import GeoRepository
     from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
     from kernel.agents.app_agent_runtime import AppAgentRuntime
 
-
 logger = logging.getLogger(__name__)
 ModelT = TypeVar("ModelT", bound=BaseModel)
-
-_APPROVAL_REASON_COPY: dict[str, str] = {
-    "ja": "比較表現または数値・引用リスクのため",
-    "en": "Comparative or numeric claims require human review before publishing.",
-    "zh": "存在对比或数值表达风险，发布前需要人工复核。",
-}
-_REWRITE_SECTION_TITLE_COPY: dict[str, str] = {
-    "ja": "レビュー反映メモ",
-    "en": "Review Notes",
-    "zh": "评审修订说明",
-}
-_REWRITE_ADJUSTMENT_NOTE_COPY: dict[str, str] = {
-    "ja": "比較表現は適用条件を明示し、断定を避けるよう調整しました。",
-    "en": "Comparative claims were rewritten with explicit conditions and non-absolute wording.",
-    "zh": "已补充对比结论的适用条件，并调整为非绝对化表述。",
-}
-_REVIEW_REQUESTED_NOTE_COPY: dict[str, str] = {
-    "ja": "レビュー要請",
-    "en": "Review requested",
-    "zh": "请求复审",
-}
-
-
-@dataclass(slots=True)
-class PendingApproval:
-    """In-memory approval wait state."""
-
-    record: ApprovalRecord
-    signal: threading.Event = field(default_factory=threading.Event)
-    decision: ApprovalStatus | None = None
-    comment: str | None = None
-    reviewer_name: str | None = None
 
 
 @dataclass(slots=True)
 class GeoTaskRuntime:
-    """Runtime state for a running task."""
+    """実行中タスクのランタイム状態."""
 
     task_id: str
     request: GeoExecuteRequest
     status: TaskStatus = TaskStatus.QUEUED
     current_stage: str | None = None
     artifact_paths: dict[str, Path] = field(default_factory=dict)
-    worker_thread: threading.Thread | None = None
+    worker_task: asyncio.Task[None] | None = None
     pending_approval: PendingApproval | None = None
     rewrite_iterations: int = 0
-    cancel_requested: threading.Event = field(default_factory=threading.Event)
+    cancel_requested: asyncio.Event = field(default_factory=asyncio.Event)
 
 
 class GeoOrchestrator:
-    """Manage task lifecycles, event streaming, and artifact generation."""
+    """タスクライフサイクル、イベントストリーミング、成果物生成を管理する."""
 
     def __init__(
         self,
@@ -130,7 +96,6 @@ class GeoOrchestrator:
         publisher: GeoPublisher | None = None,
         agent_runtime: AppAgentRuntime | None = None,
     ) -> None:
-        """Initialize the orchestrator."""
         self._settings = settings
         self._repository = repository
         self._intelligence = intelligence_adapter or GeoIntelligenceAdapter()
@@ -140,28 +105,48 @@ class GeoOrchestrator:
         self._runtimes: dict[str, GeoTaskRuntime] = {}
         self._subscribers: dict[str, set[WebSocket]] = {}
         self._broadcast_loop: asyncio.AbstractEventLoop | None = None
-        self._register_agents()
+        self._approval_flow = create_approval_flow()
+
+    # ------------------------------------------------------------------
+    # 承認コンテキスト構築
+    # ------------------------------------------------------------------
+
+    def _approval_context(self) -> ApprovalContext:
+        """承認ハンドラへ渡す依存コンテキストを構築する."""
+        return ApprovalContext(
+            repository=self._repository,
+            quality_gate=self._quality_gate,
+            settings=self._settings,
+            runtimes=self._runtimes,
+            emit_event=self._emit_event,
+            run_stage=self._run_stage,
+            write_artifact=self._write_artifact,
+            load_artifact=self._load_artifact,
+            agent_runtime=self._agent_runtime,
+            approval_flow=self._approval_flow,
+        )
+
+    # ------------------------------------------------------------------
+    # パブリック API
+    # ------------------------------------------------------------------
 
     async def start(self, request: GeoExecuteRequest) -> str:
-        """Start a new task asynchronously."""
+        """新しいタスクを非同期で開始する."""
         if self._broadcast_loop is None:
             self._broadcast_loop = asyncio.get_running_loop()
         task_id = f"geo-{datetime.now(UTC):%Y%m%d%H%M%S}-{uuid4().hex[:6]}"
         runtime = GeoTaskRuntime(task_id=task_id, request=request)
         self._runtimes[task_id] = runtime
         self._repository.create_task(task_id, request, TaskStatus.QUEUED)
-        worker = threading.Thread(
-            target=self._run_pipeline,
-            args=(runtime,),
+        task = asyncio.create_task(
+            self._run_pipeline(runtime),
             name=f"geo-worker-{task_id}",
-            daemon=True,
         )
-        runtime.worker_thread = worker
-        worker.start()
+        runtime.worker_task = task
         return task_id
 
     async def connect_websocket(self, task_id: str, websocket: WebSocket) -> None:
-        """Register a websocket and replay history."""
+        """WebSocket を登録し、履歴を再生する."""
         await websocket.accept()
         subscribers = self._subscribers.setdefault(task_id, set())
         subscribers.add(websocket)
@@ -169,7 +154,7 @@ class GeoOrchestrator:
             await websocket.send_json(event.model_dump(mode="json"))
 
     async def disconnect_websocket(self, task_id: str, websocket: WebSocket) -> None:
-        """Remove a websocket subscriber."""
+        """WebSocket サブスクライバーを削除する."""
         subscribers = self._subscribers.get(task_id)
         if subscribers is None:
             return
@@ -178,7 +163,7 @@ class GeoOrchestrator:
             self._subscribers.pop(task_id, None)
 
     def get_state(self, task_id: str) -> TaskStateResponse | None:
-        """Resolve the persisted state for a task."""
+        """永続化されたタスク状態を返す."""
         return self._repository.get_task_state(task_id)
 
     async def submit_approval(
@@ -187,7 +172,7 @@ class GeoOrchestrator:
         request_id: str,
         payload: ApprovalRequest,
     ) -> ApprovalRecord:
-        """Apply an approval decision."""
+        """承認決定を適用する."""
         runtime = self._runtimes.get(task_id)
         try:
             status = (
@@ -222,14 +207,13 @@ class GeoOrchestrator:
         return updated
 
     async def stream_events(self, task_id: str, *, poll_interval: float = 0.25) -> Any:
-        """Persisted task event stream を順次返す."""
+        """永続化されたタスクイベントストリームを順次返す."""
         seen = 0
         while True:
             events = self._repository.list_events(task_id)
             while seen < len(events):
                 yield events[seen]
                 seen += 1
-
             state = self._repository.get_task_state(task_id)
             if state is None:
                 msg = f"Task not found: {task_id}"
@@ -239,7 +223,7 @@ class GeoOrchestrator:
             await asyncio.sleep(poll_interval)
 
     async def apply_command(self, task_id: str, command: TaskCommandRequest) -> dict[str, Any]:
-        """Apply an operator command."""
+        """オペレーターコマンドを適用する."""
         runtime = self._runtimes.get(task_id)
         if runtime is None:
             msg = f"Task not found: {task_id}"
@@ -265,7 +249,7 @@ class GeoOrchestrator:
                 applied = True
                 message = "Rewrite queued for review stage"
             else:
-                self._apply_rewrite(task_id=task_id, note=note)
+                apply_rewrite(self._approval_context(), task_id=task_id, note=note)
                 applied = True
                 message = "Draft rewritten and QA re-evaluated"
         elif command.command == "campaign.kill":
@@ -284,7 +268,7 @@ class GeoOrchestrator:
         else:
             message = f"Unsupported command: {command.command}"
 
-        payload = {
+        result_payload = {
             "command": command.command,
             "status": "accepted" if applied else "ignored",
             "applied": applied,
@@ -296,41 +280,17 @@ class GeoOrchestrator:
                 task_id=task_id,
                 stage=runtime.current_stage,
                 message=message,
-                payload=payload,
+                payload=result_payload,
             ),
         )
-        return payload
+        return result_payload
 
-    def _register_agents(self) -> None:
-        """8 つの GEO Agent を A2AHub に登録."""
-        from apps.legacy_modernization_geo_platform.agents.account_score_agent import AccountScoreAgent
-        from apps.legacy_modernization_geo_platform.agents.brand_memory_agent import BrandMemoryAgent
-        from apps.legacy_modernization_geo_platform.agents.content_blueprint_agent import ContentBlueprintAgent
-        from apps.legacy_modernization_geo_platform.agents.content_draft_agent import ContentDraftAgent
-        from apps.legacy_modernization_geo_platform.agents.demand_signal_agent import DemandSignalAgent
-        from apps.legacy_modernization_geo_platform.agents.evidence_matrix_agent import EvidenceMatrixAgent
-        from apps.legacy_modernization_geo_platform.agents.legacy_semantics_agent import LegacySemanticsAgent
-        from apps.legacy_modernization_geo_platform.agents.question_graph_agent import QuestionGraphAgent
-        from kernel.protocols.a2a_hub import get_hub
+    # ------------------------------------------------------------------
+    # パイプライン実行（async + 並列ステージ）
+    # ------------------------------------------------------------------
 
-        hub = get_hub()
-        agents = [
-            BrandMemoryAgent(),
-            DemandSignalAgent(),
-            AccountScoreAgent(),
-            QuestionGraphAgent(),
-            EvidenceMatrixAgent(),
-            LegacySemanticsAgent(),
-            ContentBlueprintAgent(),
-            ContentDraftAgent(),
-        ]
-        for agent in agents:
-            agent_name = getattr(agent, "name", None) or type(agent).__name__
-            if hub.discover(agent_name) is None:
-                hub.register(agent)
-
-    def _run_pipeline(self, runtime: GeoTaskRuntime) -> None:
-        """Execute the MVP pipeline inside a dedicated worker thread."""
+    async def _run_pipeline(self, runtime: GeoTaskRuntime) -> None:
+        """非同期パイプラインを実行する（asyncio.create_task から駆動）."""
         task_id = runtime.task_id
         request = runtime.request
         try:
@@ -345,48 +305,48 @@ class GeoOrchestrator:
                 ),
             )
 
-            intelligence_snapshot = asyncio.run(self._intelligence.gather_market_intelligence(request))
-            self._invoke_registered_agent(
-                "Supervisor",
-                {"task_id": task_id, "request": request.model_dump(mode="json")},
-            )
-            brand_memory = self._run_stage(
-                runtime,
-                stage="brand_memory",
-                agent="BrandMemory",
-                artifact_name="brand_memory_artifact",
-                factory=lambda: self._execute_artifact_agent(
-                    "BrandMemory",
-                    {
-                        "task_id": task_id,
-                        "request": request.model_dump(mode="json"),
-                    },
-                    BrandMemoryArtifact,
-                    fallback=lambda: self._build_brand_memory(task_id, request),
+            intelligence_snapshot = await self._intelligence.gather_market_intelligence(request)
+            rt = self._agent_runtime
+
+            # --- 並列グループ 1: BrandMemory + DemandSignal ---
+            brand_memory, signal_artifact = await asyncio.gather(
+                self._run_stage(
+                    runtime,
+                    stage="brand_memory",
+                    agent="BrandMemory",
+                    artifact_name="brand_memory_artifact",
+                    factory=lambda: execute_artifact_agent(
+                        rt,
+                        "BrandMemory",
+                        {"task_id": task_id, "request": request.model_dump(mode="json")},
+                        BrandMemoryArtifact,
+                    ),
+                ),
+                self._run_stage(
+                    runtime,
+                    stage="demand_signal",
+                    agent="DemandSignal",
+                    artifact_name="account_signal_artifact",
+                    factory=lambda: execute_artifact_agent(
+                        rt,
+                        "DemandSignal",
+                        {
+                            "task_id": task_id,
+                            "request": request.model_dump(mode="json"),
+                            "intelligence_snapshot": intelligence_snapshot,
+                        },
+                        AccountSignalArtifact,
+                    ),
                 ),
             )
-            signal_artifact = self._run_stage(
-                runtime,
-                stage="demand_signal",
-                agent="DemandSignal",
-                artifact_name="account_signal_artifact",
-                factory=lambda: self._execute_artifact_agent(
-                    "DemandSignal",
-                    {
-                        "task_id": task_id,
-                        "request": request.model_dump(mode="json"),
-                        "intelligence_snapshot": intelligence_snapshot,
-                    },
-                    AccountSignalArtifact,
-                    fallback=lambda: self._build_demand_signal(task_id, request, intelligence_snapshot),
-                ),
-            )
-            score_artifact = self._run_stage(
+
+            score_artifact = await self._run_stage(
                 runtime,
                 stage="icp_scoring",
                 agent="AccountScore",
                 artifact_name="account_score_artifact",
-                factory=lambda: self._execute_artifact_agent(
+                factory=lambda: execute_artifact_agent(
+                    rt,
                     "AccountScore",
                     {
                         "task_id": task_id,
@@ -394,31 +354,52 @@ class GeoOrchestrator:
                         "signal_artifact": signal_artifact.model_dump(mode="json"),
                     },
                     AccountScoreArtifact,
-                    fallback=lambda: self._build_account_score(task_id, request, signal_artifact),
                 ),
             )
-            question_graph = self._run_stage(
-                runtime,
-                stage="question_map",
-                agent="QuestionGraph",
-                artifact_name="question_graph_artifact",
-                factory=lambda: self._execute_artifact_agent(
-                    "QuestionGraph",
-                    {
-                        "task_id": task_id,
-                        "request": request.model_dump(mode="json"),
-                        "score_artifact": score_artifact.model_dump(mode="json"),
-                    },
-                    QuestionGraphArtifact,
-                    fallback=lambda: self._build_question_graph(task_id, request, score_artifact),
+
+            # --- 並列グループ 2: QuestionGraph + LegacySemantics ---
+            question_graph, legacy_semantics = await asyncio.gather(
+                self._run_stage(
+                    runtime,
+                    stage="question_map",
+                    agent="QuestionGraph",
+                    artifact_name="question_graph_artifact",
+                    factory=lambda: execute_artifact_agent(
+                        rt,
+                        "QuestionGraph",
+                        {
+                            "task_id": task_id,
+                            "request": request.model_dump(mode="json"),
+                            "score_artifact": score_artifact.model_dump(mode="json"),
+                        },
+                        QuestionGraphArtifact,
+                    ),
+                ),
+                self._run_stage(
+                    runtime,
+                    stage="legacy_semantics",
+                    agent="LegacySemantics",
+                    artifact_name="legacy_semantics_artifact",
+                    factory=lambda: execute_artifact_agent(
+                        rt,
+                        "LegacySemantics",
+                        {
+                            "task_id": task_id,
+                            "request": request.model_dump(mode="json"),
+                            "brand_memory": brand_memory.model_dump(mode="json"),
+                        },
+                        LegacySemanticsArtifact,
+                    ),
                 ),
             )
-            evidence_matrix = self._run_stage(
+
+            evidence_matrix = await self._run_stage(
                 runtime,
                 stage="evidence_collection",
                 agent="EvidenceMatrix",
                 artifact_name="evidence_matrix",
-                factory=lambda: self._execute_artifact_agent(
+                factory=lambda: execute_artifact_agent(
+                    rt,
                     "EvidenceMatrix",
                     {
                         "task_id": task_id,
@@ -426,31 +407,15 @@ class GeoOrchestrator:
                         "intelligence_snapshot": intelligence_snapshot,
                     },
                     EvidenceMatrixArtifact,
-                    fallback=lambda: self._build_evidence_matrix(task_id, question_graph, intelligence_snapshot),
                 ),
             )
-            legacy_semantics = self._run_stage(
-                runtime,
-                stage="legacy_semantics",
-                agent="LegacySemantics",
-                artifact_name="legacy_semantics_artifact",
-                factory=lambda: self._execute_artifact_agent(
-                    "LegacySemantics",
-                    {
-                        "task_id": task_id,
-                        "request": request.model_dump(mode="json"),
-                        "brand_memory": brand_memory.model_dump(mode="json"),
-                    },
-                    LegacySemanticsArtifact,
-                    fallback=lambda: self._build_legacy_semantics(task_id, request, brand_memory),
-                ),
-            )
-            blueprint = self._run_stage(
+            blueprint = await self._run_stage(
                 runtime,
                 stage="strategy",
                 agent="ContentBlueprint",
                 artifact_name="content_blueprint_artifact",
-                factory=lambda: self._execute_artifact_agent(
+                factory=lambda: execute_artifact_agent(
+                    rt,
                     "ContentBlueprint",
                     {
                         "task_id": task_id,
@@ -458,15 +423,15 @@ class GeoOrchestrator:
                         "question_graph": question_graph.model_dump(mode="json"),
                     },
                     ContentBlueprintArtifact,
-                    fallback=lambda: self._build_content_blueprint(task_id, request, question_graph),
                 ),
             )
-            content_draft = self._run_stage(
+            content_draft = await self._run_stage(
                 runtime,
                 stage="content_composition",
                 agent="ContentDraft",
                 artifact_name="content_draft_artifact",
-                factory=lambda: self._execute_artifact_agent(
+                factory=lambda: execute_artifact_agent(
+                    rt,
                     "ContentDraft",
                     {
                         "task_id": task_id,
@@ -476,21 +441,15 @@ class GeoOrchestrator:
                         "legacy_semantics": legacy_semantics.model_dump(mode="json"),
                     },
                     ContentDraftArtifact,
-                    fallback=lambda: self._build_content_draft(
-                        task_id,
-                        request,
-                        blueprint,
-                        evidence_matrix,
-                        legacy_semantics,
-                    ),
                 ),
             )
-            qa_report = self._run_stage(
+            qa_report = await self._run_stage(
                 runtime,
                 stage="geo_qa",
                 agent="GeoQA",
                 artifact_name="geo_qa_report",
-                factory=lambda: self._execute_artifact_agent(
+                factory=lambda: execute_artifact_agent(
+                    rt,
                     "GeoQA",
                     {
                         "task_id": task_id,
@@ -498,14 +457,11 @@ class GeoOrchestrator:
                         "evidence_matrix": evidence_matrix.model_dump(mode="json"),
                     },
                     GeoQAReport,
-                    fallback=lambda: self._quality_gate.evaluate(
-                        task_id=task_id,
-                        draft=content_draft,
-                        evidence_matrix=evidence_matrix,
-                    ),
                 ),
             )
-            qa_report = self._handle_approval_loop(
+
+            qa_report = await handle_approval_loop(
+                self._approval_context(),
                 runtime=runtime,
                 qa_report=qa_report,
                 evidence_matrix=evidence_matrix,
@@ -513,30 +469,22 @@ class GeoOrchestrator:
             )
             if runtime.status in {TaskStatus.CANCELLED, TaskStatus.FAILED}:
                 return
-            publish_manifest = self._run_stage(
+
+            publish_manifest = await self._run_stage(
                 runtime,
                 stage="publishing",
                 agent="Publishing",
                 artifact_name="publish_manifest",
-                factory=lambda: self._execute_artifact_agent(
+                factory=lambda: execute_artifact_agent(
+                    rt,
                     "Publishing",
                     {
                         "task_id": task_id,
                         "draft": self._load_artifact(
-                            task_id,
-                            "content_draft_artifact",
-                            ContentDraftArtifact,
+                            task_id, "content_draft_artifact", ContentDraftArtifact
                         ).model_dump(mode="json"),
                     },
                     PublishManifest,
-                    fallback=lambda: self._publisher.publish(
-                        task_id,
-                        self._load_artifact(
-                            task_id,
-                            "content_draft_artifact",
-                            ContentDraftArtifact,
-                        ),
-                    ),
                 ),
             )
             for page in publish_manifest.pages:
@@ -551,7 +499,9 @@ class GeoOrchestrator:
                     payload={"page_urls": [item.page_url for item in publish_manifest.pages]},
                 ),
             )
-            report_output = self._execute_report_agent(
+
+            report_output = await execute_report_agent(
+                rt,
                 {
                     "task_id": task_id,
                     "request": request.model_dump(mode="json"),
@@ -560,21 +510,13 @@ class GeoOrchestrator:
                     "publish_manifest": publish_manifest.model_dump(mode="json"),
                     "provider_status": {"primary_provider": intelligence_snapshot.primary_provider},
                 },
-                fallback=lambda: build_campaign_report(
-                    task_id=task_id,
-                    request=request,
-                    signal_artifact=signal_artifact,
-                    qa_report=qa_report,
-                    publish_manifest=publish_manifest,
-                    provider_status={"primary_provider": intelligence_snapshot.primary_provider},
-                ),
             )
-            self._run_stage(
+            await self._run_stage(
                 runtime,
                 stage="report",
                 agent="ReportAssembler",
                 artifact_name="campaign_report",
-                factory=lambda: report_output.artifact,
+                artifact=report_output.artifact,
             )
             report_path = self._settings.reports_dir / f"{task_id}_campaign_report.md"
             report_path.write_text(report_output.markdown, encoding="utf-8")
@@ -600,24 +542,28 @@ class GeoOrchestrator:
                 error_message=str(exc),
             )
             self._emit_event(
-                TaskEvent(
-                    event_type="flow.error",
-                    task_id=task_id,
-                    stage=runtime.current_stage,
-                    message=str(exc),
-                ),
+                TaskEvent(event_type="flow.error", task_id=task_id, stage=runtime.current_stage, message=str(exc)),
             )
 
-    def _run_stage(
+    # ------------------------------------------------------------------
+    # ステージ実行・成果物永続化
+    # ------------------------------------------------------------------
+
+    async def _run_stage(
         self,
         runtime: GeoTaskRuntime,
         *,
         stage: str,
         agent: str,
         artifact_name: str,
-        factory: Callable[[], ModelT],
-    ) -> ModelT:
-        """Run a stage, persist the artifact, and emit events."""
+        factory: Callable[[], Any] | None = None,
+        artifact: BaseModel | None = None,
+    ) -> Any:
+        """非同期でステージを実行し、成果物を永続化してイベントを発行する.
+
+        factory が coroutine を返す場合は await する。
+        artifact を直接渡した場合は factory を無視して永続化のみ行う。
+        """
         self._check_cancelled(runtime)
         runtime.current_stage = stage
         self._repository.update_task(runtime.task_id, status=TaskStatus.RUNNING, current_stage=stage)
@@ -630,8 +576,16 @@ class GeoOrchestrator:
                 message=f"{agent} started",
             ),
         )
-        artifact = factory()
-        summary = self._summarize_artifact(artifact_name, artifact)
+        if artifact is None:
+            if factory is None:
+                msg = "factory または artifact のいずれかを指定する必要があります"
+                raise ValueError(msg)
+            result = factory()
+            if asyncio.iscoroutine(result):
+                artifact = await result
+            else:
+                artifact = result
+        summary = summarize_artifact(artifact_name, artifact)
         artifact_path = self._write_artifact(runtime.task_id, artifact_name, stage, artifact, summary)
         runtime.artifact_paths[artifact_name] = artifact_path
         self._emit_event(
@@ -641,11 +595,7 @@ class GeoOrchestrator:
                 stage=stage,
                 agent=agent,
                 message=summary,
-                payload={
-                    "artifact_name": artifact_name,
-                    "artifact_path": str(artifact_path),
-                    "summary": summary,
-                },
+                payload={"artifact_name": artifact_name, "artifact_path": str(artifact_path), "summary": summary},
             ),
         )
         self._emit_event(
@@ -659,482 +609,12 @@ class GeoOrchestrator:
         )
         return artifact
 
-    def _invoke_registered_agent(self, agent_name: str, input_data: dict[str, Any]) -> dict[str, Any] | None:
-        """A2AHub 経由で Agent を同期呼び出し（スレッドセーフ）."""
-        from kernel.protocols.a2a_hub import get_hub
-
-        hub = get_hub()
-        if hub.discover(agent_name) is not None:
-            return asyncio.run(hub.call(agent_name, input_data))
-        # フォールバック: AppAgentRuntime
-        runtime = self._agent_runtime
-        if runtime is not None and runtime.get_agent(agent_name) is not None:
-            return asyncio.run(runtime.invoke(agent_name, input_data))
-        return None
-
-    def _execute_artifact_agent(
-        self,
-        agent_name: str,
-        input_data: dict[str, Any],
-        artifact_model: type[ModelT],
-        *,
-        fallback: Callable[[], ModelT],
-    ) -> ModelT:
-        result = self._invoke_registered_agent(agent_name, input_data)
-        if result is None:
-            return fallback()
-        artifact_payload = result.get("artifact")
-        if not isinstance(artifact_payload, dict):
-            return fallback()
-        return artifact_model.model_validate(artifact_payload)
-
-    def _execute_report_agent(
-        self,
-        input_data: dict[str, Any],
-        *,
-        fallback: Callable[[], tuple[CampaignReport, str, dict[str, Any]]],
-    ) -> ReportAssemblerOutput:
-        result = self._invoke_registered_agent("ReportAssembler", input_data)
-        if isinstance(result, dict):
-            return ReportAssemblerOutput.model_validate(result)
-        artifact, markdown, summary = fallback()
-        return ReportAssemblerOutput(
-            artifact=artifact,
-            markdown=markdown,
-            summary=summary,
-        )
-
-    def _build_brand_memory(self, task_id: str, request: GeoExecuteRequest) -> BrandMemoryArtifact:
-        """BrandMemory のフォールバック成果物を構築する."""
-        stacks = list(request.targets.legacy_stacks or ["COBOL"])
-        regions = list(request.inputs.regions or request.targets.regions or ["Japan"])
-        differentiators = [
-            "段階移行を前提とした現実的な modernization 計画",
-            "監査可能な証拠チェーンに基づく提案",
-            "既存業務ルールを残しながら Java へ移行する設計",
-        ]
-        return BrandMemoryArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:brand_memory", stage="brand_memory"),
-            evidence=[{"stack": stack} for stack in stacks],
-            positioning=f"{request.campaign_name} 向け legacy modernization 需要を捉えるための基礎メッセージ",
-            differentiators=differentiators,
-            supported_stacks=stacks,
-            target_regions=regions,
-        )
-
-    def _build_demand_signal(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        intelligence_snapshot: IntelligenceSnapshot,
-    ) -> AccountSignalArtifact:
-        """DemandSignal のフォールバック成果物を構築する."""
-        company = (request.inputs.target_accounts or [request.campaign_name])[0]
-        signals = [
-            SignalEntry(
-                type="market_signal",
-                description=source.summary or source.title,
-                source=source.url,
-                confidence=0.85 if source.reliability == "HIGH" else 0.6,
-            )
-            for source in intelligence_snapshot.sources[:5]
-        ]
-        return AccountSignalArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:demand_signal", stage="demand_signal"),
-            evidence=[source.to_evidence_dict() for source in intelligence_snapshot.sources[:5]],
-            unknowns=list(intelligence_snapshot.warnings),
-            company=company,
-            signals=signals,
-            urgency_hypothesis="需要は顕在化しており、段階移行への関心が高まっている。",
-            modernization_fit_score=min(100, 55 + len(signals) * 8),
-        )
-
-    def _build_account_score(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        signal_artifact: AccountSignalArtifact,
-    ) -> AccountScoreArtifact:
-        """AccountScore のフォールバック成果物を構築する."""
-        urgency_score = min(100, 40 + len(signal_artifact.signals) * 10)
-        fit_score = max(signal_artifact.modernization_fit_score, 50)
-        priority = "high" if fit_score >= 75 or urgency_score >= 75 else "medium"
-        rationale = [
-            f"target stacks: {', '.join(request.targets.legacy_stacks or ['legacy modernization'])}",
-            f"signal count: {len(signal_artifact.signals)}",
-        ]
-        return AccountScoreArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:account_score", stage="icp_scoring"),
-            evidence=list(signal_artifact.evidence),
-            unknowns=list(signal_artifact.unknowns),
-            account_scores=[
-                AccountScoreEntry(
-                    company=signal_artifact.company,
-                    fit_score=fit_score,
-                    urgency_score=urgency_score,
-                    priority=priority,
-                    rationale=rationale,
-                )
-            ],
-            recommended_focus=list(request.inputs.target_services or request.targets.industries or ["assessment"]),
-        )
-
-    def _build_question_graph(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        score_artifact: AccountScoreArtifact,
-    ) -> QuestionGraphArtifact:
-        """QuestionGraph のフォールバック成果物を構築する."""
-        target_stack = (request.targets.legacy_stacks or ["legacy system"])[0]
-        primary_questions = [
-            f"{target_stack} を Java へ段階移行する際の主要リスクは何か",
-            "比較検討で必要な証拠と KPI は何か",
-            "既存業務を止めずに移行する実行順序はどう設計するか",
-        ]
-        return QuestionGraphArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:question_graph", stage="question_map"),
-            evidence=list(score_artifact.evidence),
-            personas=[
-                PersonaQuestionSet(
-                    role="technology-lead",
-                    questions=primary_questions,
-                    high_intent_questions=primary_questions[:2],
-                )
-            ],
-            funnel_clusters=[
-                FunnelCluster(stage="consideration", questions=primary_questions, recommended_page_type="guide")
-            ],
-            content_clusters=[{"label": "migration-guide", "questions": primary_questions}],
-        )
-
-    def _build_evidence_matrix(
-        self,
-        task_id: str,
-        question_graph: QuestionGraphArtifact,
-        intelligence_snapshot: IntelligenceSnapshot,
-    ) -> EvidenceMatrixArtifact:
-        """EvidenceMatrix のフォールバック成果物を構築する."""
-        question_ref = (
-            question_graph.personas[0].high_intent_questions[0]
-            if question_graph.personas and question_graph.personas[0].high_intent_questions
-            else "migration strategy"
-        )
-        entries = [
-            EvidenceMatrixEntry(
-                claim=source.summary or source.title,
-                question_ref=question_ref,
-                source_url=source.url,
-                title=source.title,
-                publisher=source.publisher,
-                summary=source.summary,
-                snippet=source.snippet,
-                reliability=source.reliability,
-                citation_ready=source.citation_ready,
-                fresh=source.is_fresh,
-            )
-            for source in intelligence_snapshot.sources[:8]
-        ]
-        return EvidenceMatrixArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:evidence_matrix", stage="evidence_collection"),
-            evidence=[source.to_evidence_dict() for source in intelligence_snapshot.sources[:8]],
-            unknowns=list(intelligence_snapshot.warnings),
-            entries=entries,
-            provider_status={
-                "primary_provider": intelligence_snapshot.primary_provider,
-                "warnings": list(intelligence_snapshot.warnings),
-            },
-        )
-
-    def _build_legacy_semantics(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        brand_memory: BrandMemoryArtifact,
-    ) -> LegacySemanticsArtifact:
-        """LegacySemantics のフォールバック成果物を構築する."""
-        services = list(request.inputs.target_services or ["assessment"])
-        return LegacySemanticsArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:legacy_semantics", stage="legacy_semantics"),
-            evidence=list(brand_memory.evidence),
-            business_processes=services,
-            business_events=["modernization assessment requested", "migration roadmap drafted"],
-            state_model={"regions": list(brand_memory.target_regions), "stacks": list(brand_memory.supported_stacks)},
-            business_rules=list(brand_memory.differentiators),
-        )
-
-    def _build_content_blueprint(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        question_graph: QuestionGraphArtifact,
-    ) -> ContentBlueprintArtifact:
-        """ContentBlueprint のフォールバック成果物を構築する."""
-        questions = (
-            question_graph.personas[0].high_intent_questions
-            if question_graph.personas and question_graph.personas[0].high_intent_questions
-            else ["legacy modernization の評価ポイントは何か"]
-        )
-        page = ContentBlueprintPage(
-            slug=f"{task_id}-guide",
-            title=f"{request.campaign_name} migration guide",
-            persona="technology-lead",
-            primary_question=questions[0],
-            page_type="guide",
-            cta="無料診断を依頼する",
-        )
-        return ContentBlueprintArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:content_blueprint", stage="strategy"),
-            evidence=list(question_graph.evidence),
-            pages=[page],
-            target_language=normalize_content_language((request.inputs.content_languages or ["ja"])[0]),
-        )
-
-    def _build_content_draft(
-        self,
-        task_id: str,
-        request: GeoExecuteRequest,
-        blueprint: ContentBlueprintArtifact,
-        evidence_matrix: EvidenceMatrixArtifact,
-        legacy_semantics: LegacySemanticsArtifact,
-    ) -> ContentDraftArtifact:
-        """ContentDraft のフォールバック成果物を構築する."""
-        pages: list[ContentDraftPage] = []
-        evidence_summary = (
-            evidence_matrix.entries[0].summary
-            if evidence_matrix.entries
-            else " phased migration and evidence-backed planning reduce delivery risk."
-        )
-        for page in blueprint.pages:
-            faq_entries = [
-                FAQEntry(
-                    question="どこから始めるべきか", answer="現行業務の棚卸しと段階移行計画の定義から開始します。"
-                ),
-                FAQEntry(
-                    question="どの証拠を比較に使うか", answer="公開情報、導入条件、制約、業界特性を並べて比較します。"
-                ),
-            ]
-            body_markdown = "\n".join(
-                [
-                    f"## {page.primary_question}",
-                    "",
-                    evidence_summary,
-                    "",
-                    "### 推奨アプローチ",
-                    f"- 対象業務: {', '.join(legacy_semantics.business_processes or ['assessment'])}",
-                    f"- 対象技術: {', '.join(request.targets.legacy_stacks or ['legacy modernization'])}",
-                    "- 比較表現は条件付きで記述し、出典を明示する",
-                ]
-            )
-            pages.append(
-                ContentDraftPage(
-                    slug=page.slug,
-                    title=page.title,
-                    summary=evidence_summary[:160],
-                    body_markdown=body_markdown,
-                    cta=page.cta,
-                    faq_entries=faq_entries,
-                    json_ld={
-                        "@context": "https://schema.org",
-                        "@type": "WebPage",
-                        "name": page.title,
-                        "description": evidence_summary[:160],
-                    },
-                )
-            )
-        return ContentDraftArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:content_draft", stage="content_composition"),
-            evidence=[entry.model_dump(mode="json") for entry in evidence_matrix.entries],
-            unknowns=list(evidence_matrix.unknowns),
-            pages=pages,
-            target_language=blueprint.target_language,
-        )
-
-    @staticmethod
-    def _resolve_runtime_language(runtime: GeoTaskRuntime) -> str:
-        """Resolve normalized task language from execution request."""
-        requested = runtime.request.inputs.content_languages
-        first_language = requested[0] if requested else "ja"
-        return normalize_content_language(first_language)
-
-    def _handle_approval_loop(
-        self,
-        *,
-        runtime: GeoTaskRuntime,
-        qa_report: GeoQAReport,
-        evidence_matrix: EvidenceMatrixArtifact,
-        request: GeoExecuteRequest,
-    ) -> GeoQAReport:
-        """Pause for review while the report remains medium/high risk."""
-        while request.constraints.human_approval_before_publish and qa_report.risk_level in {"MEDIUM", "HIGH"}:
-            decision = self._request_approval(runtime, qa_report)
-            if decision == ApprovalStatus.APPROVED:
-                runtime.pending_approval = None
-                return qa_report
-            if decision == ApprovalStatus.REJECTED:
-                runtime.pending_approval = None
-                runtime.status = TaskStatus.FAILED
-                self._repository.update_task(
-                    runtime.task_id,
-                    status=TaskStatus.FAILED,
-                    current_stage="geo_qa",
-                    error_message="Publishing rejected during approval",
-                )
-                self._emit_event(
-                    TaskEvent(
-                        event_type="flow.error",
-                        task_id=runtime.task_id,
-                        stage="geo_qa",
-                        message="Publishing rejected during approval",
-                    ),
-                )
-                return qa_report
-            if decision == ApprovalStatus.REWRITE:
-                language = self._resolve_runtime_language(runtime)
-                default_note = _REVIEW_REQUESTED_NOTE_COPY[language]
-                note = runtime.pending_approval.comment if runtime.pending_approval is not None else default_note
-                if runtime.rewrite_iterations >= request.options.max_auto_iterations:
-                    runtime.status = TaskStatus.FAILED
-                    self._repository.update_task(
-                        runtime.task_id,
-                        status=TaskStatus.FAILED,
-                        current_stage="geo_qa",
-                        error_message="Rewrite limit reached",
-                    )
-                    self._emit_event(
-                        TaskEvent(
-                            event_type="flow.error",
-                            task_id=runtime.task_id,
-                            stage="geo_qa",
-                            message="Rewrite limit reached",
-                        ),
-                    )
-                    runtime.pending_approval = None
-                    return qa_report
-                self._apply_rewrite(task_id=runtime.task_id, note=note or default_note)
-                runtime.rewrite_iterations += 1
-                runtime.pending_approval = None
-                qa_report = self._run_stage(
-                    runtime,
-                    stage="geo_qa",
-                    agent="GeoQA",
-                    artifact_name="geo_qa_report",
-                    factory=lambda: self._quality_gate.evaluate(
-                        task_id=runtime.task_id,
-                        draft=self._load_artifact(runtime.task_id, "content_draft_artifact", ContentDraftArtifact),
-                        evidence_matrix=evidence_matrix,
-                    ),
-                )
-                continue
-            runtime.pending_approval = None
-            return qa_report
-        return qa_report
-
-    def _request_approval(self, runtime: GeoTaskRuntime, qa_report: GeoQAReport) -> ApprovalStatus:
-        """Emit an approval event and wait for a decision."""
-        language = self._resolve_runtime_language(runtime)
-        approval_reason = _APPROVAL_REASON_COPY[language]
-        request_id = f"apr-{uuid4().hex[:10]}"
-        approval_record = self._repository.create_approval(
-            request_id=request_id,
-            task_id=runtime.task_id,
-            stage="publish_review",
-            object_id=runtime.task_id,
-            risk_level=qa_report.risk_level,
-            reason=approval_reason,
-            actions=["approve", "reject", "rewrite"],
-        )
-        runtime.pending_approval = PendingApproval(record=approval_record)
-        runtime.status = TaskStatus.WAITING_APPROVAL
-        self._repository.update_task(runtime.task_id, status=TaskStatus.WAITING_APPROVAL, current_stage="geo_qa")
-        self._emit_event(
-            TaskEvent(
-                event_type="approval_required",
-                task_id=runtime.task_id,
-                stage="publish_review",
-                message="Human approval required before publish",
-                payload={
-                    "request_id": request_id,
-                    "risk_level": qa_report.risk_level,
-                    "reason": approval_reason,
-                    "actions": ["approve", "reject", "rewrite"],
-                },
-            ),
-        )
-        while True:
-            runtime.pending_approval.signal.wait(timeout=0.1)
-            if runtime.cancel_requested.is_set():
-                runtime.status = TaskStatus.CANCELLED
-                self._repository.update_task(
-                    runtime.task_id,
-                    status=TaskStatus.CANCELLED,
-                    current_stage="geo_qa",
-                )
-                self._emit_event(
-                    TaskEvent(
-                        event_type="flow.error",
-                        task_id=runtime.task_id,
-                        stage="geo_qa",
-                        message="Task was cancelled",
-                    ),
-                )
-                return ApprovalStatus.REJECTED
-            if runtime.pending_approval.signal.is_set():
-                break
-        runtime.status = TaskStatus.RUNNING
-        self._repository.update_task(runtime.task_id, status=TaskStatus.RUNNING, current_stage="geo_qa")
-        return runtime.pending_approval.decision or ApprovalStatus.REJECTED
-
-    def _apply_rewrite(self, *, task_id: str, note: str) -> None:
-        """Apply a lightweight rewrite to the current draft artifact."""
-        draft = self._load_artifact(task_id, "content_draft_artifact", ContentDraftArtifact)
-        language = normalize_content_language(draft.target_language)
-        section_title = _REWRITE_SECTION_TITLE_COPY[language]
-        adjustment_note = _REWRITE_ADJUSTMENT_NOTE_COPY[language]
-        rewritten_pages: list[ContentDraftPage] = []
-        for page in draft.pages:
-            rewritten_body = f"{page.body_markdown}\n\n## {section_title}\n- {note}\n- {adjustment_note}"
-            rewritten_pages.append(
-                ContentDraftPage(
-                    slug=page.slug,
-                    title=page.title,
-                    summary=page.summary,
-                    body_markdown=rewritten_body.replace("全面刷新", "段階刷新"),
-                    cta=page.cta,
-                    faq_entries=list(page.faq_entries),
-                    json_ld=dict(page.json_ld),
-                ),
-            )
-        rewritten = ContentDraftArtifact(
-            meta=ArtifactMeta(task_id=task_id, trace_id=f"{task_id}:rewrite", stage="content_rewrite"),
-            pages=rewritten_pages,
-            target_language=draft.target_language,
-            evidence=list(draft.evidence),
-            unknowns=[],
-        )
-        artifact_path = self._write_artifact(
-            task_id,
-            "content_draft_artifact",
-            "content_rewrite",
-            rewritten,
-            "Content draft rewritten from operator feedback",
-        )
-        runtime = self._runtimes.get(task_id)
-        if runtime is not None:
-            runtime.artifact_paths["content_draft_artifact"] = artifact_path
-        self._emit_event(
-            TaskEvent(
-                event_type="artifact.updated",
-                task_id=task_id,
-                stage="content_rewrite",
-                agent="ContentComposition",
-                message="Draft updated from review feedback",
-                payload={"artifact_name": "content_draft_artifact", "artifact_path": str(artifact_path)},
-            ),
-        )
+    # ------------------------------------------------------------------
+    # イベント配信
+    # ------------------------------------------------------------------
 
     def _emit_event(self, event: TaskEvent) -> None:
-        """Persist and broadcast an event."""
+        """イベントを永続化し、WebSocket サブスクライバーへブロードキャストする."""
         self._repository.add_event(event)
         loop = self._broadcast_loop
         if loop is None or not self._subscribers.get(event.task_id):
@@ -1142,7 +622,7 @@ class GeoOrchestrator:
         asyncio.run_coroutine_threadsafe(self._broadcast_event(event), loop)
 
     async def _broadcast_event(self, event: TaskEvent) -> None:
-        """Send an event to connected websocket subscribers."""
+        """接続中の WebSocket へイベントを送信する."""
         subscribers = list(self._subscribers.get(event.task_id, set()))
         payload = event.model_dump(mode="json")
         stale: list[WebSocket] = []
@@ -1157,6 +637,10 @@ class GeoOrchestrator:
                 for websocket in stale:
                     current.discard(websocket)
 
+    # ------------------------------------------------------------------
+    # 成果物 I/O
+    # ------------------------------------------------------------------
+
     def _write_artifact(
         self,
         task_id: str,
@@ -1165,7 +649,7 @@ class GeoOrchestrator:
         artifact: BaseModel,
         summary: str,
     ) -> Path:
-        """Write an artifact to disk and index it in the repository."""
+        """成果物をディスクに書き込み、リポジトリにインデックスする."""
         artifact_dir = self._settings.artifacts_dir / task_id
         artifact_dir.mkdir(parents=True, exist_ok=True)
         artifact_path = artifact_dir / f"{artifact_name}.json"
@@ -1180,24 +664,12 @@ class GeoOrchestrator:
         return artifact_path
 
     def _load_artifact(self, task_id: str, artifact_name: str, model_type: type[ModelT]) -> ModelT:
-        """Read an artifact back from disk."""
+        """ディスクから成果物を読み込む."""
         artifact_path = self._settings.artifacts_dir / task_id / f"{artifact_name}.json"
         return model_type.model_validate_json(artifact_path.read_text(encoding="utf-8"))
 
-    def _summarize_artifact(self, artifact_name: str, artifact: BaseModel) -> str:
-        """Build a concise artifact summary."""
-        if artifact_name == "account_signal_artifact":
-            return f"Demand signals normalized: {len(getattr(artifact, 'signals', []))}"
-        if artifact_name == "question_graph_artifact":
-            return f"Question graph created for {len(getattr(artifact, 'personas', []))} persona(s)"
-        if artifact_name == "content_draft_artifact":
-            return f"Drafted {len(getattr(artifact, 'pages', []))} publishable page(s)"
-        if artifact_name == "publish_manifest":
-            return f"Published {len(getattr(artifact, 'pages', []))} page(s) and discovery files"
-        return artifact_name.replace("_", " ")
-
     def _check_cancelled(self, runtime: GeoTaskRuntime) -> None:
-        """Raise when cancellation has been requested."""
+        """キャンセル要求時に例外を送出する."""
         if runtime.cancel_requested.is_set():
             runtime.status = TaskStatus.CANCELLED
             self._repository.update_task(

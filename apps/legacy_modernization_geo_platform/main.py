@@ -598,11 +598,28 @@ def _latest_pending_approval_id(state: Any) -> str | None:
     return None
 
 
-app = create_app()
+def get_app() -> FastAPI:
+    """遅延ファクトリ: import 時ではなく初回アクセス時に app を生成する."""
+    global _app_instance  # noqa: PLW0603
+    if _app_instance is None:
+        _app_instance = create_app()
+    return _app_instance
+
+
+_app_instance: FastAPI | None = None
+app: FastAPI = None  # type: ignore[assignment]  # uvicorn が参照するエントリポイント
+
+
+def __getattr__(name: str) -> Any:
+    """モジュールレベル属性の遅延解決（uvicorn 互換）."""
+    if name == "app":
+        return get_app()
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 def main() -> None:
-    """Run the application via Uvicorn."""
+    """Uvicorn でアプリケーションを起動する."""
     default_settings = GeoPlatformSettings.from_env(app_root=APP_ROOT)
     parser = argparse.ArgumentParser(description="Run the Legacy Modernization GEO Platform")
     parser.add_argument("--host", default=default_settings.host)
