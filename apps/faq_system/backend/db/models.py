@@ -250,7 +250,13 @@ class RoleKBPermission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
-Index("ix_role_kb_permissions_unique", RoleKBPermission.role_name, RoleKBPermission.kb_type, RoleKBPermission.action, unique=True)
+Index(
+    "ix_role_kb_permissions_unique",
+    RoleKBPermission.role_name,
+    RoleKBPermission.kb_type,
+    RoleKBPermission.action,
+    unique=True,
+)
 
 Index("ix_chat_messages_session_created", ChatMessage.session_id, ChatMessage.created_at)
 Index("ix_auth_sessions_user_active", AuthSession.user_id, AuthSession.revoked_at)

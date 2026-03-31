@@ -149,6 +149,7 @@ async def search_skills(
         "query": tag,
     }
 
+
 @router.get("/cli-native", response_model=CLINativeListResponse)
 async def list_cli_native_harnesses() -> CLINativeListResponse:
     """登録済み CLI-Native harness 一覧."""

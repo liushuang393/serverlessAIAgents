@@ -28,7 +28,8 @@ _DEFAULT_KB_PERMS: dict[str, list[tuple[str, str]]] = {
     "guest": [("external", "read")],
     "employee": [("internal", "read"), ("external", "read")],
     "manager": [
-        ("internal", "read"), ("internal", "write"),
+        ("internal", "read"),
+        ("internal", "write"),
         ("external", "read"),
         ("confidential", "read"),
     ],
@@ -37,13 +38,18 @@ _DEFAULT_KB_PERMS: dict[str, list[tuple[str, str]]] = {
         ("external", "read"),
     ],
     "hr_admin": [
-        ("internal", "read"), ("internal", "write"),
-        ("confidential", "read"), ("confidential", "write"),
+        ("internal", "read"),
+        ("internal", "write"),
+        ("confidential", "read"),
+        ("confidential", "write"),
     ],
     "admin": [
-        ("internal", "read"), ("internal", "write"),
-        ("external", "read"), ("external", "write"),
-        ("confidential", "read"), ("confidential", "write"),
+        ("internal", "read"),
+        ("internal", "write"),
+        ("external", "read"),
+        ("external", "write"),
+        ("confidential", "read"),
+        ("confidential", "write"),
     ],
 }
 
@@ -96,4 +102,3 @@ def downgrade() -> None:
     op.drop_index("ix_role_kb_permissions_unique", table_name="role_kb_permissions")
     op.drop_index("ix_role_kb_permissions_role_name", table_name="role_kb_permissions")
     op.drop_table("role_kb_permissions")
-

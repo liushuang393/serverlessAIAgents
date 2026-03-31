@@ -106,9 +106,7 @@ class BuilderDraftStore:
             "spec_kind": str(payload.get("spec_kind", "agent")).strip().lower() or "agent",
             "spec": payload.get("spec") if isinstance(payload.get("spec"), dict) else {},
             "generated_files": (
-                payload.get("generated_files")
-                if isinstance(payload.get("generated_files"), dict)
-                else {}
+                payload.get("generated_files") if isinstance(payload.get("generated_files"), dict) else {}
             ),
             "status": status,
             "updated_at": updated_at,

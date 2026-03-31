@@ -554,9 +554,7 @@ class GeoRepository:
             task_id=str(task_row["task_id"]),
             status=TaskStatus(str(task_row["status"])),
             current_stage=(
-                task_row["current_stage"]
-                if task_row["current_stage"] is None
-                else str(task_row["current_stage"])
+                task_row["current_stage"] if task_row["current_stage"] is None else str(task_row["current_stage"])
             ),
             campaign_name=str(task_row["campaign_name"]),
             package=str(task_row["package_name"]),
@@ -567,8 +565,6 @@ class GeoRepository:
             report=report,
             published_pages=pages,
             error_message=(
-                task_row["error_message"]
-                if task_row["error_message"] is None
-                else str(task_row["error_message"])
+                task_row["error_message"] if task_row["error_message"] is None else str(task_row["error_message"])
             ),
         )

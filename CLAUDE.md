@@ -30,6 +30,7 @@
 - `git checkout` / `git reset` / `git restore` / `git stash` はユーザーの明示的な許可なしに実行禁止
 - 変更前に必ず `git diff` をチャットに提示してユーザー確認を仰ぐ
 - `--force` / `-f` を伴う操作は独断で実行禁止
+- **worktree 禁止**: `git worktree` を使わない。単独開発のため、常に `main` ブランチ上で直接作業する
 
 ---
 

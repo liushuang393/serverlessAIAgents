@@ -2,6 +2,7 @@
 
 実装は kernel/memory/ に移動済み。新規コードは kernel.memory を使うこと。
 """
+
 import warnings
 
 warnings.warn(

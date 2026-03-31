@@ -114,10 +114,7 @@ async def _get_kb_perms_for_role(role_name: str) -> list[dict[str, str]]:
         result = await session.execute(
             select(RoleKBPermission).where(RoleKBPermission.role_name == role_name),
         )
-        return [
-            {"kb_type": p.kb_type, "action": p.action}
-            for p in result.scalars().all()
-        ]
+        return [{"kb_type": p.kb_type, "action": p.action} for p in result.scalars().all()]
 
 
 # ---------------------------------------------------------------------------
@@ -144,13 +141,15 @@ async def list_roles(
     for role in auth_roles:
         role_name = role.get("name", "")
         kb_perms = await _get_kb_perms_for_role(role_name)
-        roles_with_perms.append({
-            "role_name": role_name,
-            "display_name": role.get("display_name", role_name),
-            "description": role.get("description", ""),
-            "is_system": role.get("is_system", False),
-            "kb_permissions": kb_perms,
-        })
+        roles_with_perms.append(
+            {
+                "role_name": role_name,
+                "display_name": role.get("display_name", role_name),
+                "description": role.get("description", ""),
+                "is_system": role.get("is_system", False),
+                "kb_permissions": kb_perms,
+            }
+        )
 
     return {"roles": roles_with_perms}
 
@@ -184,4 +183,3 @@ async def update_kb_permissions(
     # 更新後の権限を返す
     kb_perms = await _get_kb_perms_for_role(role_name)
     return {"updated": True, "role_name": role_name, "kb_permissions": kb_perms}
-

@@ -184,9 +184,7 @@ def allow_local_default_auth() -> bool:
     if force_auth in {"1", "true", "yes"}:
         return False
 
-    env_name = (
-        os.getenv("CODE_MIGRATION_ENV") or os.getenv("APP_ENV") or os.getenv("ENV") or ""
-    ).lower()
+    env_name = (os.getenv("CODE_MIGRATION_ENV") or os.getenv("APP_ENV") or os.getenv("ENV") or "").lower()
     if env_name in {"prod", "production"}:
         return False
 

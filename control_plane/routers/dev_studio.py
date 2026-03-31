@@ -283,7 +283,9 @@ def _determine_layout(
     generated_files: dict[str, str],
     output_type: str,
 ) -> tuple[bool, bool, str | None, str | None]:
-    has_backend = output_type in {"backend", "fullstack"} or "app.py" in generated_files or "backend/app.py" in generated_files
+    has_backend = (
+        output_type in {"backend", "fullstack"} or "app.py" in generated_files or "backend/app.py" in generated_files
+    )
     has_frontend = (
         output_type in {"frontend", "fullstack"}
         or "package.json" in generated_files
