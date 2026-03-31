@@ -282,4 +282,85 @@ docker compose up --build -d
 
 ---
 
-> 执行/训练解耦与轨迹设计部分参考了 [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) 的思路。
+## 致谢 — 所用开源技术
+
+BizCore AI 的开发离不开以下优秀开源项目、工具与设计思想的支撑。
+谨向所有贡献者和社区表示衷心感谢。
+
+### 🏗️ 框架层
+
+| 项目 | 职责 | 许可证 |
+| --- | --- | --- |
+| [FastAPI](https://github.com/fastapi/fastapi) | 高性能异步 Web API 框架（Kernel / Control Plane 基础） | MIT |
+| [Pydantic v2](https://github.com/pydantic/pydantic) | 类型安全的数据校验与 Schema 定义（Contracts 全域） | MIT |
+| [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) | ORM 与数据库抽象（Control Plane / Auth Service） | MIT |
+| [Alembic](https://github.com/sqlalchemy/alembic) | 数据库迁移管理 | MIT |
+| [Uvicorn](https://github.com/encode/uvicorn) | ASGI 服务器（FastAPI 运行时） | BSD-3-Clause |
+| [React](https://github.com/facebook/react) | 前端 UI 框架 | MIT |
+| [Vite](https://github.com/vitejs/vite) | 高速前端构建工具 | MIT |
+| [TypeScript](https://github.com/microsoft/TypeScript) | 类型安全的前端开发语言 | Apache 2.0 |
+
+### 🤖 AI 协议层
+
+| 项目 | 职责 | 来源 |
+| --- | --- | --- |
+| [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) | AI 工具集成协议（Layer 5 Integration 标准） | Anthropic |
+| [Agent-to-Agent Protocol (A2A)](https://github.com/google-a2a/A2A) | Agent 间通信与委托协议 | Google |
+| [AG-UI Protocol](https://github.com/ag-ui-protocol/ag-ui) | Agent → UI 实时流式传输协议 | 开放标准 |
+
+### 🛠️ 工具与基础设施层
+
+| 项目 | 职责 | 许可证 |
+| --- | --- | --- |
+| [Qdrant](https://github.com/qdrant/qdrant) | 高性能向量数据库（RAG Pipeline） | Apache 2.0 |
+| [Redis](https://github.com/redis/redis) | 分布式缓存与消息队列 | BSD-3-Clause |
+| [PostgreSQL](https://www.postgresql.org/) | 关系型数据库 | PostgreSQL License |
+| [Supabase](https://github.com/supabase/supabase) | 托管 PostgreSQL + BaaS | Apache 2.0 |
+| [Ruff](https://github.com/astral-sh/ruff) | 超高速 Python Linter 与格式化工具 | MIT |
+| [mypy](https://github.com/python/mypy) | Python 静态类型检查器 | MIT |
+| [pytest](https://github.com/pytest-dev/pytest) | Python 测试框架 | MIT |
+| [ESLint](https://github.com/eslint/eslint) / [Prettier](https://github.com/prettier/prettier) | 前端代码质量与格式化工具 | MIT |
+| [Docker](https://www.docker.com/) | 容器化与部署基础设施 | Apache 2.0 |
+
+### 🧩 内置 Skill
+
+BizCore Studios 内置的以下 Skill 基于开源工具与服务实现。
+
+#### web-content-fetcher（网页正文提取）
+
+| 项目 | 职责 | 许可证 |
+| --- | --- | --- |
+| [Jina Reader](https://github.com/jina-ai/reader) | 从 URL 提取干净 Markdown 正文的云服务（首选） | Apache 2.0 |
+| [Scrapling](https://github.com/D4Vinci/Scrapling) | 具备反爬虫能力的 Python 网页抓取库（二级降级） | MIT |
+| [html2text](https://github.com/Alir3z4/html2text) | HTML 转 Markdown 转换库 | GPL-3.0 |
+
+#### design-skills（设计图像生成）
+
+| 项目 | 职责 | 许可证 |
+| --- | --- | --- |
+| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) | 本地 GPU 图像生成后端（首选） | GPL-3.0 |
+| [Stable Diffusion XL (SDXL)](https://github.com/Stability-AI/generative-models) | 用于本地推理的高质量文生图模型 | CreativeML Open RAIL++-M |
+| [OpenAI gpt-image-1](https://platform.openai.com/docs/guides/images) | ComfyUI 不可用时的云端兜底 | — (商业 API) |
+
+#### minimalist-entrepreneur-skills（极简创业框架技能集）
+
+基于 Sahil Lavingia（Gumroad 创始人）所著《The Minimalist Entrepreneur》的创业支持技能包，包含 10 个结构化技能，在 `apps/messaging_hub` 中使用。
+
+| 项目 | 职责 | 许可证 |
+| --- | --- | --- |
+| [slavingia/skills](https://github.com/slavingia/skills) | 极简创业框架技能集（10 个技能）的原始仓库 | MIT |
+| [《The Minimalist Entrepreneur》](https://www.minimalistentrepreneur.com/) — Sahil Lavingia | 技能的思想基础书籍 | — |
+
+### 💡 设计思想与架构参考
+
+| 思想 / 参考来源 | 概要 |
+| --- | --- |
+| [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) | BizCore 执行/训练解耦模型与分布式轨迹设计的重要参考 |
+| **Clean Architecture** — Robert C. Martin | 分层隔离与依赖方向原则，7 核心层架构的设计指南 |
+| **ReAct Pattern** — Yao et al., 2022 | 融合 Reasoning + Acting 的 Agent 循环设计，Kernel 运行时的理论基础 |
+| **RAG（检索增强生成）** — Lewis et al., 2020 | 通过检索增强实现知识集成，RAGEngine / RetrievalGate 的理论依据 |
+| **HITL（人机协同）** | 将人类监督内嵌于 AI 治理的设计思想（Harness / ApprovalManager 的根基） |
+| **Gateway Pattern** — Enterprise Integration Patterns | 集中式 LLM 访问、故障转移与可观测性设计，LLM Gateway 的架构依据 |
+| **Contract-First Design** | 以跨层契约先行定义接口、解耦实现的设计原则，`contracts/` 层的核心哲学 |
+| **12-Factor App** — Heroku | 云原生应用设计原则，应用于配置外部化、无状态化与日志标准化 |
+| **微内核 Agent（百行原型）** — 内部自研 | `@agent` 装饰器最小化 Agent 定义模式的原型。起初以约 100 行实验代码实现，现已演进为 `kernel/agent_decorator.py`（Skills 集成、Pydantic 类型校验、AgentRegistry 与 A2AHub 注册） |

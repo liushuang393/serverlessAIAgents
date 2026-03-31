@@ -282,4 +282,85 @@ docker compose up --build -d
 
 ---
 
-> Parts of the execution/training decoupling and trace design were inspired by [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning).
+## Acknowledgements — Open Source Technologies
+
+BizCore AI is built on the shoulders of outstanding open source projects, tools, and design philosophies.
+We are deeply grateful to every contributor and community behind them.
+
+### 🏗️ Framework Layer
+
+| Project | Role | License |
+| --- | --- | --- |
+| [FastAPI](https://github.com/fastapi/fastapi) | High-performance async Web API framework (Kernel / Control Plane) | MIT |
+| [Pydantic v2](https://github.com/pydantic/pydantic) | Type-safe data validation and schema definition (Contracts layer) | MIT |
+| [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) | ORM and database abstraction (Control Plane / Auth Service) | MIT |
+| [Alembic](https://github.com/sqlalchemy/alembic) | Database migration management | MIT |
+| [Uvicorn](https://github.com/encode/uvicorn) | ASGI server (FastAPI runtime) | BSD-3-Clause |
+| [React](https://github.com/facebook/react) | Frontend UI framework | MIT |
+| [Vite](https://github.com/vitejs/vite) | Fast frontend build tooling | MIT |
+| [TypeScript](https://github.com/microsoft/TypeScript) | Type-safe frontend development language | Apache 2.0 |
+
+### 🤖 AI Protocol Layer
+
+| Project | Role | By |
+| --- | --- | --- |
+| [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) | AI tool integration protocol (Layer 5 Integration standard) | Anthropic |
+| [Agent-to-Agent Protocol (A2A)](https://github.com/google-a2a/A2A) | Inter-agent communication and delegation protocol | Google |
+| [AG-UI Protocol](https://github.com/ag-ui-protocol/ag-ui) | Agent → UI real-time streaming protocol | Open Standard |
+
+### 🛠️ Tool & Infrastructure Layer
+
+| Project | Role | License |
+| --- | --- | --- |
+| [Qdrant](https://github.com/qdrant/qdrant) | High-performance vector database (RAG Pipeline) | Apache 2.0 |
+| [Redis](https://github.com/redis/redis) | Distributed cache and message queue | BSD-3-Clause |
+| [PostgreSQL](https://www.postgresql.org/) | Relational database | PostgreSQL License |
+| [Supabase](https://github.com/supabase/supabase) | Managed PostgreSQL + BaaS | Apache 2.0 |
+| [Ruff](https://github.com/astral-sh/ruff) | Ultra-fast Python linter and formatter | MIT |
+| [mypy](https://github.com/python/mypy) | Python static type checker | MIT |
+| [pytest](https://github.com/pytest-dev/pytest) | Python testing framework | MIT |
+| [ESLint](https://github.com/eslint/eslint) / [Prettier](https://github.com/prettier/prettier) | Frontend code quality and formatting tools | MIT |
+| [Docker](https://www.docker.com/) | Container and deployment infrastructure | Apache 2.0 |
+
+### 🧩 Built-in Skills
+
+The following skills shipped with BizCore Studios are built on top of open source tools and services.
+
+#### web-content-fetcher (Web Content Extraction)
+
+| Project | Role | License |
+| --- | --- | --- |
+| [Jina Reader](https://github.com/jina-ai/reader) | Cloud service for extracting clean Markdown content from URLs (primary) | Apache 2.0 |
+| [Scrapling](https://github.com/D4Vinci/Scrapling) | Anti-bot-aware Python web scraping library (secondary fallback) | MIT |
+| [html2text](https://github.com/Alir3z4/html2text) | HTML to Markdown conversion library | GPL-3.0 |
+
+#### design-skills (Design Image Generation)
+
+| Project | Role | License |
+| --- | --- | --- |
+| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) | Local GPU image generation backend (primary) | GPL-3.0 |
+| [Stable Diffusion XL (SDXL)](https://github.com/Stability-AI/generative-models) | High-quality text-to-image model for local inference | CreativeML Open RAIL++-M |
+| [OpenAI gpt-image-1](https://platform.openai.com/docs/guides/images) | Cloud fallback when ComfyUI is unavailable | — (Commercial API) |
+
+#### minimalist-entrepreneur-skills (Startup Framework Skill Pack)
+
+A skill pack based on Sahil Lavingia's (Gumroad founder) book *The Minimalist Entrepreneur*, providing 10 structured skills for startup decision-making, used in `apps/messaging_hub`.
+
+| Project | Role | License |
+| --- | --- | --- |
+| [slavingia/skills](https://github.com/slavingia/skills) | Original repository for the minimalist entrepreneur skill pack (10 skills) | MIT |
+| [*The Minimalist Entrepreneur*](https://www.minimalistentrepreneur.com/) — Sahil Lavingia | The book that serves as the philosophical foundation of the skills | — |
+
+### 💡 Design Philosophy & Architecture Inspiration
+
+| Concept / Reference | Summary |
+| --- | --- |
+| [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) | Inspired BizCore's execution/training decoupling model and distributed trace design |
+| **Clean Architecture** — Robert C. Martin | Layer separation and dependency-direction principles behind the 7-layer architecture |
+| **ReAct Pattern** — Yao et al., 2022 | Agent loop design combining Reasoning + Acting, foundational to the Kernel runtime |
+| **RAG (Retrieval-Augmented Generation)** — Lewis et al., 2020 | Knowledge integration via retrieval augmentation; theoretical basis for RAGEngine / RetrievalGate |
+| **HITL (Human-in-the-Loop)** | Design philosophy for embedding human oversight into AI governance (Harness / ApprovalManager) |
+| **Gateway Pattern** — Enterprise Integration Patterns | Centralized LLM access with fallback and observability; basis for the LLM Gateway design |
+| **Contract-First Design** | Define interfaces before implementations to decouple layers; the philosophy behind `contracts/` |
+| **12-Factor App** — Heroku | Cloud-native application design principles applied to config externalization, statelessness, and logging |
+| **Micro-kernel Agent (100-line Prototype)** — In-house | The original proof-of-concept that introduced the `@agent` decorator pattern for defining agents with a minimal plain class. Started as ~100 lines and has since evolved into `kernel/agent_decorator.py` (Skills integration, Pydantic schema support, AgentRegistry & A2AHub registration) |

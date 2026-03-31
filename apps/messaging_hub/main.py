@@ -290,6 +290,7 @@ def _risk_level_from_reason(reason: str) -> RiskLevel:
 
 _store = SQLiteMessagingHubStore.from_default_path()
 _skill_gateway = _build_skill_gateway()
+
 _approval_manager = ApprovalManager(websocket_hub=hub)
 _execution_tracker = ExecutionTracker(websocket_hub=hub)
 _skills_manager = SkillsManager(gateway=_skill_gateway, websocket_hub=hub)
@@ -300,6 +301,12 @@ _lazy_tool_loader = LazyToolLoader(
 )
 _file_organizer_agent = FileOrganizerAgent(gateway=_skill_gateway)
 
+# ビジネスアドバイザーエージェント
+from apps.messaging_hub.agents.business_advisor_agent import BusinessAdvisorAgent
+
+
+_business_advisor_agent = BusinessAdvisorAgent(gateway=_skill_gateway)
+
 # A2AHub に Agent を登録
 from kernel.protocols.a2a_hub import get_hub as _get_a2a_hub
 
@@ -307,6 +314,8 @@ from kernel.protocols.a2a_hub import get_hub as _get_a2a_hub
 _a2a_hub = _get_a2a_hub()
 if _a2a_hub.discover(_file_organizer_agent.name) is None:
     _a2a_hub.register(_file_organizer_agent)
+if _a2a_hub.discover(_business_advisor_agent.name) is None:
+    _a2a_hub.register(_business_advisor_agent)
 
 _active_step_events: dict[str, str] = {}
 _run_started_at: dict[str, float] = {}
@@ -1025,13 +1034,33 @@ async def lifespan(app: FastAPI) -> Any:
     restored_events = [ExecutionEvent.from_dict(row) for row in execution_rows]
     _execution_tracker.restore_events(restored_events)
 
-    # 2. プラットフォームアダプターを登録
+    # 2. スキルパック GitHub 同期 → ロード → ワークフロー登録
+    from apps.messaging_hub.skills.entrepreneurship.loader import (
+        discover_and_load_all_packs,
+    )
+    from apps.messaging_hub.skills.entrepreneurship.sync import sync_all_packs
+    from apps.messaging_hub.skills.entrepreneurship.workflows import (
+        get_default_workflows,
+    )
+
+    sync_results = await sync_all_packs()
+    for pack_name, updated in sync_results.items():
+        if updated:
+            logger.info("スキルパック '%s' を GitHub から更新しました", pack_name)
+
+    discover_and_load_all_packs(_skill_gateway)
+
+    for wf_def in get_default_workflows():
+        await _skills_manager.create_workflow(wf_def)
+    logger.info("ビジネスワークフロー %d 件登録完了", len(get_default_workflows()))
+
+    # 3. プラットフォームアダプターを登録
     await setup_platforms()
 
-    # 3. ツールインデックスの構築（遅延ロード）
+    # 4. ツールインデックスの構築（遅延ロード）
     await _lazy_tool_loader.build_index()
 
-    # 4. バックグラウンドタスクを開始（Discord bot）
+    # 5. バックグラウンドタスクを開始（Discord bot）
     await start_background_tasks()
 
     logger.info("Messaging Hub started successfully")
@@ -1362,6 +1391,14 @@ async def health() -> dict[str, Any]:
 @app.get("/api/a2a/card")
 async def get_a2a_card() -> dict[str, Any]:
     """A2A AgentCard 相当の情報を返す."""
+    from kernel.protocols.a2a_hub import get_hub
+
+    a2a_hub = get_hub()
+    for agent_name in (assistant.name, _file_organizer_agent.name, _business_advisor_agent.name):
+        card = a2a_hub.discover(agent_name)
+        if card is not None and hasattr(card, "to_a2a_format"):
+            return card.to_a2a_format()
+
     return {
         "name": "messaging-hub-coordinator",
         "description": "マルチチャネル入力を専門Agentへ振り分ける coordinator",

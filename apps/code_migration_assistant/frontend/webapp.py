@@ -11,12 +11,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("migration_server")
+
+_APP_ROOT = Path(__file__).resolve().parents[1]
+load_code_migration_env(_APP_ROOT)
 
 
 def _resolve_cors_origins() -> list[str]:
@@ -31,7 +35,7 @@ def _resolve_cors_origins() -> list[str]:
 
 _cors_origins = _resolve_cors_origins()
 _cors_allow_credentials = not (len(_cors_origins) == 1 and _cors_origins[0] == "*")
-_APP_CONFIG_PATH = Path(__file__).resolve().parents[1] / "app_config.json"
+_APP_CONFIG_PATH = _APP_ROOT / "app_config.json"
 _PUBLIC_HTTP_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
 _auth_guard = ContractAuthGuard(
     ContractAuthGuardConfig(

@@ -1,93 +1,56 @@
-"""Agentレジストリ.
+"""Unified agent registry.
 
-能力ベースのAgent発見とファクトリベースのインスタンス化を提供するモジュール。
-
-設計原則:
-- 高度な抽象化: Agent実装に依存しないインターフェース
-- 高凝集: Agent管理機能のみに責任を持つ
-- 低結合: 具体的なAgent実装を知らない
-- 拡張性: 新しい検索・フィルタ機能の追加が容易
-
-使用例:
-    >>> # Agentを登録
-    >>> registry = AgentRegistry()
-    >>> registry.register(
-    ...     agent_id="pdf_analyzer",
-    ...     capability=capability,
-    ...     factory=lambda: PDFAnalyzerAgent(),
-    ... )
-    >>>
-    >>> # 能力でAgent検索
-    >>> matches = registry.find_matching(requirement)
-    >>>
-    >>> # Agentインスタンスを作成
-    >>> factory = registry.get_factory("pdf_analyzer")
-    >>> agent = factory()
+能力ベースの検索 API を後方互換で維持しつつ、runtime/bus 用の canonical
+descriptor / instance / feedback 情報を一元管理する。
 """
 
 from __future__ import annotations
 
 import threading
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+from kernel.agents.contracts import (
+    AgentDescriptor,
+    AgentFeedback,
+    AgentFeedbackSummary,
+)
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from kernel.core.capability_spec import AgentCapabilitySpec, CapabilityRequirement
+    from kernel.protocols.a2a_card import AgentCard
 
 
+@dataclass(slots=True)
 class AgentEntry:
-    """Agentレジストリエントリ.
+    """Agent レジストリエントリ."""
 
-    登録されたAgent情報を保持。
-
-    Attributes:
-        agent_id: Agent ID
-        capability: Agent能力仕様
-        factory: Agentインスタンス生成ファクトリ
-    """
-
-    def __init__(
-        self,
-        agent_id: str,
-        capability: AgentCapabilitySpec,
-        factory: Callable[[], Any],
-    ) -> None:
-        """初期化.
-
-        Args:
-            agent_id: Agent ID
-            capability: Agent能力仕様
-            factory: Agentインスタンス生成ファクトリ
-        """
-        self.agent_id = agent_id
-        self.capability = capability
-        self.factory = factory
+    agent_id: str
+    capability: AgentCapabilitySpec | None = None
+    factory: Callable[[], Any] | None = None
+    descriptor: AgentDescriptor | None = None
+    instance: Any | None = None
+    a2a_card: AgentCard | None = None
+    feedback: AgentFeedbackSummary = field(default_factory=AgentFeedbackSummary)
 
 
 class AgentRegistry:
-    """Agentレジストリ.
+    """統一 agent レジストリ.
 
-    能力ベースの発見とファクトリベースのインスタンス化を提供する中央レジストリ。
-
-    主な機能:
-    - Agent登録（能力とファクトリ付き）
-    - タグベースの発見
-    - 要件マッチング
-    - ファクトリベースのインスタンス化
-
-    スレッドセーフな実装。
-
-    Attributes:
-        _agents: agent_id → AgentEntry のマッピング
-        _lock: スレッドセーフティのためのロック
+    役割:
+    - 旧 capability/factory 登録の維持
+    - runtime descriptor / instance の正本管理
+    - feedback 集計
+    - protocol adapter 向けの metadata 供給
     """
 
     def __init__(self) -> None:
         """空のレジストリを初期化."""
         self._agents: dict[str, AgentEntry] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def register(
         self,
@@ -95,25 +58,46 @@ class AgentRegistry:
         capability: AgentCapabilitySpec,
         factory: Callable[[], Any],
     ) -> None:
-        """Agentを能力とファクトリと共に登録.
-
-        Args:
-            agent_id: Agentのユニーク識別子
-            capability: Agent能力宣言
-            factory: Agentインスタンスを作成するCallable
-        """
+        """旧 capability/factory ベース登録."""
         with self._lock:
-            self._agents[agent_id] = AgentEntry(agent_id, capability, factory)
+            entry = self._agents.get(agent_id)
+            if entry is None:
+                entry = AgentEntry(agent_id=agent_id)
+                self._agents[agent_id] = entry
+            entry.capability = capability
+            entry.factory = factory
+
+    def register_runtime(
+        self,
+        *,
+        agent_id: str,
+        descriptor: AgentDescriptor,
+        instance: Any,
+        replace: bool = False,
+        factory: Callable[[], Any] | None = None,
+        capability: AgentCapabilitySpec | None = None,
+        a2a_card: AgentCard | None = None,
+    ) -> AgentEntry:
+        """runtime descriptor / instance を登録する."""
+        with self._lock:
+            existing = self._agents.get(agent_id)
+            if existing is not None and existing.instance is not None and not replace:
+                return existing
+
+            entry = existing or AgentEntry(agent_id=agent_id)
+            entry.descriptor = descriptor
+            entry.instance = instance
+            if factory is not None:
+                entry.factory = factory
+            if capability is not None:
+                entry.capability = capability
+            if a2a_card is not None:
+                entry.a2a_card = a2a_card
+            self._agents[agent_id] = entry
+            return entry
 
     def unregister(self, agent_id: str) -> bool:
-        """Agentをレジストリから削除.
-
-        Args:
-            agent_id: 削除するAgent ID
-
-        Returns:
-            削除された場合True、見つからない場合False
-        """
+        """Agent をレジストリから削除."""
         with self._lock:
             if agent_id in self._agents:
                 del self._agents[agent_id]
@@ -121,41 +105,78 @@ class AgentRegistry:
             return False
 
     def get_factory(self, agent_id: str) -> Callable[[], Any] | None:
-        """Agentのファクトリ関数を取得.
-
-        Args:
-            agent_id: Agent ID
-
-        Returns:
-            ファクトリCallable または見つからない場合None
-        """
+        """Agent のファクトリ関数を取得."""
         entry = self._agents.get(agent_id)
         return entry.factory if entry else None
 
     def get_capability(self, agent_id: str) -> AgentCapabilitySpec | None:
-        """Agentの能力宣言を取得.
-
-        Args:
-            agent_id: Agent ID
-
-        Returns:
-            AgentCapabilitySpec または見つからない場合None
-        """
+        """Agent の能力宣言を取得."""
         entry = self._agents.get(agent_id)
         return entry.capability if entry else None
 
+    def get_descriptor(self, agent_id: str) -> AgentDescriptor | None:
+        """Agent descriptor を取得."""
+        entry = self._agents.get(agent_id)
+        return entry.descriptor if entry else None
+
+    def get_instance(self, agent_id: str) -> Any | None:
+        """Agent instance を取得."""
+        entry = self._agents.get(agent_id)
+        return entry.instance if entry else None
+
+    def get_feedback_summary(self, agent_id: str) -> AgentFeedbackSummary | None:
+        """feedback 集計を取得."""
+        entry = self._agents.get(agent_id)
+        return entry.feedback if entry else None
+
+    def record_feedback(self, agent_id: str, feedback: AgentFeedback) -> None:
+        """agent feedback を集計."""
+        with self._lock:
+            entry = self._agents.get(agent_id)
+            if entry is None:
+                entry = AgentEntry(agent_id=agent_id)
+                self._agents[agent_id] = entry
+            entry.feedback.record(feedback)
+
+    def set_a2a_card(self, agent_id: str, card: AgentCard) -> None:
+        """A2A card override を設定."""
+        with self._lock:
+            entry = self._agents.get(agent_id)
+            if entry is None:
+                entry = AgentEntry(agent_id=agent_id)
+                self._agents[agent_id] = entry
+            entry.a2a_card = card
+
+    def get_a2a_card(self, agent_id: str) -> AgentCard | None:
+        """descriptor から A2A card を取得."""
+        entry = self._agents.get(agent_id)
+        if entry is None:
+            return None
+        if entry.a2a_card is not None:
+            return entry.a2a_card
+        if entry.descriptor is None:
+            return None
+        from kernel.adapters.protocol_adapter import ProtocolAdapter
+
+        return ProtocolAdapter.generate_a2a_card_from_descriptor(entry.descriptor)
+
+    def list_a2a_cards(self) -> list[AgentCard]:
+        """登録済み runtime の A2A card を列挙."""
+        cards: list[AgentCard] = []
+        for agent_id in self.list_runtime_agent_ids():
+            card = self.get_a2a_card(agent_id)
+            if card is not None:
+                cards.append(card)
+        return cards
+
     def find_by_tags(self, tags: list[str]) -> list[str]:
-        """指定されたタグをすべて持つAgentを検索.
-
-        Args:
-            tags: マッチするタグ
-
-        Returns:
-            マッチするAgent IDのリスト
-        """
+        """指定タグをすべて持つ Agent を検索."""
         results = []
         for agent_id, entry in self._agents.items():
-            if all(tag in entry.capability.tags for tag in tags):
+            capability = entry.capability
+            if capability is None:
+                continue
+            if all(tag in capability.tags for tag in tags):
                 results.append(agent_id)
         return results
 
@@ -164,18 +185,13 @@ class AgentRegistry:
         requirement: CapabilityRequirement,
         limit: int = 5,
     ) -> list[tuple[str, float]]:
-        """タスク要件にマッチするAgentを検索.
-
-        Args:
-            requirement: タスク要件
-            limit: 返す最大結果数
-
-        Returns:
-            (agent_id, score) タプルのリスト（スコア降順）
-        """
+        """タスク要件にマッチする Agent を検索."""
         scored = []
         for agent_id, entry in self._agents.items():
-            score = entry.capability.matches(requirement)
+            capability = entry.capability
+            if capability is None:
+                continue
+            score = capability.matches(requirement)
             if score > 0:
                 scored.append((agent_id, score))
 
@@ -183,20 +199,24 @@ class AgentRegistry:
         return scored[:limit]
 
     def list_all(self) -> list[AgentEntry]:
-        """登録された全Agentエントリをリスト.
-
-        Returns:
-            AgentEntryのリスト
-        """
+        """登録された全 Agent エントリを取得."""
         return list(self._agents.values())
 
-    def get_all_capabilities(self) -> dict[str, AgentCapabilitySpec]:
-        """全Agentの能力を取得.
+    def list_descriptors(self) -> list[AgentDescriptor]:
+        """runtime descriptor 一覧を取得."""
+        return [entry.descriptor for entry in self._agents.values() if entry.descriptor is not None]
 
-        Returns:
-            agent_id → AgentCapabilitySpec のマッピング
-        """
-        return {aid: entry.capability for aid, entry in self._agents.items()}
+    def list_runtime_agent_ids(self) -> list[str]:
+        """runtime instance を持つ agent id 一覧."""
+        return sorted(agent_id for agent_id, entry in self._agents.items() if entry.instance is not None)
+
+    def get_all_capabilities(self) -> dict[str, AgentCapabilitySpec]:
+        """全 Agent の能力を取得."""
+        result: dict[str, AgentCapabilitySpec] = {}
+        for agent_id, entry in self._agents.items():
+            if entry.capability is not None:
+                result[agent_id] = entry.capability
+        return result
 
     def clear(self) -> None:
         """レジストリを完全にクリア."""
@@ -204,31 +224,20 @@ class AgentRegistry:
             self._agents.clear()
 
     def __contains__(self, agent_id: str) -> bool:
-        """Agentが登録されているかチェック."""
+        """Agent が登録されているかチェック."""
         return agent_id in self._agents
 
     def __len__(self) -> int:
-        """登録Agent数を返す."""
+        """登録 Agent 数を返す."""
         return len(self._agents)
 
-
-# =============================================================================
-# グローバルレジストリ（シングルトン）
-# =============================================================================
 
 _global_agent_registry: AgentRegistry | None = None
 _registry_lock = threading.Lock()
 
 
 def get_global_agent_registry() -> AgentRegistry:
-    """グローバルAgentレジストリを取得または作成.
-
-    シングルトンパターンでグローバルレジストリを管理。
-    アプリケーション全体で同じレジストリを共有。
-
-    Returns:
-        グローバルAgentRegistryインスタンス
-    """
+    """グローバル AgentRegistry を取得または作成."""
     global _global_agent_registry
     if _global_agent_registry is None:
         with _registry_lock:
@@ -238,17 +247,20 @@ def get_global_agent_registry() -> AgentRegistry:
 
 
 def reset_global_agent_registry() -> None:
-    """グローバルAgentレジストリをリセット.
-
-    主にテスト用。新しい空のレジストリを作成。
-    """
+    """グローバル AgentRegistry をリセット."""
     global _global_agent_registry
     with _registry_lock:
-        _global_agent_registry = AgentRegistry()
+        if _global_agent_registry is None:
+            _global_agent_registry = AgentRegistry()
+        else:
+            _global_agent_registry.clear()
 
 
 __all__ = [
+    "AgentDescriptor",
     "AgentEntry",
+    "AgentFeedback",
+    "AgentFeedbackSummary",
     "AgentRegistry",
     "get_global_agent_registry",
     "reset_global_agent_registry",

@@ -230,10 +230,8 @@ class PipelineEngine(BaseEngine):
         # デフォルトは何もしない
 
     async def _initialize_agents(self) -> None:
-        """すべてのAgentインスタンスを初期化し、A2AHub に登録."""
-        from kernel.protocols.a2a_hub import get_hub
-
-        hub = get_hub()
+        """すべてのAgentインスタンスを初期化し、内部 bus に登録."""
+        bus = self._agent_bus
         for stage in self._stage_configs:
             instances = []
 
@@ -242,8 +240,8 @@ class PipelineEngine(BaseEngine):
                 if hasattr(inst, "initialize"):
                     await inst.initialize()
                 agent_name = getattr(inst, "name", None) or type(inst).__name__
-                if hub.discover(agent_name) is None:
-                    hub.register(inst)
+                if bus.discover(agent_name) is None:
+                    bus.register(inst)
                 instances.append(inst)
 
             if stage.agents:
@@ -252,8 +250,8 @@ class PipelineEngine(BaseEngine):
                     if hasattr(inst, "initialize"):
                         await inst.initialize()
                     agent_name = getattr(inst, "name", None) or type(inst).__name__
-                    if hub.discover(agent_name) is None:
-                        hub.register(inst)
+                    if bus.discover(agent_name) is None:
+                        bus.register(inst)
                     instances.append(inst)
 
             self._stage_instances[stage.name] = instances

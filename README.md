@@ -99,7 +99,8 @@ LLM 呼び出しは **Infrastructure / Gateway 経由のみ** とする。
 ### 実行エンジン（BizCore Kernel）
 
 - **Engine パターン**: `SimpleEngine`（単一 Agent）/ `PipelineEngine`（多段・Review）/ `GateEngine`（入口審査）/ `RAGEngine`（検索拡張）/ `PEVEngine`（Plan-Execute-Verify）
-- **Agent 定義**: `@agent` デコレータ / `AgentBlock` 継承 / `AgentClient.get("名前").invoke(...)`
+- **Agent 定義**: `ResilientAgent` 継承 / `app_config.json + AgentFactory` / `@agent` デコレータ
+- **内部編排**: `LocalAgentBus` を canonical とし、`LocalA2AHub` は互換レイヤーとして維持
 - **フロー構築**: `create_flow(...).gate(...).then(...).parallel(...).review(...).build()`
 - **統一プロトコル**: MCP / A2A / AG-UI / A2UI を単一 API 面で利用
 
@@ -362,4 +363,86 @@ docker compose down
 
 ---
 
-> 実行/訓練の分離やトレース設計の一部は [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) の思想を参考にしています。
+## 謝辞 — 活用しているオープンソース技術
+
+BizCore AI の開発は、以下のオープンソースプロジェクト・設計思想の恩恵なしには成立しませんでした。
+各コミュニティとコントリビューターの皆様に心より感謝申し上げます。
+
+### 🏗️ フレームワーク層
+
+| プロジェクト | 役割 | ライセンス |
+| --- | --- | --- |
+| [FastAPI](https://github.com/fastapi/fastapi) | 高性能非同期 Web API フレームワーク（Kernel / Control Plane 基盤） | MIT |
+| [Pydantic v2](https://github.com/pydantic/pydantic) | 型安全なデータ検証・スキーマ定義（Contracts 全域） | MIT |
+| [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) | ORM・DB 抽象化（Control Plane / Auth Service） | MIT |
+| [Alembic](https://github.com/sqlalchemy/alembic) | データベースマイグレーション管理 | MIT |
+| [Uvicorn](https://github.com/encode/uvicorn) | ASGI サーバー（FastAPI 実行ランタイム） | BSD-3-Clause |
+| [React](https://github.com/facebook/react) | フロントエンド UI フレームワーク | MIT |
+| [Vite](https://github.com/vitejs/vite) | 高速フロントエンドビルドツール | MIT |
+| [TypeScript](https://github.com/microsoft/TypeScript) | 型安全なフロントエンド開発言語 | Apache 2.0 |
+
+### 🤖 AI プロトコル層
+
+| プロジェクト | 役割 | 提供元 |
+| --- | --- | --- |
+| [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) | AI ツール統合プロトコル（Layer 5 Integration の標準） | Anthropic |
+| [Agent-to-Agent Protocol (A2A)](https://github.com/google-a2a/A2A) | Agent 間通信・委譲プロトコル | Google |
+| [AG-UI Protocol](https://github.com/ag-ui-protocol/ag-ui) | Agent → UI リアルタイムストリーミングプロトコル | Open Standard |
+
+### 🛠️ ツール・インフラ層
+
+| プロジェクト | 役割 | ライセンス |
+| --- | --- | --- |
+| [Qdrant](https://github.com/qdrant/qdrant) | 高性能ベクターデータベース（RAG Pipeline） | Apache 2.0 |
+| [Redis](https://github.com/redis/redis) | 分散キャッシュ・メッセージキュー | BSD-3-Clause |
+| [PostgreSQL](https://www.postgresql.org/) | リレーショナルデータベース | PostgreSQL License |
+| [Supabase](https://github.com/supabase/supabase) | マネージド PostgreSQL + BaaS | Apache 2.0 |
+| [Ruff](https://github.com/astral-sh/ruff) | 超高速 Python リンター・フォーマッター | MIT |
+| [mypy](https://github.com/python/mypy) | Python 静的型チェッカー | MIT |
+| [pytest](https://github.com/pytest-dev/pytest) | Python テストフレームワーク | MIT |
+| [ESLint](https://github.com/eslint/eslint) / [Prettier](https://github.com/prettier/prettier) | フロントエンドコード品質・整形ツール | MIT |
+| [Docker](https://www.docker.com/) | コンテナ化・デプロイ基盤 | Apache 2.0 |
+
+### 🧩 組み込みスキル
+
+BizCore Studios に同梱している以下のスキルは、オープンソースツール・サービスをベースに実装しています。
+
+#### web-content-fetcher（Web 正文抽出）
+
+| プロジェクト | 役割 | ライセンス |
+| --- | --- | --- |
+| [Jina Reader](https://github.com/jina-ai/reader) | URL から Markdown 正文を抽出するクラウドサービス（第一選択） | Apache 2.0 |
+| [Scrapling](https://github.com/D4Vinci/Scrapling) | 反クロール対策済みの Python Web スクレイピングライブラリ（第二選択） | MIT |
+| [html2text](https://github.com/Alir3z4/html2text) | HTML → Markdown 変換ライブラリ | GPL-3.0 |
+
+#### design-skills（デザイン画像生成）
+
+| プロジェクト | 役割 | ライセンス |
+| --- | --- | --- |
+| [ComfyUI](https://github.com/comfyanonymous/ComfyUI) | ローカル GPU 画像生成バックエンド（第一選択） | GPL-3.0 |
+| [Stable Diffusion XL (SDXL)](https://github.com/Stability-AI/generative-models) | ローカル推論で使用する高品質テキスト → 画像モデル | CreativeML Open RAIL++-M |
+| [OpenAI gpt-image-1](https://platform.openai.com/docs/guides/images) | ComfyUI 未起動時のクラウドフォールバック | — (商用 API) |
+
+#### minimalist-entrepreneur-skills（起業フレームワークスキル集）
+
+Sahil Lavingia（Gumroad 創業者）著『The Minimalist Entrepreneur』に基づく起業支援スキルパック。
+validate-idea / mvp / pricing / marketing-plan など 10 スキルを収録し、`apps/messaging_hub` で使用しています。
+
+| プロジェクト | 役割 | ライセンス |
+| --- | --- | --- |
+| [slavingia/skills](https://github.com/slavingia/skills) | ミニマリスト起業フレームワーク（10 スキル）のオリジナルリポジトリ | MIT |
+| [『The Minimalist Entrepreneur』](https://www.minimalistentrepreneur.com/) — Sahil Lavingia | スキルの思想的基盤となった書籍 | — |
+
+### 💡 設計思想・アーキテクチャ参考
+
+| 思想・参考元 | 概要 |
+| --- | --- |
+| [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) | 実行/訓練分離・トレース設計の参考元。AgentFlow のランタイム分離モデルに影響を与えた |
+| **Clean Architecture** — Robert C. Martin | レイヤー分離・依存方向の原則。7 コア層の設計指針 |
+| **ReAct Pattern** — Yao et al., 2022 | Reasoning + Acting を組み合わせた Agent ループ設計 |
+| **RAG (Retrieval-Augmented Generation)** — Lewis et al., 2020 | 検索拡張生成によるナレッジ統合。RAGEngine / RetrievalGate の理論的基盤 |
+| **HITL (Human-in-the-Loop)** | 人間監督を AI ガバナンスに内包する設計思想。Harness / ApprovalManager の根拠 |
+| **Gateway Pattern** — Enterprise Integration Patterns | LLM アクセスの中央集約・フォールバック・オブザーバビリティ設計の根拠 |
+| **Contract-First Design** | 契約（インターフェース）を先に定義し、実装を分離する設計原則。`contracts/` 層の哲学 |
+| **12-Factor App** — Heroku | クラウドネイティブアプリの設計指針。設定外部化・ステートレス・ログ標準化に適用 |
+| **Micro-kernel Agent（100行プロトタイプ）** — 内製 | `@agent` デコレータによる最小限 Agent 定義パターンの原型。当初 100 行程度の実験実装として誕生し、現在の `kernel/agent_decorator.py`（Skills 統合・Pydantic スキーマ・AgentRegistry 連携）に進化 |

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from kernel.agents.agent_factory import AgentFactory
+from kernel.agents.local_agent_bus import LocalAgentBus, get_agent_bus
 from kernel.protocols.a2a_hub import LocalA2AHub, get_hub
 from kernel.protocols.a2a_server import A2AServer
 from kernel.protocols.agui_events import (
@@ -33,6 +34,7 @@ class AppAgentRuntime:
     """実行可能 agent runtime."""
 
     config_path: Path
+    bus: LocalAgentBus
     hub: LocalA2AHub
     server: A2AServer
     agents: dict[str, Any]
@@ -48,19 +50,14 @@ class AppAgentRuntime:
 
     def get_card(self, agent_id: str) -> AgentCard | None:
         """agent card を返す."""
-        return self.cards.get(agent_id)
+        return self.cards.get(agent_id) or self.bus.get_a2a_card(agent_id)
 
     async def invoke(self, agent_id: str, input_data: dict[str, Any]) -> dict[str, Any]:
         """agent を同期的に実行する."""
-        agent = self.get_agent(agent_id)
-        if agent is None:
+        if self.get_agent(agent_id) is None:
             msg = f"Agent not found: {agent_id}"
             raise KeyError(msg)
-        result = await agent.run(input_data)
-        if not isinstance(result, dict):
-            msg = f"Agent must return dict payload: {agent_id}"
-            raise TypeError(msg)
-        return result
+        return await self.bus.call(agent_id, input_data)
 
     async def stream(self, agent_id: str, input_data: dict[str, Any]) -> AsyncIterator[AGUIEvent]:
         """agent 実行を AG-UI イベント列として返す."""
@@ -118,26 +115,36 @@ class AppAgentRuntime:
 def bootstrap_app_agents(
     config_path: Path,
     *,
+    bus: LocalAgentBus | None = None,
     hub: LocalA2AHub | None = None,
     agent_init_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> AppAgentRuntime:
     """manifest から agent runtime を構築する."""
+    target_bus = bus or (hub.bus if hub is not None else get_agent_bus())
     target_hub = hub or get_hub()
     server = A2AServer()
     agents = AgentFactory.from_app_config(
         config_path,
         hub=target_hub,
+        bus=target_bus,
         agent_init_overrides=agent_init_overrides,
     )
     cards: dict[str, AgentCard] = {}
 
     for agent_id, agent in agents.items():
-        card = target_hub.register(agent, replace=True)
-        server.register_agent(card, {"process": agent.run})
+        if target_bus.discover(agent_id) is None:
+            target_bus.register(agent)
+        card = target_bus.get_a2a_card(agent_id)
+        if card is None:
+            msg = f"Failed to build agent card: {agent_id}"
+            raise ValueError(msg)
+        handlers = {skill.name: agent.run for skill in card.skills} or {"process": agent.run}
+        server.register_agent(card, handlers)
         cards[agent_id] = card
 
     return AppAgentRuntime(
         config_path=config_path,
+        bus=target_bus,
         hub=target_hub,
         server=server,
         agents=agents,

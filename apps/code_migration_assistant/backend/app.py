@@ -20,6 +20,7 @@ from apps.code_migration_assistant.backend.knowledge_router import router as kno
 from apps.code_migration_assistant.backend.migration_router import router as migration_ui_router
 from apps.code_migration_assistant.backend.task_store import RedisTaskStore
 from apps.code_migration_assistant.engine import CodeMigrationEngine
+from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from shared.config.manifest import load_app_manifest
 
@@ -28,6 +29,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("migration_server")
 
 CONTRACT_VERSION = "2026-03-01"
+_APP_ROOT = Path(__file__).resolve().parents[1]
+load_code_migration_env(_APP_ROOT)
 
 
 class MigrationOptions(BaseModel):

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from kernel.agents.contracts import AgentDescriptor, descriptor_from_agent_metadata
 from kernel.core.metadata import AgentMetadata, InputField, OutputField
 from kernel.protocols.a2a_card import AgentCard, AgentSkill
 
@@ -76,54 +77,8 @@ class ProtocolAdapter:
             >>> print(tools[0]["name"])
             'process_text'
         """
-        tools: list[dict[str, Any]] = []
-
-        # A2A スキルがある場合、それを MCP ツールとして公開
-        if metadata.protocols.a2a and metadata.protocols.a2a.skills:
-            for skill_name in metadata.protocols.a2a.skills:
-                # 入力スキーマを生成
-                input_schema: dict[str, Any] = {
-                    "type": "object",
-                    "properties": {},
-                    "required": [],
-                }
-
-                for input_field in metadata.interfaces.inputs:
-                    input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(input_field)
-                    if input_field.required:
-                        input_schema["required"].append(input_field.name)
-
-                # ツール定義を作成
-                tool = {
-                    "name": skill_name,
-                    "description": f"{metadata.meta.name} - {skill_name}",
-                    "inputSchema": input_schema,
-                }
-
-                tools.append(tool)
-
-        # メタデータにツールが定義されていない場合、デフォルトツールを作成
-        if not tools:
-            input_schema = {
-                "type": "object",
-                "properties": {},
-                "required": [],
-            }
-
-            for input_field in metadata.interfaces.inputs:
-                input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(input_field)
-                if input_field.required:
-                    input_schema["required"].append(input_field.name)
-
-            tool = {
-                "name": metadata.meta.id.replace("-", "_"),
-                "description": metadata.meta.description,
-                "inputSchema": input_schema,
-            }
-
-            tools.append(tool)
-
-        return tools
+        descriptor = ProtocolAdapter.build_descriptor_from_metadata(metadata)
+        return ProtocolAdapter.generate_mcp_tools_from_descriptor(descriptor)
 
     @staticmethod
     def generate_a2a_card(metadata: AgentMetadata) -> AgentCard:
@@ -142,62 +97,94 @@ class ProtocolAdapter:
             >>> print(card.name)
             'Text Processor'
         """
-        # 入力スキーマを生成
-        input_schema: dict[str, Any] = {
-            "type": "object",
-            "properties": {},
-            "required": [],
-        }
+        descriptor = ProtocolAdapter.build_descriptor_from_metadata(metadata)
+        return ProtocolAdapter.generate_a2a_card_from_descriptor(descriptor)
 
-        for input_field in metadata.interfaces.inputs:
-            input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(input_field)
-            if input_field.required:
-                input_schema["required"].append(input_field.name)
+    @staticmethod
+    def build_descriptor_from_metadata(metadata: AgentMetadata) -> AgentDescriptor:
+        """metadata を内部 canonical descriptor に変換."""
+        return descriptor_from_agent_metadata(metadata)
 
-        # 出力スキーマを生成
-        output_schema: dict[str, Any] = {
-            "type": "object",
-            "properties": {},
-        }
+    @staticmethod
+    def generate_mcp_tools_from_descriptor(descriptor: AgentDescriptor) -> list[dict[str, Any]]:
+        """descriptor から MCP tool 定義を生成."""
+        fallback_default = not descriptor.metadata.get("a2a_skills")
+        tool_names = ProtocolAdapter._resolve_skill_names(descriptor) or [descriptor.agent_id.replace("-", "_")]
+        return [
+            {
+                "name": tool_name.replace("-", "_"),
+                "description": ProtocolAdapter._describe_skill(
+                    descriptor,
+                    tool_name,
+                    fallback_default=fallback_default,
+                ),
+                "inputSchema": descriptor.input_schema,
+            }
+            for tool_name in tool_names
+        ]
 
-        for output_field in metadata.interfaces.outputs:
-            output_schema["properties"][output_field.name] = ProtocolAdapter._field_to_json_schema(output_field)
+    @staticmethod
+    def generate_a2a_card_from_descriptor(descriptor: AgentDescriptor) -> AgentCard:
+        """descriptor から A2A card を生成."""
+        fallback_default = not descriptor.metadata.get("a2a_skills")
+        skill_names = ProtocolAdapter._resolve_skill_names(descriptor)
+        if not skill_names:
+            skill_names = [descriptor.agent_id.replace("-", "_")]
 
-        # スキルリストを生成
-        skills: list[AgentSkill] = []
-
-        if metadata.protocols.a2a and metadata.protocols.a2a.skills:
-            for skill_name in metadata.protocols.a2a.skills:
-                skill = AgentSkill(
-                    name=skill_name,
-                    description=f"{metadata.meta.name} - {skill_name}",
-                    input_schema=input_schema,
-                    output_schema=output_schema,
-                )
-                skills.append(skill)
-        else:
-            # デフォルトスキルを作成
-            skill = AgentSkill(
-                name=metadata.meta.id.replace("-", "_"),
-                description=metadata.meta.description,
-                input_schema=input_schema,
-                output_schema=output_schema,
+        skills = [
+            AgentSkill(
+                name=skill_name.replace("-", "_"),
+                description=ProtocolAdapter._describe_skill(
+                    descriptor,
+                    skill_name,
+                    fallback_default=fallback_default,
+                ),
+                input_schema=descriptor.input_schema,
+                output_schema=descriptor.output_schema,
             )
-            skills.append(skill)
+            for skill_name in skill_names
+        ]
+        metadata = dict(descriptor.metadata)
+        metadata.setdefault("id", descriptor.agent_id)
 
-        # AgentCard を作成
         return AgentCard(
-            name=metadata.meta.name,
-            description=metadata.meta.description,
-            version=metadata.meta.version,
-            author=metadata.meta.author,
+            name=descriptor.name,
+            description=descriptor.description,
+            version=descriptor.version,
+            author=metadata.get("author"),
             skills=skills,
-            metadata={
-                "id": metadata.meta.id,
-                "icon": metadata.meta.icon,
-                "category": metadata.meta.category,
+            capabilities={
+                "streaming": descriptor.supports_streaming,
+                "push_notifications": False,
+                "state_transition_history": True,
             },
+            metadata=metadata,
         )
+
+    @staticmethod
+    def _resolve_skill_names(descriptor: AgentDescriptor) -> list[str]:
+        """descriptor から公開 skill/tool 名を解決."""
+        metadata_skills = descriptor.metadata.get("a2a_skills")
+        if isinstance(metadata_skills, list):
+            normalized = [str(item).strip() for item in metadata_skills if str(item).strip()]
+            if normalized:
+                return normalized
+
+        category = descriptor.metadata.get("category")
+        return [
+            item
+            for item in descriptor.capabilities
+            if item
+            and item != category
+            and item not in {"specialist", "planner", "executor", "reactor", "reporter"}
+        ]
+
+    @staticmethod
+    def _describe_skill(descriptor: AgentDescriptor, skill_name: str, *, fallback_default: bool) -> str:
+        """skill/tool の説明を生成."""
+        if fallback_default and skill_name.replace("-", "_") == descriptor.agent_id.replace("-", "_"):
+            return descriptor.description
+        return f"{descriptor.name} - {skill_name}"
 
     @staticmethod
     def wrap_flow_with_agui(

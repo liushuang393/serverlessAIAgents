@@ -3,9 +3,9 @@
 Agent インスタンス生成を一元化し、共通の実行コンテキスト
 （tool gateway / mcp / skills / tiered memory）を注入する。
 
-A2A Hub 連携:
+A2A Hub 互換 / LocalAgentBus 標準経路:
     from_module() / from_app_config() で ResilientAgent を検出・インスタンス化し、
-    LocalA2AHub に自動登録する。
+    内部では LocalAgentBus に登録し、LocalA2AHub は互換ラッパーとして扱う。
 
 使用例:
     >>> from kernel.agents.agent_factory import AgentFactory
@@ -23,8 +23,9 @@ from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from kernel.agents.agent_block import AgentBlock
+from kernel.agents.local_agent_bus import LocalAgentBus, get_agent_bus
 from kernel.agents.resilient_agent import ResilientAgent
-from kernel.protocols.a2a_hub import LocalA2AHub, get_hub
+from kernel.protocols.a2a_hub import LocalA2AHub
 
 
 if TYPE_CHECKING:
@@ -208,7 +209,7 @@ def _attach_shared_context(
 
 
 # ============================================================================
-# AgentFactory — A2AHub 連携（設定ファイル自動インスタンス化）
+# AgentFactory — LocalAgentBus 標準登録（Hub は互換入力）
 # ============================================================================
 
 
@@ -231,7 +232,7 @@ class AgentFactory:
 
     責務:
     - module パスから ResilientAgent サブクラスを検出
-    - インスタンス化して LocalA2AHub に自動登録
+    - インスタンス化して LocalAgentBus に自動登録
     - app_config.json の agents[] を一括処理
     """
 
@@ -243,6 +244,7 @@ class AgentFactory:
         llm_client: Any = None,
         init_kwargs: dict[str, Any] | None = None,
         hub: LocalA2AHub | None = None,
+        bus: LocalAgentBus | None = None,
     ) -> AgentInstance:
         """モジュールパスから Agent を検出・インスタンス化.
 
@@ -259,7 +261,8 @@ class AgentFactory:
             module_path: Python モジュールパス（例: "apps.my_app.agents.my_agent"）
             llm_client: LLM クライアント（None の場合は自動注入）
             init_kwargs: Agent コンストラクタへの追加キーワード引数
-            hub: 登録先 LocalA2AHub（None の場合はグローバル Hub）
+            hub: 互換用の登録先 LocalA2AHub
+            bus: 正規登録先 LocalAgentBus（None の場合は hub またはグローバル bus）
 
         Returns:
             インスタンス化された Agent
@@ -267,7 +270,7 @@ class AgentFactory:
         Raises:
             AgentInstantiationError: インスタンス化に失敗した場合
         """
-        target_hub = hub or get_hub()
+        target_bus = _resolve_registration_bus(bus=bus, hub=hub)
 
         try:
             module = importlib.import_module(module_path)
@@ -326,10 +329,10 @@ class AgentFactory:
                 msg = f"RegisteredAgent.get_instance() returned unsupported type: {type(instance).__name__}"
                 raise AgentInstantiationError(registered.name, module_path, TypeError(msg))
 
-            # Hub に登録（既に登録済みの場合はスキップ）
+            # bus に登録（既に登録済みの場合はスキップ）
             agent_name = registered.name
-            if target_hub.discover(agent_name) is None:
-                target_hub.register(instance)
+            if target_bus.discover(agent_name) is None:
+                target_bus.register(instance)
                 _logger.info("Agent auto-registered (decorator): %s from %s", agent_name, module_path)
 
             return instance
@@ -359,10 +362,10 @@ class AgentFactory:
             last_err = TypeError(f"All instantiation strategies failed for {cls_name}")
             raise AgentInstantiationError(cls_name, module_path, last_err)
 
-        # Hub に登録（既に登録済みの場合はスキップ）
+        # bus に登録（既に登録済みの場合はスキップ）
         agent_name = getattr(instance, "name", cls_name)
-        if target_hub.discover(agent_name) is None:
-            target_hub.register(instance)
+        if target_bus.discover(agent_name) is None:
+            target_bus.register(instance)
             _logger.info("Agent auto-registered: %s from %s", agent_name, module_path)
 
         if not isinstance(instance, (ResilientAgent, AgentBlock)):
@@ -376,6 +379,7 @@ class AgentFactory:
         *,
         llm_client: Any = None,
         hub: LocalA2AHub | None = None,
+        bus: LocalAgentBus | None = None,
         agent_init_overrides: dict[str, dict[str, Any]] | None = None,
     ) -> dict[str, AgentInstance]:
         """app_config.json の agents[] から全 Agent をインスタンス化.
@@ -383,7 +387,8 @@ class AgentFactory:
         Args:
             config_path: app_config.json のパス
             llm_client: LLM クライアント
-            hub: 登録先 LocalA2AHub
+            hub: 互換用の登録先 LocalA2AHub
+            bus: 正規登録先 LocalAgentBus
 
         Returns:
             Agent 名 → ResilientAgent インスタンスのマッピング
@@ -431,6 +436,7 @@ class AgentFactory:
                     llm_client=llm_client,
                     init_kwargs=merged_init_kwargs,
                     hub=hub,
+                    bus=bus,
                 )
                 resolved_name = getattr(instance, "name", None) or agent_name
                 result[resolved_name] = instance
@@ -445,3 +451,12 @@ class AgentFactory:
             config_path,
         )
         return result
+
+
+def _resolve_registration_bus(*, bus: LocalAgentBus | None, hub: LocalA2AHub | None) -> LocalAgentBus:
+    """登録先 bus を解決."""
+    if bus is not None:
+        return bus
+    if hub is not None:
+        return hub.bus
+    return get_agent_bus()

@@ -116,7 +116,10 @@ async def download_artifact(
 async def get_a2a_card() -> dict[str, Any]:
     """A2A AgentCard 相当の情報を取得."""
     agent = get_faq_agent()
-    card = agent.get_a2a_card()
+    from kernel.protocols.a2a_hub import get_hub
+
+    hub = get_hub()
+    card = hub.discover(agent.name) or agent.get_a2a_card()
     if card is not None and hasattr(card, "to_a2a_format"):
         return card.to_a2a_format()
 

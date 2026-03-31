@@ -1,0 +1,14 @@
+{
+  "name": "minimalist-entrepreneur-skills",
+  "display_name": "Minimalist Entrepreneur Skills",
+  "description": "Sahil Lavingia 著『The Minimalist Entrepreneur』に基づく起業フレームワークスキル",
+  "source": {
+    "type": "github",
+    "repo": "slavingia/skills",
+    "branch": "main",
+    "skills_path": "skills"
+  },
+  "prefix": "biz",
+  "license": "MIT",
+  "local_commit_sha": "f4e1bf8dd9c3a63eebab662fc57396183446068b"
+}

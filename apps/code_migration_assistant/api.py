@@ -32,6 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from kernel.protocols.a2ui.rich_content import (
     AlertType,
@@ -41,6 +42,9 @@ from kernel.protocols.a2ui.rich_content import (
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_APP_ROOT = Path(__file__).resolve().parent
+load_code_migration_env(_APP_ROOT)
 
 
 ProgressCallback = Callable[[int, str, str], Awaitable[None]]
@@ -63,7 +67,7 @@ def _resolve_cors_origins() -> list[str]:
 
 _cors_origins = _resolve_cors_origins()
 _cors_allow_credentials = not (len(_cors_origins) == 1 and _cors_origins[0] == "*")
-_APP_CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
+_APP_CONFIG_PATH = _APP_ROOT / "app_config.json"
 _PUBLIC_HTTP_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json", "/"}
 _auth_guard = ContractAuthGuard(
     ContractAuthGuardConfig(

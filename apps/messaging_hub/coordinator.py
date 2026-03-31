@@ -539,6 +539,47 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
             )
         )
 
+        # ビジネスアドバイステンプレート（Minimalist Entrepreneur）
+        self._intent_router.register_template(
+            TaskTemplate(
+                name="business_advice",
+                triggers=[
+                    "ビジネスアドバイス",
+                    "起業相談",
+                    "事業計画",
+                    "ビジネス相談",
+                    "起業アイデア",
+                    "アイデア検証",
+                    "価格設定",
+                    "マーケティング",
+                    "顧客獲得",
+                    "MVP",
+                    "最小限の製品",
+                    "商业建议",
+                    "创业咨询",
+                    "事业计划",
+                    "business advice",
+                    "startup advice",
+                    "entrepreneurship",
+                    "product idea",
+                    "pricing strategy",
+                    "marketing plan",
+                    "minimum viable product",
+                    "first customers",
+                    "validate idea",
+                    "find community",
+                    "grow sustainably",
+                ],
+                description="Minimalist Entrepreneurフレームワークに基づくビジネスアドバイス",
+                required_skills=["biz_minimalist_review"],
+                parameters=[
+                    TaskParameter(name="question", required=True),
+                    TaskParameter(name="context", default=""),
+                ],
+                tags=["business", "entrepreneurship", "advisory"],
+            )
+        )
+
     def _parse_input(self, input_data: dict[str, Any]) -> Any:
         """入力をそのまま返す."""
         return input_data
@@ -719,6 +760,8 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
             return await self._execute_competitor_analysis(params, context)
         if template_name == "report":
             return await self._execute_report(params, context)
+        if template_name == "business_advice":
+            return await self._execute_business_advice(intent, context)
         return await self._execute_general_task(intent.original_text, context)
 
     async def _answer_query(
@@ -1270,6 +1313,61 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
                 ],
                 "recommended_actions": [
                     "内容レビュー後、必要なら追加条件で再生成してください",
+                ],
+            },
+        )
+
+    async def _execute_business_advice(
+        self,
+        intent: Intent,
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """ビジネスアドバイスを実行（Minimalist Entrepreneur）."""
+        from apps.messaging_hub.agents.business_advisor_agent import (
+            BusinessAdvisorAgent,
+            BusinessAdvisorInput,
+        )
+
+        question = intent.rewritten_query or intent.original_text
+        self._logger.info("ビジネスアドバイス実行: %s", question[:80])
+
+        agent: BusinessAdvisorAgent | None = self._agents.get("business_advisor")  # type: ignore[assignment]
+        if agent is None:
+            agent = BusinessAdvisorAgent(gateway=self._gateway)
+            self._agents["business_advisor"] = agent
+
+        advisor_input = BusinessAdvisorInput(
+            question=question,
+            context=str(context.get("history_summary", "")),
+        )
+        output = await agent.process(advisor_input)
+
+        if output.error:
+            return self._contract_payload(
+                result={"error": output.error},
+                risk_flags=["business_advice_error"],
+            )
+
+        return self._contract_payload(
+            result={
+                "advice": output.summary or "",
+                "selected_skills": output.selected_skills,
+                "skill_results": output.advice,
+            },
+            evidence=[
+                {
+                    "type": "business_advice",
+                    "skills_used": output.selected_skills,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+            ],
+            extra={
+                "summary_points": [
+                    f"ビジネスアドバイス: {', '.join(output.selected_skills)}",
+                    "Minimalist Entrepreneur フレームワーク適用",
+                ],
+                "recommended_actions": [
+                    "アドバイスに基づいて次のアクションを検討してください",
                 ],
             },
         )

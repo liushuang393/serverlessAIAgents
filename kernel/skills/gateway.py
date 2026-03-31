@@ -40,6 +40,7 @@ class SkillCategory(StrEnum):
     OS_EXECUTE = "os_execute"  # OS実行（要監視）
     BROWSER = "browser"  # ブラウザ操作
     NETWORK = "network"  # ネットワーク
+    ADVISORY = "advisory"  # LLMアドバイザリー（副作用なし・安全）
 
 
 class RiskLevel(StrEnum):

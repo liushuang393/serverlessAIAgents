@@ -43,6 +43,14 @@
       "business_base": "interaction",
       "pattern": "specialist",
       "agent_type": "specialist"
+    },
+    {
+      "name": "BusinessAdvisorAgent",
+      "module": "apps.messaging_hub.agents.business_advisor_agent",
+      "capabilities": ["business_advice", "entrepreneurship", "advisory"],
+      "business_base": "interaction",
+      "pattern": "specialist",
+      "agent_type": "specialist"
     }
   ],
   "services": {

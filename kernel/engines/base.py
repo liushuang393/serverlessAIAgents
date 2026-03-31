@@ -156,15 +156,17 @@ class BaseEngine(ABC):
         self._is_resuming: bool = False
         self._resume_checkpoint_id: str | None = None
 
-        # A2A Hub 統合: 全 Agent 呼び出しはハブ経由
+        # 内部 canonical bus を優先し、旧 Hub API も互換保持する
+        from kernel.agents.local_agent_bus import LocalAgentBus, get_agent_bus
         from kernel.protocols.a2a_hub import LocalA2AHub, get_hub
 
+        self._agent_bus: LocalAgentBus = get_agent_bus()
         self._hub: LocalA2AHub = get_hub()
 
     async def call_agent(self, agent: Any, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Agent を A2A プロトコル経由で呼び出す（Engine 統一メソッド）.
+        """Agent を内部 bus 経由で呼び出す（Engine 統一メソッド）.
 
-        ローカルハブに登録済み → ハブ経由で呼び出し
+        ローカル bus に登録済み → bus 経由で呼び出し
         未登録 → 直接 agent.run() にフォールバック
 
         Args:
@@ -178,9 +180,9 @@ class BaseEngine(ABC):
 
         agent_name = getattr(agent, "name", None)
 
-        # ハブに登録済みの場合は A2A 経由
-        if agent_name and self._hub.discover(agent_name) is not None:
-            return await self._hub.call(agent_name, inputs)
+        # bus に登録済みの場合は canonical 呼び出し経由
+        if agent_name and self._agent_bus.discover(agent_name) is not None:
+            return await self._agent_bus.call(agent_name, inputs)
 
         # 未登録の場合は直接呼び出し（後方互換）
         if hasattr(agent, "run"):

@@ -8,7 +8,8 @@ Agent 定義方式（2つのみ）:
     方式2: 設定ファイル — app_config.json + AgentFactory で自動インスタンス化
 
 Agent 間通信:
-    全て LocalA2AHub（A2A プロトコル）経由で行う。直接 agent.run() 呼び出しは禁止。
+    内部 canonical 経路は LocalAgentBus。LocalA2AHub は互換ラッパーとして残す。
+    直接 agent.run() 呼び出しは後方互換の fallback に限定する。
 
 使用例:
     >>> from kernel.agents.resilient_agent import ResilientAgent
