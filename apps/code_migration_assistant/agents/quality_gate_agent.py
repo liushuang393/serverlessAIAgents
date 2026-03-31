@@ -37,14 +37,18 @@ class QualityGateAgent:
         diffs = differential.get("diffs", [])
         classification = str(differential.get("classification", "logic"))
         equivalence = bool(differential.get("equivalence", False))
+        differential_evidence = differential.get("evidence", {})
+        if not isinstance(differential_evidence, dict):
+            differential_evidence = {}
 
-        decision, target_agent, reason, severity = self._decide(
+        decision, target_agent, reason, severity, root_cause = self._decide(
             equivalence=equivalence,
             classification=classification,
             diffs=diffs,
             design_unknowns=migration_design.get("unknowns", []),
             test_unknowns=test_synthesis.get("unknowns", []),
             known_legacy_issues=known_legacy_issues,
+            differential_evidence=differential_evidence,
         )
 
         unknowns: list[UnknownItem] = []
@@ -67,6 +71,10 @@ class QualityGateAgent:
             evidence={
                 "classification": classification,
                 "diff_count": len(diffs),
+                "oracle_source": differential_evidence.get("oracle_source"),
+                "execution_mode": differential_evidence.get("execution_mode"),
+                "golden_available": differential_evidence.get("golden_available"),
+                "root_cause": root_cause,
             },
             unknowns=unknowns,
             extensions={},
@@ -82,7 +90,8 @@ class QualityGateAgent:
         design_unknowns: list[dict[str, Any]],
         test_unknowns: list[dict[str, Any]],
         known_legacy_issues: list[dict[str, Any]],
-    ) -> tuple[QualityDecision, str, str, str]:
+        differential_evidence: dict[str, Any],
+    ) -> tuple[QualityDecision, str, str, str, str]:
         """裁定ロジック."""
         if equivalence:
             return (
@@ -90,6 +99,7 @@ class QualityGateAgent:
                 "None",
                 "差分なしのため品質ゲート通過",
                 "LOW",
+                "equivalent",
             )
 
         if self._matches_known_legacy(diffs, known_legacy_issues):
@@ -98,6 +108,25 @@ class QualityGateAgent:
                 "None",
                 "既知の旧システム不具合に一致",
                 "LOW",
+                "known_legacy_match",
+            )
+
+        if bool(differential_evidence.get("skipped_execution", False)):
+            return (
+                QualityDecision.TEST_ISSUE,
+                "TestSynthesisAgent",
+                "実行検証が未完了のため比較結果を確定できない",
+                "MEDIUM",
+                "execution_skipped",
+            )
+
+        if differential_evidence.get("golden_available") is False:
+            return (
+                QualityDecision.TEST_ISSUE,
+                "TestSynthesisAgent",
+                "比較基準が不足しているため品質判定を確定できない",
+                "MEDIUM",
+                "golden_missing",
             )
 
         if classification == "environment":
@@ -106,6 +135,7 @@ class QualityGateAgent:
                 "EnvironmentAgent",
                 "実行環境依存のエラーを検出",
                 "HIGH",
+                "environment_error",
             )
 
         if classification == "test":
@@ -114,6 +144,7 @@ class QualityGateAgent:
                 "TestSynthesisAgent",
                 "テスト工程の簡易実行モードで完全検証が未実施",
                 "MEDIUM",
+                "test_classification",
             )
 
         if test_unknowns:
@@ -122,6 +153,7 @@ class QualityGateAgent:
                 "TestSynthesisAgent",
                 "テスト期待値または基準が不足",
                 "MEDIUM",
+                "test_unknowns",
             )
 
         if design_unknowns:
@@ -130,6 +162,7 @@ class QualityGateAgent:
                 "MigrationDesignAgent",
                 "設計成果物に未確定要素が残存",
                 "MEDIUM",
+                "design_unknowns",
             )
 
         if classification in {"logic", "format", "data", "timing"}:
@@ -139,6 +172,7 @@ class QualityGateAgent:
                 "LimitedFixerAgent",
                 "変換成果物に差分を検出",
                 severity,
+                f"{classification}_diff",
             )
 
         return (
@@ -146,6 +180,7 @@ class QualityGateAgent:
             "MigrationDesignAgent",
             "責任工程を特定できないため設計再確認",
             "MEDIUM",
+            "unclassified",
         )
 
     def _matches_known_legacy(

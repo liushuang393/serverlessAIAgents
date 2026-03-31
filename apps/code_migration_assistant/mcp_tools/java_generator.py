@@ -12,9 +12,8 @@
 
 from typing import Any
 
-from infrastructure.llm import LLMClient, LLMConfig
+from infrastructure.llm.providers.llm_provider import get_llm
 from kernel import MCPTool, MCPToolRequest, MCPToolResponse
-from shared.config import get_settings
 
 
 class JavaGenerator(MCPTool):
@@ -52,17 +51,12 @@ class JavaGenerator(MCPTool):
         """JavaGeneratorを初期化."""
         super().__init__(tool_name="java_generator", version="2.0.0")
 
-        # LLMクライアント初期化
-        settings = get_settings()
-        llm_runtime = settings.get_active_llm_config()
-        llm_config = LLMConfig(
-            provider=settings.get_active_provider(),
-            api_key=llm_runtime.get("api_key") if isinstance(llm_runtime.get("api_key"), str) else None,
-            model=settings.get_active_model(),
-            temperature=0.2,  # コード生成には低めの温度
+        # LLM クライアント初期化 — 統一 API 経由
+        self._llm_client = get_llm(
+            role="java_generation",
+            temperature=0.2,
             max_tokens=2000,
         )
-        self._llm_client = LLMClient(llm_config)
 
     async def handle_request(self, request: MCPToolRequest) -> MCPToolResponse:
         """ASTからJavaコードを生成.

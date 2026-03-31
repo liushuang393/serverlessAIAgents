@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
+from asyncio import Event
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +17,7 @@ from apps.code_migration_assistant.backend.migration_execution_adapter import (
     ExecutionResult,
 )
 from apps.code_migration_assistant.backend.migration_router import router as migration_router
+from apps.code_migration_assistant.backend.migration_task_store import HITLRequest, get_task_store
 
 
 def _create_test_app() -> FastAPI:
@@ -23,8 +26,8 @@ def _create_test_app() -> FastAPI:
     return app
 
 
-def test_hitl_returns_501_in_cma_cli_backend(monkeypatch) -> None:
-    """cma_cli バックエンドでは HITL API が未サポートである."""
+def test_hitl_returns_404_for_unknown_task_in_cma_cli_backend(monkeypatch) -> None:
+    """cma_cli バックエンドでも未知タスクには 404 を返す."""
     monkeypatch.setenv("MIGRATION_EXECUTION_BACKEND", "cma_cli")
     client = TestClient(_create_test_app())
 
@@ -37,8 +40,44 @@ def test_hitl_returns_501_in_cma_cli_backend(monkeypatch) -> None:
             "modifications": {},
         },
     )
-    assert response.status_code == 501
-    assert "未サポート" in response.json()["detail"]
+    assert response.status_code == 404
+
+
+def test_hitl_writes_bridge_file_for_cma_cli_backend(monkeypatch, tmp_path: Path) -> None:
+    """cma_cli バックエンドでも pending approval へ応答できる."""
+    monkeypatch.setenv("MIGRATION_EXECUTION_BACKEND", "cma_cli")
+
+    from apps.code_migration_assistant.backend import migration_router as router_module
+
+    monkeypatch.setattr(router_module, "_get_output_root", lambda: tmp_path / "output")
+    store = get_task_store()
+    task = asyncio.run(store.create())
+    task.pending_hitl = HITLRequest(
+        request_id="req-1",
+        stage="design",
+        artifact={"artifact_path": "design.json"},
+        unknowns=[],
+        question="approve?",
+        response_event=Event(),
+    )
+
+    client = TestClient(_create_test_app())
+    response = client.post(
+        f"/api/migrate/{task.task_id}/hitl",
+        json={
+            "request_id": "req-1",
+            "approved": True,
+            "comment": "ok",
+            "modifications": {"field": "value"},
+        },
+    )
+
+    assert response.status_code == 200
+    bridge_path = tmp_path / "output" / "_runtime" / task.task_id / "approvals" / "req-1.json"
+    assert bridge_path.exists()
+    payload = json.loads(bridge_path.read_text(encoding="utf-8"))
+    assert payload["approved"] is True
+    assert payload["comment"] == "ok"
 
 
 class _FakeCmaCliExecutionAdapter:

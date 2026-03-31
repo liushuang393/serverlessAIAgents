@@ -92,12 +92,12 @@
       "agent_type": "planner"
     },
     {
-      "name": "CodeMigrationEngine",
-      "module": "apps.code_migration_assistant.engine",
-      "capabilities": ["orchestration", "pipeline"],
+      "name": "BusinessSemanticsAgent",
+      "module": "apps.code_migration_assistant.agents.business_semantics_agent",
+      "capabilities": ["business_analysis", "semantics"],
       "business_base": "operations",
-      "pattern": "coordinator",
-      "agent_type": "planner"
+      "pattern": "analyzer",
+      "agent_type": "reactor"
     }
   ],
   "services": {

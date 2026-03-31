@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
 from apps.code_migration_assistant.agents.business_semantics_agent import BusinessSemanticsAgent
 from apps.code_migration_assistant.agents.migration_design_agent import MigrationDesignAgent
 from apps.code_migration_assistant.engine import MIGRATION_ANALYSIS, CodeMigrationEngine
-from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner
+from apps.code_migration_assistant.workflow.capabilities import CAPABILITY_MAP, StageCapabilityRunner
 from apps.code_migration_assistant.workflow.models import (
     BusinessSemanticsArtifact,
     DifferentialVerificationArtifact,
@@ -29,13 +32,9 @@ from apps.code_migration_assistant.workflow.models import (
 from apps.code_migration_assistant.workflow.models import (
     TestSynthesisArtifact as _TestSynthesisArtifact,
 )
-from apps.code_migration_assistant.workflow.pipeline_runtime import run_pipeline
+from apps.code_migration_assistant.workflow.pipeline_runtime import execute_stage_task, run_pipeline
 from apps.code_migration_assistant.workflow.reflection import run_reflection_loop
 from shared.integrations.context_bridge import FlowContext, SourceSystemType
-
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class _StaticAgent:
@@ -323,6 +322,217 @@ def test_engine_governance_rejects_without_context() -> None:
         asyncio.run(_run())
 
 
+def test_request_design_approval_returns_true_after_submit(tmp_path: Path) -> None:
+    engine = CodeMigrationEngine()
+    engine._event_queue = asyncio.Queue()
+    design = MigrationDesignArtifact.model_validate(_design_payload())
+    design_path = tmp_path / "migration_design.json"
+    design_path.write_text("{}", encoding="utf-8")
+
+    async def _approve_when_pending() -> None:
+        for _ in range(50):
+            pending = engine._approval_flow.get_pending_requests()
+            if pending:
+                await engine._approval_flow.submit_response(
+                    request_id=pending[0].id,
+                    approved=True,
+                    approver="tester",
+                    comment="ok",
+                )
+                return
+            await asyncio.sleep(0.01)
+        pytest.fail("approval request was not registered")
+
+    async def _run() -> bool:
+        submit_task = asyncio.create_task(_approve_when_pending())
+        try:
+            return await engine._request_design_approval(
+                "task-approval-ok",
+                "SAMPLE",
+                design,
+                design_path,
+            )
+        finally:
+            await submit_task
+
+    approved = asyncio.run(_run())
+
+    assert approved is True
+    assert engine._approval_flow.get_pending_requests() == []
+    queued_events: list[dict[str, Any]] = []
+    while not engine._event_queue.empty():
+        queued_events.append(engine._event_queue.get_nowait())
+    event_types = [str(item.get("event_type")) for item in queued_events]
+    assert "approval_required" in event_types
+    assert "approval_submitted" in event_types
+
+
+def test_request_design_approval_returns_false_on_reject(tmp_path: Path) -> None:
+    engine = CodeMigrationEngine()
+    design = MigrationDesignArtifact.model_validate(_design_payload())
+    design_path = tmp_path / "migration_design.json"
+    design_path.write_text("{}", encoding="utf-8")
+
+    async def _reject_when_pending() -> None:
+        for _ in range(50):
+            pending = engine._approval_flow.get_pending_requests()
+            if pending:
+                await engine._approval_flow.submit_response(
+                    request_id=pending[0].id,
+                    approved=False,
+                    approver="tester",
+                    comment="reject",
+                )
+                return
+            await asyncio.sleep(0.01)
+        pytest.fail("approval request was not registered")
+
+    async def _run() -> bool:
+        submit_task = asyncio.create_task(_reject_when_pending())
+        try:
+            return await engine._request_design_approval(
+                "task-approval-ng",
+                "SAMPLE",
+                design,
+                design_path,
+            )
+        finally:
+            await submit_task
+
+    approved = asyncio.run(_run())
+
+    assert approved is False
+
+
+def test_run_pipeline_returns_design_error_when_manual_approval_rejected(tmp_path: Path) -> None:
+    diff_payload = DifferentialVerificationArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="diff", module="SAMPLE"),
+        equivalence=True,
+        diffs=[],
+        classification="none",
+        confidence=1.0,
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    quality_payload = QualityGateArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="quality", module="SAMPLE"),
+        decision=QualityDecision.PASSED,
+        target_agent="None",
+        reason="差分なし",
+        severity="LOW",
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    engine, _diff, _quality, _fixer = _build_stub_engine(
+        diff_payloads=[diff_payload],
+        quality_payloads=[quality_payload],
+        fixer=_FailIfCalledFixer(),
+    )
+
+    async def _reject_design(
+        _task_id: str,
+        _module: str,
+        _design_artifact: MigrationDesignArtifact,
+        _design_path: Path,
+    ) -> bool:
+        return False
+
+    engine._request_design_approval = _reject_design  # type: ignore[method-assign]
+
+    result = asyncio.run(
+        run_pipeline(
+            engine,
+            {
+                "source_code": "IDENTIFICATION DIVISION.",
+                "module": "SAMPLE",
+                "artifacts_dir": str(tmp_path / "artifacts"),
+                "options": {
+                    "human_policy": "manual_all",
+                    "risk_profile": "normal",
+                },
+                "expected_outputs": {"RESULT": "100"},
+            },
+        )
+    )
+
+    assert result["success"] is False
+    assert result["stage"] == "design"
+    assert "Rejected" in result["error"]
+
+
+def test_execute_stage_task_design_requests_approval_under_manual_all(tmp_path: Path) -> None:
+    analysis_payload = _analysis_payload()
+    semantics_payload = _semantics_payload()
+    engine = CodeMigrationEngine()
+    engine._legacy_analysis_agent = _StaticAgent(analysis_payload)
+    engine._business_semantics_agent = _StaticAgent(semantics_payload)
+    engine._migration_design_agent = _StaticAgent(_design_payload())
+    engine._code_transformation_agent = _StaticAgent({})
+    engine._test_synthesis_agent = _StaticAgent(_tests_payload())
+    engine._differential_agent = _StaticAgent({})
+    engine._quality_gate_agent = _StaticAgent({})
+    engine._limited_fixer_agent = _FailIfCalledFixer()
+    engine._compliance_reporter_agent = _StaticAgent({"report_markdown": "# report"})
+
+    async def _noop(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    approval_calls: list[dict[str, Any]] = []
+
+    async def _approve_design(
+        task_id: str,
+        module: str,
+        design_artifact: MigrationDesignArtifact,
+        design_path: Path,
+    ) -> bool:
+        approval_calls.append(
+            {
+                "task_id": task_id,
+                "module": module,
+                "design_path": str(design_path),
+                "unknowns": list(design_artifact.unknowns),
+            }
+        )
+        return True
+
+    engine._check_governance = _noop  # type: ignore[method-assign]
+    engine._log_completion = _noop  # type: ignore[method-assign]
+    engine._request_design_approval = _approve_design  # type: ignore[method-assign]
+    analysis_path = tmp_path / "analysis" / "task-1_legacy_analysis.json"
+    analysis_path.parent.mkdir(parents=True, exist_ok=True)
+    analysis_path.write_text(json.dumps(analysis_payload, ensure_ascii=False), encoding="utf-8")
+    semantics_path = tmp_path / "business_semantics" / "task-1_business_semantics.json"
+    semantics_path.parent.mkdir(parents=True, exist_ok=True)
+    semantics_path.write_text(json.dumps(semantics_payload, ensure_ascii=False), encoding="utf-8")
+
+    result = asyncio.run(
+        execute_stage_task(
+            engine,
+            {
+                "stage": "design",
+                "source_code": "IDENTIFICATION DIVISION.",
+                "task_id": "task-1",
+                "trace_id": "trace-1",
+                "module": "SAMPLE",
+                "program_task_id": "task-1",
+                "module_root": str(tmp_path),
+                "fast_mode": False,
+                "options": {
+                    "human_policy": "manual_all",
+                    "risk_profile": "normal",
+                },
+            },
+        )
+    )
+
+    assert result["success"] is True
+    assert result["artifact_paths"]["design"].endswith("migration_design.json")
+    assert len(approval_calls) == 1
+    assert approval_calls[0]["module"] == "SAMPLE"
+
+
 def test_business_semantics_agent_extracts_process_event_rule_state() -> None:
     agent = BusinessSemanticsAgent()
     legacy_analysis = {
@@ -545,6 +755,420 @@ def test_stage_capability_runner_skill_first_and_fallback() -> None:
     assert fallback_execution.output["value"] == 21
     assert fallback_execution.trace["provider"] == "native"
     assert fallback_execution.trace["status"] == "fallback_applied"
+
+
+def test_capability_map_covers_primary_closed_loop_stages() -> None:
+    expected = {"analysis", "business_semantics", "design", "transform", "tests", "diff", "quality", "fix", "report"}
+    assert expected.issubset(set(CAPABILITY_MAP))
+
+
+def test_run_pipeline_blocks_on_analysis_input_safety(tmp_path: Path) -> None:
+    diff_payload = DifferentialVerificationArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="diff", module="SAMPLE"),
+        equivalence=True,
+        diffs=[],
+        classification="none",
+        confidence=1.0,
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    quality_payload = QualityGateArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="quality", module="SAMPLE"),
+        decision=QualityDecision.PASSED,
+        target_agent="None",
+        reason="差分なし",
+        severity="LOW",
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    engine, _diff, _quality, _fixer = _build_stub_engine(
+        diff_payloads=[diff_payload],
+        quality_payloads=[quality_payload],
+        fixer=_FailIfCalledFixer(),
+    )
+
+    async def _unsafe_input(_text: str, _context: dict[str, Any] | None = None) -> Any:
+        return SimpleNamespace(is_safe=False, sanitized_input="blocked", warnings=["unsafe input"])
+
+    engine.check_input_safety = _unsafe_input  # type: ignore[method-assign]
+
+    result = asyncio.run(
+        run_pipeline(
+            engine,
+            {
+                "source_code": "IDENTIFICATION DIVISION.",
+                "module": "SAMPLE",
+                "artifacts_dir": str(tmp_path / "artifacts"),
+                "options": {
+                    "human_policy": "auto_with_sampling",
+                    "risk_profile": "normal",
+                },
+                "expected_outputs": {"RESULT": "100"},
+            },
+        )
+    )
+
+    assert result["success"] is False
+    assert result["stage"] == "analysis"
+    assert "safety" in result["error"].lower()
+
+
+def test_execute_stage_task_transform_records_output_safety_review(tmp_path: Path) -> None:
+    analysis_payload = _analysis_payload()
+    design_payload = _design_payload()
+    engine = CodeMigrationEngine()
+    engine._legacy_analysis_agent = _StaticAgent(analysis_payload)
+    engine._business_semantics_agent = _StaticAgent(_semantics_payload())
+    engine._migration_design_agent = _StaticAgent(design_payload)
+    engine._code_transformation_agent = _StaticAgent({})
+    engine._test_synthesis_agent = _StaticAgent(_tests_payload())
+    engine._differential_agent = _StaticAgent({})
+    engine._quality_gate_agent = _StaticAgent({})
+    engine._limited_fixer_agent = _FailIfCalledFixer()
+    engine._compliance_reporter_agent = _StaticAgent({"report_markdown": "# report"})
+
+    async def _noop(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    async def _safe_input(_text: str, _context: dict[str, Any] | None = None) -> Any:
+        return SimpleNamespace(is_safe=True, sanitized_input=_text, warnings=[])
+
+    async def _review_output(_text: str, _context: dict[str, Any] | None = None) -> Any:
+        return SimpleNamespace(
+            is_reliable=True,
+            needs_review=True,
+            confidence_score=0.4,
+            sanitized_output=_text,
+            issues=[{"type": "policy", "message": "review"}],
+        )
+
+    engine._check_governance = _noop  # type: ignore[method-assign]
+    engine._log_completion = _noop  # type: ignore[method-assign]
+    engine.check_input_safety = _safe_input  # type: ignore[method-assign]
+    engine.check_output_safety = _review_output  # type: ignore[method-assign]
+
+    async def _transform_stub(**_kwargs: Any) -> tuple[TransformationArtifact, TransformationIterationArtifact]:
+        return _transformation_artifacts()
+
+    engine._run_transformation_with_reflection = _transform_stub  # type: ignore[method-assign]
+
+    analysis_path = tmp_path / "analysis" / "task-1_legacy_analysis.json"
+    analysis_path.parent.mkdir(parents=True, exist_ok=True)
+    analysis_path.write_text(json.dumps(analysis_payload, ensure_ascii=False), encoding="utf-8")
+    design_path = tmp_path / "design" / "task-1_migration_design.json"
+    design_path.parent.mkdir(parents=True, exist_ok=True)
+    design_path.write_text(json.dumps(design_payload, ensure_ascii=False), encoding="utf-8")
+
+    result = asyncio.run(
+        execute_stage_task(
+            engine,
+            {
+                "stage": "transform",
+                "source_code": "IDENTIFICATION DIVISION.",
+                "task_id": "task-1",
+                "trace_id": "trace-1",
+                "module": "SAMPLE",
+                "program_task_id": "task-1",
+                "module_root": str(tmp_path),
+                "fast_mode": False,
+                "options": {
+                    "human_policy": "auto_with_sampling",
+                    "risk_profile": "normal",
+                },
+            },
+        )
+    )
+
+    assert result["success"] is True
+    assert result["evidence"]["safety_review"] is True
+    assert result["evidence"]["safety_issue_count"] == 1
+
+
+def test_execute_stage_task_report_writes_sanitized_output(tmp_path: Path) -> None:
+    analysis_payload = _analysis_payload()
+    design_payload = _design_payload()
+    quality_payload = QualityGateArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="quality", module="SAMPLE"),
+        decision=QualityDecision.PASSED,
+        target_agent="None",
+        reason="差分なし",
+        severity="LOW",
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+
+    engine = CodeMigrationEngine()
+    engine._legacy_analysis_agent = _StaticAgent(analysis_payload)
+    engine._business_semantics_agent = _StaticAgent(_semantics_payload())
+    engine._migration_design_agent = _StaticAgent(design_payload)
+    engine._code_transformation_agent = _StaticAgent({})
+    engine._test_synthesis_agent = _StaticAgent(_tests_payload())
+    engine._differential_agent = _StaticAgent({})
+    engine._quality_gate_agent = _StaticAgent(quality_payload)
+    engine._limited_fixer_agent = _FailIfCalledFixer()
+    engine._compliance_reporter_agent = _StaticAgent({"report_markdown": "# internal"})
+
+    async def _noop(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    async def _safe_input(_text: str, _context: dict[str, Any] | None = None) -> Any:
+        return SimpleNamespace(is_safe=True, sanitized_input=_text, warnings=[])
+
+    async def _sanitize_output(_text: str, _context: dict[str, Any] | None = None) -> Any:
+        return SimpleNamespace(
+            is_reliable=True,
+            needs_review=True,
+            confidence_score=0.3,
+            sanitized_output="# sanitized",
+            issues=[{"type": "policy", "message": "mask"}],
+        )
+
+    engine._check_governance = _noop  # type: ignore[method-assign]
+    engine._log_completion = _noop  # type: ignore[method-assign]
+    engine.check_input_safety = _safe_input  # type: ignore[method-assign]
+    engine.check_output_safety = _sanitize_output  # type: ignore[method-assign]
+
+    async def _transform_stub(**_kwargs: Any) -> tuple[TransformationArtifact, TransformationIterationArtifact]:
+        return _transformation_artifacts()
+
+    engine._run_transformation_with_reflection = _transform_stub  # type: ignore[method-assign]
+
+    analysis_path = tmp_path / "analysis" / "task-1_legacy_analysis.json"
+    analysis_path.parent.mkdir(parents=True, exist_ok=True)
+    analysis_path.write_text(json.dumps(analysis_payload, ensure_ascii=False), encoding="utf-8")
+
+    semantics_path = tmp_path / "business_semantics" / "task-1_business_semantics.json"
+    semantics_path.parent.mkdir(parents=True, exist_ok=True)
+    semantics_path.write_text(json.dumps(_semantics_payload(), ensure_ascii=False), encoding="utf-8")
+
+    design_path = tmp_path / "design" / "task-1_migration_design.json"
+    design_path.parent.mkdir(parents=True, exist_ok=True)
+    design_path.write_text(json.dumps(design_payload, ensure_ascii=False), encoding="utf-8")
+
+    transform_artifact, reflection_artifact = _transformation_artifacts()
+    transform_path = tmp_path / "code" / "task-1_transformation.json"
+    transform_path.parent.mkdir(parents=True, exist_ok=True)
+    transform_path.write_text(transform_artifact.model_dump_json(indent=2), encoding="utf-8")
+    reflection_path = tmp_path / "code" / "task-1_transformation_iterations.json"
+    reflection_path.write_text(reflection_artifact.model_dump_json(indent=2), encoding="utf-8")
+
+    diff_path = tmp_path / "diff" / "task-1_differential_verification.json"
+    diff_path.parent.mkdir(parents=True, exist_ok=True)
+    diff_path.write_text(
+        DifferentialVerificationArtifact(
+            meta=build_meta(task_id="task-1", trace_id="trace-1", stage="diff", module="SAMPLE"),
+            equivalence=True,
+            diffs=[],
+            classification="none",
+            confidence=1.0,
+            evidence={},
+            unknowns=[],
+            extensions={},
+        ).model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+
+    quality_path = tmp_path / "quality" / "task-1_quality_gate.json"
+    quality_path.parent.mkdir(parents=True, exist_ok=True)
+    quality_path.write_text(json.dumps(quality_payload, ensure_ascii=False), encoding="utf-8")
+
+    fix_path = tmp_path / "fix" / "task-1_limited_fix.json"
+    fix_path.parent.mkdir(parents=True, exist_ok=True)
+    fix_path.write_text(
+        LimitedFixArtifact(
+            meta=build_meta(task_id="task-1", trace_id="trace-1", stage="fix", module="SAMPLE"),
+            applied=False,
+            target_code=transform_artifact.target_code,
+            patch_summary=["no fix required"],
+            retest_required=False,
+            unknowns=[],
+            extensions={},
+        ).model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+
+    result = asyncio.run(
+        execute_stage_task(
+            engine,
+            {
+                "stage": "report",
+                "task_id": "task-1",
+                "trace_id": "trace-1",
+                "module": "SAMPLE",
+                "program_task_id": "task-1",
+                "module_root": str(tmp_path),
+                "fast_mode": False,
+                "options": {
+                    "human_policy": "auto_with_sampling",
+                    "risk_profile": "normal",
+                },
+            },
+        )
+    )
+
+    assert result["success"] is True
+    assert result["evidence"]["safety_review"] is True
+    report_text = Path(result["artifact_paths"]["report"]).read_text(encoding="utf-8")
+    assert report_text == "# sanitized"
+
+
+def test_execute_stage_task_uses_skill_executor_for_analysis(tmp_path: Path) -> None:
+    diff_payload = DifferentialVerificationArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="diff", module="SAMPLE"),
+        equivalence=True,
+        diffs=[],
+        classification="none",
+        confidence=1.0,
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    quality_payload = QualityGateArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="quality", module="SAMPLE"),
+        decision=QualityDecision.PASSED,
+        target_agent="None",
+        reason="差分なし",
+        severity="LOW",
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    engine, _diff, _quality, _fixer = _build_stub_engine(
+        diff_payloads=[diff_payload],
+        quality_payloads=[quality_payload],
+        fixer=_FailIfCalledFixer(),
+    )
+
+    async def _noop(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    skill_payload = _analysis_payload()
+    skill_payload["programs"] = [{"program_id": "SKILL"}]
+
+    async def _skill_executor(
+        capability_id: str,
+        payload: dict[str, Any],
+        _capability: Any,
+    ) -> dict[str, Any]:
+        assert capability_id == "legacy-ingestion"
+        assert "task_spec" in payload
+        return {"output": deepcopy(skill_payload)}
+
+    engine._check_governance = _noop  # type: ignore[method-assign]
+    engine._log_completion = _noop  # type: ignore[method-assign]
+
+    result = asyncio.run(
+        execute_stage_task(
+            engine,
+            {
+                "stage": "analysis",
+                "source_code": "IDENTIFICATION DIVISION.",
+                "module": "SAMPLE",
+                "task_id": "task-skill-stage",
+                "program_task_id": "task-skill-stage",
+                "module_root": str(tmp_path / "stage"),
+                "skill_executor": _skill_executor,
+            },
+        )
+    )
+
+    assert result["success"] is True
+    artifact_path = Path(result["artifact_paths"]["analysis"])
+    stored = artifact_path.read_text(encoding="utf-8")
+    assert '"program_id": "SKILL"' in stored
+    trace = engine.get_capability_trace()
+    assert trace
+    assert trace[0]["capability_id"] == "legacy-ingestion"
+    assert trace[0]["provider"] == "skill"
+
+
+def test_stage_execution_matches_pipeline_mapped_capability_trace(tmp_path: Path) -> None:
+    diff_payload = DifferentialVerificationArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="diff", module="SAMPLE"),
+        equivalence=True,
+        diffs=[],
+        classification="none",
+        confidence=1.0,
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+    quality_payload = QualityGateArtifact(
+        meta=build_meta(task_id="task-1", trace_id="trace-1", stage="quality", module="SAMPLE"),
+        decision=QualityDecision.PASSED,
+        target_agent="None",
+        reason="差分なし",
+        severity="LOW",
+        evidence={},
+        unknowns=[],
+        extensions={},
+    ).model_dump(mode="json")
+
+    pipeline_engine, _diff, _quality, _fixer = _build_stub_engine(
+        diff_payloads=[diff_payload],
+        quality_payloads=[quality_payload],
+        fixer=_FailIfCalledFixer(),
+    )
+    pipeline_result = asyncio.run(
+        run_pipeline(
+            pipeline_engine,
+            {
+                "source_code": "IDENTIFICATION DIVISION.",
+                "module": "SAMPLE",
+                "artifacts_dir": str(tmp_path / "pipeline"),
+                "options": {
+                    "human_policy": "auto_with_sampling",
+                    "risk_profile": "normal",
+                },
+                "expected_outputs": {"RESULT": "100"},
+            },
+        )
+    )
+    assert pipeline_result["success"] is True
+
+    stage_engine, _stage_diff, _stage_quality, _stage_fixer = _build_stub_engine(
+        diff_payloads=[diff_payload],
+        quality_payloads=[quality_payload],
+        fixer=_FailIfCalledFixer(),
+    )
+    module_root = tmp_path / "stage"
+    for stage in ("analysis", "business_semantics", "design", "transform", "tests"):
+        stage_result = asyncio.run(
+            execute_stage_task(
+                stage_engine,
+                {
+                    "stage": stage,
+                    "source_code": "IDENTIFICATION DIVISION.",
+                    "module": "SAMPLE",
+                    "task_id": "task-stage",
+                    "trace_id": "trace-stage",
+                    "program_task_id": "task-stage",
+                    "module_root": str(module_root),
+                    "expected_outputs": {"RESULT": "100"},
+                    "options": {
+                        "human_policy": "auto_with_sampling",
+                        "risk_profile": "normal",
+                    },
+                },
+            )
+        )
+        assert stage_result["success"] is True
+
+    pipeline_mapped = [
+        (item["stage"], item["capability_id"], item["provider"])
+        for item in pipeline_result["capability_trace"]
+        if item["capability_id"] in {"legacy-ingestion", "business-semantics", "modernization-generator"}
+    ]
+    stage_mapped = [
+        (item["stage"], item["capability_id"], item["provider"])
+        for item in stage_engine.get_capability_trace()
+        if item["capability_id"] in {"legacy-ingestion", "business-semantics", "modernization-generator"}
+    ]
+
+    assert stage_mapped == pipeline_mapped
 
 
 def test_engine_resets_human_facts_per_run() -> None:

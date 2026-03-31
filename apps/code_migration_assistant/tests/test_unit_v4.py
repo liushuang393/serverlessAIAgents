@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from apps.code_migration_assistant.agents import DifferentialVerificationAgent
+from apps.code_migration_assistant.agents.quality_gate_agent import QualityGateAgent
 from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
 from apps.code_migration_assistant.workflow.artifacts import ArtifactStore
 
@@ -97,6 +98,76 @@ def test_differential_verification_fast_mode_returns_test_classification() -> No
     assert result["classification"] == "test"
     assert result["equivalence"] is False
     assert len(result["unknowns"]) == 1
+    assert result["evidence"]["oracle_source"] == "test_synthesis_expected_outputs"
+    assert result["evidence"]["execution_mode"] == "fast"
+    assert result["evidence"]["comparison_scope"] == "generated_java_vs_expected_outputs"
+
+
+class _TargetAdapterStub:
+    def __init__(self, stdout: str) -> None:
+        self._stdout = stdout
+
+    class _ExecutionResult:
+        def __init__(self, stdout: str) -> None:
+            self.success = True
+            self.stdout = stdout
+            self.stderr = ""
+            self.error = None
+
+    def execute(self, _target_code: str, _inputs: dict[str, Any]) -> _ExecutionResult:
+        return self._ExecutionResult(self._stdout)
+
+
+def test_differential_verification_records_oracle_metadata_and_parse_mode() -> None:
+    agent = DifferentialVerificationAgent(target_adapter=_TargetAdapterStub("RESULT=100"))
+
+    result = agent.process(
+        {
+            "fast_mode": False,
+            "transformation": {
+                "meta": {"task_id": "task-1", "trace_id": "trace-1", "module": "M1"},
+                "target_code": "public class A {}",
+            },
+            "test_synthesis": {
+                "test_cases": [{"name": "case-1", "inputs": {}, "expected_outputs": {"RESULT": "100"}}],
+                "golden_master": {"case-1": {"RESULT": "100"}},
+            },
+        }
+    )
+
+    assert result["evidence"]["oracle_source"] == "test_synthesis_expected_outputs"
+    assert result["evidence"]["golden_available"] is True
+    assert result["evidence"]["stdout_parse_mode"] == "kv"
+    assert result["evidence"]["execution_mode"] == "strict"
+    assert result["evidence"]["comparison_scope"] == "generated_java_vs_expected_outputs"
+
+
+def test_quality_gate_marks_skipped_oracle_as_test_issue() -> None:
+    agent = QualityGateAgent()
+    result = agent.process(
+        {
+            "differential": {
+                "meta": {"task_id": "task-1", "trace_id": "trace-1", "module": "M1"},
+                "equivalence": False,
+                "classification": "test",
+                "diffs": [],
+                "evidence": {
+                    "oracle_source": "test_synthesis_expected_outputs",
+                    "golden_available": False,
+                    "stdout_parse_mode": "not_executed",
+                    "execution_mode": "fast",
+                    "comparison_scope": "generated_java_vs_expected_outputs",
+                    "skipped_execution": True,
+                },
+            },
+            "migration_design": {"unknowns": []},
+            "test_synthesis": {"unknowns": []},
+            "known_legacy_issues": [],
+        }
+    )
+
+    assert result["decision"] == "TEST_ISSUE"
+    assert result["evidence"]["root_cause"] == "execution_skipped"
 
 
 def test_differential_verification_compare_outputs_whitespace_and_value() -> None:

@@ -45,6 +45,8 @@ class DifferentialVerificationAgent:
         meta = transformation.get("meta", {})
         task_id = str(meta.get("task_id", "unknown-task"))
         trace_id = str(meta.get("trace_id", task_id))
+        golden_master = test_synthesis.get("golden_master", {})
+        golden_available = isinstance(golden_master, dict) and bool(golden_master)
 
         if fast_mode:
             artifact = DifferentialVerificationArtifact(
@@ -60,7 +62,15 @@ class DifferentialVerificationAgent:
                 diffs=[],
                 classification="test",
                 confidence=0.0,
-                evidence={"mode": "fast", "skipped_execution": True},
+                evidence={
+                    "mode": "fast",
+                    "skipped_execution": True,
+                    "oracle_source": "test_synthesis_expected_outputs",
+                    "golden_available": golden_available,
+                    "stdout_parse_mode": "not_executed",
+                    "execution_mode": "fast",
+                    "comparison_scope": "generated_java_vs_expected_outputs",
+                },
                 unknowns=[
                     UnknownItem(
                         field="verification",
@@ -99,6 +109,12 @@ class DifferentialVerificationAgent:
             confidence=1.0 if equivalence else 0.8,
             evidence={
                 "verification_result": verification_result,
+                "oracle_source": "test_synthesis_expected_outputs",
+                "golden_available": golden_available,
+                "stdout_parse_mode": self._resolve_stdout_parse_mode(verification_result),
+                "execution_mode": "strict",
+                "comparison_scope": "generated_java_vs_expected_outputs",
+                "skipped_execution": False,
             },
             unknowns=unknowns,
             extensions={},
@@ -132,7 +148,7 @@ class DifferentialVerificationAgent:
                 )
                 continue
 
-            actual_outputs = self._parse_stdout(execution.stdout)
+            actual_outputs, parse_mode = self._parse_stdout_with_mode(execution.stdout)
             diffs = self._compare_outputs(
                 expected_outputs if isinstance(expected_outputs, dict) else {},
                 actual_outputs,
@@ -142,10 +158,24 @@ class DifferentialVerificationAgent:
                     "name": name,
                     "actual_outputs": actual_outputs,
                     "diffs": diffs,
+                    "parse_mode": parse_mode,
                 }
             )
 
         return {"results": results, "has_exec_error": has_exec_error}
+
+    def _resolve_stdout_parse_mode(self, verification_result: dict[str, Any]) -> str:
+        """検証結果から代表的な stdout parse mode を決定する."""
+        parse_modes = {
+            str(item.get("parse_mode", "unknown"))
+            for item in verification_result.get("results", [])
+            if isinstance(item, dict)
+        }
+        if not parse_modes:
+            return "unknown"
+        if len(parse_modes) == 1:
+            return parse_modes.pop()
+        return "mixed"
 
     def _collect_diffs(self, verification_result: dict[str, Any]) -> list[dict[str, Any]]:
         """検証結果から差分一覧を抽出."""
@@ -210,7 +240,13 @@ class DifferentialVerificationAgent:
 
     def _parse_stdout(self, stdout: str) -> dict[str, Any]:
         """標準出力を辞書へ変換."""
+        parsed, _mode = self._parse_stdout_with_mode(stdout)
+        return parsed
+
+    def _parse_stdout_with_mode(self, stdout: str) -> tuple[dict[str, Any], str]:
+        """標準出力を辞書へ変換し、使用した parse mode を返す."""
         result: dict[str, Any] = {}
+        parse_mode = "empty"
         for raw_line in stdout.splitlines():
             line = raw_line.strip()
             if not line:
@@ -219,6 +255,7 @@ class DifferentialVerificationAgent:
             if "=" in line:
                 key, _, value = line.partition("=")
                 result[key.strip()] = value.strip()
+                parse_mode = "kv"
                 continue
 
             if line.startswith("{") and line.endswith("}"):
@@ -228,6 +265,8 @@ class DifferentialVerificationAgent:
                     continue
                 if isinstance(parsed, dict):
                     result.update(parsed)
+                    if parse_mode == "empty":
+                        parse_mode = "json_line"
                 continue
 
             if "output_lines" not in result:
@@ -235,8 +274,10 @@ class DifferentialVerificationAgent:
             output_lines = result["output_lines"]
             if isinstance(output_lines, list):
                 output_lines.append(line)
+                if parse_mode == "empty":
+                    parse_mode = "output_lines"
 
-        return result
+        return result, parse_mode
 
     def _compare_outputs(self, expected: dict[str, Any], actual: dict[str, Any]) -> list[dict[str, Any]]:
         """期待値と実測値を比較し差分を返す."""

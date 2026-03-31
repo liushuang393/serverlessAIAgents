@@ -9,11 +9,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import aiofiles
 
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents import (
@@ -29,6 +32,10 @@ from apps.code_migration_assistant.agents import (
 )
 from apps.code_migration_assistant.lightning import create_lightning_engine_config
 from apps.code_migration_assistant.workflow.artifacts import ArtifactStore
+from apps.code_migration_assistant.workflow.control_plane import (
+    allow_local_default_auth,
+    build_auth_context_for_tool,
+)
 from apps.code_migration_assistant.workflow.models import (
     BusinessSemanticsArtifact,
     DifferentialVerificationArtifact,
@@ -217,15 +224,15 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         self._event_queue: asyncio.Queue[dict[str, Any]] | None = None
         self._human_facts: list[dict[str, Any]] = []
         self._capability_trace: list[dict[str, Any]] = []
+        self._approval_bridge_dir: Path | None = None
+        self._last_approval_result: dict[str, Any] | None = None
 
         # HITL + Governance 統合
         self._approval_flow = ApprovalFlow(flow_id="migration")
 
         # エンタープライズ監査ロガーを使用
         self._audit_logger = EnterpriseAuditLogger()
-        self._governance = GovernanceEngine()
-        # GovernanceEngineに監査ロガーを注入（※内部API利用だが許容範囲）
-        self._governance._audit_logger = self._audit_logger
+        self._governance = GovernanceEngine(audit_logger=self._audit_logger)
 
         self._killed = False
 
@@ -238,6 +245,58 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         """
         self._killed = True
         self._logger.warning("Kill Switch activated - pipeline will stop at next checkpoint")
+
+    async def _request_design_approval(
+        self,
+        task_id: str,
+        module: str,
+        design_artifact: Any,
+        design_path: Any,
+    ) -> bool:
+        """設計承認を HITL で要求する.
+
+        ApprovalFlow を使用して設計工程後の人間承認を実施する。
+        承認 / 却下 / タイムアウトの結果を返す。
+
+        Args:
+            task_id: タスク ID
+            module: モジュール名
+            design_artifact: 設計成果物
+            design_path: 設計成果物パス
+
+        Returns:
+            承認された場合 True
+        """
+        context = {
+            "task_id": task_id,
+            "module": module,
+            "design_path": str(design_path),
+        }
+        # design_artifact が model_dump を持つ場合サマリーを追加
+        if hasattr(design_artifact, "model_dump"):
+            dumped = design_artifact.model_dump(mode="json")
+            context["class_name"] = dumped.get("class_name", "")
+            context["unknowns_count"] = len(dumped.get("unknowns", []))
+
+        approved = False
+        async for event in self._approval_flow.request_approval(
+            action="migration.design_approval",
+            reason=f"移行設計の承認が必要です（モジュール: {module}）",
+            risk_level="high",
+            context=context,
+        ):
+            # ストリーミングイベントをキューに転送
+            if self._event_queue is not None:
+                await self._event_queue.put(event)
+
+            # 承認結果を判定
+            event_type = event.get("type", "")
+            if event_type == "approval_submitted":
+                approved = bool(event.get("approved", False))
+            elif event_type == "approval_timeout":
+                approved = False
+
+        return approved
 
     async def _initialize(self) -> None:
         """内部 Agent を初期化."""
@@ -407,87 +466,15 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
     @staticmethod
     def _allow_local_default_auth() -> bool:
         """ローカル/テスト実行時にデフォルト認証コンテキストを許可するか判定."""
-        force_auth = os.getenv("CODE_MIGRATION_FORCE_AUTH", "").lower()
-        if force_auth in {"1", "true", "yes"}:
-            return False
-
-        env_name = (os.getenv("CODE_MIGRATION_ENV") or os.getenv("APP_ENV") or os.getenv("ENV") or "").lower()
-        if env_name in {"prod", "production"}:
-            return False
-
-        allow_local = os.getenv("CODE_MIGRATION_ALLOW_LOCAL_AUTH", "true").lower()
-        return allow_local not in {"0", "false", "no"}
+        return allow_local_default_auth()
 
     def _build_auth_context(
         self,
         flow_context: Any,
         tool: RegisteredTool,
     ) -> AuthContext | None:
-        """Governance 用認証コンテキストを構築する."""
-
-        def _normalize_permissions(raw: Any) -> list[str]:
-            """既存権限セットを plugin manifest 互換権限へ拡張する."""
-            permissions: list[str] = []
-            if isinstance(raw, list):
-                for item in raw:
-                    if isinstance(item, str):
-                        token = item.strip()
-                        if token:
-                            permissions.append(token)
-
-            expanded = set(permissions)
-            if "read" in expanded:
-                expanded.add("repo.read")
-            if "write" in expanded:
-                expanded.add("repo.write")
-            if "execute" in expanded:
-                expanded.add("os.exec")
-            return sorted(expanded)
-
-        if flow_context is not None:
-            user_context = getattr(flow_context, "user_context", {})
-            if not isinstance(user_context, dict):
-                user_context = {}
-
-            permissions = user_context.get("permissions")
-            if not isinstance(permissions, list) or not permissions:
-                permissions = ["read", "write", "execute", "manage"]
-            permissions = _normalize_permissions(permissions)
-
-            role = user_context.get("role")
-            if not isinstance(role, str) or not role:
-                role = "manager"
-
-            subject = {
-                "user_id": getattr(flow_context, "user_id", "unknown-user"),
-                "role": role,
-                "permissions": permissions,
-            }
-            for key, value in user_context.items():
-                if key not in {"permissions", "role"}:
-                    subject[key] = value
-
-            return AuthContext(
-                subject=subject,
-                resource={"type": tool.name},
-                action=tool.operation_type.value,
-                tenant_id=getattr(flow_context, "tenant_id", None),
-            )
-
-        if not self._allow_local_default_auth():
-            return None
-
-        return AuthContext(
-            subject={
-                "user_id": "local-runner",
-                "role": "manager",
-                "permissions": _normalize_permissions(["read", "write", "execute", "manage"]),
-            },
-            resource={"type": tool.name},
-            action=tool.operation_type.value,
-            environment={"mode": "local"},
-            tenant_id="local",
-        )
+        """Governance 用認証コンテキストを構築する（control_plane に委譲）."""
+        return build_auth_context_for_tool(flow_context, tool)
 
     async def _log_completion(
         self,
@@ -530,6 +517,110 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                 event["result"] = result
 
             await self._event_queue.put(event)
+
+    def _set_approval_bridge_dir(self, bridge_dir: Any) -> None:
+        """承認応答 bridge ディレクトリを設定する."""
+        if isinstance(bridge_dir, str) and bridge_dir.strip():
+            self._approval_bridge_dir = Path(bridge_dir)
+            self._approval_bridge_dir.mkdir(parents=True, exist_ok=True)
+            return
+        self._approval_bridge_dir = None
+
+    async def _watch_approval_bridge_response(self, request_id: str) -> None:
+        """bridge ディレクトリ経由の承認応答を待機する."""
+        bridge_dir = self._approval_bridge_dir
+        if bridge_dir is None:
+            return
+        response_path = bridge_dir / f"{request_id}.json"
+        while True:
+            if response_path.exists():
+                try:
+                    raw = json.loads(response_path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError:
+                    await asyncio.sleep(0.2)
+                    continue
+                if not isinstance(raw, dict):
+                    await asyncio.sleep(0.2)
+                    continue
+                await self._approval_flow.submit_response(
+                    request_id=request_id,
+                    approved=bool(raw.get("approved", False)),
+                    approver=str(raw.get("approver") or "operator"),
+                    comment=str(raw.get("comment") or ""),
+                    modifications=raw.get("modifications") if isinstance(raw.get("modifications"), dict) else {},
+                )
+                response_path.unlink(missing_ok=True)
+                return
+            await asyncio.sleep(0.2)
+
+    async def _request_design_approval(
+        self,
+        task_id: str,
+        module: str,
+        design_artifact: MigrationDesignArtifact,
+        design_path: Path,
+    ) -> bool:
+        """設計成果物の承認フローを実行する."""
+        request_id = ""
+        approved = False
+        bridge_task: asyncio.Task[None] | None = None
+        self._last_approval_result = None
+        context = {
+            "task_id": task_id,
+            "module": module,
+            "stage": "design",
+            "artifact_path": str(design_path),
+            "reason": "migration design review required",
+            "timeout_policy": "approval_flow_default",
+            "design_unknowns": [item for item in design_artifact.unknowns if isinstance(item, dict)],
+        }
+
+        async for event in self._approval_flow.request_approval(
+            action=f"approve_migration_design:{module}",
+            reason=f"{module} の移行設計を承認してください",
+            risk_level="high",
+            context=context,
+            options=[
+                {"id": "approve", "label": "Approve"},
+                {"id": "reject", "label": "Reject"},
+            ],
+            requester="CodeMigrationEngine",
+        ):
+            if self._event_queue is not None:
+                await self._event_queue.put(event)
+
+            event_type = str(event.get("event_type", ""))
+            if event_type == "approval_required":
+                request_id = str(event.get("request_id", ""))
+                self._last_approval_result = {"status": "pending", "request_id": request_id}
+                if self._approval_bridge_dir is not None and request_id:
+                    bridge_task = asyncio.create_task(self._watch_approval_bridge_response(request_id))
+            elif event_type == "approval_submitted":
+                approved = bool(event.get("approved", False))
+                self._last_approval_result = {
+                    "status": "approved" if approved else "rejected",
+                    "request_id": str(event.get("request_id", request_id)),
+                    "approved": approved,
+                    "comment": str(event.get("comment", "")),
+                }
+            elif event_type == "approval_timeout":
+                approved = False
+                self._last_approval_result = {
+                    "status": "timeout",
+                    "request_id": str(event.get("request_id", request_id)),
+                    "approved": False,
+                }
+
+        if bridge_task is not None:
+            bridge_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await bridge_task
+
+        if request_id:
+            response = self._approval_flow.get_response(request_id)
+            if response is not None:
+                return bool(response.approved)
+        return approved
 
     async def _run_pipeline(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """工程固定パイプラインを実行.
@@ -585,7 +676,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         if not path.exists():
             return []
 
-        raw = path.read_text(encoding="utf-8")
+        async with aiofiles.open(path, encoding="utf-8") as f:
+            raw = await f.read()
 
         try:
             parsed = json.loads(raw)

@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner
+from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner, StageRunner
 from apps.code_migration_assistant.workflow.control_plane import (
     resolve_execution_options,
     should_require_human_approval,
@@ -16,6 +16,7 @@ from apps.code_migration_assistant.workflow.models import (
     DifferentialVerificationArtifact,
     LimitedFixArtifact,
     MigrationDesignArtifact,
+    UnknownItem,
     QualityDecision,
     QualityGateArtifact,
     TestSynthesisArtifact,
@@ -25,6 +26,82 @@ from apps.code_migration_assistant.workflow.models import (
     build_meta,
 )
 from shared.integrations.context_bridge import get_current_context
+
+
+def _build_safety_evidence(review: Any) -> dict[str, Any]:
+    """SafetyMixin の結果を evidence 形式へ正規化する."""
+    issues = getattr(review, "issues", [])
+    normalized_issues = issues if isinstance(issues, list) else []
+    confidence = getattr(review, "confidence_score", None)
+    evidence: dict[str, Any] = {
+        "safety_review": bool(getattr(review, "needs_review", False)),
+        "safety_issue_count": len(normalized_issues),
+    }
+    if confidence is not None:
+        evidence["safety_confidence"] = confidence
+    return evidence
+
+
+async def _ensure_safe_input(engine: Any, *, text: str, stage: str, module: str) -> dict[str, Any] | None:
+    """入力 safety を検査し unsafe ならエラー結果を返す."""
+    review = await engine.check_input_safety(text, {"stage": stage, "module": module})
+    if bool(getattr(review, "is_safe", True)):
+        return None
+    warnings = getattr(review, "warnings", [])
+    return {
+        "success": False,
+        "stage": stage,
+        "error": f"{stage} input failed safety check",
+        "evidence": {
+            "safety_review": True,
+            "safety_issue_count": len(warnings) if isinstance(warnings, list) else 0,
+            "safety_warnings": warnings if isinstance(warnings, list) else [],
+        },
+    }
+
+
+async def _check_safe_output(engine: Any, *, text: str, stage: str, module: str) -> tuple[str, dict[str, Any]]:
+    """出力 safety を検査し sanitize 結果と evidence を返す."""
+    review = await engine.check_output_safety(text, {"stage": stage, "module": module})
+    sanitized_output = getattr(review, "sanitized_output", text)
+    if not isinstance(sanitized_output, str):
+        sanitized_output = text
+    return sanitized_output, _build_safety_evidence(review)
+
+
+def _resolve_skill_executor(inputs: dict[str, Any]) -> StageRunner | None:
+    skill_executor = inputs.get("skill_executor")
+    if callable(skill_executor):
+        return skill_executor
+    return None
+
+
+def _build_capability_runner(
+    *,
+    execution_options: Any,
+    inputs: dict[str, Any],
+) -> StageCapabilityRunner:
+    return StageCapabilityRunner(
+        skill_mode=execution_options.skill_mode,
+        skill_executor=_resolve_skill_executor(inputs),
+    )
+
+
+async def _run_stage_with_capability(
+    *,
+    engine: Any,
+    capability_runner: StageCapabilityRunner,
+    stage: str,
+    payload: dict[str, Any],
+    native_runner: StageRunner,
+) -> dict[str, Any]:
+    execution = await capability_runner.run_stage(
+        stage=stage,
+        payload=payload,
+        native_runner=native_runner,
+    )
+    engine._append_capability_trace(execution.trace)
+    return execution.output
 
 
 async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -46,16 +123,17 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
     execution_options = resolve_execution_options(inputs)
     fast_mode_raw = inputs.get("fast_mode")
     fast_mode = execution_options.verification_mode == "fast" if fast_mode_raw is None else bool(fast_mode_raw)
+    options_raw = inputs.get("options", {})
+    options = options_raw if isinstance(options_raw, dict) else {}
+    if hasattr(engine, "_set_approval_bridge_dir"):
+        engine._set_approval_bridge_dir(options.get("approval_bridge_dir"))
 
     task_id = str(inputs.get("task_id") or f"task-{uuid.uuid4().hex[:12]}")
     trace_id = str(inputs.get("trace_id") or task_id)
     module = str(inputs.get("module") or "UNKNOWN")
-    skill_executor = inputs.get("skill_executor")
-    if not callable(skill_executor):
-        skill_executor = None
-    capability_runner = StageCapabilityRunner(
-        skill_mode=execution_options.skill_mode,
-        skill_executor=skill_executor,
+    capability_runner = _build_capability_runner(
+        execution_options=execution_options,
+        inputs=inputs,
     )
 
     flow_context = get_current_context()
@@ -89,13 +167,18 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
     artifact_paths: dict[str, str] = {}
 
     try:
+        input_safety_error = await _ensure_safe_input(engine, text=source_code, stage="analysis", module=module)
+        if input_safety_error is not None:
+            return input_safety_error
         await engine._check_governance(
             engine_module.MIGRATION_ANALYSIS,
             task_id,
             {"module": module},
             flow_context,
         )
-        analysis_execution = await capability_runner.run_stage(
+        analysis = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
             stage="analysis",
             payload={
                 "source_code": source_code,
@@ -103,8 +186,6 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             },
             native_runner=engine._legacy_analysis_agent.process,
         )
-        engine._append_capability_trace(analysis_execution.trace)
-        analysis = analysis_execution.output
         analysis_artifact = engine._validate_or_fail(
             engine_module.LegacyAnalysisArtifact,
             analysis,
@@ -136,7 +217,9 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
         )
 
         await engine._check_governance(engine_module.MIGRATION_BUSINESS_SEMANTICS, task_id, {}, flow_context)
-        semantics_execution = await capability_runner.run_stage(
+        business_semantics = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
             stage="business_semantics",
             payload={
                 "legacy_analysis": analysis_for_next,
@@ -145,8 +228,6 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             },
             native_runner=engine._business_semantics_agent.process,
         )
-        engine._append_capability_trace(semantics_execution.trace)
-        business_semantics = semantics_execution.output
         semantics_artifact = engine._validate_or_fail(
             BusinessSemanticsArtifact,
             business_semantics,
@@ -182,11 +263,15 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
         )
 
         await engine._check_governance(engine_module.MIGRATION_DESIGN, task_id, {}, flow_context)
-        design = engine._migration_design_agent.process(
-            {
+        design = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
+            stage="design",
+            payload={
                 "legacy_analysis": analysis_for_next,
                 "business_semantics": semantics_for_next,
-            }
+            },
+            native_runner=engine._migration_design_agent.process,
         )
         design_artifact = engine._validate_or_fail(MigrationDesignArtifact, design, "design")
         if design_artifact is None:
@@ -269,6 +354,26 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             {"fast_mode": fast_mode},
             flow_context,
         )
+        # SafetyMixin: WRITE 工程前にソースコードの安全性を検査
+        if engine.safety_enabled:
+            safety_result = await engine.check_input_safety(
+                source_code,
+                context={"stage": "transform", "task_id": task_id},
+            )
+            if not safety_result.is_safe:
+                await artifact_store.append_failure(
+                    task_id=task_id,
+                    stage="transform",
+                    responsible_stage="safety_guard",
+                    reason=f"入力安全検査で問題検出: {safety_result.warnings}",
+                )
+                return {
+                    "success": False,
+                    "stage": "transform",
+                    "error": "input safety check failed",
+                    "safety_warnings": safety_result.warnings,
+                }
+
         transform_payload = {
             "source_code": source_code,
             "analysis": analysis_for_next,
@@ -293,15 +398,14 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 "reflection": iterations.model_dump(mode="json"),
             }
 
-        transform_execution = await capability_runner.run_stage(
+        transform_output = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
             stage="transform",
             payload=transform_payload,
             native_runner=_native_transform,
         )
-        engine._append_capability_trace(transform_execution.trace)
         try:
-            transform_output = transform_execution.output
-
             transformation_payload = (
                 transform_output.get("transformation")
                 if isinstance(transform_output.get("transformation"), dict)
@@ -366,6 +470,18 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 "error": "invalid transformation artifact",
             }
 
+        transform_safety_evidence: dict[str, Any] = {}
+        _, transform_safety_evidence = await _check_safe_output(
+            engine,
+            text=transformation_artifact.target_code,
+            stage="transform",
+            module=module,
+        )
+        if transform_safety_evidence.get("safety_review"):
+            transformation_artifact.unknowns.append(
+                UnknownItem(field="target_code", reason="transform output requires safety review")
+            )
+
         transformation_path = await artifact_store.write_json(
             stage="code",
             task_id=task_id,
@@ -408,13 +524,17 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
         )
 
         await engine._check_governance(engine_module.MIGRATION_TEST_GEN, task_id, {}, flow_context)
-        test_synthesis = engine._test_synthesis_agent.process(
-            {
+        test_synthesis = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
+            stage="tests",
+            payload={
                 "legacy_analysis": analysis_for_next,
                 "business_semantics": semantics_for_next,
                 "expected_outputs": expected_outputs,
                 "target_language": task_spec.target_language,
-            }
+            },
+            native_runner=engine._test_synthesis_agent.process,
         )
         test_artifact = engine._validate_or_fail(TestSynthesisArtifact, test_synthesis, "tests")
         if test_artifact is None:
@@ -443,12 +563,16 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
         )
 
         await engine._check_governance(engine_module.MIGRATION_VERIFY_DIFF, task_id, {}, flow_context)
-        differential = engine._differential_agent.process(
-            {
+        differential = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
+            stage="diff",
+            payload={
                 "transformation": transformation_for_next,
                 "test_synthesis": tests_for_next,
                 "fast_mode": fast_mode,
-            }
+            },
+            native_runner=engine._differential_agent.process,
         )
         diff_artifact = engine._validate_or_fail(
             DifferentialVerificationArtifact,
@@ -482,13 +606,17 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
 
         await engine._check_governance(engine_module.MIGRATION_QUALITY_GATE, task_id, {}, flow_context)
         known_legacy_issues = await engine._load_known_legacy_issues(inputs)
-        quality_gate = engine._quality_gate_agent.process(
-            {
+        quality_gate = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
+            stage="quality",
+            payload={
                 "differential": diff_for_next,
                 "migration_design": design_for_next,
                 "test_synthesis": tests_for_next,
                 "known_legacy_issues": known_legacy_issues,
-            }
+            },
+            native_runner=engine._quality_gate_agent.process,
         )
         quality_artifact = engine._validate_or_fail(QualityGateArtifact, quality_gate, "quality")
         if quality_artifact is None:
@@ -522,16 +650,11 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
         fix_artifact: LimitedFixArtifact
         if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
             await engine._check_governance(engine_module.MIGRATION_FIX, task_id, {}, flow_context)
-            fix = engine._limited_fixer_agent.process(
-                {
-                    "quality_gate": quality_for_next,
-                    "transformation": transformation_for_next,
-                    "migration_design": design_for_next,
-                }
-            )
-            fix_artifact = engine._validate_or_fail(LimitedFixArtifact, fix, "fix")
-        else:
-            fix_artifact = LimitedFixArtifact(
+
+        def _native_fix(payload: dict[str, Any]) -> dict[str, Any]:
+            if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
+                return engine._limited_fixer_agent.process(payload)
+            return LimitedFixArtifact(
                 meta=build_meta(
                     task_id=task_id,
                     trace_id=trace_id,
@@ -546,7 +669,28 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 retest_required=False,
                 unknowns=[],
                 extensions={},
+            ).model_dump(mode="json")
+
+        fix = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
+            stage="fix",
+            payload={
+                "quality_gate": quality_for_next,
+                "transformation": transformation_for_next,
+                "migration_design": design_for_next,
+            },
+            native_runner=_native_fix,
+        )
+        fix_artifact = engine._validate_or_fail(LimitedFixArtifact, fix, "fix")
+        if fix_artifact is None:
+            await artifact_store.append_failure(
+                task_id=task_id,
+                stage="fix",
+                responsible_stage="fix",
+                reason="schema validation failed",
             )
+            return {"success": False, "stage": "fix", "error": "invalid fix artifact"}
 
         fix_path = await artifact_store.write_json(
             stage="fix",
@@ -573,12 +717,16 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             adjusted_transformation = transformation_for_next.copy()
             adjusted_transformation["target_code"] = fix_artifact.target_code
 
-            post_differential = engine._differential_agent.process(
-                {
+            post_differential = await _run_stage_with_capability(
+                engine=engine,
+                capability_runner=capability_runner,
+                stage="diff",
+                payload={
                     "transformation": adjusted_transformation,
                     "test_synthesis": tests_for_next,
                     "fast_mode": fast_mode,
-                }
+                },
+                native_runner=engine._differential_agent.process,
             )
             post_diff_artifact = DifferentialVerificationArtifact.model_validate(post_differential)
             post_diff_path = await artifact_store.write_json(
@@ -589,13 +737,17 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             )
             artifact_paths["diff_post_fix"] = str(post_diff_path)
 
-            post_quality = engine._quality_gate_agent.process(
-                {
+            post_quality = await _run_stage_with_capability(
+                engine=engine,
+                capability_runner=capability_runner,
+                stage="quality",
+                payload={
                     "differential": post_diff_artifact.model_dump(mode="json"),
                     "migration_design": design_for_next,
                     "test_synthesis": tests_for_next,
                     "known_legacy_issues": known_legacy_issues,
-                }
+                },
+                native_runner=engine._quality_gate_agent.process,
             )
             post_quality_artifact = QualityGateArtifact.model_validate(post_quality)
             post_quality_path = await artifact_store.write_json(
@@ -624,7 +776,9 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             )
 
         await engine._check_governance(engine_module.MIGRATION_REPORT, task_id, {}, flow_context)
-        report_execution = await capability_runner.run_stage(
+        report = await _run_stage_with_capability(
+            engine=engine,
+            capability_runner=capability_runner,
             stage="report",
             payload={
                 "task_id": task_id,
@@ -639,15 +793,20 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             },
             native_runner=engine._compliance_reporter_agent.process,
         )
-        engine._append_capability_trace(report_execution.trace)
-        report = report_execution.output
+        report_markdown = str(report.get("report_markdown", "# Report Generation Failed"))
+        report_markdown, report_safety_evidence = await _check_safe_output(
+            engine,
+            text=report_markdown,
+            stage="report",
+            module=module,
+        )
 
         report_path = await artifact_store.write_text(
             stage="report",
             task_id=task_id,
             artifact_name="compliance_report",
             extension="md",
-            content=report.get("report_markdown", "# Report Generation Failed"),
+            content=report_markdown,
         )
         artifact_paths["report"] = str(report_path)
         await engine._log_completion(
@@ -678,499 +837,15 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             "reflection": iteration_artifact.model_dump(mode="json"),
             "execution_options": execution_options.to_dict(),
             "fast_mode": fast_mode,
+            "transform_safety": transform_safety_evidence,
+            "report_safety": report_safety_evidence,
             "capability_trace": engine.get_capability_trace(),
         }
     finally:
         await artifact_store.release_lock(lock_path)
 
 
-_ARTIFACT_STAGE_DIRS: dict[str, str] = {
-    "analysis": "analysis",
-    "business_semantics": "business_semantics",
-    "design": "design",
-    "code": "code",
-    "tests": "tests",
-    "diff": "diff",
-    "quality": "quality",
-    "fix": "fix",
-    "report": "report",
-}
-
-
-def _artifact_path(
-    module_root: Path,
-    *,
-    stage: str,
-    task_id: str,
-    artifact_name: str,
-    extension: str = "json",
-) -> Path:
-    stage_dir = _ARTIFACT_STAGE_DIRS[stage]
-    return module_root / stage_dir / f"{task_id}_{artifact_name}.{extension}"
-
-
-def _read_json_if_exists(path: Path) -> dict[str, Any] | None:
-    if not path.exists():
-        return None
-    try:
-        import json
-
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    return raw if isinstance(raw, dict) else None
-
-
-async def execute_stage_task(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
-    """Execute a single stage task for backlog dispatcher."""
-    from apps.code_migration_assistant import engine as engine_module
-
-    engine._ensure_agents_ready()
-    stage = str(inputs.get("stage", "")).strip()
-    if not stage:
-        return {"success": False, "error": "stage is required"}
-
-    source_code = str(inputs.get("source_code") or "")
-    if not source_code:
-        return {"success": False, "error": "source_code is required"}
-
-    module = str(inputs.get("module") or "UNKNOWN")
-    task_id = str(inputs.get("task_id") or f"task-{uuid.uuid4().hex[:12]}")
-    trace_id = str(inputs.get("trace_id") or task_id)
-    program_task_id = str(inputs.get("program_task_id") or f"{task_id}-{module.lower()}")
-    module_root = Path(str(inputs.get("module_root") or (Path("migration_output") / task_id / module)))
-
-    expected_outputs = inputs.get("expected_outputs", {})
-    if not isinstance(expected_outputs, dict):
-        expected_outputs = {}
-
-    execution_options = resolve_execution_options(inputs)
-    fast_mode_raw = inputs.get("fast_mode")
-    fast_mode = execution_options.verification_mode == "fast" if fast_mode_raw is None else bool(fast_mode_raw)
-
-    artifact_store = engine_module.ArtifactStore(
-        base_dir=module_root,
-        decisions_path=module_root.parent / "DECISIONS.md",
-        failures_path=module_root.parent / "FAILURES.md",
-    )
-    await artifact_store.initialize()
-    lock_path = await artifact_store.acquire_lock(f"{program_task_id}-{stage}")
-    flow_context = get_current_context()
-    if flow_context is None and hasattr(engine, "_resolve_flow_context"):
-        flow_context = engine._resolve_flow_context()
-
-    task_spec = engine._build_task_spec(
-        task_id=program_task_id,
-        trace_id=trace_id,
-        module=module,
-        expected_outputs=expected_outputs,
-        options=execution_options.to_dict(),
-    )
-
-    tool_map = {
-        "analysis": engine_module.MIGRATION_ANALYSIS,
-        "business_semantics": engine_module.MIGRATION_BUSINESS_SEMANTICS,
-        "design": engine_module.MIGRATION_DESIGN,
-        "transform": engine_module.MIGRATION_TRANSFORM,
-        "tests": engine_module.MIGRATION_TEST_GEN,
-        "diff": engine_module.MIGRATION_VERIFY_DIFF,
-        "strict_verification": engine_module.MIGRATION_VERIFY_DIFF,
-        "quality": engine_module.MIGRATION_QUALITY_GATE,
-        "fix": engine_module.MIGRATION_FIX,
-        "report": engine_module.MIGRATION_REPORT,
-    }
-
-    artifact_paths: dict[str, str] = {}
-    decision: str | None = None
-    unknowns: list[dict[str, Any]] = []
-    evidence: dict[str, Any] = {}
-
-    try:
-        tool = tool_map.get(stage)
-        if tool is None:
-            return {"success": False, "error": f"unsupported stage: {stage}"}
-        await engine._check_governance(tool, program_task_id, {"stage": stage, "module": module}, flow_context)
-
-        if stage == "analysis":
-            payload = engine._legacy_analysis_agent.process(
-                {
-                    "source_code": source_code,
-                    "task_spec": task_spec.model_dump(mode="json"),
-                }
-            )
-            artifact = engine._validate_or_fail(engine_module.LegacyAnalysisArtifact, payload, "analysis")
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid analysis artifact"}
-            path = await artifact_store.write_json(
-                stage="analysis",
-                task_id=program_task_id,
-                artifact_name="legacy_analysis",
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths["analysis"] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-
-        elif stage == "business_semantics":
-            analysis_path = _artifact_path(
-                module_root,
-                stage="analysis",
-                task_id=program_task_id,
-                artifact_name="legacy_analysis",
-            )
-            analysis = _read_json_if_exists(analysis_path)
-            if analysis is None:
-                return {"success": False, "stage": stage, "error": "analysis artifact missing"}
-            payload = engine._business_semantics_agent.process(
-                {
-                    "legacy_analysis": analysis,
-                    "business_context": execution_options.business_context or {},
-                    "human_facts": getattr(engine, "_human_facts", []),
-                }
-            )
-            artifact = engine._validate_or_fail(BusinessSemanticsArtifact, payload, "business_semantics")
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid business semantics artifact"}
-            path = await artifact_store.write_json(
-                stage="business_semantics",
-                task_id=program_task_id,
-                artifact_name="business_semantics",
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths["business_semantics"] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-
-        elif stage == "design":
-            analysis = _read_json_if_exists(
-                _artifact_path(module_root, stage="analysis", task_id=program_task_id, artifact_name="legacy_analysis")
-            )
-            semantics = _read_json_if_exists(
-                _artifact_path(
-                    module_root,
-                    stage="business_semantics",
-                    task_id=program_task_id,
-                    artifact_name="business_semantics",
-                )
-            )
-            if analysis is None or semantics is None:
-                return {"success": False, "stage": stage, "error": "analysis/business_semantics artifact missing"}
-            payload = engine._migration_design_agent.process(
-                {
-                    "legacy_analysis": analysis,
-                    "business_semantics": semantics,
-                }
-            )
-            artifact = engine._validate_or_fail(MigrationDesignArtifact, payload, "design")
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid design artifact"}
-            path = await artifact_store.write_json(
-                stage="design",
-                task_id=program_task_id,
-                artifact_name="migration_design",
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths["design"] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-
-        elif stage == "transform":
-            analysis = _read_json_if_exists(
-                _artifact_path(module_root, stage="analysis", task_id=program_task_id, artifact_name="legacy_analysis")
-            )
-            design = _read_json_if_exists(
-                _artifact_path(module_root, stage="design", task_id=program_task_id, artifact_name="migration_design")
-            )
-            if analysis is None or design is None:
-                return {"success": False, "stage": stage, "error": "analysis/design artifact missing"}
-            transformation, iterations = await engine._run_transformation_with_reflection(
-                source_code=source_code,
-                analysis=analysis,
-                migration_design=design,
-                fast_mode=fast_mode,
-                acceptance_threshold=execution_options.acceptance_threshold,
-                max_auto_iterations=execution_options.max_auto_iterations,
-            )
-            transformation_path = await artifact_store.write_json(
-                stage="code",
-                task_id=program_task_id,
-                artifact_name="transformation",
-                payload=transformation.model_dump(mode="json"),
-            )
-            iteration_path = await artifact_store.write_json(
-                stage="code",
-                task_id=program_task_id,
-                artifact_name="transformation_iterations",
-                payload=iterations.model_dump(mode="json"),
-            )
-            artifact_paths["code"] = str(transformation_path)
-            artifact_paths["code_iterations"] = str(iteration_path)
-            for generated in transformation.generated_files:
-                await artifact_store.write_text(
-                    stage="code",
-                    task_id=program_task_id,
-                    artifact_name=generated.path.replace("/", "_").replace(".java", ""),
-                    extension="java",
-                    content=generated.content,
-                )
-            await artifact_store.write_text(
-                stage="code",
-                task_id=program_task_id,
-                artifact_name="target_code",
-                extension="java",
-                content=transformation.target_code,
-            )
-            unknowns = transformation.model_dump(mode="json").get("unknowns", [])
-            evidence = {
-                "reflection_iterations": len(iterations.iterations),
-                "warnings": list(transformation.warnings),
-            }
-
-        elif stage == "tests":
-            analysis = _read_json_if_exists(
-                _artifact_path(module_root, stage="analysis", task_id=program_task_id, artifact_name="legacy_analysis")
-            )
-            semantics = _read_json_if_exists(
-                _artifact_path(
-                    module_root,
-                    stage="business_semantics",
-                    task_id=program_task_id,
-                    artifact_name="business_semantics",
-                )
-            )
-            if analysis is None or semantics is None:
-                return {"success": False, "stage": stage, "error": "analysis/business_semantics artifact missing"}
-            payload = engine._test_synthesis_agent.process(
-                {
-                    "legacy_analysis": analysis,
-                    "business_semantics": semantics,
-                    "expected_outputs": expected_outputs,
-                    "target_language": task_spec.target_language,
-                }
-            )
-            artifact = engine._validate_or_fail(TestSynthesisArtifact, payload, "tests")
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid test artifact"}
-            path = await artifact_store.write_json(
-                stage="tests",
-                task_id=program_task_id,
-                artifact_name="test_synthesis",
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths["tests"] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-            evidence = dict(artifact.evidence)
-
-        elif stage in {"diff", "strict_verification"}:
-            transformation = _read_json_if_exists(
-                _artifact_path(module_root, stage="code", task_id=program_task_id, artifact_name="transformation")
-            )
-            tests = _read_json_if_exists(
-                _artifact_path(module_root, stage="tests", task_id=program_task_id, artifact_name="test_synthesis")
-            )
-            if transformation is None or tests is None:
-                return {"success": False, "stage": stage, "error": "transformation/tests artifact missing"}
-            force_strict = stage == "strict_verification"
-            payload = engine._differential_agent.process(
-                {
-                    "transformation": transformation,
-                    "test_synthesis": tests,
-                    "fast_mode": False if force_strict else fast_mode,
-                }
-            )
-            artifact = engine._validate_or_fail(DifferentialVerificationArtifact, payload, "diff")
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid differential artifact"}
-            artifact_name = "differential_strict" if force_strict else "differential"
-            key = "diff_strict" if force_strict else "diff"
-            path = await artifact_store.write_json(
-                stage="diff",
-                task_id=program_task_id,
-                artifact_name=artifact_name,
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths[key] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-            evidence = dict(artifact.evidence)
-            decision = "PASSED" if artifact.equivalence else "ISSUE"
-
-        elif stage == "quality":
-            design = _read_json_if_exists(
-                _artifact_path(module_root, stage="design", task_id=program_task_id, artifact_name="migration_design")
-            )
-            tests = _read_json_if_exists(
-                _artifact_path(module_root, stage="tests", task_id=program_task_id, artifact_name="test_synthesis")
-            )
-            differential = _read_json_if_exists(
-                _artifact_path(module_root, stage="diff", task_id=program_task_id, artifact_name="differential_strict")
-            )
-            if differential is None:
-                differential = _read_json_if_exists(
-                    _artifact_path(module_root, stage="diff", task_id=program_task_id, artifact_name="differential")
-                )
-            if design is None or tests is None or differential is None:
-                return {"success": False, "stage": stage, "error": "design/tests/diff artifact missing"}
-            known_legacy_issues = await engine._load_known_legacy_issues(inputs)
-            payload = engine._quality_gate_agent.process(
-                {
-                    "differential": differential,
-                    "migration_design": design,
-                    "test_synthesis": tests,
-                    "known_legacy_issues": known_legacy_issues,
-                }
-            )
-            artifact = engine._validate_or_fail(QualityGateArtifact, payload, "quality")
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid quality artifact"}
-            path = await artifact_store.write_json(
-                stage="quality",
-                task_id=program_task_id,
-                artifact_name="quality_gate",
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths["quality"] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-            evidence = dict(artifact.evidence)
-            decision = artifact.decision.value
-
-        elif stage == "fix":
-            transformation = _read_json_if_exists(
-                _artifact_path(module_root, stage="code", task_id=program_task_id, artifact_name="transformation")
-            )
-            design = _read_json_if_exists(
-                _artifact_path(module_root, stage="design", task_id=program_task_id, artifact_name="migration_design")
-            )
-            quality = _read_json_if_exists(
-                _artifact_path(module_root, stage="quality", task_id=program_task_id, artifact_name="quality_gate")
-            )
-            if transformation is None or design is None or quality is None:
-                return {"success": False, "stage": stage, "error": "transformation/design/quality artifact missing"}
-            quality_decision = str(quality.get("decision", QualityDecision.PASSED.value))
-            if quality_decision == QualityDecision.TRANSFORM_ISSUE.value:
-                payload = engine._limited_fixer_agent.process(
-                    {
-                        "quality_gate": quality,
-                        "transformation": transformation,
-                        "migration_design": design,
-                    }
-                )
-                artifact = engine._validate_or_fail(LimitedFixArtifact, payload, "fix")
-            else:
-                transformed = TransformationArtifact.model_validate(transformation)
-                artifact = LimitedFixArtifact(
-                    meta=build_meta(
-                        task_id=program_task_id,
-                        trace_id=trace_id,
-                        stage="fix",
-                        source_language=task_spec.source_language,
-                        target_language=task_spec.target_language,
-                        module=module,
-                    ),
-                    applied=False,
-                    target_code=transformed.target_code,
-                    patch_summary=["no fix required by quality decision"],
-                    retest_required=False,
-                    unknowns=[],
-                    extensions={},
-                )
-            if artifact is None:
-                return {"success": False, "stage": stage, "error": "invalid fix artifact"}
-            path = await artifact_store.write_json(
-                stage="fix",
-                task_id=program_task_id,
-                artifact_name="limited_fix",
-                payload=artifact.model_dump(mode="json"),
-            )
-            artifact_paths["fix"] = str(path)
-            unknowns = artifact.model_dump(mode="json").get("unknowns", [])
-            evidence = {
-                "applied": artifact.applied,
-                "retest_required": artifact.retest_required,
-            }
-
-        elif stage == "report":
-            analysis = _read_json_if_exists(
-                _artifact_path(module_root, stage="analysis", task_id=program_task_id, artifact_name="legacy_analysis")
-            )
-            semantics = _read_json_if_exists(
-                _artifact_path(
-                    module_root,
-                    stage="business_semantics",
-                    task_id=program_task_id,
-                    artifact_name="business_semantics",
-                )
-            )
-            design = _read_json_if_exists(
-                _artifact_path(module_root, stage="design", task_id=program_task_id, artifact_name="migration_design")
-            )
-            transformation = _read_json_if_exists(
-                _artifact_path(module_root, stage="code", task_id=program_task_id, artifact_name="transformation")
-            )
-            quality = _read_json_if_exists(
-                _artifact_path(module_root, stage="quality", task_id=program_task_id, artifact_name="quality_gate")
-            )
-            fix = _read_json_if_exists(
-                _artifact_path(module_root, stage="fix", task_id=program_task_id, artifact_name="limited_fix")
-            )
-            if (
-                analysis is None
-                or semantics is None
-                or design is None
-                or transformation is None
-                or quality is None
-                or fix is None
-            ):
-                return {"success": False, "stage": stage, "error": "required artifacts missing for report"}
-            report = engine._compliance_reporter_agent.process(
-                {
-                    "task_id": program_task_id,
-                    "migration_type": engine._migration_type,
-                    "source_code": source_code,
-                    "analysis": analysis,
-                    "business_semantics": semantics,
-                    "design": design,
-                    "transformation": transformation,
-                    "quality": quality,
-                    "fix": fix,
-                }
-            )
-            report_markdown = str(report.get("report_markdown", "# report generation failed"))
-            path = await artifact_store.write_text(
-                stage="report",
-                task_id=program_task_id,
-                artifact_name="compliance_report",
-                extension="md",
-                content=report_markdown,
-            )
-            artifact_paths["report"] = str(path)
-            evidence = {"report_length": len(report_markdown)}
-
-        await engine._log_completion(
-            tool,
-            program_task_id,
-            {
-                "stage": stage,
-                "module": module,
-                "artifact_paths": artifact_paths,
-            },
-            flow_context,
-        )
-        return {
-            "success": True,
-            "stage": stage,
-            "module": module,
-            "artifact_paths": artifact_paths,
-            "unknowns": unknowns,
-            "decision": decision,
-            "evidence": evidence,
-        }
-    except Exception as exc:
-        return {
-            "success": False,
-            "stage": stage,
-            "module": module,
-            "error": str(exc),
-            "artifact_paths": artifact_paths,
-            "unknowns": unknowns,
-            "decision": decision,
-            "evidence": evidence,
-        }
-    finally:
-        await artifact_store.release_lock(lock_path)
+# execute_stage_task は stage_executor.py に分離済み（後方互換 re-export）
+from apps.code_migration_assistant.workflow.stage_executor import (  # noqa: E402
+    execute_stage_task as execute_stage_task,
+)

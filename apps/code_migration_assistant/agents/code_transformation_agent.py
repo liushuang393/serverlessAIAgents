@@ -203,7 +203,7 @@ class CodeTransformationAgent:
 
     def _count_todo(self, target_code: str) -> int:
         """TODO の件数を返す."""
-        return len(re.findall(r"\\bTODO\\b", target_code))
+        return len(re.findall(r"\bTODO\b", target_code))
 
     def _to_java_method_name(self, name: str) -> str:
         """COBOL 識別子を Java メソッド名へ変換する."""

@@ -102,6 +102,11 @@ def _get_execution_backend() -> str:
     return "cma_cli"
 
 
+def _approval_bridge_path(task_id: str, request_id: str) -> Path:
+    """cma_cli 承認応答の bridge file path を返す."""
+    return _get_output_root() / "_runtime" / task_id / "approvals" / f"{request_id}.json"
+
+
 async def _run_legacy_pipeline(
     *,
     task_id: str,
@@ -196,6 +201,20 @@ async def _run_cma_cli_pipeline(
                     TaskStatus.RUNNING,
                     current_stage=stage,
                 )
+            if str(event.get("type", "")) == "hitl_required":
+                task_obj = await store.get(task_id)
+                if task_obj is not None:
+                    context = event.get("context", {})
+                    unknowns_raw = context.get("design_unknowns", []) if isinstance(context, dict) else []
+                    unknowns = [str(item) for item in unknowns_raw if item is not None]
+                    task_obj.pending_hitl = PendingHITLRequest(
+                        request_id=str(event.get("request_id", "")),
+                        stage=str(event.get("stage", "")),
+                        artifact=context if isinstance(context, dict) else {},
+                        unknowns=unknowns,
+                        question=str(event.get("reason", "")),
+                        response_event=asyncio.Event(),
+                    )
 
         result = await adapter.await_result(task_id)
         if result.output_dir is not None and result.output_dir.exists():
@@ -424,16 +443,26 @@ async def submit_hitl(
     store: TaskStore = Depends(get_task_store),
 ) -> dict[str, str]:
     """HITL（Human-In-The-Loop）確認結果を送信する."""
-
-    if _get_execution_backend() == "cma_cli":
-        raise HTTPException(
-            status_code=501,
-            detail="cma_cli backend では HITL API は未サポートです（Phase 2 で接続予定）",
-        )
-
     task = await store.get(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail=f"タスクが存在しません: {task_id}")
+
+    if _get_execution_backend() == "cma_cli":
+        bridge_path = _approval_bridge_path(task_id, body.request_id)
+        bridge_path.parent.mkdir(parents=True, exist_ok=True)
+        bridge_path.write_text(
+            json.dumps(
+                {
+                    "approved": body.approved,
+                    "comment": body.comment,
+                    "modifications": body.modifications,
+                    "approver": "operator",
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
     success = await store.submit_hitl_response(
         task_id=task_id,

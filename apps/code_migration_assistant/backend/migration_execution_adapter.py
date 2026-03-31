@@ -76,10 +76,14 @@ class CmaCliExecutionAdapter(ExecutionAdapter):
     async def start(self, task_id: str, config: ExecutionConfig) -> None:
         runtime_dir = self._runtime_root / task_id
         runtime_dir.mkdir(parents=True, exist_ok=True)
+        approval_dir = runtime_dir / "approvals"
+        approval_dir.mkdir(parents=True, exist_ok=True)
 
         input_path = runtime_dir / "input.json"
         output_path = runtime_dir / "output.json"
         events_path = runtime_dir / "events.ndjson"
+        options = dict(config.options)
+        options.setdefault("approval_bridge_dir", str(approval_dir))
 
         payload = {
             "task_id": task_id,
@@ -87,7 +91,7 @@ class CmaCliExecutionAdapter(ExecutionAdapter):
             "output_root": str(config.output_root),
             "fast_mode": config.fast_mode,
             "model": config.model,
-            "options": config.options,
+            "options": options,
             "migration_type": "cobol-to-java",
         }
         input_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

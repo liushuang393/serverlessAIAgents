@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from infrastructure.llm.providers.tool_provider import RiskLevel
+from infrastructure.sandbox.tool_provider import RegisteredTool
 from shared import AccessContext, build_access_context
 
 
@@ -168,4 +170,106 @@ def _to_auth_context(access_context: AccessContext) -> AuthContext:
         action=access_context.action,
         environment=access_context.environment,
         tenant_id=access_context.tenant_id,
+    )
+
+
+# =========================================================================
+# ローカルデフォルト認証対応
+# =========================================================================
+
+
+def allow_local_default_auth() -> bool:
+    """ローカル/テスト実行時にデフォルト認証コンテキストを許可するか判定."""
+    force_auth = os.getenv("CODE_MIGRATION_FORCE_AUTH", "").lower()
+    if force_auth in {"1", "true", "yes"}:
+        return False
+
+    env_name = (
+        os.getenv("CODE_MIGRATION_ENV") or os.getenv("APP_ENV") or os.getenv("ENV") or ""
+    ).lower()
+    if env_name in {"prod", "production"}:
+        return False
+
+    allow_local = os.getenv("CODE_MIGRATION_ALLOW_LOCAL_AUTH", "true").lower()
+    return allow_local not in {"0", "false", "no"}
+
+
+def _normalize_permissions(raw: Any) -> list[str]:
+    """既存権限セットを plugin manifest 互換権限へ拡張する."""
+    permissions: list[str] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, str):
+                token = item.strip()
+                if token:
+                    permissions.append(token)
+
+    expanded = set(permissions)
+    if "read" in expanded:
+        expanded.add("repo.read")
+    if "write" in expanded:
+        expanded.add("repo.write")
+    if "execute" in expanded:
+        expanded.add("os.exec")
+    return sorted(expanded)
+
+
+def build_auth_context_for_tool(
+    flow_context: Any,
+    tool: RegisteredTool,
+) -> AuthContext | None:
+    """Governance 用認証コンテキストを構築する（ローカルデフォルト認証対応）.
+
+    Args:
+        flow_context: フローコンテキスト（None 可）
+        tool: 対象の RegisteredTool
+
+    Returns:
+        AuthContext またはローカル認証不可時は None
+    """
+    from harness.policies.policy_engine import AuthContext
+
+    if flow_context is not None:
+        user_context = getattr(flow_context, "user_context", {})
+        if not isinstance(user_context, dict):
+            user_context = {}
+
+        permissions = user_context.get("permissions")
+        if not isinstance(permissions, list) or not permissions:
+            permissions = ["read", "write", "execute", "manage"]
+        permissions = _normalize_permissions(permissions)
+
+        role = user_context.get("role")
+        if not isinstance(role, str) or not role:
+            role = "manager"
+
+        subject: dict[str, Any] = {
+            "user_id": getattr(flow_context, "user_id", "unknown-user"),
+            "role": role,
+            "permissions": permissions,
+        }
+        for key, value in user_context.items():
+            if key not in {"permissions", "role"}:
+                subject[key] = value
+
+        return AuthContext(
+            subject=subject,
+            resource={"type": tool.name},
+            action=tool.operation_type.value,
+            tenant_id=getattr(flow_context, "tenant_id", None),
+        )
+
+    if not allow_local_default_auth():
+        return None
+
+    return AuthContext(
+        subject={
+            "user_id": "local-runner",
+            "role": "manager",
+            "permissions": _normalize_permissions(["read", "write", "execute", "manage"]),
+        },
+        resource={"type": tool.name},
+        action=tool.operation_type.value,
+        environment={"mode": "local"},
+        tenant_id="local",
     )
