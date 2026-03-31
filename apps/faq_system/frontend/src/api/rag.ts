@@ -127,10 +127,56 @@ export interface DocumentInfo {
   status: string;
   chunk_count: number;
   content_hash: string;
+  document_group_id: string | null;
+  tags: string[];
   uploaded_by: string | null;
   uploaded_at: string | null;
   indexed_at: string | null;
   error_message: string | null;
+}
+
+export interface KBLoadDirectoryRequest {
+  directory: string;
+  collection?: string;
+  kb_type?: string;
+  recursive?: boolean;
+  glob_pattern?: string;
+  auto_group?: boolean;
+  dry_run?: boolean;
+}
+
+export interface KBLoadDirectoryResult {
+  status: string;
+  directory: string;
+  collection?: string;
+  document_group_id?: string;
+  total_files: number;
+  success?: number;
+  errors?: number;
+  skipped?: number;
+  results?: Array<{
+    filename: string;
+    path: string;
+    size: number;
+    status: string;
+    chunks?: number;
+    error?: string;
+    reason?: string;
+  }>;
+  files?: Array<{
+    path: string;
+    filename: string;
+    size: number;
+    extension: string;
+  }>;
+  supported_extensions?: string[];
+  message?: string;
+}
+
+export interface SupportedFormat {
+  extension: string;
+  description: string;
+  parser: string;
 }
 
 export interface ChunkPreview {
@@ -256,6 +302,31 @@ export const ragApi = {
       dry_run: dryRun,
       async_mode: asyncMode,
     }),
+
+  // ナレッジベース ディレクトリロード
+  loadDirectory: (req: KBLoadDirectoryRequest) =>
+    post<KBLoadDirectoryResult>("/kb/load-directory", req),
+
+  getSupportedFormats: () =>
+    get<{ formats: SupportedFormat[]; extensions: string[] }>("/kb/supported-formats"),
+
+  // バッチアップロード（複数ファイル）
+  uploadDocuments: async (
+    collection: string,
+    files: File[],
+    autoIndex = false,
+  ): Promise<DocumentInfo[]> => {
+    const results: DocumentInfo[] = [];
+    for (const file of files) {
+      const resp = await upload<{ document: DocumentInfo }>(
+        `/collections/${collection}/documents`,
+        file,
+        autoIndex ? { auto_index: "true" } : undefined,
+      );
+      results.push(resp.document);
+    }
+    return results;
+  },
 
   // アクセス制御（読み取り専用）
   getAccessMatrix: () =>

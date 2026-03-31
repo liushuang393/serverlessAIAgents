@@ -146,7 +146,7 @@ export const ChatWindow = () => {
     >
       {/* Top Bar / Header Info */}
       <div
-        className={`w-full h-16 shrink-0 glass flex items-center justify-between pr-10 z-10 border-b border-white/5 ${sidebarOpen ? "pl-[72px]" : "pl-12"}`}
+        className={`w-full h-16 shrink-0 glass flex items-center justify-between pr-10 z-10 border-b border-white/5 ${sidebarOpen ? "pl-[75px]" : "pl-[51px]"}`}
       >
         <div className="flex items-center gap-3">
           <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
@@ -303,19 +303,19 @@ export const ChatWindow = () => {
 
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-4">
-                  <span className="text-[11px] flex items-center gap-1.5 font-medium tracking-wide text-[var(--text-dim)]">
+                  <span className="text-[11px] flex items-center gap-[3px] font-medium tracking-wide text-[var(--text-dim)]">
                     知識
                     <span className={stateColorClass(knowledgeState)}>
                       {knowledgeState}
                     </span>
                   </span>
-                  <span className="text-[11px] flex items-center gap-1.5 font-medium tracking-wide text-[var(--text-dim)]">
+                  <span className="text-[11px] flex items-center gap-[3px] font-medium tracking-wide text-[var(--text-dim)]">
                     データ
                     <span className={stateColorClass(dataState)}>
                       {dataState}
                     </span>
                   </span>
-                  <span className="text-[11px] flex items-center gap-1.5 font-medium tracking-wide text-[var(--text-dim)]">
+                  <span className="text-[11px] flex items-center gap-[3px] font-medium tracking-wide text-[var(--text-dim)]">
                     安全
                     <span className={stateColorClass(safetyState)}>
                       {safetyState}

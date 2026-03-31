@@ -38,20 +38,25 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
     }
   }, [isOpen, handleKeyDown]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${isOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
+        }`}
+    >
       {/* オーバーレイ背景 */}
       <button
         type="button"
         tabIndex={-1}
-        className="absolute inset-0 w-full h-full bg-black/60 backdrop-blur-sm border-none cursor-default"
+        className={`absolute inset-0 w-full h-full bg-black/60 backdrop-blur-sm border-none cursor-default transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0"
+          }`}
         onClick={onClose}
         aria-label={t("common.close")}
       />
       {/* モーダル本体 */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar glass rounded-2xl border border-white/10 shadow-2xl mx-4">
+      <div
+        className={`relative z-10 w-full max-w-2xl max-h-[85vh] overflow-y-auto custom-scrollbar bg-black rounded-2xl border border-white/10 shadow-2xl mx-4 transition-all duration-300 transform ${isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-8"
+          }`}
+      >
         <div className="p-8 space-y-6">
           {/* ヘッダー */}
           <div className="flex items-center justify-between">

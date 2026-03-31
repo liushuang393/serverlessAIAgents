@@ -116,15 +116,16 @@
       "enabled": true
     },
     "vector_db": {
-      "provider": "qdrant",
+      "provider": "chromadb",
       "url": null,
-      "collection": "faq_knowledge"
+      "collection": "faq_knowledge",
+      "persist_dir": "./data/chroma"
     }
   },
   "dependencies": {
     "database": "postgresql",
     "redis": false,
-    "external": ["comfyui", "qdrant", "vector_store"]
+    "external": ["comfyui", "chromadb", "vector_store"]
   },
   "runtime": {
     "urls": {
@@ -188,7 +189,7 @@
     "rag": {
       "enabled": true,
       "pattern": "faq_precision",
-      "provider": "qdrant",
+      "provider": "chromadb",
       "collections": ["faq_knowledge"],
       "data_sources": [
         {
@@ -202,6 +203,17 @@
             "read_mode": "query",
             "query": "SELECT 1 AS sample_value",
             "row_limit": 200
+          }
+        },
+        {
+          "type": "file",
+          "path": "./data/knowledge_base",
+          "label": "ローカル知識ベースディレクトリ",
+          "enabled": false,
+          "options": {
+            "recursive": true,
+            "supported_extensions": [".pdf", ".docx", ".xlsx", ".csv", ".md", ".txt", ".json", ".html"],
+            "auto_group": true
           }
         }
       ],

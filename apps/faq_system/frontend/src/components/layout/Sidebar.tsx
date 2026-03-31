@@ -151,7 +151,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
 
         {/* Navigation / History */}
         <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3 custom-scrollbar">
-          <div className="flex items-center justify-between px-2 py-4 mt-2">
+          <div className="flex items-center justify-between pl-2 pr-3.5 py-4 mt-2">
             <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">
               {t("sidebar.history")}
             </span>

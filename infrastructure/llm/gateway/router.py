@@ -706,6 +706,14 @@ class LiteLLMGateway:
         payload = {"model": target_model, "input": input_texts}
         async with httpx.AsyncClient(timeout=self._config.gateway.request_timeout_seconds) as client:
             response = await client.post(f"{openai_base}/embeddings", headers=headers, json=payload)
+            if response.status_code != 200:
+                logger.error(
+                    "Embedding API エラー: status=%s, model=%s, input_count=%d, body=%s",
+                    response.status_code,
+                    target_model,
+                    len(input_texts),
+                    response.text[:500],
+                )
             response.raise_for_status()
             data = response.json().get("data", [])
             return [[float(x) for x in item.get("embedding", [])] for item in data if isinstance(item, dict)]

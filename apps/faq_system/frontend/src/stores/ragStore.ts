@@ -10,6 +10,8 @@ import {
   type DocumentInfo,
   type IngestRunSummary,
   type ChunkPreview,
+  type KBLoadDirectoryRequest,
+  type KBLoadDirectoryResult,
 } from "../api/rag";
 
 export type RAGTab =
@@ -56,6 +58,19 @@ interface RAGState {
   chunkPreviews: ChunkPreview[];
   chunksLoading: boolean;
   previewChunks: (collection: string, docId: string) => Promise<void>;
+
+  // バッチアップロード
+  uploadDocuments: (
+    collection: string,
+    files: File[],
+    autoIndex?: boolean,
+  ) => Promise<DocumentInfo[]>;
+
+  // ディレクトリロード
+  directoryLoadResult: KBLoadDirectoryResult | null;
+  directoryLoading: boolean;
+  loadDirectory: (req: KBLoadDirectoryRequest) => Promise<KBLoadDirectoryResult>;
+  clearDirectoryResult: () => void;
 
   // インジェスト
   ingestRuns: IngestRunSummary[];
@@ -132,6 +147,30 @@ export const useRAGStore = create<RAGState>((set, get) => ({
     await ragApi.reindexDocument(collection, docId);
     await get().fetchDocuments(collection);
   },
+
+  // バッチアップロード
+  uploadDocuments: async (collection, files, autoIndex) => {
+    const results = await ragApi.uploadDocuments(collection, files, autoIndex);
+    await get().fetchDocuments(collection);
+    return results;
+  },
+
+  // ディレクトリロード
+  directoryLoadResult: null,
+  directoryLoading: false,
+  loadDirectory: async (req) => {
+    set({ directoryLoading: true, error: null });
+    try {
+      const result = await ragApi.loadDirectory(req);
+      set({ directoryLoadResult: result, directoryLoading: false });
+      return result;
+    } catch (e) {
+      const message = (e as Error).message;
+      set({ error: message, directoryLoading: false });
+      throw e;
+    }
+  },
+  clearDirectoryResult: () => set({ directoryLoadResult: null }),
 
   // チャンクプレビュー
   chunkPreviews: [],

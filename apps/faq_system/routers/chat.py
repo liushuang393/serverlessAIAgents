@@ -22,6 +22,7 @@ from apps.faq_system.routers.dependencies import (
     register_artifacts,
     resolve_session_id,
 )
+from apps.faq_system.backend.utils.summarizer import summarize_to_title
 from kernel.protocols.a2a_hub import get_hub
 
 
@@ -76,13 +77,23 @@ async def chat(
         ),
         limit=8,
     )
+    # 初回メッセージ判定とタイトル要約
+    existing_messages = await history_svc.list_messages(session_id=session_id, limit=1, user=user)
+    msg_metadata = {"options": request.options}
+    
+    if not existing_messages:
+        agent = get_faq_agent()
+        # FAQAgent の LLM を共有して要約
+        summary = await summarize_to_title(request.message, getattr(agent, "_llm_client", None))
+        msg_metadata["session_title"] = summary
+
     await history_svc.save_message(
         session_id=session_id,
         role="user",
         content=request.message,
         transport="api",
         user=user,
-        metadata={"options": request.options},
+        metadata=msg_metadata,
     )
 
     agent = get_faq_agent()
@@ -152,13 +163,22 @@ async def chat_stream(
         ),
         limit=8,
     )
+    # 初回メッセージ判定とタイトル要約
+    existing_messages = await history_svc.list_messages(session_id=session_id, limit=1, user=user)
+    msg_metadata = {"options": request.options}
+    
+    if not existing_messages:
+        agent = get_faq_agent()
+        summary = await summarize_to_title(request.message, getattr(agent, "_llm_client", None))
+        msg_metadata["session_title"] = summary
+
     await history_svc.save_message(
         session_id=session_id,
         role="user",
         content=request.message,
         transport="sse",
         user=user,
-        metadata={"options": request.options},
+        metadata=msg_metadata,
     )
     agent = get_faq_agent()
 

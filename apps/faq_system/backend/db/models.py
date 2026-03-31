@@ -232,6 +232,24 @@ class IngestionCheckpoint(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+class DocumentRelation(Base):
+    """ドキュメント間関連性テーブル.
+
+    ドキュメント同士の関係（同バッチ、参照、補足、バージョン違い等）を追跡する。
+    """
+
+    __tablename__ = "document_relations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_document_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    target_document_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    relation_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    confidence: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    created_by: Mapped[str] = mapped_column(String(128), nullable=False, default="auto")
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class RoleKBPermission(Base):
     """ロール × KB 権限テーブル.
 
@@ -262,3 +280,9 @@ Index("ix_chat_messages_session_created", ChatMessage.session_id, ChatMessage.cr
 Index("ix_auth_sessions_user_active", AuthSession.user_id, AuthSession.revoked_at)
 Index("ix_ingestion_runs_app_started", IngestionRun.app_name, IngestionRun.started_at)
 Index("ix_ingestion_run_items_run_source", IngestionRunItem.run_id, IngestionRunItem.source_id)
+Index(
+    "ix_document_relations_pair",
+    DocumentRelation.source_document_id,
+    DocumentRelation.target_document_id,
+    unique=True,
+)

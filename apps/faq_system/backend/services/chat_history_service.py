@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class ChatHistoryService:
     """チャット履歴を DB に保存・取得する."""
 
-    _SESSION_TITLE_MAX_CHARS = 17
+    _SESSION_TITLE_MAX_CHARS = 20
 
     async def save_message(
         self,
@@ -140,7 +140,7 @@ class ChatHistoryService:
             .subquery()
         )
 
-        preview_stmt = select(ChatMessage.session_id, ChatMessage.content).join(
+        preview_stmt = select(ChatMessage.session_id, ChatMessage.content, ChatMessage.metadata_json).join(
             first_msg_subq,
             (ChatMessage.session_id == first_msg_subq.c.session_id)
             & (ChatMessage.created_at == first_msg_subq.c.first_at),
@@ -148,15 +148,21 @@ class ChatHistoryService:
 
         async with get_db_session() as session:
             rows = (await session.execute(agg_stmt)).all()
-            previews: dict[str, str] = {str(r[0]): str(r[1]) for r in (await session.execute(preview_stmt)).all()}
+            previews_data = (await session.execute(preview_stmt)).all()
+            previews: dict[str, str] = {str(r[0]): str(r[1]) for r in previews_data}
+            metadatas: dict[str, dict[str, Any]] = {str(r[0]): dict(r[2]) for r in previews_data}
 
         results: list[dict[str, Any]] = []
         for row in rows:
             preview_text = previews.get(row.session_id)
+            metadata = metadatas.get(row.session_id, {})
+            # メタデータに要約タイトルがあれば優先する
+            stored_title = metadata.get("session_title")
+            
             results.append(
                 {
                     "session_id": row.session_id,
-                    "title": self._auto_title_from_text(preview_text) if preview_text else row.session_id,
+                    "title": stored_title or (self._auto_title_from_text(preview_text) if preview_text else row.session_id),
                     "message_count": row.message_count,
                     "last_message_at": row.last_message_at.isoformat() if row.last_message_at else None,
                     "preview": (preview_text or "")[:80],

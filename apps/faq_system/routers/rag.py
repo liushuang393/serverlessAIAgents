@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -208,19 +207,16 @@ async def rag_upload_file(
     filename = file.filename or "uploaded_file"
     ext = filename.split(".")[-1].lower() if "." in filename else ""
 
-    content = ""
     file_bytes = await file.read()
 
     try:
-        if ext == "pdf":
-            content = FileParser.parse_pdf(io.BytesIO(file_bytes))
-        elif ext in ["docx", "doc"]:
-            content = FileParser.parse_docx(io.BytesIO(file_bytes))
-        elif ext == "csv":
-            content = FileParser.parse_csv(io.StringIO(file_bytes.decode("utf-8")))
-        else:
-            # Default to text
-            content = file_bytes.decode("utf-8")
+        parse_result = FileParser.parse_auto(file_bytes, filename)
+        content = parse_result.content
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": f"パースライブラリが不足: {exc!s}", "error_code": "missing_dependency"},
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=400,
@@ -241,10 +237,15 @@ async def rag_upload_file(
         explicit_collection=collection,
     )
     service = get_rag_service(collection=target_collection)
+
+    # パーサーのメタデータも保存
+    doc_metadata: dict[str, Any] = {"source": filename, "type": ext}
+    doc_metadata.update(parse_result.metadata)
+
     result = await service.execute(
         action="add_document",
         content=content,
-        metadata={"source": filename, "type": ext},
+        metadata=doc_metadata,
     )
     if not result.success:
         _raise_service_error(
@@ -342,3 +343,211 @@ async def rag_ingest_run_events(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# ナレッジベース ディレクトリロード API
+# ---------------------------------------------------------------------------
+
+_SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".md", ".txt", ".json", ".jsonl", ".html", ".htm"}
+
+
+class KBLoadDirectoryRequest(BaseModel):
+    """ナレッジベースディレクトリロードリクエスト."""
+
+    directory: str = Field(..., description="ロード対象ディレクトリパス")
+    collection: str | None = Field(None, description="対象コレクション名（省略時はデフォルト）")
+    kb_type: KnowledgeBaseType = Field(
+        default=KnowledgeBaseType.INTERNAL,
+        description="KB種別",
+    )
+    recursive: bool = Field(default=True, description="サブディレクトリを再帰スキャンするか")
+    glob_pattern: str = Field(default="*", description="ファイル glob パターン")
+    auto_group: bool = Field(default=True, description="同ディレクトリのファイルをグループ化するか")
+    dry_run: bool = Field(default=False, description="スキャンのみ（実処理しない）")
+
+
+@router.post("/api/kb/load-directory")
+async def kb_load_directory(
+    request: KBLoadDirectoryRequest,
+    _user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """ローカルディレクトリから知識ベースを一括ロード.
+
+    指定ディレクトリ内のサポート対象ファイルをスキャン → パース → チャンク → インデックスする。
+    同ディレクトリのファイルは自動的に document_group_id でグループ化される。
+    """
+    if not is_rag_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
+        )
+
+    _check_kb_access(_user, request.kb_type)
+
+    import hashlib
+    import uuid
+    from pathlib import Path as _Path
+
+    dir_path = _Path(request.directory)
+    if not dir_path.exists():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": f"ディレクトリが見つかりません: {request.directory}", "error_code": "directory_not_found"},
+        )
+    if not dir_path.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": f"ディレクトリではありません: {request.directory}", "error_code": "not_a_directory"},
+        )
+
+    # ファイルをスキャン
+    if request.recursive:
+        files = list(dir_path.rglob(request.glob_pattern))
+    else:
+        files = list(dir_path.glob(request.glob_pattern))
+
+    target_files = [
+        f for f in files
+        if f.is_file() and f.suffix.lower() in _SUPPORTED_EXTENSIONS
+    ]
+
+    if request.dry_run:
+        return {
+            "status": "dry_run",
+            "directory": str(dir_path),
+            "total_files": len(target_files),
+            "files": [
+                {
+                    "path": str(f),
+                    "filename": f.name,
+                    "size": f.stat().st_size,
+                    "extension": f.suffix.lower(),
+                }
+                for f in target_files
+            ],
+            "supported_extensions": sorted(_SUPPORTED_EXTENSIONS),
+        }
+
+    if not target_files:
+        return {
+            "status": "no_files",
+            "directory": str(dir_path),
+            "total_files": 0,
+            "message": "対象ファイルが見つかりませんでした",
+            "supported_extensions": sorted(_SUPPORTED_EXTENSIONS),
+        }
+
+    # グループ ID 生成（同ディレクトリのファイル群を紐付け）
+    group_id = uuid.uuid4().hex[:12] if request.auto_group else None
+
+    target_collection = kb_registry.resolve_collection(
+        kb_type=request.kb_type,
+        explicit_collection=request.collection,
+    )
+    service = get_rag_service(collection=target_collection)
+
+    results: list[dict[str, Any]] = []
+    success_count = 0
+    error_count = 0
+    skip_count = 0
+    seen_hashes: set[str] = set()
+
+    for file_path in target_files:
+        file_result: dict[str, Any] = {
+            "filename": file_path.name,
+            "path": str(file_path),
+            "size": file_path.stat().st_size,
+        }
+        try:
+            raw_bytes = file_path.read_bytes()
+
+            # 重複検出
+            content_hash = hashlib.sha256(raw_bytes).hexdigest()
+            if content_hash in seen_hashes:
+                file_result["status"] = "skipped"
+                file_result["reason"] = "duplicate"
+                skip_count += 1
+                results.append(file_result)
+                continue
+            seen_hashes.add(content_hash)
+
+            # パース
+            parse_result = FileParser.parse_auto(raw_bytes, file_path.name)
+            content = parse_result.content
+            if not content.strip():
+                file_result["status"] = "skipped"
+                file_result["reason"] = "empty_content"
+                skip_count += 1
+                results.append(file_result)
+                continue
+
+            # メタデータ構築
+            doc_metadata: dict[str, Any] = {
+                "source": file_path.name,
+                "source_path": str(file_path),
+                "type": file_path.suffix.lower().lstrip("."),
+                "content_hash": content_hash,
+            }
+            if group_id:
+                doc_metadata["document_group_id"] = group_id
+            doc_metadata.update(parse_result.metadata)
+
+            # インデックス登録
+            add_result = await service.execute(
+                action="add_document",
+                content=content,
+                source=file_path.name,
+                metadata=doc_metadata,
+            )
+
+            if add_result.success:
+                file_result["status"] = "success"
+                file_result["chunks"] = add_result.data.get("count", 0) if add_result.data else 0
+                success_count += 1
+            else:
+                file_result["status"] = "error"
+                file_result["error"] = add_result.error_message or "インデックス登録失敗"
+                error_count += 1
+
+        except Exception as exc:
+            file_result["status"] = "error"
+            file_result["error"] = str(exc)
+            error_count += 1
+            logger.warning("KB ディレクトリロード - ファイル処理失敗: %s: %s", file_path, exc)
+
+        results.append(file_result)
+
+    return {
+        "status": "success" if error_count == 0 else ("partial" if success_count > 0 else "failed"),
+        "directory": str(dir_path),
+        "collection": target_collection,
+        "document_group_id": group_id,
+        "total_files": len(target_files),
+        "success": success_count,
+        "errors": error_count,
+        "skipped": skip_count,
+        "results": results,
+    }
+
+
+@router.get("/api/kb/supported-formats")
+async def kb_supported_formats(
+    _user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """サポートされるドキュメント形式一覧."""
+    formats = [
+        {"extension": ".pdf", "description": "PDF ドキュメント", "parser": "pdfplumber/pypdf"},
+        {"extension": ".docx", "description": "Microsoft Word", "parser": "python-docx"},
+        {"extension": ".xlsx", "description": "Microsoft Excel", "parser": "openpyxl"},
+        {"extension": ".csv", "description": "CSV データ", "parser": "csv"},
+        {"extension": ".md", "description": "Markdown", "parser": "markdown"},
+        {"extension": ".txt", "description": "プレーンテキスト", "parser": "text"},
+        {"extension": ".json", "description": "JSON データ", "parser": "json"},
+        {"extension": ".jsonl", "description": "JSON Lines", "parser": "json"},
+        {"extension": ".html", "description": "HTML ページ", "parser": "html"},
+    ]
+    return {
+        "formats": formats,
+        "extensions": sorted(_SUPPORTED_EXTENSIONS),
+    }

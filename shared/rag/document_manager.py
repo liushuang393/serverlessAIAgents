@@ -441,34 +441,47 @@ class DocumentManager:
     def _read_document_content(doc: DocumentRecordModel) -> str:
         """ファイルストレージからドキュメントコンテンツを読み込む.
 
-        メタデータに保存された file_path からファイルを読み込み、
-        テキストとして返す。バイナリファイル (PDF 等) の場合は
-        ファイル名ベースのプレースホルダを返す。
+        メタデータに保存された file_path からファイルを読み込む。
+        バイナリファイル (PDF/DOCX/XLSX) はパーサーでテキスト抽出する。
 
         Args:
             doc: ドキュメントレコード
 
         Returns:
-            ドキュメントテキスト
+            ドキュメントテキスト（抽出失敗時は空文字列）
         """
         try:
             meta = json.loads(doc.metadata_json or "{}")
             file_path = meta.get("file_path")
-            if file_path:
-                p = Path(file_path)
-                if p.exists():
-                    raw = p.read_bytes()
-                    try:
-                        return raw.decode("utf-8")
-                    except UnicodeDecodeError:
-                        # バイナリファイル: サイズベースのプレースホルダ
-                        return f"[Binary: {doc.filename}] " + "." * min(doc.file_size, 10000)
-        except Exception:
-            logger.warning("ファイル読み込み失敗: doc_id=%s", doc.document_id)
+            if not file_path:
+                logger.warning("file_path が未設定: doc_id=%s", doc.document_id)
+                return ""
 
-        # フォールバック: サイズベースのプレースホルダ
-        size = max(doc.file_size, 100)
-        return f"[{doc.filename}] " + "x" * min(size, 10000)
+            p = Path(file_path)
+            if not p.exists():
+                logger.warning("ファイルが存在しない: doc_id=%s path=%s", doc.document_id, file_path)
+                return ""
+
+            raw = p.read_bytes()
+
+            # 拡張子で判定してパーサーを選択
+            ext = p.suffix.lower()
+            if ext in {".pdf", ".docx", ".doc", ".xlsx", ".xls"}:
+                return _parse_binary_file(raw, doc.filename)
+
+            # テキスト系: UTF-8 デコード
+            try:
+                return raw.decode("utf-8")
+            except UnicodeDecodeError:
+                # Shift_JIS フォールバック（日本語ファイル対策）
+                try:
+                    return raw.decode("shift_jis")
+                except UnicodeDecodeError:
+                    return raw.decode("utf-8", errors="replace")
+
+        except Exception:
+            logger.exception("ファイル読み込み失敗: doc_id=%s", doc.document_id)
+            return ""
 
     @staticmethod
     def _split_text(
@@ -501,3 +514,101 @@ class DocumentManager:
             start += step
 
         return chunks
+
+
+# ---------------------------------------------------------------------------
+# モジュールレベルヘルパー
+# ---------------------------------------------------------------------------
+
+
+def _parse_binary_file(raw: bytes, filename: str) -> str:
+    """バイナリファイル (PDF/DOCX/XLSX) をテキストに変換.
+
+    apps/faq_system のパーサーを使い、抽出失敗時は空文字列を返す。
+
+    Args:
+        raw: ファイルバイナリ
+        filename: ファイル名（拡張子判定用）
+
+    Returns:
+        抽出テキスト
+    """
+    import io as _io
+
+    ext = Path(filename).suffix.lower()
+
+    # PDF
+    if ext == ".pdf":
+        # pdfplumber 優先
+        try:
+            import pdfplumber
+
+            with pdfplumber.open(_io.BytesIO(raw)) as pdf:
+                pages = [page.extract_text() or "" for page in pdf.pages]
+                return "\n\n".join(pages)
+        except ImportError:
+            pass
+        try:
+            from pypdf import PdfReader
+
+            reader = PdfReader(_io.BytesIO(raw))
+            pages = [page.extract_text() or "" for page in reader.pages]
+            return "\n\n".join(pages)
+        except ImportError:
+            logger.warning("PDF パースライブラリが未インストール: %s", filename)
+            return ""
+
+    # DOCX
+    if ext in {".docx", ".doc"}:
+        try:
+            from docx import Document as DocxDocument
+
+            doc = DocxDocument(_io.BytesIO(raw))
+            paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+            # テーブルも抽出
+            for table in doc.tables:
+                for row in table.rows:
+                    cells = [c.text.strip() for c in row.cells if c.text.strip()]
+                    if cells:
+                        paragraphs.append(" | ".join(cells))
+            return "\n".join(paragraphs)
+        except ImportError:
+            logger.warning("python-docx が未インストール: %s", filename)
+            return ""
+
+    # Excel
+    if ext in {".xlsx", ".xls"}:
+        try:
+            import openpyxl
+
+            wb = openpyxl.load_workbook(_io.BytesIO(raw), read_only=True, data_only=True)
+            texts: list[str] = []
+            for sheet_name in wb.sheetnames:
+                ws = wb[sheet_name]
+                rows_data: list[list[str]] = []
+                for row in ws.iter_rows(values_only=True):
+                    vals = [str(c) if c is not None else "" for c in row]
+                    if any(v.strip() for v in vals):
+                        rows_data.append(vals)
+                if not rows_data:
+                    continue
+                headers = rows_data[0]
+                row_strs: list[str] = []
+                for dr in rows_data[1:]:
+                    parts = []
+                    for i, v in enumerate(dr):
+                        if not v.strip():
+                            continue
+                        h = headers[i] if i < len(headers) and headers[i].strip() else f"Col{i + 1}"
+                        parts.append(f"{h}: {v}")
+                    if parts:
+                        row_strs.append(", ".join(parts))
+                if row_strs:
+                    texts.append(f"[シート: {sheet_name}]\n" + "\n".join(row_strs))
+            wb.close()
+            return "\n\n".join(texts)
+        except ImportError:
+            logger.warning("openpyxl が未インストール: %s", filename)
+            return ""
+
+    return ""

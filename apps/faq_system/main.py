@@ -103,6 +103,8 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 _APP_CONFIG_PATH = _APP_ROOT / "app_config.json"
+_FAQ_DATA_DIR = _APP_ROOT / "data"
+_FAQ_DB_PATH = _FAQ_DATA_DIR / "faq_system.db"
 
 
 def _load_app_config() -> dict[str, Any]:
@@ -117,6 +119,42 @@ def _load_app_config() -> dict[str, Any]:
         except (OSError, ValueError):
             return {}
     return {}
+
+
+def _build_faq_database_config() -> DatabaseConfig:
+    """FAQ アプリ用の DB 設定を構築する.
+
+    FAQ 固有の永続データは `FAQ_DATABASE_URL` を正本とし、未設定時は
+    apps/faq_system/data 配下のローカル SQLite を既定値とする。
+    """
+    _FAQ_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    return DatabaseConfig(
+        url=f"sqlite+aiosqlite:///{_FAQ_DB_PATH}",
+        url_env_key="FAQ_DATABASE_URL",
+        echo_env_key="FAQ_DB_ECHO",
+    )
+
+
+def _detect_database_backend(database_url: str) -> str:
+    """DB URL からバックエンド種別を判定する."""
+    lower_url = database_url.lower()
+    if lower_url.startswith("sqlite"):
+        return "sqlite"
+    if "postgres" in lower_url:
+        return "postgresql"
+    if "mysql" in lower_url:
+        return "mysql"
+    if lower_url.startswith("mssql"):
+        return "mssql"
+    return "unknown"
+
+
+def _mask_database_url(database_url: str) -> str:
+    """ログ出力用に DB URL の機密部をマスクする."""
+    if "@" in database_url:
+        _, suffix = database_url.rsplit("@", 1)
+        return f"***@{suffix}"
+    return database_url
 
 
 def _sync_runtime_env_from_app_config() -> None:
@@ -147,6 +185,9 @@ def _log_faq_startup(host: str, port: int) -> None:
             "agents": agent_names,
         },
     )
+    faq_db_url = db_manager.resolved_url
+    logger.info("[FAQ DB] Backend: %s", _detect_database_backend(faq_db_url))
+    logger.info("[FAQ DB] URL: %s", _mask_database_url(faq_db_url))
 
     # アクセス情報
     display_host = "localhost" if host in ("0.0.0.0", "::") else host
@@ -163,7 +204,7 @@ def _log_faq_startup(host: str, port: int) -> None:
 
 # グローバル DB 管理
 db_manager = DatabaseManager(
-    config=DatabaseConfig(),  # URL は環境変数 DB_URL または FAQ_DB_URL から自動解決
+    config=_build_faq_database_config(),
     metadata=Base.metadata,
 )
 

@@ -535,6 +535,128 @@ class HTMLLoader(DocumentLoader):
         return path.suffix.lower() in {".html", ".htm"}
 
 
+class DocxLoader(DocumentLoader):
+    """Word (.docx) ローダー."""
+
+    async def load(self, source: str | Path) -> list[DocumentChunk]:
+        """Word ファイルを読み込み."""
+        path = Path(source)
+
+        try:
+            from docx import Document as DocxDocument
+        except ImportError as exc:
+            msg = "Word パースには python-docx が必要: pip install python-docx"
+            raise ImportError(msg) from exc
+
+        doc = DocxDocument(str(path))
+
+        # 段落テキスト
+        paragraphs: list[str] = []
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if text:
+                paragraphs.append(text)
+
+        # テーブルテキスト
+        for table in doc.tables:
+            rows: list[str] = []
+            for row in table.rows:
+                cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                if cells:
+                    rows.append(" | ".join(cells))
+            if rows:
+                paragraphs.append("\n".join(rows))
+
+        full_text = "\n\n".join(paragraphs)
+        chunks = self._chunk_text(full_text, str(path))
+
+        # メタデータ付与
+        props = doc.core_properties
+        extra_meta: dict[str, Any] = {
+            "loader": "docx",
+            "file_size": path.stat().st_size,
+            "loaded_at": datetime.now(UTC).isoformat(),
+        }
+        if props and props.title:
+            extra_meta["title"] = props.title
+        if props and props.author:
+            extra_meta["author"] = props.author
+
+        for chunk in chunks:
+            chunk.metadata.update(extra_meta)
+
+        self._logger.info("Loaded %d chunks from %s", len(chunks), path)
+        return chunks
+
+    def supports(self, source: str | Path) -> bool:
+        """Word ファイルをサポート."""
+        return Path(source).suffix.lower() in {".docx", ".doc"}
+
+
+class ExcelLoader(DocumentLoader):
+    """Excel (.xlsx / .xls) ローダー."""
+
+    async def load(self, source: str | Path) -> list[DocumentChunk]:
+        """Excel ファイルを読み込み."""
+        path = Path(source)
+
+        try:
+            import openpyxl as _openpyxl
+        except ImportError as exc:
+            msg = "Excel パースには openpyxl が必要: pip install openpyxl"
+            raise ImportError(msg) from exc
+
+        wb = _openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        all_chunks: list[DocumentChunk] = []
+
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            rows_data: list[list[str]] = []
+            for row in ws.iter_rows(values_only=True):
+                cell_values = [str(c) if c is not None else "" for c in row]
+                if any(v.strip() for v in cell_values):
+                    rows_data.append(cell_values)
+
+            if not rows_data:
+                continue
+
+            # 1行目をヘッダーとして使用
+            headers = rows_data[0]
+            row_texts: list[str] = []
+            for data_row in rows_data[1:]:
+                parts: list[str] = []
+                for i, val in enumerate(data_row):
+                    if not val.strip():
+                        continue
+                    header = headers[i] if i < len(headers) and headers[i].strip() else f"Col{i + 1}"
+                    parts.append(f"{header}: {val}")
+                if parts:
+                    row_texts.append(", ".join(parts))
+
+            if row_texts:
+                sheet_text = f"[シート: {sheet_name}]\n" + "\n".join(row_texts)
+            else:
+                sheet_text = f"[シート: {sheet_name}]\n" + " | ".join(h for h in headers if h.strip())
+
+            sheet_chunks = self._chunk_text(sheet_text, str(path))
+            for chunk in sheet_chunks:
+                chunk.metadata.update({
+                    "loader": "excel",
+                    "sheet_name": sheet_name,
+                    "file_size": path.stat().st_size,
+                    "loaded_at": datetime.now(UTC).isoformat(),
+                })
+            all_chunks.extend(sheet_chunks)
+
+        wb.close()
+        self._logger.info("Loaded %d chunks from %s", len(all_chunks), path)
+        return all_chunks
+
+    def supports(self, source: str | Path) -> bool:
+        """Excel ファイルをサポート."""
+        return Path(source).suffix.lower() in {".xlsx", ".xls"}
+
+
 class UniversalLoader:
     """統一ドキュメントローダー.
 
@@ -558,6 +680,8 @@ class UniversalLoader:
         self._chunking_config = chunking_config or ChunkingConfig()
         self._loaders: list[DocumentLoader] = [
             PDFLoader(self._chunking_config),
+            DocxLoader(self._chunking_config),
+            ExcelLoader(self._chunking_config),
             MarkdownLoader(self._chunking_config),
             HTMLLoader(self._chunking_config),
             CSVLoader(self._chunking_config),

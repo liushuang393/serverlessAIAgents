@@ -22,7 +22,7 @@ const AppLayout = () => {
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-main)]">
+    <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-main)] p-[3px] gap-[3px]">
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
       <div className="flex-1 min-w-0 flex flex-col h-full relative transition-all duration-300">
         <Outlet context={{ sidebarOpen }} />

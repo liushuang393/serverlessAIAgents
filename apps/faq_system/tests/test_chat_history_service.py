@@ -42,9 +42,9 @@ class TestListSessions:
         agg_result = MagicMock()
         agg_result.all.return_value = [agg_row]
 
-        # preview_stmt の結果: session_id -> content のマッピング
+        # preview_stmt の結果: session_id -> content -> metadata のマッピング
         preview_result = MagicMock()
-        preview_result.all.return_value = [("sess-abc", "こんにちは、質問です")]
+        preview_result.all.return_value = [("sess-abc", "こんにちは、質問です", {})]
 
         mock_session.execute = AsyncMock(side_effect=[agg_result, preview_result])
 

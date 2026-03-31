@@ -106,8 +106,8 @@ async def test_list_sessions_with_data(client: httpx.AsyncClient) -> None:
     sessions = data["sessions"]
     assert sessions[0]["session_id"] == "session-B"
     assert sessions[0]["message_count"] == 5
-    assert sessions[0]["title"] == "Message 0 in sess…"
-    assert len(sessions[0]["title"]) <= 18  # 17文字 + 省略記号
+    assert sessions[0]["title"] == "Message 0 in session…"
+    assert len(sessions[0]["title"]) <= 21  # 20文字以内
 
     assert sessions[1]["session_id"] == "session-A"
     assert sessions[1]["message_count"] == 3
@@ -155,14 +155,14 @@ async def test_session_isolation(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_session_title_is_trimmed_to_17_chars(client: httpx.AsyncClient) -> None:
-    """セッションタイトルは 17 文字以内に制限される."""
+async def test_session_title_is_trimmed_to_20_chars(client: httpx.AsyncClient) -> None:
+    """セッションタイトルは 20 文字以内に制限される."""
     long_text = "これはとても長いタイトル生成テストメッセージです"
     async with get_db_session() as session:
         session.add(
             ChatMessage(
                 id="msg-session-title-long",
-                session_id="session-title-17",
+                session_id="session-title-20",
                 user_id="user-session-test",
                 username="tester",
                 role="user",
@@ -174,8 +174,8 @@ async def test_session_title_is_trimmed_to_17_chars(client: httpx.AsyncClient) -
 
     response = await client.get("/api/chat/sessions")
     assert response.status_code == 200
-    target = next((s for s in response.json()["sessions"] if s["session_id"] == "session-title-17"), None)
+    target = next((s for s in response.json()["sessions"] if s["session_id"] == "session-title-20"), None)
     assert target is not None
     title = target["title"]
     assert title.endswith("…")
-    assert len(title) <= 18
+    assert len(title) <= 21

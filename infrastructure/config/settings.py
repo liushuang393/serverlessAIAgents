@@ -256,13 +256,13 @@ class AgentFlowSettings(BaseSettings):
         Returns:
             DB設定辞書（backend, url）
         """
+        if self.database_url:
+            backend = "postgresql" if "postgres" in self.database_url else "sqlite"
+            return {"backend": backend, "url": self.database_url}
         if self.supabase_url:
             return {"backend": "supabase", "url": self.supabase_url, "key": self.supabase_key}
         if self.turso_url:
             return {"backend": "turso", "url": self.turso_url}
-        if self.database_url:
-            backend = "postgresql" if "postgres" in self.database_url else "sqlite"
-            return {"backend": backend, "url": self.database_url}
         return {"backend": "memory", "url": None}
 
     def get_vectordb_config(self) -> dict[str, Any]:

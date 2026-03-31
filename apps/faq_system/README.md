@@ -964,7 +964,7 @@ FAQ の `.env` で `AUTH_SERVICE_URL=http://localhost:8010` と `AUTH_SERVICE_JW
 | `RAG_COLLECTION`                   | RAG コレクション名                                    | `faq_knowledge`                                                     | —      |
 | `DB_SCHEMA`                        | DB スキーマ JSON                                      | `{}`                                                                | —      |
 | `FAQ_SALES_MATERIAL_DIR`           | 営業資料画像の出力先                                  | `/tmp/faq_sales_material`                                           | —      |
-| `FAQ_DATABASE_URL`                 | FAQ 認証/履歴用 DB 接続先                             | `postgresql+asyncpg://faq:faq_password@faq-db:5432/faq_system`      | —      |
+| `FAQ_DATABASE_URL`                 | FAQ 認証/履歴用 DB 接続先                             | 未設定時は `sqlite+aiosqlite:///apps/faq_system/data/faq_system.db` | —      |
 | `FAQ_DB_AUTO_CREATE`               | モデルから自動テーブル作成（ローカル検証向け）        | `false`                                                             | —      |
 | `FAQ_AUTH_PROVIDER`                | 認証方式 (`local_db`/`ldap`/`idp`)                    | `local_db`                                                          | —      |
 | `FAQ_AUTH_MAX_LOGIN_ATTEMPTS`      | アカウントロックまでの試行回数                        | `5`                                                                 | —      |
