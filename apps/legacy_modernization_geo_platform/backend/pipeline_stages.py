@@ -15,6 +15,7 @@ from apps.legacy_modernization_geo_platform.agents._models import (
     ReportAssemblerOutput,
 )
 
+
 if TYPE_CHECKING:
     from kernel.agents.app_agent_runtime import AppAgentRuntime
 
@@ -51,7 +52,7 @@ async def invoke_agent(
     raise RuntimeError(msg)
 
 
-async def execute_artifact_agent(
+async def execute_artifact_agent[ModelT: BaseModel](
     agent_runtime: AppAgentRuntime | None,
     agent_name: str,
     input_data: dict[str, Any],

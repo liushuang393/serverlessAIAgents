@@ -16,10 +16,6 @@ from apps.code_migration_assistant.workflow.control_plane import (
     resolve_execution_options,
     should_require_human_approval,
 )
-from apps.code_migration_assistant.workflow.pipeline_runtime import (
-    _check_safe_output,
-    _ensure_safe_input,
-)
 from apps.code_migration_assistant.workflow.models import (
     BusinessSemanticsArtifact,
     DifferentialVerificationArtifact,
@@ -32,6 +28,10 @@ from apps.code_migration_assistant.workflow.models import (
     TransformationIterationArtifact,
     TransformationIterationRecord,
     build_meta,
+)
+from apps.code_migration_assistant.workflow.pipeline_runtime import (
+    _check_safe_output,
+    _ensure_safe_input,
 )
 from shared.integrations.context_bridge import get_current_context
 
@@ -101,7 +101,6 @@ async def _run_stage_with_capability(
     native_runner: Any,
 ) -> dict[str, Any]:
     """Capability 経由でステージを実行し、トレースを記録."""
-    import inspect
 
     execution = await capability_runner.run_stage(
         stage=stage,
@@ -592,7 +591,11 @@ async def execute_stage_task(engine: Any, inputs: dict[str, Any]) -> dict[str, A
 
             def _native_fix(payload: dict[str, Any]) -> dict[str, Any]:
                 if quality_decision == QualityDecision.TRANSFORM_ISSUE.value:
-                    return engine._limited_fixer_agent.process(payload)
+                    fix_payload = engine._limited_fixer_agent.process(payload)
+                    if not isinstance(fix_payload, dict):
+                        msg = "limited fixer must return dict payload"
+                        raise TypeError(msg)
+                    return fix_payload
                 transformed = TransformationArtifact.model_validate(transformation)
                 return LimitedFixArtifact(
                     meta=build_meta(

@@ -13,8 +13,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from harness.approval.approval_flow import ApprovalFlow, ApprovalFlowConfig
-
 from apps.legacy_modernization_geo_platform.backend.schemas import (
     ApprovalRecord,
     ApprovalStatus,
@@ -27,6 +25,8 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     TaskStatus,
     normalize_content_language,
 )
+from harness.approval.approval_flow import ApprovalFlow, ApprovalFlowConfig
+
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

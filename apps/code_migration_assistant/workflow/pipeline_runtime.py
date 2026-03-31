@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner, StageRunner
+from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner
 from apps.code_migration_assistant.workflow.control_plane import (
     resolve_execution_options,
     should_require_human_approval,
@@ -16,16 +16,103 @@ from apps.code_migration_assistant.workflow.models import (
     DifferentialVerificationArtifact,
     LimitedFixArtifact,
     MigrationDesignArtifact,
-    UnknownItem,
     QualityDecision,
     QualityGateArtifact,
     TestSynthesisArtifact,
     TransformationArtifact,
     TransformationIterationArtifact,
     TransformationIterationRecord,
+    UnknownItem,
     build_meta,
 )
 from shared.integrations.context_bridge import get_current_context
+
+
+def _build_capability_runner(
+    *,
+    execution_options: Any,
+    inputs: dict[str, Any],
+) -> StageCapabilityRunner:
+    """Capability runner を入力オプションから構築する."""
+    skill_executor = inputs.get("skill_executor")
+    if not callable(skill_executor):
+        skill_executor = None
+    return StageCapabilityRunner(
+        skill_mode=execution_options.skill_mode,
+        skill_executor=skill_executor,
+    )
+
+
+async def _run_stage_with_capability(
+    *,
+    engine: Any,
+    capability_runner: StageCapabilityRunner,
+    stage: str,
+    payload: dict[str, Any],
+    native_runner: Any,
+) -> dict[str, Any]:
+    """Capability 実行トレースを engine に集約しつつステージを実行する."""
+    execution = await capability_runner.run_stage(
+        stage=stage,
+        payload=payload,
+        native_runner=native_runner,
+    )
+    engine._append_capability_trace(execution.trace)
+    return execution.output
+
+
+async def _ensure_safe_input(
+    engine: Any,
+    *,
+    text: str,
+    stage: str,
+    module: str,
+) -> dict[str, Any] | None:
+    """入力安全性を検査し、ブロック時のみ標準エラー payload を返す."""
+    if not getattr(engine, "safety_enabled", False):
+        return None
+
+    safety_result = await engine.check_input_safety(
+        text,
+        context={"stage": stage, "module": module},
+    )
+    if safety_result.is_safe:
+        return None
+
+    return {
+        "success": False,
+        "stage": stage,
+        "error": "input safety check failed",
+        "safety_level": safety_result.safety_level.value,
+        "safety_warnings": list(safety_result.warnings),
+        "safety_threats": list(safety_result.threats),
+        "sanitized_input": safety_result.sanitized_input,
+    }
+
+
+async def _check_safe_output(
+    engine: Any,
+    *,
+    text: str,
+    stage: str,
+    module: str,
+) -> tuple[str, dict[str, Any]]:
+    """出力安全性を検査し、サニタイズ済み本文と証跡を返す."""
+    if not getattr(engine, "safety_enabled", False):
+        return text, {"safety_review": False}
+
+    safety_result = await engine.check_output_safety(
+        text,
+        context={"stage": stage, "module": module},
+    )
+    sanitized_text = str(safety_result.sanitized_output or text)
+    evidence = {
+        "safety_review": bool(safety_result.needs_review),
+        "is_reliable": bool(safety_result.is_reliable),
+        "confidence_score": float(safety_result.confidence_score),
+        "issues": list(safety_result.issues),
+    }
+    return sanitized_text, evidence
 
 
 async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -571,13 +658,16 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             flow_context,
         )
 
-        fix_artifact: LimitedFixArtifact
         if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
             await engine._check_governance(engine_module.MIGRATION_FIX, task_id, {}, flow_context)
 
         def _native_fix(payload: dict[str, Any]) -> dict[str, Any]:
             if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
-                return engine._limited_fixer_agent.process(payload)
+                fix_payload = engine._limited_fixer_agent.process(payload)
+                if not isinstance(fix_payload, dict):
+                    msg = "limited fixer must return dict payload"
+                    raise TypeError(msg)
+                return fix_payload
             return LimitedFixArtifact(
                 meta=build_meta(
                     task_id=task_id,
@@ -635,6 +725,7 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
         final_differential = diff_artifact
         final_quality = quality_artifact
         iterations = 1
+        report_safety_evidence: dict[str, Any] = {}
 
         if fix_artifact.retest_required:
             iterations = 2
@@ -717,8 +808,14 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
             },
             native_runner=engine._compliance_reporter_agent.process,
         )
-        engine._append_capability_trace(report_execution.trace)
-        report = report_execution.output
+        report_markdown = str(report.get("report_markdown", "# report generation failed"))
+        report_markdown, report_safety_evidence = await _check_safe_output(
+            engine,
+            text=report_markdown,
+            stage="report",
+            module=module,
+        )
+        report_safety_evidence["report_length"] = len(report_markdown)
 
         report_path = await artifact_store.write_text(
             stage="report",
@@ -950,6 +1047,34 @@ async def execute_stage_task(engine: Any, inputs: dict[str, Any]) -> dict[str, A
             )
             artifact_paths["design"] = str(path)
             unknowns = artifact.model_dump(mode="json").get("unknowns", [])
+            need_approval = should_require_human_approval(
+                tool_risk=engine_module.MIGRATION_DESIGN.risk_level,
+                execution_options=execution_options,
+            )
+            if need_approval:
+                approved = await engine._request_design_approval(program_task_id, module, artifact, path)
+                approval_result = getattr(engine, "_last_approval_result", {}) or {}
+                evidence = {
+                    "approval_required": True,
+                    "approval_status": str(approval_result.get("status", "approved" if approved else "rejected")),
+                    "approval_request_id": str(approval_result.get("request_id", "")),
+                }
+                if not approved:
+                    return {
+                        "success": False,
+                        "stage": stage,
+                        "module": module,
+                        "artifact_paths": artifact_paths,
+                        "decision": "APPROVAL_REJECTED",
+                        "unknowns": unknowns,
+                        "evidence": evidence,
+                        "error": "migration design approval rejected or timed out",
+                    }
+            else:
+                evidence = {
+                    "approval_required": False,
+                    "approval_status": "auto_approved",
+                }
 
         elif stage == "transform":
             analysis = _read_json_if_exists(

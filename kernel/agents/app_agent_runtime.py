@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from kernel.agents.agent_factory import AgentFactory
-from kernel.protocols.a2a_hub import LocalA2AHub
+from kernel.protocols.a2a_hub import LocalA2AHub, get_hub
 from kernel.protocols.a2a_server import A2AServer
 from kernel.protocols.agui_events import (
     AGUIEvent,
@@ -122,7 +122,7 @@ def bootstrap_app_agents(
     agent_init_overrides: dict[str, dict[str, Any]] | None = None,
 ) -> AppAgentRuntime:
     """manifest から agent runtime を構築する."""
-    target_hub = hub or LocalA2AHub()
+    target_hub = hub or get_hub()
     server = A2AServer()
     agents = AgentFactory.from_app_config(
         config_path,
@@ -132,9 +132,7 @@ def bootstrap_app_agents(
     cards: dict[str, AgentCard] = {}
 
     for agent_id, agent in agents.items():
-        card = target_hub.discover(agent_id)
-        if card is None:
-            card = target_hub.register(agent, replace=True)
+        card = target_hub.register(agent, replace=True)
         server.register_agent(card, {"process": agent.run})
         cards[agent_id] = card
 

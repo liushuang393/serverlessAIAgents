@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.rag.rag import RAGConfig, RAGResult, RAGSkill
+
+_rag = import_module("kernel.skills.builtin.rag.rag")
+RAGConfig = _rag.RAGConfig
+RAGResult = _rag.RAGResult
+RAGSkill = _rag.RAGSkill
 
 
 warnings.warn(

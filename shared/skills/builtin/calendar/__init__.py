@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.calendar.calendar import CalendarEvent, CalendarSkill
+
+_calendar = import_module("kernel.skills.builtin.calendar.calendar")
+CalendarEvent = _calendar.CalendarEvent
+CalendarSkill = _calendar.CalendarSkill
 
 
 warnings.warn(

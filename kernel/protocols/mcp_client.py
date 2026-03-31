@@ -1,4 +1,10 @@
-"""後方互換ブリッジ — 実装は kernel/protocols/mcp/client.py に移動済み."""
+"""後方互換ブリッジ — 実装モジュールをそのまま公開する."""
 
-from kernel.protocols.mcp.client import *  # noqa: F401, F403
-from kernel.protocols.mcp.client import _ensure_mcp_imports  # noqa: F401
+from __future__ import annotations
+
+import sys
+
+from kernel.protocols.mcp import client as _client_impl
+
+
+sys.modules[__name__] = _client_impl

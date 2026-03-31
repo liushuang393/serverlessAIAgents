@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from infrastructure.sandbox.tool_provider import OperationType, RegisteredTool, RiskLevel
+
+
 if TYPE_CHECKING:
     from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest
 
@@ -141,14 +144,14 @@ class GeoIntelligenceAdapter:
         """ToolGate によるガバナンス評価を実行する."""
         if self._tool_gate is None:
             return
-        from infrastructure.sandbox.tool_provider import RegisteredTool
 
         tool_descriptor = RegisteredTool(
             name="intelligence_service.gather",
             description="外部検索プロバイダへのインテリジェンス収集",
+            func=self._service.gather,
             provider_type="method",
-            operation_type="read",
-            risk_level="medium",
+            operation_type=OperationType.READ,
+            risk_level=RiskLevel.MEDIUM,
         )
         decision = await self._tool_gate.evaluate(
             tool_descriptor,
@@ -197,8 +200,8 @@ class GeoIntelligenceAdapter:
                     url=getattr(item, "url", ""),
                     title=getattr(item, "title", ""),
                     publisher=getattr(item, "publisher", None) or result_provider,
-                    summary=getattr(item, "summary", None) or getattr(item, "snippet", ""),
-                    snippet=getattr(item, "snippet", ""),
+                    summary=str(getattr(item, "summary", None) or getattr(item, "snippet", "")),
+                    snippet=str(getattr(item, "snippet", "")),
                     reliability=reliability_str,
                     published_at=getattr(item, "published_at", None),
                     retrieved_at=getattr(item, "retrieved_at", datetime.now(UTC)),

@@ -6,8 +6,6 @@ import re
 import uuid
 from typing import Any, Literal
 
-from contracts.core.types import EdgeDefinition, NodeDefinition, WorkflowDefinition
-
 from apps.dev_studio.wizard.models import (
     AgentSpec,
     EngineType,
@@ -15,6 +13,7 @@ from apps.dev_studio.wizard.models import (
     ValidationResult,
     ValidationStatus,
 )
+from contracts.core.types import EdgeDefinition, NodeDefinition, WorkflowDefinition
 
 
 SpecKind = Literal["agent", "system"]
@@ -320,7 +319,13 @@ def workflow_from_spec(
 ) -> WorkflowDefinition:
     """spec を workflow に変換する."""
     if spec_kind == "system":
-        system = spec if isinstance(spec, SystemSpec) else SystemSpec.from_dict(spec)
+        if isinstance(spec, SystemSpec):
+            system = spec
+        elif isinstance(spec, dict):
+            system = SystemSpec.from_dict(spec)
+        else:
+            msg = "system spec は SystemSpec または dict である必要があります。"
+            raise TypeError(msg)
         nodes = []
         agent_id_map: dict[str, str] = {}
         for index, agent in enumerate(system.agents):
@@ -376,7 +381,13 @@ def workflow_from_spec(
             },
         )
 
-    agent = spec if isinstance(spec, AgentSpec) else AgentSpec.from_dict(spec)
+    if isinstance(spec, AgentSpec):
+        agent = spec
+    elif isinstance(spec, dict):
+        agent = AgentSpec.from_dict(spec)
+    else:
+        msg = "agent spec は AgentSpec または dict である必要があります。"
+        raise TypeError(msg)
     return WorkflowDefinition(
         id=str(uuid.uuid4()),
         name=agent.name,

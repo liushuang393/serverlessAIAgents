@@ -12,6 +12,7 @@ from kernel.skills.builtin.bi_analytics.connector import (
 )
 from kernel.skills.builtin.bi_analytics.visualizer import Chart, ChartGenerator, ChartType
 
+
 __all__ = [
     "AnalysisResult",
     "BIAnalyzer",

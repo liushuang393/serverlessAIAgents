@@ -5,6 +5,7 @@ Google Cloud Run へのコンテナデプロイを実装します。
 
 from __future__ import annotations
 
+import importlib
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -59,7 +60,7 @@ class GoogleCloudRunTarget(BaseDeployTarget):
         )
 
         try:
-            from google.cloud import run_v2
+            run_v2: Any = importlib.import_module("google.cloud.run_v2")
 
             # Cloud Run クライアント作成
             client = run_v2.ServicesAsyncClient()

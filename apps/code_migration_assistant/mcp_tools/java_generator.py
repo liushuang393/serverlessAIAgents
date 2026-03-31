@@ -58,6 +58,15 @@ class JavaGenerator(MCPTool):
             max_tokens=2000,
         )
 
+    @staticmethod
+    def _extract_llm_content(response: Any) -> str:
+        """LLM 応答から文字列本文を取り出す."""
+        if isinstance(response, dict):
+            content = response.get("content", "")
+        else:
+            content = getattr(response, "content", "")
+        return content if isinstance(content, str) else ""
+
     async def handle_request(self, request: MCPToolRequest) -> MCPToolResponse:
         """ASTからJavaコードを生成.
 
@@ -383,7 +392,7 @@ Java Code:
 ```java"""
 
         response = await self._llm_client.generate(role="coding", prompt=prompt)
-        java_code = response.content or ""
+        java_code = self._extract_llm_content(response)
 
         # コードブロックから抽出
         if "```" in java_code:

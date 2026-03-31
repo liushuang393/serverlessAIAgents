@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -59,7 +58,6 @@ from harness.governance.enterprise_audit import (
     EnterpriseAuditLogger,
 )
 from harness.guardrails.safety_mixin import SafetyMixin
-from harness.policies.policy_engine import AuthContext
 from infrastructure.sandbox.tool_provider import (
     OperationType,
     RegisteredTool,
@@ -74,6 +72,8 @@ from shared.integrations.context_bridge import get_current_context
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    from harness.policies.policy_engine import AuthContext
 
 
 __all__ = [
@@ -245,58 +245,6 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         """
         self._killed = True
         self._logger.warning("Kill Switch activated - pipeline will stop at next checkpoint")
-
-    async def _request_design_approval(
-        self,
-        task_id: str,
-        module: str,
-        design_artifact: Any,
-        design_path: Any,
-    ) -> bool:
-        """設計承認を HITL で要求する.
-
-        ApprovalFlow を使用して設計工程後の人間承認を実施する。
-        承認 / 却下 / タイムアウトの結果を返す。
-
-        Args:
-            task_id: タスク ID
-            module: モジュール名
-            design_artifact: 設計成果物
-            design_path: 設計成果物パス
-
-        Returns:
-            承認された場合 True
-        """
-        context = {
-            "task_id": task_id,
-            "module": module,
-            "design_path": str(design_path),
-        }
-        # design_artifact が model_dump を持つ場合サマリーを追加
-        if hasattr(design_artifact, "model_dump"):
-            dumped = design_artifact.model_dump(mode="json")
-            context["class_name"] = dumped.get("class_name", "")
-            context["unknowns_count"] = len(dumped.get("unknowns", []))
-
-        approved = False
-        async for event in self._approval_flow.request_approval(
-            action="migration.design_approval",
-            reason=f"移行設計の承認が必要です（モジュール: {module}）",
-            risk_level="high",
-            context=context,
-        ):
-            # ストリーミングイベントをキューに転送
-            if self._event_queue is not None:
-                await self._event_queue.put(event)
-
-            # 承認結果を判定
-            event_type = event.get("type", "")
-            if event_type == "approval_submitted":
-                approved = bool(event.get("approved", False))
-            elif event_type == "approval_timeout":
-                approved = False
-
-        return approved
 
     async def _initialize(self) -> None:
         """内部 Agent を初期化."""
@@ -565,14 +513,14 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         approved = False
         bridge_task: asyncio.Task[None] | None = None
         self._last_approval_result = None
-        context = {
+        context: dict[str, Any] = {
             "task_id": task_id,
             "module": module,
             "stage": "design",
             "artifact_path": str(design_path),
             "reason": "migration design review required",
             "timeout_policy": "approval_flow_default",
-            "design_unknowns": [item for item in design_artifact.unknowns if isinstance(item, dict)],
+            "design_unknowns": [item.model_dump(mode="json") for item in design_artifact.unknowns],
         }
 
         async for event in self._approval_flow.request_approval(

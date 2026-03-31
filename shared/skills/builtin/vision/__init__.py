@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.vision.vision import VisionConfig, VisionResult, VisionSkill
+
+_vision = import_module("kernel.skills.builtin.vision.vision")
+VisionConfig = _vision.VisionConfig
+VisionResult = _vision.VisionResult
+VisionSkill = _vision.VisionSkill
 
 
 warnings.warn(

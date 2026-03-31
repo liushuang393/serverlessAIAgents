@@ -91,18 +91,15 @@ def launch_from_manifest(
         raise ValueError(msg)
 
     backend_host, backend_port = resolve_backend_binding(config, env=env)
-    run_kwargs: dict[str, object] = {
-        "host": backend_host,
-        "port": backend_port,
-        "reload": reload,
-    }
-    if workers is not None:
-        run_kwargs["workers"] = workers
-    if reload_dirs is not None:
-        run_kwargs["reload_dirs"] = list(reload_dirs)
-    if log_level is not None:
-        run_kwargs["log_level"] = log_level
-    uvicorn.run(config.app_import, **run_kwargs)
+    uvicorn.run(
+        config.app_import,
+        host=backend_host,
+        port=backend_port,
+        reload=reload,
+        workers=workers,
+        reload_dirs=list(reload_dirs) if reload_dirs is not None else None,
+        log_level=log_level,
+    )
 
 
 def _parse_args(argv: Sequence[str]) -> argparse.Namespace:

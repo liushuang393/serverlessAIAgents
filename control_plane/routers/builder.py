@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from control_plane.services.builder_draft_store import BuilderDraftStore
+
+if TYPE_CHECKING:
+    from control_plane.services.builder_draft_store import BuilderDraftStore
 
 
 router = APIRouter(prefix="/api/studios/framework/builder", tags=["builder"])

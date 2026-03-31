@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.conversation_export.conversation_export import (
-    ConversationExportSkill,
-    ExportConfig,
-    ExportFormat,
-    ExportMessage,
-)
+
+_conversation_export = import_module("kernel.skills.builtin.conversation_export.conversation_export")
+ConversationExportSkill = _conversation_export.ConversationExportSkill
+ExportConfig = _conversation_export.ExportConfig
+ExportFormat = _conversation_export.ExportFormat
+ExportMessage = _conversation_export.ExportMessage
 
 
 warnings.warn(

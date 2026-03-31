@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 import threading
@@ -80,10 +81,8 @@ class GeoRepository:
             self._conn.close()
 
     def __del__(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self._conn.close()
-        except Exception:  # noqa: BLE001
-            pass
 
     def _init_db(self) -> None:
         with self._lock:

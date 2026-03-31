@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field
 
-from contracts.skill import CLIHarnessManifest
+
+if TYPE_CHECKING:
+    from contracts.skill import CLIHarnessManifest
 
 
 class CLINativeImportRequest(BaseModel):

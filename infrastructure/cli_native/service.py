@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
@@ -114,6 +114,7 @@ class CLINativeService:
 
         managed_skill_md = managed_harness_dir / detected_skill_md.relative_to(source_dir)
         cli_command = self._discover_cli_command(managed_harness_dir)
+        install_state: Literal["installed", "failed"]
         try:
             self._install_harness(managed_harness_dir)
             install_state = "installed"

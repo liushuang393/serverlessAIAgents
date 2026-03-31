@@ -52,7 +52,7 @@ class TestStudioServer:
         server = StudioServer()
 
         assert server.host == "0.0.0.0"
-        assert server.port == 8000
+        assert server.port == 8012
         assert server.agents_dir is None
         assert server.workflows_dir is None
         assert server.reload is False
@@ -129,7 +129,7 @@ class TestStudioServer:
         mock_uvicorn_run.assert_called_once()
         call_kwargs = mock_uvicorn_run.call_args[1]
         assert call_kwargs["host"] == "0.0.0.0"
-        assert call_kwargs["port"] == 8000
+        assert call_kwargs["port"] == 8012
         assert call_kwargs["reload"] is False
 
 
@@ -148,7 +148,7 @@ class TestCLI:
         # StudioServer が作成されたことを確認
         mock_server_class.assert_called_once_with(
             host="0.0.0.0",
-            port=8000,
+            port=8012,
             agents_dir=None,
             workflows_dir=None,
             reload=False,
@@ -198,7 +198,7 @@ class TestCLI:
         # StudioServer が作成されたことを確認
         call_kwargs = mock_server_class.call_args[1]
         assert call_kwargs["host"] == "0.0.0.0"
-        assert call_kwargs["port"] == 8000
+        assert call_kwargs["port"] == 8012
         assert call_kwargs["agents_dir"] == Path("/tmp/agents")
         assert call_kwargs["workflows_dir"] == Path("/tmp/workflows")
         assert call_kwargs["reload"] is True

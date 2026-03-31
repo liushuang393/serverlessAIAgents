@@ -7,12 +7,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from infrastructure.llm.providers.tool_provider import RiskLevel
-from infrastructure.sandbox.tool_provider import RegisteredTool
 from shared import AccessContext, build_access_context
 
 
 if TYPE_CHECKING:
     from harness.policies.policy_engine import AuthContext
+    from infrastructure.sandbox.tool_provider import RegisteredTool
 
 
 @dataclass(slots=True)

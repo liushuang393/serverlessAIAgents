@@ -600,7 +600,7 @@ def _latest_pending_approval_id(state: Any) -> str | None:
 
 def get_app() -> FastAPI:
     """遅延ファクトリ: import 時ではなく初回アクセス時に app を生成する."""
-    global _app_instance  # noqa: PLW0603
+    global _app_instance
     if _app_instance is None:
         _app_instance = create_app()
     return _app_instance

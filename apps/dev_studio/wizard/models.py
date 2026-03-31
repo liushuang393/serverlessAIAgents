@@ -162,7 +162,7 @@ class SystemSpec:
         agents = [
             agent if isinstance(agent, AgentSpec) else AgentSpec.from_dict(agent)
             for agent in agents_payload
-            if isinstance(agent, dict) or isinstance(agent, AgentSpec)
+            if isinstance(agent, (dict, AgentSpec))
         ]
         return cls(
             name=data["name"],

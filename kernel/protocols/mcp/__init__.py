@@ -5,12 +5,13 @@ from kernel.protocols.mcp.config import LazyLoadingConfig, MCPConfig, MCPServerC
 from kernel.protocols.mcp.lazy_client import LazyMCPClient
 from kernel.protocols.mcp.tool import MCPTool, MCPToolClient
 
+
 __all__ = [
+    "LazyLoadingConfig",
+    "LazyMCPClient",
     "MCPClient",
     "MCPConfig",
-    "LazyMCPClient",
     "MCPServerConfig",
-    "LazyLoadingConfig",
     "MCPTool",
     "MCPToolClient",
 ]

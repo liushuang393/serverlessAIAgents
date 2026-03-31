@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,9 +8,9 @@ import ReactFlow, {
   useEdgesState,
   type Connection,
   type Node,
-} from "reactflow";
-import AgentNode from "./AgentNode";
-import { useWorkflowStore } from "../stores/workflowStore";
+} from 'reactflow';
+import AgentNode from './AgentNode';
+import { useWorkflowStore } from '../stores/workflowStore';
 
 /**
  * ワークフローキャンバスコンポーネント
@@ -53,7 +53,7 @@ export default function Canvas() {
    */
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    event.dataTransfer.dropEffect = 'move';
   }, []);
 
   /**
@@ -66,7 +66,7 @@ export default function Canvas() {
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const agentData = event.dataTransfer.getData("application/reactflow");
+      const agentData = event.dataTransfer.getData('application/reactflow');
       if (!agentData) {
         return;
       }
@@ -79,7 +79,7 @@ export default function Canvas() {
 
       const newNode: Node = {
         id: `${agent.id}-${Date.now()}`,
-        type: "agent",
+        type: 'agent',
         position,
         data: {
           label: agent.name,
@@ -153,10 +153,10 @@ export default function Canvas() {
         <MiniMap
           nodeColor={(node) => {
             switch (node.type) {
-              case "agent":
-                return "#3b82f6";
+              case 'agent':
+                return '#3b82f6';
               default:
-                return "#6b7280";
+                return '#6b7280';
             }
           }}
           className="bg-card border border-border"

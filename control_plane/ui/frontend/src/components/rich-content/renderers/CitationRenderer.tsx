@@ -4,8 +4,8 @@
  * @description 引用元情報をレンダリング
  */
 
-import React from "react";
-import type { RichComponent } from "../types";
+import React from 'react';
+import type { RichComponent } from '../types';
 
 interface CitationRendererProps {
   /** RichComponent */
@@ -26,9 +26,7 @@ interface Source {
   date?: string;
 }
 
-export function CitationRenderer({
-  component,
-}: CitationRendererProps): React.JSX.Element {
+export function CitationRenderer({ component }: CitationRendererProps): React.JSX.Element {
   const rawSources = component.props.sources;
   const sources: Source[] = Array.isArray(rawSources) ? rawSources : [];
 
@@ -38,9 +36,7 @@ export function CitationRenderer({
 
   return (
     <div className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 py-2">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-        📚 引用元
-      </h4>
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📚 引用元</h4>
       <ol className="list-decimal list-inside space-y-2">
         {sources.map((source, idx) => (
           <li
@@ -59,12 +55,8 @@ export function CitationRenderer({
             ) : (
               <span>{source.title}</span>
             )}
-            {source.author && (
-              <span className="ml-2 text-gray-500">- {source.author}</span>
-            )}
-            {source.date && (
-              <span className="ml-2 text-gray-400">({source.date})</span>
-            )}
+            {source.author && <span className="ml-2 text-gray-500">- {source.author}</span>}
+            {source.date && <span className="ml-2 text-gray-400">({source.date})</span>}
           </li>
         ))}
       </ol>

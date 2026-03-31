@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.voice.voice import VoiceConfig, VoiceSkill
+
+_voice = import_module("kernel.skills.builtin.voice.voice")
+VoiceConfig = _voice.VoiceConfig
+VoiceSkill = _voice.VoiceSkill
 
 
 warnings.warn(

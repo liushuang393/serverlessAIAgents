@@ -18,7 +18,6 @@ from pydantic import BaseModel
 
 from apps.legacy_modernization_geo_platform.backend.approval_handler import (
     ApprovalContext,
-    ApprovalStatus,
     PendingApproval,
     apply_rewrite,
     create_approval_flow,
@@ -39,6 +38,7 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     AccountSignalArtifact,
     ApprovalRecord,
     ApprovalRequest,
+    ApprovalStatus,
     BrandMemoryArtifact,
     ContentBlueprintArtifact,
     ContentDraftArtifact,
@@ -53,6 +53,9 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
     TaskStateResponse,
     TaskStatus,
 )
+from apps.legacy_modernization_geo_platform.backend.settings import APP_CONFIG_PATH
+from kernel.agents.app_agent_runtime import bootstrap_app_agents
+
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -101,7 +104,13 @@ class GeoOrchestrator:
         self._intelligence = intelligence_adapter or GeoIntelligenceAdapter()
         self._quality_gate = quality_gate or GeoQualityGate()
         self._publisher = publisher or GeoPublisher(settings)
-        self._agent_runtime = agent_runtime
+        self._agent_runtime = agent_runtime or bootstrap_app_agents(
+            APP_CONFIG_PATH,
+            agent_init_overrides={
+                "GeoQA": {"quality_gate": self._quality_gate},
+                "Publishing": {"publisher": self._publisher},
+            },
+        )
         self._runtimes: dict[str, GeoTaskRuntime] = {}
         self._subscribers: dict[str, set[WebSocket]] = {}
         self._broadcast_loop: asyncio.AbstractEventLoop | None = None

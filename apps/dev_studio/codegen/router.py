@@ -77,7 +77,8 @@ async def generate_code(request: GenerateRequest) -> GenerateResponse:
         else:
             workflow_name = request.workflow_name.strip()
             if not workflow_name:
-                raise ValueError("workflow_name または spec は必須です")
+                msg = "workflow_name または spec は必須です"
+                raise ValueError(msg)
             workflow = WorkflowDefinition(
                 id=str(uuid.uuid4()),
                 name=workflow_name,

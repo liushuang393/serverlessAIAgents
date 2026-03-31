@@ -25,10 +25,13 @@ except ImportError:  # pragma: no cover - optional dependency
 else:
     httpx = _httpx
 
+trafilatura: ModuleType | None
 try:
-    import trafilatura
+    import trafilatura as _trafilatura
 except ImportError:  # pragma: no cover - optional dependency
     trafilatura = None
+else:
+    trafilatura = _trafilatura
 
 
 _TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", flags=re.IGNORECASE | re.DOTALL)

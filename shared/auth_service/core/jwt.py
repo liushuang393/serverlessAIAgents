@@ -9,7 +9,7 @@ import logging
 import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
@@ -260,13 +260,14 @@ class JWTManager:
         try:
             import jwt
 
-            return jwt.decode(
+            decoded = jwt.decode(
                 token,
                 self._secret_key,
                 algorithms=[self._algorithm],
                 issuer=self._issuer,
                 audience=self._audience,
             )
+            return cast("dict[str, Any]", decoded)
             # PyJWT 2.0+ decode returns dict (verified by MyPy reachable code)
         except ImportError:
             logger.exception("PyJWT がインストールされていません")

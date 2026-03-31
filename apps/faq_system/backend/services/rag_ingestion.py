@@ -46,7 +46,7 @@ with contextlib.suppress(ImportError):
     _httpx_module = importlib.import_module("httpx")
 
 with contextlib.suppress(ImportError):
-    import boto3
+    boto3 = importlib.import_module("boto3")
 
 _tenacity_module: Any = None
 with contextlib.suppress(ImportError):

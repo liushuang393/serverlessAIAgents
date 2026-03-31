@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.chatbot.chatbot import ChatBotConfig, ChatBotSkill, ChatSession
+
+_chatbot = import_module("kernel.skills.builtin.chatbot.chatbot")
+ChatBotConfig = _chatbot.ChatBotConfig
+ChatBotSkill = _chatbot.ChatBotSkill
+ChatSession = _chatbot.ChatSession
 
 
 warnings.warn(

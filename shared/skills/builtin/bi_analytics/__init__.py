@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 import warnings
+from importlib import import_module
 
-from kernel.skills.builtin.bi_analytics.analyzer import AnalysisResult, BIAnalyzer
-from kernel.skills.builtin.bi_analytics.connector import (
-    ConnectionConfig,
-    ConnectorType,
-    DataConnector,
-    DataFrame,
-    MemoryConnector,
-)
-from kernel.skills.builtin.bi_analytics.visualizer import Chart, ChartGenerator, ChartType
+
+_analyzer = import_module("kernel.skills.builtin.bi_analytics.analyzer")
+_connector = import_module("kernel.skills.builtin.bi_analytics.connector")
+_visualizer = import_module("kernel.skills.builtin.bi_analytics.visualizer")
+
+AnalysisResult = _analyzer.AnalysisResult
+BIAnalyzer = _analyzer.BIAnalyzer
+ConnectionConfig = _connector.ConnectionConfig
+ConnectorType = _connector.ConnectorType
+DataConnector = _connector.DataConnector
+DataFrame = _connector.DataFrame
+MemoryConnector = _connector.MemoryConnector
+Chart = _visualizer.Chart
+ChartGenerator = _visualizer.ChartGenerator
+ChartType = _visualizer.ChartType
 
 
 warnings.warn(

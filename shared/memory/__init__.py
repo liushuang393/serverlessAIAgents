@@ -4,6 +4,8 @@
 """
 
 import warnings
+from importlib import import_module
+
 
 warnings.warn(
     "shared.memory は非推奨です。kernel.memory を使用してください。",
@@ -11,6 +13,8 @@ warnings.warn(
     stacklevel=2,
 )
 
-from kernel.memory.memory_manager import MemoryManager  # noqa: E402
+_memory_manager = import_module("kernel.memory.memory_manager")
+MemoryManager = _memory_manager.MemoryManager
+
 
 __all__ = ["MemoryManager"]
