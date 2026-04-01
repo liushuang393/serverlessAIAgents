@@ -7,6 +7,7 @@ Mock LLM を使用（外部依存なし）。
 from __future__ import annotations
 
 import json
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 from apps.market_trend_monitor.backend.models import SentimentType, Trend
@@ -27,7 +28,7 @@ def _make_trend(
     score: float = 0.8,
     growth_rate: float = 0.2,
     sentiment: SentimentType = SentimentType.POSITIVE,
-    metadata: dict | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> Trend:
     """テスト用 Trend を生成."""
     return Trend(
@@ -42,7 +43,7 @@ def _make_trend(
     )
 
 
-def _make_mock_llm():
+def _make_mock_llm() -> Any:
     """テスト用 Mock LLM を生成."""
     mock = AsyncMock()
     mock.chat = AsyncMock(

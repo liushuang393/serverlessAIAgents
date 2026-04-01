@@ -34,6 +34,11 @@ except ImportError:
     PdfReader = None  # type: ignore[assignment,misc]
 
 try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None  # type: ignore[assignment]
+
+try:
     from docx import Document as DocxDocument
 except ImportError:
     DocxDocument = None  # type: ignore[assignment,misc]
@@ -41,7 +46,7 @@ except ImportError:
 try:
     import openpyxl
 except ImportError:
-    openpyxl = None  # type: ignore[assignment]
+    openpyxl = None
 
 
 # ---------------------------------------------------------------------------
@@ -172,8 +177,34 @@ class _LegacyParser:
     @staticmethod
     def parse_pdf(file_stream: IO[bytes]) -> ParseResult:
         """PDF テキスト抽出."""
+        metadata: dict[str, Any] = {"parser": "pdf"}
+
+        if pdfplumber is not None:
+            try:
+                file_stream.seek(0)
+                with pdfplumber.open(file_stream) as pdf:
+                    pages: list[str] = []
+                    sections: list[str] = []
+                    for i, page in enumerate(pdf.pages):
+                        text = page.extract_text() or ""
+                        if text:
+                            pages.append(text)
+                            sections.append(f"Page {i + 1}")
+                    metadata["page_count"] = len(pdf.pages)
+                    pdf_meta = getattr(pdf, "metadata", None)
+                    if pdf_meta:
+                        _merge_pdf_metadata(pdf_meta, metadata)
+                    return ParseResult(
+                        content="\n\n".join(pages),
+                        metadata=metadata,
+                        file_type="application/pdf",
+                        sections=sections,
+                    )
+            except Exception:
+                logger.debug("pdfplumber 失敗、pypdf にフォールバック", exc_info=True)
+
         if PdfReader is None:
-            msg = "PDF パースには markitdown または pypdf が必要"
+            msg = "PDF パースには markitdown または pdfplumber / pypdf が必要"
             raise ImportError(msg)
 
         file_stream.seek(0)
@@ -185,9 +216,21 @@ class _LegacyParser:
             if text:
                 pages.append(text)
                 sections.append(f"Page {i + 1}")
+
+        metadata["page_count"] = len(reader.pages)
+        reader_metadata = reader.metadata
+        if reader_metadata is not None:
+            _merge_pdf_metadata(
+                {
+                    key: getattr(reader_metadata, key, None)
+                    for key in ("title", "author", "subject", "creator")
+                },
+                metadata,
+            )
+
         return ParseResult(
             content="\n\n".join(pages),
-            metadata={"parser": "pypdf", "page_count": len(reader.pages)},
+            metadata=metadata,
             file_type="application/pdf",
             sections=sections,
         )
@@ -244,6 +287,11 @@ class _LegacyParser:
 
         file_stream.seek(0)
         wb = openpyxl.load_workbook(file_stream, read_only=True, data_only=True)
+        metadata: dict[str, Any] = {
+            "parser": "openpyxl",
+            "sheet_count": len(wb.sheetnames),
+            "sheet_names": list(wb.sheetnames),
+        }
         sections: list[str] = []
         sheet_texts: list[str] = []
 
@@ -272,9 +320,10 @@ class _LegacyParser:
                 sheet_texts.append(f"[シート: {sheet_name}]\n" + "\n".join(row_texts))
         wb.close()
 
+        metadata["total_rows"] = sum(1 for st in sheet_texts for _line in st.split("\n") if _line.strip())
         return ParseResult(
             content="\n\n".join(sheet_texts),
-            metadata={"parser": "openpyxl", "sheet_count": len(wb.sheetnames)},
+            metadata=metadata,
             file_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             sections=sections,
         )
@@ -481,3 +530,14 @@ _MIME_MAP: dict[str, str] = {
 def _ext_to_mime(ext: str) -> str:
     """拡張子から MIME タイプに変換."""
     return _MIME_MAP.get(ext, "application/octet-stream")
+
+
+def _merge_pdf_metadata(source: dict[str, Any] | Any, target: dict[str, Any]) -> None:
+    """PDF メタデータを target 辞書へ安全にマージする."""
+    if not isinstance(source, dict):
+        return
+
+    for key in ("title", "author", "subject", "creator"):
+        value = source.get(key)
+        if isinstance(value, str) and value.strip():
+            target[key] = value.strip()

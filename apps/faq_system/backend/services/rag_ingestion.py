@@ -28,18 +28,18 @@ from infrastructure.providers.db_provider import SQLAlchemyDBProvider
 from shared.rag.document_loader import UniversalLoader
 
 
-# Optional dependencies - use Any for module variables to satisfy MyPy
-sqlglot: Any = None
-sql_exp: Any = None
-trafilatura: Any = None
-boto3: Any = None
-
-with contextlib.suppress(ImportError):
+# Optional dependencies
+try:
     import sqlglot
     from sqlglot import exp as sql_exp
+except ImportError:
+    sqlglot = None  # type: ignore
+    sql_exp = None  # type: ignore
 
-with contextlib.suppress(ImportError):
+try:
     import trafilatura
+except ImportError:
+    trafilatura = None  # type: ignore
 
 _httpx_module: Any = None
 with contextlib.suppress(ImportError):

@@ -1,5 +1,6 @@
 import io
 import os
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,7 +19,7 @@ except ModuleNotFoundError:
 class TestEnterpriseFeatures:
     """Enterprise 拡張機能（P2）の検証テスト."""
 
-    def test_pdf_parser_smoke(self):
+    def test_pdf_parser_smoke(self) -> None:
         """PDF パーサーのモックテスト."""
         mock_pdf_content = b"%PDF-1.4\n1 0 obj\n<< /Length 10 >>\nstream\nHello PDF\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF"
         stream = io.BytesIO(mock_pdf_content)
@@ -33,7 +34,7 @@ class TestEnterpriseFeatures:
                 text = FileParser.parse_pdf(stream)
                 assert text == "Extracted PDF Text"
 
-    def test_docx_parser_smoke(self):
+    def test_docx_parser_smoke(self) -> None:
         """Word パーサーのモックテスト."""
         stream = io.BytesIO(b"dummy docx")
         with patch("apps.faq_system.backend.rag.parsers.Document") as mock_doc:
@@ -45,7 +46,7 @@ class TestEnterpriseFeatures:
                 text = FileParser.parse_docx(stream)
                 assert text == "Extracted Docx Text"
 
-    def test_csv_parser(self):
+    def test_csv_parser(self) -> None:
         """CSV パーサーの検証."""
         csv_data = "header1,header2\nval1,val2\nval3,val4"
         stream = io.StringIO(csv_data)
@@ -59,7 +60,7 @@ class TestEnterpriseFeatures:
     @pytest.mark.skipif(not _has_ldap3, reason="ldap3 がインストールされていません")
     @patch("ldap3.Connection")
     @patch("ldap3.Server")
-    def test_ldap_auth_logic(self, mock_server, mock_conn):
+    def test_ldap_auth_logic(self, mock_server: Any, mock_conn: Any) -> None:
         """LDAP 認証ロジックの検証."""
         from apps.faq_system.backend.auth.service import AuthService
 
@@ -86,7 +87,7 @@ class TestEnterpriseFeatures:
         assert result.email == "ldap@example.com"
 
     @patch("apps.faq_system.backend.auth.service.get_db_session")
-    async def test_account_lockout_logic(self, mock_get_session):
+    async def test_account_lockout_logic(self, mock_get_session: Any) -> None:
         """アカウントロックアウトロジックの検証."""
         from unittest.mock import AsyncMock
 

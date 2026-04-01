@@ -50,6 +50,8 @@ class ToolApprovalRequest(ContractApprovalRequest):
 
     Attributes:
         id: リクエストID
+        action: 承認対象アクション (Contract フィールド)
+        reason: 承認理由 (Contract フィールド)
         skill_name: スキル名
         risk_level: リスクレベル
         params: スキルパラメータ
@@ -63,6 +65,8 @@ class ToolApprovalRequest(ContractApprovalRequest):
         metadata: 追加メタデータ
     """
 
+    action: str = Field(default="")
+    reason: str = Field(default="")
     skill_name: str = Field(..., min_length=1)
     risk_level: RiskLevel = Field(default=RiskLevel.LOW)
     params: dict[str, Any] = Field(default_factory=dict)

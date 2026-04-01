@@ -1331,7 +1331,7 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
         question = intent.rewritten_query or intent.original_text
         self._logger.info("ビジネスアドバイス実行: %s", question[:80])
 
-        agent: BusinessAdvisorAgent | None = self._agents.get("business_advisor")  # type: ignore[assignment]
+        agent: BusinessAdvisorAgent | None = self._agents.get("business_advisor")
         if agent is None:
             agent = BusinessAdvisorAgent(gateway=self._gateway)
             self._agents["business_advisor"] = agent

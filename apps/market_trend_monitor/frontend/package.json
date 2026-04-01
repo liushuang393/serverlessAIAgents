@@ -2,6 +2,7 @@
   "name": "market-trend-monitor-frontend",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Market Trend Monitor - Frontend Application",
   "scripts": {
     "dev": "vite",

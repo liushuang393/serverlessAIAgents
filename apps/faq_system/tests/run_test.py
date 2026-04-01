@@ -4,12 +4,13 @@
 import json
 import urllib.error
 import urllib.request
+from typing import Any, cast
 
 
 BASE = "http://localhost:8005"
 
 
-def chat(msg: str, token: str) -> dict:
+def chat(msg: str, token: str) -> dict[str, Any]:
     """チャットAPIを呼び出す."""
     req = urllib.request.Request(
         f"{BASE}/api/chat",
@@ -19,7 +20,7 @@ def chat(msg: str, token: str) -> dict:
     )
     try:
         with urllib.request.urlopen(req, timeout=120) as r:
-            return json.loads(r.read())
+            return cast("dict[str, Any]", json.loads(r.read()))
     except urllib.error.HTTPError as e:
         return {"error": e.code, "body": e.read().decode()[:300]}
     except Exception as ex:

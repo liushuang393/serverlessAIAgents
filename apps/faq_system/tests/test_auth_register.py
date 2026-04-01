@@ -5,7 +5,7 @@ from apps.faq_system.backend.auth.service import AuthProvider, get_auth_service
 
 
 @pytest.mark.asyncio
-async def test_register_user_success(client: AsyncClient):
+async def test_register_user_success(client: AsyncClient) -> None:
     """ユーザー登録成功シナリオ."""
     # Ensure local db mode
     service = get_auth_service()
@@ -35,7 +35,7 @@ async def test_register_user_success(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_register_user_duplicate(client: AsyncClient):
+async def test_register_user_duplicate(client: AsyncClient) -> None:
     """重複ユーザー登録失敗シナリオ."""
     service = get_auth_service()
     if service._active_provider() != AuthProvider.LOCAL_DB:
@@ -52,7 +52,7 @@ async def test_register_user_duplicate(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_register_weak_password(client: AsyncClient):
+async def test_register_weak_password(client: AsyncClient) -> None:
     """弱いパスワードでの登録失敗.
 
     RegisterRequest の Pydantic バリデーション (min_length=8) により

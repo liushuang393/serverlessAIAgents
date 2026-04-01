@@ -7,7 +7,7 @@ import json
 import time
 from asyncio import Event
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -20,13 +20,19 @@ from apps.code_migration_assistant.backend.migration_router import router as mig
 from apps.code_migration_assistant.backend.migration_task_store import HITLRequest, get_task_store
 
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    import pytest
+
+
 def _create_test_app() -> FastAPI:
     app = FastAPI()
     app.include_router(migration_router)
     return app
 
 
-def test_hitl_returns_404_for_unknown_task_in_cma_cli_backend(monkeypatch) -> None:
+def test_hitl_returns_404_for_unknown_task_in_cma_cli_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     """cma_cli バックエンドでも未知タスクには 404 を返す."""
     monkeypatch.setenv("MIGRATION_EXECUTION_BACKEND", "cma_cli")
     client = TestClient(_create_test_app())
@@ -91,7 +97,7 @@ class _FakeCmaCliExecutionAdapter:
     async def start(self, task_id: str, config: ExecutionConfig) -> None:
         self._configs[task_id] = config
 
-    async def stream_events(self, task_id: str):
+    async def stream_events(self, task_id: str) -> AsyncGenerator[dict[str, Any]]:
         _ = task_id
         yield {"type": "stage_start", "stage": "analyzer", "message": "start"}
         yield {"type": "stage_complete", "stage": "analyzer", "decision": "PASSED"}
@@ -129,7 +135,7 @@ class _FakeCmaCliExecutionAdapter:
 
 
 def test_upload_stream_status_download_with_cma_cli(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     """最小E2E: upload -> stream -> status -> download が成立する."""
