@@ -33,6 +33,8 @@ def _build_compose_env() -> dict[str, str]:
     backend_port = runtime.ports.api
     frontend_host = runtime.hosts.frontend
     frontend_port = runtime.ports.frontend
+    db_port = runtime.ports.db
+    redis_port = runtime.ports.redis
     if backend_host is None or backend_port is None or frontend_host is None or frontend_port is None:
         msg = (
             "Decision Governance Engine の frontend / backend host / port は "
@@ -45,6 +47,10 @@ def _build_compose_env() -> dict[str, str]:
     env["DGE_PORT"] = str(backend_port)
     env["FRONTEND_HOST"] = frontend_host
     env["FRONTEND_PORT"] = str(frontend_port)
+    if db_port is not None:
+        env["DB_PORT"] = str(db_port)
+    if redis_port is not None:
+        env["REDIS_PORT"] = str(redis_port)
     return env
 
 

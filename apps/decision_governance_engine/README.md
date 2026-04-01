@@ -227,22 +227,28 @@ CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi →
 # 1. プロジェクトルートで BizCore をインストール
 pip install -e .
 
-# 2. フロントエンド依存関係をインストール
-cd apps/decision_governance_engine/frontend
+# 2. auth_service を先に起動（共有認証基盤）
+cd shared/auth_service
+conda run -n agentflow python scripts/compose.py publish
+
+# 3. フロントエンド依存関係をインストール
+cd ../../apps/decision_governance_engine/frontend
 npm install
 
-# 3. 環境変数を設定
+# 4. 環境変数を設定
 cd ../../..
 cat <<'EOF' > .env
 PLATFORM_SECRET_MASTER_KEY=
+AUTH_SERVICE_URL=http://localhost:8010
 EOF
 
-# 4. Gateway 設定を初期化（未作成時）
+# 5. Gateway 設定を初期化（未作成時）
 python -c "from infrastructure.llm.gateway import get_gateway_router; print(get_gateway_router())"
 ```
 
 > 注意:
 >
+> - login を使う場合は `auth_service` を先に起動してください。
 > - この app の正本は `app_config.json` の `contracts.llm` です。
 > - Provider / model / API Key は `control_plane` の `LLM Management` で管理してください。
 > - app 層は Provider 名を直接扱わず、契約から解決された model を利用します。
@@ -304,13 +310,15 @@ pip install -e ".[dev,apps]"
 #### 方法1: Docker Compose（推奨）
 
 ```bash
-# プロジェクトルートで実行
-cd apps/decision_governance_engine
-
+# 共有 auth_service を先に起動
+cd shared/auth_service
 conda run -n agentflow python scripts/compose.py publish
 
-# 開発モードで起動（ホットリロード有効）
-# バックグラウンドで起動
+# DGE を起動
+cd ../../apps/decision_governance_engine
+conda run -n agentflow python scripts/compose.py publish
+
+# 開発モードで再起動
 conda run -n agentflow python scripts/compose.py start
 
 # ログ確認
@@ -323,22 +331,26 @@ conda run -n agentflow python scripts/compose.py stop
 **サービス構成:**
 
 - `postgres-main`: PostgreSQL データベース（ポート 5432）
-- `redis`: Redis キャッシュ（ポート 6379）
+- `redis`: Redis キャッシュ（Docker 内部依存、host port 非公開）
 - `backend`: FastAPI バックエンド（ポート 8001、ホットリロード有効）
-- `frontend`: Vite 開発サーバー（ポート 5174）
+- `frontend`: Vite 開発サーバー（ポート 5175）
 
 **ブラウザでアクセス**
 
 ```
-http://localhost:5174
+http://localhost:5175
 ```
+
+login は `auth_service` の demo user を使います。
 
 #### 方法2: ローカル環境（手動起動）
 
 **前提条件:**
 
-- PostgreSQL と Redis が起動していること
-- 環境変数 `DATABASE_URL` と `REDIS_URL` が設定されていること
+- auth_service が起動していること
+- PostgreSQL が起動していること
+- 環境変数 `DATABASE_URL` が設定されていること
+- Redis は任意（未接続時はキャッシュ無効で継続）
 
 **ターミナル1: バックエンドAPI起動**
 
@@ -351,9 +363,11 @@ pip install -e ".[dev]"
 # ローカル開発（ホットリロード有効）
 # scripts/dev.py が 明示指定 > app_config.json の順で host / port を解決し、
 # 共通 launcher 経由で uvicorn を起動する
+AUTH_SERVICE_URL=http://localhost:8010 \
 conda run -n agentflow python apps/decision_governance_engine/scripts/dev.py --reload
 
 # 本番相当のローカル起動（リロードなし）
+AUTH_SERVICE_URL=http://localhost:8010 \
 conda run -n agentflow python apps/decision_governance_engine/scripts/dev.py --no-reload --workers 2
 ```
 
@@ -365,14 +379,14 @@ cd apps/decision_governance_engine/frontend
 # 依存関係インストール
 npm install
 
-# 開発サーバー起動（ポート5174）
+# 開発サーバー起動（ポート 5175）
 npm run dev
 ```
 
 **ブラウザでアクセス**
 
 ```
-http://localhost:5174
+http://localhost:5175
 ```
 
 ### 5.2 動作確認
@@ -385,6 +399,21 @@ curl http://localhost:8001/api/health
 # Swagger UI（API仕様書）
 open http://localhost:8001/docs
 ```
+
+### 5.2.1 Login 動作確認
+
+```bash
+# auth_service の demo user を利用
+curl -X POST http://localhost:8001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+```
+
+期待値:
+
+- `http://localhost:5175` の login 画面が表示される
+- `/api/auth/login` が成功する
+- `/api/auth/me` が認証済みユーザーを返す
 
 ### 5.3 CLI モード（開発者向け）
 

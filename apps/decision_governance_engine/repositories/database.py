@@ -25,8 +25,8 @@ from infrastructure.storage.database.session import DatabaseManager
 logger = logging.getLogger(__name__)
 
 # デフォルト接続 URL（開発用、本番は環境変数で上書き）
-_DEFAULT_DATABASE_URL = "postgresql+asyncpg://dge:dge_password@localhost:5432/decision_governance"
-_DEFAULT_REDIS_URL = "redis://localhost:6379/0"
+_DEFAULT_DATABASE_URL = "postgresql+asyncpg://dge:dge_password@localhost:5500/decision_governance"
+_DEFAULT_REDIS_URL = "redis://localhost:6400/0"
 
 # フレームワーク統一 DatabaseManager インスタンス
 _db = DatabaseManager(

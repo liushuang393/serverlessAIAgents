@@ -6,7 +6,8 @@
 #
 # 前提:
 #   - 必ず docker-compose.yml と一緒に使用すること（postgres-main, redis が必要）
-#   - frontend / backend host / port は app_config.json または compose wrapper で注入すること
+#   - frontend / backend host / port は app_config.json の既定値を使い、
+#     必要時のみ compose wrapper / env で override する
 #
 # 機能:
 #   - バックエンド: uvicorn --reload（ホットリロード）
@@ -65,6 +66,7 @@ services:
       # アプリ設定
       - LOG_LEVEL=DEBUG
       - ENABLE_RAG=${ENABLE_RAG:-true}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://host.docker.internal:8010}
       # データベース設定（docker-compose.yml の postgres-main サービスを使用）
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-dge}:${POSTGRES_PASSWORD:-dge_password}@postgres-main:5432/${POSTGRES_DB:-decision_governance}
       - REDIS_URL=redis://redis:6379/0
@@ -77,7 +79,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+      - "${FRONTEND_PORT:-5175}:${FRONTEND_PORT:-5175}"
     volumes:
       # ソースコードをマウント（ホットリロード用）
       - ./frontend/src:/app/src
@@ -90,16 +92,16 @@ services:
       - ./frontend/tsconfig.json:/app/tsconfig.json
     environment:
       - VITE_DEBUG_MODE=true
-      - FRONTEND_HOST=${FRONTEND_HOST}
-      - FRONTEND_PORT=${FRONTEND_PORT}
-      - DGE_HOST=${DGE_HOST}
-      - DGE_PORT=${DGE_PORT}
+      - FRONTEND_HOST=${FRONTEND_HOST:-0.0.0.0}
+      - FRONTEND_PORT=${FRONTEND_PORT:-5175}
+      - DGE_HOST=${DGE_HOST:-0.0.0.0}
+      - DGE_PORT=${DGE_PORT:-8001}
       # Vite dev server の proxy target（容器内部ネットワーク経由）
       # ※ VITE_ プレフィックスだとブラウザ側に注入されてしまうため、
       #    PROXY_TARGET を使用（vite.config.ts の process.env.PROXY_TARGET で参照）
-      - PROXY_TARGET=http://backend:${DGE_PORT}
+      - PROXY_TARGET=http://backend:${DGE_PORT:-8001}
     healthcheck:
-      # 開発モードは Vite dev server（5174）に対してヘルスチェックする
+      # 開発モードは Vite dev server（5175）に対してヘルスチェックする
       test:
         [
           "CMD",
@@ -107,7 +109,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://127.0.0.1:${FRONTEND_PORT}/",
+          "http://127.0.0.1:${FRONTEND_PORT:-5175}/",
         ]
       interval: 30s
       timeout: 3s

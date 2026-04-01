@@ -12,7 +12,7 @@
     "api": 8001,
     "frontend": 5175,
     "db": 5432,
-    "redis": 6379
+    "redis": null
   },
   "entry_points": {
     "api_module": "apps.decision_governance_engine.api:app",
@@ -22,10 +22,7 @@
     {
       "name": "CognitiveGateAgent",
       "module": "apps.decision_governance_engine.agents.cognitive_gate_agent",
-      "capabilities": [
-        "gate",
-        "cognitive_check"
-      ],
+      "capabilities": ["gate", "cognitive_check"],
       "business_base": "governance",
       "pattern": "gatekeeper",
       "agent_type": "gatekeeper"
@@ -33,10 +30,7 @@
     {
       "name": "GatekeeperAgent",
       "module": "apps.decision_governance_engine.agents.gatekeeper_agent",
-      "capabilities": [
-        "gate",
-        "validation"
-      ],
+      "capabilities": ["gate", "validation"],
       "business_base": "governance",
       "pattern": "gatekeeper",
       "agent_type": "gatekeeper"
@@ -44,10 +38,7 @@
     {
       "name": "ClarificationAgent",
       "module": "apps.decision_governance_engine.agents.clarification_agent",
-      "capabilities": [
-        "diagnosis",
-        "clarification"
-      ],
+      "capabilities": ["diagnosis", "clarification"],
       "business_base": "reasoning",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -55,11 +46,7 @@
     {
       "name": "DaoAgent",
       "module": "apps.decision_governance_engine.agents.dao_agent",
-      "capabilities": [
-        "analysis",
-        "dao",
-        "philosophy"
-      ],
+      "capabilities": ["analysis", "dao", "philosophy"],
       "business_base": "reasoning",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -67,11 +54,7 @@
     {
       "name": "FaAgent",
       "module": "apps.decision_governance_engine.agents.fa_agent",
-      "capabilities": [
-        "analysis",
-        "fa",
-        "rules"
-      ],
+      "capabilities": ["analysis", "fa", "rules"],
       "business_base": "reasoning",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -79,11 +62,7 @@
     {
       "name": "ShuAgent",
       "module": "apps.decision_governance_engine.agents.shu_agent",
-      "capabilities": [
-        "analysis",
-        "shu",
-        "strategy"
-      ],
+      "capabilities": ["analysis", "shu", "strategy"],
       "business_base": "reasoning",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -91,11 +70,7 @@
     {
       "name": "QiAgent",
       "module": "apps.decision_governance_engine.agents.qi_agent",
-      "capabilities": [
-        "analysis",
-        "qi",
-        "tools"
-      ],
+      "capabilities": ["analysis", "qi", "tools"],
       "business_base": "reasoning",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -103,10 +78,7 @@
     {
       "name": "ReviewAgent",
       "module": "apps.decision_governance_engine.agents.review_agent",
-      "capabilities": [
-        "review",
-        "synthesis"
-      ],
+      "capabilities": ["review", "synthesis"],
       "business_base": "governance",
       "pattern": "reviewer",
       "agent_type": "reviewer"
@@ -114,9 +86,7 @@
   ],
   "services": {
     "rag": {
-      "collections": [
-        "decision_knowledge"
-      ]
+      "collections": ["decision_knowledge"]
     },
     "pipeline": {
       "engine": "DecisionGovernanceEngine"
@@ -152,24 +122,24 @@
     "commands": {
       "backend_dev": "python apps/decision_governance_engine/scripts/dev.py --reload",
       "frontend_dev": "cd apps/decision_governance_engine/frontend && npm run dev",
-      "publish": "python apps/decision_governance_engine/scripts/compose.py publish",
-      "start": "python apps/decision_governance_engine/scripts/compose.py start",
-      "stop": "python apps/decision_governance_engine/scripts/compose.py stop"
+      "publish": "python scripts/compose.py publish",
+      "start": "python scripts/compose.py start",
+      "stop": "python scripts/compose.py stop"
     }
   },
-  "tags": [
-    "decision",
-    "governance",
-    "pipeline",
-    "dao",
-    "multi-agent"
-  ],
+  "tags": ["decision", "governance", "pipeline", "dao", "multi-agent"],
   "contracts": {
     "auth": {
-      "enabled": false,
-      "providers": [],
-      "allow_anonymous": true,
+      "enabled": true,
+      "providers": ["auth_service"],
+      "allow_anonymous": false,
       "required_scopes": [],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "allow_same_tenant_sso": true,
+      "token_policy": {
+        "allow_same_tenant_sso": true
+      },
       "session_ttl_minutes": 60
     },
     "llm": {
@@ -187,19 +157,14 @@
         }
       },
       "agent_overrides": {},
-      "allowed_modalities": [
-        "embedding",
-        "text"
-      ],
+      "allowed_modalities": ["embedding", "text"],
       "extra_model_refs": []
     },
     "rag": {
       "enabled": true,
       "pattern": null,
       "provider": null,
-      "collections": [
-        "decision_knowledge"
-      ],
+      "collections": ["decision_knowledge"],
       "data_sources": [],
       "chunk_strategy": "recursive",
       "chunk_size": 800,
@@ -220,9 +185,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -258,11 +221,7 @@
       "consumer_group": "evolution-validator-v1",
       "max_retries": 5
     },
-    "scope_policy": [
-      "tenant_app",
-      "tenant_product_line",
-      "global_verified"
-    ],
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
       "high_complexity_threshold": 0.7,

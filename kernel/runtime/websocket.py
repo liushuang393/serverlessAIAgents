@@ -38,7 +38,7 @@ class WSMessageType(StrEnum):
 class WSMessage(BaseModel):
     """WebSocket message payload."""
 
-    type: WSMessageType = Field(..., description="message type")
+    type: WSMessageType | str = Field(..., description="message type")
     data: dict[str, Any] = Field(default_factory=dict, description="message data")
     room: str | None = Field(default=None, description="room")
     client_id: str | None = Field(default=None, description="client id")
@@ -320,7 +320,8 @@ class WebSocketHub:
         await handler(message)
 
     async def _dispatch_message(self, client_id: str, message: WSMessage) -> None:
-        await self.emit(message.type.value, client_id, message.data)
+        event_type = str(message.type)
+        await self.emit(event_type, client_id, message.data)
         if message.type == WSMessageType.SUBSCRIBE and message.room:
             await self.join_room(client_id, message.room)
         elif message.type == WSMessageType.UNSUBSCRIBE and message.room:

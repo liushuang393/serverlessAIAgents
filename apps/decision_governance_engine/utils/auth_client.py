@@ -1,10 +1,12 @@
 import logging
+import os
 from typing import Any
 
 import httpx
 
 
 logger = logging.getLogger("decision_api.auth_client")
+_DEFAULT_AUTH_SERVICE_URL = "http://localhost:8010"
 
 
 def _response_json_dict(response: httpx.Response) -> dict[str, Any]:
@@ -18,8 +20,9 @@ def _response_json_dict(response: httpx.Response) -> dict[str, Any]:
 class AuthClient:
     """Auth Service と通信するためのクライアント."""
 
-    def __init__(self, base_url: str = "http://auth-service:8010"):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, base_url: str | None = None):
+        resolved_base_url = base_url or os.getenv("AUTH_SERVICE_URL", _DEFAULT_AUTH_SERVICE_URL)
+        self.base_url = resolved_base_url.rstrip("/")
 
     async def login(self, username: str, password: str) -> dict[str, Any]:
         """ログイン要求をプロキシ."""

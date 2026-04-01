@@ -673,7 +673,7 @@ class AppLifecycleManager:
             run_health_check=True,
             cli_preflight=cli_preflight,
             allow_process_fallback=False,
-            allow_command_override=False,
+            allow_command_override=True,
         )
         result.execution_mode = "docker"
         mode_note = f"publish_mode={publish_mode}"
@@ -740,7 +740,7 @@ class AppLifecycleManager:
                 run_health_check=True,
                 cli_preflight=cli_preflight,
                 allow_process_fallback=False,
-                allow_command_override=False,
+                allow_command_override=True,
             )
         else:
             local_running = bool(mode_details.get("local", {}).get("running"))
@@ -833,7 +833,7 @@ class AppLifecycleManager:
                 run_health_check=False,
                 cli_preflight=None,
                 allow_process_fallback=False,
-                allow_command_override=False,
+                allow_command_override=True,
             )
             local_stop_result = await self._stop_local_processes(config.name)
             result = self._merge_local_stop_result(result, local_stop_result)

@@ -113,7 +113,7 @@ server {
     # API リバースプロキシ
     # set 変数経由で proxy_pass するとリクエスト時に DNS 解決（起動時解決を回避）
     location /api/ {
-        set $backend http://backend:8000;
+        set $backend http://backend:8001;
         proxy_pass $backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -127,7 +127,7 @@ server {
 
     # SSE ストリーミング専用エンドポイント
     location /api/decision/stream {
-        set $backend http://backend:8000;
+        set $backend http://backend:8001;
         proxy_pass $backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

@@ -4,8 +4,10 @@
 # PostgreSQL + Redis + バックエンド + フロントエンド
 #
 # ポート設定:
-#   - frontend / backend の host / port は compose wrapper が app_config.json から注入
-#   - DB / Redis のポートのみ .env override を許容
+#   - frontend / backend の host / port は app_config.json の既定値を使い、
+#     必要時のみ compose wrapper / env で override する
+#   - DB の host port のみ .env override を許容する
+#   - Redis は Docker 内部依存として扱い、host には公開しない
 #
 # 使用方法:
 #   開発（ホットリロード）:
@@ -61,8 +63,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: dge-redis
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     command: >
       redis-server
       --appendonly yes
@@ -103,7 +103,7 @@ services:
         "DGE_PORT",
       ]
     ports:
-      - "${DGE_PORT}:${DGE_PORT}"
+      - "${DGE_PORT:-8001}:${DGE_PORT:-8001}"
     environment:
       # LLM 設定（.env から読み込み）
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -115,11 +115,14 @@ services:
       # アプリ設定
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENABLE_RAG=${ENABLE_RAG:-true}
-      - DGE_HOST=${DGE_HOST}
-      - DGE_PORT=${DGE_PORT}
+      - DGE_HOST=${DGE_HOST:-0.0.0.0}
+      - DGE_PORT=${DGE_PORT:-8001}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://host.docker.internal:8010}
       # データベース設定
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-dge}:${POSTGRES_PASSWORD:-dge_password}@postgres-main:5432/${POSTGRES_DB:-decision_governance}
       - REDIS_URL=redis://redis:6379/0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # 開発時: ソースコードをマウント（ホットリロード用）
       - ../../contracts:/app/contracts:ro
