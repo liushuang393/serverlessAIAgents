@@ -1,12 +1,14 @@
 """FAQ システムファイルパーサー.
 
-PDF, Word, Excel, CSV などのファイルをテキスト + メタデータに変換する。
+Microsoft markitdown を主パーサーとして使用し、
+PDF/Word/Excel/PPT/CSV/JSON/HTML 等を Markdown に変換する。
+markitdown 未対応 or 失敗時のみレガシーパーサーにフォールバック。
+
 統合インターフェース ``ParseResult`` で全形式の結果を返す。
 """
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from dataclasses import dataclass, field
@@ -16,17 +18,20 @@ from typing import IO, Any
 
 logger = logging.getLogger(__name__)
 
-# --- オプショナル依存 ---
+# --- markitdown (Microsoft) ---
+try:
+    from markitdown import MarkItDown as _MarkItDown
 
+    _markitdown_instance: _MarkItDown | None = _MarkItDown()
+except ImportError:
+    _markitdown_instance = None
+    logger.info("markitdown 未インストール — レガシーパーサーを使用")
+
+# --- レガシー依存（フォールバック用） ---
 try:
     from pypdf import PdfReader
 except ImportError:
     PdfReader = None  # type: ignore[assignment,misc]
-
-try:
-    import pdfplumber
-except ImportError:
-    pdfplumber = None  # type: ignore[assignment]
 
 try:
     from docx import Document as DocxDocument
@@ -49,7 +54,7 @@ class ParseResult:
     """パーサー出力の統一型.
 
     Attributes:
-        content: 抽出されたテキスト全体
+        content: 抽出されたテキスト (Markdown 形式)
         metadata: ファイル由来のメタ情報（タイトル・著者・ページ数等）
         file_type: MIME タイプまたは拡張子
         sections: 構造的セクション（見出し・シート名など）
@@ -62,112 +67,143 @@ class ParseResult:
 
 
 # ---------------------------------------------------------------------------
-# 個別パーサー
+# markitdown ベースパーサー
 # ---------------------------------------------------------------------------
 
 
-class FileParser:
-    """ファイルパーサークラス.
+def _parse_with_markitdown(
+    file_bytes: bytes,
+    filename: str,
+) -> ParseResult | None:
+    """markitdown で変換を試みる.
 
-    各 ``parse_*`` メソッドは ``ParseResult`` を返す。
-    後方互換のため、テキストのみを返す旧 API も維持する。
+    成功時は ParseResult、失敗時は None を返す。
     """
+    if _markitdown_instance is None:
+        return None
 
-    # ---- PDF ---------------------------------------------------------------
+    ext = Path(filename).suffix.lower()
 
-    @staticmethod
-    def parse_pdf(file_stream: IO[bytes]) -> str:
-        """PDF からテキスト抽出（後方互換）."""
-        return FileParser.parse_pdf_rich(file_stream).content
+    try:
+        # markitdown はファイルパスまたはストリームを受け付ける
+        # ストリームの場合は StreamInfo で拡張子ヒントを渡す
+        from markitdown import StreamInfo
 
-    @staticmethod
-    def parse_pdf_rich(file_stream: IO[bytes]) -> ParseResult:
-        """PDF からテキスト + メタデータを抽出."""
-        metadata: dict[str, Any] = {"parser": "pdf"}
+        stream = io.BytesIO(file_bytes)
+        stream_info = StreamInfo(
+            extension=ext,
+            filename=filename,
+        )
+        result = _markitdown_instance.convert_stream(stream, stream_info=stream_info)
+
+        markdown_text = result.markdown or ""
+        if not markdown_text.strip():
+            return None
+
+        metadata: dict[str, Any] = {"parser": "markitdown"}
+        if result.title:
+            metadata["title"] = result.title
+
+        # Markdown からセクション見出しを抽出
         sections: list[str] = []
+        for line in markdown_text.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                heading = stripped.lstrip("#").strip()
+                if heading:
+                    sections.append(heading)
 
-        # pdfplumber 優先
-        if pdfplumber is not None:
-            try:
-                file_stream.seek(0)
-                with pdfplumber.open(file_stream) as pdf:
-                    pages: list[str] = []
-                    for i, page in enumerate(pdf.pages):
-                        text = page.extract_text() or ""
-                        if text:
-                            pages.append(text)
-                            sections.append(f"Page {i + 1}")
-                    metadata["page_count"] = len(pdf.pages)
-                    if hasattr(pdf, "metadata") and pdf.metadata:
-                        _merge_pdf_metadata(pdf.metadata, metadata)
-                    return ParseResult(
-                        content="\n\n".join(pages),
-                        metadata=metadata,
-                        file_type="application/pdf",
-                        sections=sections,
-                    )
-            except Exception:
-                logger.debug("pdfplumber 失敗、pypdf にフォールバック")
+        return ParseResult(
+            content=markdown_text,
+            metadata=metadata,
+            file_type=_ext_to_mime(ext),
+            sections=sections,
+        )
+    except Exception:
+        logger.debug("markitdown 変換失敗 (%s) — フォールバック", filename, exc_info=True)
+        return None
 
-        # pypdf フォールバック
+
+def _parse_with_markitdown_path(
+    file_path: str | Path,
+) -> ParseResult | None:
+    """markitdown でローカルファイルパスから変換."""
+    if _markitdown_instance is None:
+        return None
+
+    p = Path(file_path)
+    try:
+        result = _markitdown_instance.convert(str(p))
+        markdown_text = result.markdown or ""
+        if not markdown_text.strip():
+            return None
+
+        metadata: dict[str, Any] = {"parser": "markitdown"}
+        if result.title:
+            metadata["title"] = result.title
+
+        sections: list[str] = []
+        for line in markdown_text.split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                heading = stripped.lstrip("#").strip()
+                if heading:
+                    sections.append(heading)
+
+        return ParseResult(
+            content=markdown_text,
+            metadata=metadata,
+            file_type=_ext_to_mime(p.suffix.lower()),
+            sections=sections,
+        )
+    except Exception:
+        logger.debug("markitdown パス変換失敗 (%s) — フォールバック", file_path, exc_info=True)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# レガシーパーサー（フォールバック用）
+# ---------------------------------------------------------------------------
+
+
+class _LegacyParser:
+    """markitdown が使えない場合のフォールバックパーサー."""
+
+    @staticmethod
+    def parse_pdf(file_stream: IO[bytes]) -> ParseResult:
+        """PDF テキスト抽出."""
         if PdfReader is None:
-            msg = "PDF パースには pdfplumber または pypdf が必要: pip install pdfplumber pypdf"
+            msg = "PDF パースには markitdown または pypdf が必要"
             raise ImportError(msg)
 
         file_stream.seek(0)
         reader = PdfReader(file_stream)
-        pages_text: list[str] = []
+        pages: list[str] = []
+        sections: list[str] = []
         for i, page in enumerate(reader.pages):
             text = page.extract_text() or ""
             if text:
-                pages_text.append(text)
+                pages.append(text)
                 sections.append(f"Page {i + 1}")
-        metadata["page_count"] = len(reader.pages)
-        if reader.metadata:
-            _merge_pdf_metadata(
-                {k: getattr(reader.metadata, k, None) for k in ("title", "author", "subject", "creator")},
-                metadata,
-            )
         return ParseResult(
-            content="\n\n".join(pages_text),
-            metadata=metadata,
+            content="\n\n".join(pages),
+            metadata={"parser": "pypdf", "page_count": len(reader.pages)},
             file_type="application/pdf",
             sections=sections,
         )
 
-    # ---- DOCX --------------------------------------------------------------
-
     @staticmethod
-    def parse_docx(file_stream: IO[bytes]) -> str:
-        """Word (docx) からテキスト抽出（後方互換）."""
-        return FileParser.parse_docx_rich(file_stream).content
-
-    @staticmethod
-    def parse_docx_rich(file_stream: IO[bytes]) -> ParseResult:
-        """Word (docx) からテキスト + メタデータを抽出."""
+    def parse_docx(file_stream: IO[bytes]) -> ParseResult:
+        """Word テキスト抽出."""
         if DocxDocument is None:
-            msg = "python-docx が必要: pip install python-docx"
+            msg = "DOCX パースには markitdown または python-docx が必要"
             raise ImportError(msg)
 
         file_stream.seek(0)
         doc = DocxDocument(file_stream)
-        metadata: dict[str, Any] = {"parser": "docx"}
+        paragraphs: list[str] = []
         sections: list[str] = []
 
-        # ドキュメントプロパティ
-        props = doc.core_properties
-        if props:
-            if props.title:
-                metadata["title"] = props.title
-            if props.author:
-                metadata["author"] = props.author
-            if props.subject:
-                metadata["subject"] = props.subject
-            if props.created:
-                metadata["created_at"] = str(props.created)
-
-        # 段落テキスト + 見出し抽出
-        paragraphs: list[str] = []
         for para in doc.paragraphs:
             text = para.text.strip()
             if not text:
@@ -176,63 +212,38 @@ class FileParser:
             if para.style and para.style.name and para.style.name.startswith("Heading"):
                 sections.append(text)
 
-        # テーブルからもテキスト抽出
-        table_texts: list[str] = []
         for table in doc.tables:
             rows: list[str] = []
             for row in table.rows:
-                cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                cells = [c.text.strip() for c in row.cells if c.text.strip()]
                 if cells:
                     rows.append(" | ".join(cells))
             if rows:
-                table_texts.append("\n".join(rows))
+                paragraphs.append("\n".join(rows))
 
-        content_parts = paragraphs
-        if table_texts:
-            content_parts.append("\n---\n".join(table_texts))
-
-        metadata["paragraph_count"] = len(paragraphs)
-        metadata["table_count"] = len(doc.tables)
+        metadata: dict[str, Any] = {"parser": "python-docx"}
+        props = doc.core_properties
+        if props and props.title:
+            metadata["title"] = props.title
+        if props and props.author:
+            metadata["author"] = props.author
 
         return ParseResult(
-            content="\n".join(content_parts),
+            content="\n".join(paragraphs),
             metadata=metadata,
             file_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             sections=sections,
         )
 
-    # ---- Excel -------------------------------------------------------------
-
     @staticmethod
-    def parse_excel(file_stream: IO[bytes]) -> str:
-        """Excel (.xlsx) からテキスト抽出（後方互換）."""
-        return FileParser.parse_excel_rich(file_stream).content
-
-    @staticmethod
-    def parse_excel_rich(file_stream: IO[bytes]) -> ParseResult:
-        """Excel (.xlsx) からテキスト + メタデータを抽出.
-
-        各シートを「シート名: ヘッダー行ベースの Key-Value」形式で変換する。
-        """
+    def parse_excel(file_stream: IO[bytes]) -> ParseResult:
+        """Excel テキスト抽出."""
         if openpyxl is None:
-            msg = "openpyxl が必要: pip install openpyxl"
+            msg = "Excel パースには markitdown または openpyxl が必要"
             raise ImportError(msg)
 
         file_stream.seek(0)
         wb = openpyxl.load_workbook(file_stream, read_only=True, data_only=True)
-        metadata: dict[str, Any] = {
-            "parser": "excel",
-            "sheet_names": wb.sheetnames,
-            "sheet_count": len(wb.sheetnames),
-        }
-
-        # ワークブックプロパティ
-        if wb.properties:
-            if wb.properties.title:
-                metadata["title"] = wb.properties.title
-            if wb.properties.creator:
-                metadata["author"] = wb.properties.creator
-
         sections: list[str] = []
         sheet_texts: list[str] = []
 
@@ -241,14 +252,11 @@ class FileParser:
             sections.append(sheet_name)
             rows_data: list[list[str]] = []
             for row in ws.iter_rows(values_only=True):
-                cell_values = [str(c) if c is not None else "" for c in row]
-                if any(v.strip() for v in cell_values):
-                    rows_data.append(cell_values)
-
+                vals = [str(c) if c is not None else "" for c in row]
+                if any(v.strip() for v in vals):
+                    rows_data.append(vals)
             if not rows_data:
                 continue
-
-            # 1行目をヘッダーとして扱う
             headers = rows_data[0]
             row_texts: list[str] = []
             for data_row in rows_data[1:]:
@@ -256,75 +264,102 @@ class FileParser:
                 for i, val in enumerate(data_row):
                     if not val.strip():
                         continue
-                    header = headers[i] if i < len(headers) and headers[i].strip() else f"Col{i + 1}"
-                    parts.append(f"{header}: {val}")
+                    h = headers[i] if i < len(headers) and headers[i].strip() else f"Col{i + 1}"
+                    parts.append(f"{h}: {val}")
                 if parts:
                     row_texts.append(", ".join(parts))
-
             if row_texts:
-                sheet_text = f"[シート: {sheet_name}]\n" + "\n".join(row_texts)
-            else:
-                # ヘッダーのみのシート
-                sheet_text = f"[シート: {sheet_name}]\n" + " | ".join(h for h in headers if h.strip())
-            sheet_texts.append(sheet_text)
-
+                sheet_texts.append(f"[シート: {sheet_name}]\n" + "\n".join(row_texts))
         wb.close()
-
-        metadata["total_rows"] = sum(
-            1 for st in sheet_texts for _line in st.split("\n") if _line.strip()
-        )
 
         return ParseResult(
             content="\n\n".join(sheet_texts),
-            metadata=metadata,
+            metadata={"parser": "openpyxl", "sheet_count": len(wb.sheetnames)},
             file_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             sections=sections,
         )
 
-    # ---- CSV ---------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# 統合パーサー API
+# ---------------------------------------------------------------------------
+
+
+class FileParser:
+    """ファイルパーサー統合クラス.
+
+    markitdown を優先し、失敗時のみレガシーパーサーにフォールバック。
+    """
+
+    # ---- 後方互換 API（文字列返却） ----------------------------------------
+
+    @staticmethod
+    def parse_pdf(file_stream: IO[bytes]) -> str:
+        """PDF テキスト抽出（後方互換）."""
+        return FileParser.parse_pdf_rich(file_stream).content
+
+    @staticmethod
+    def parse_docx(file_stream: IO[bytes]) -> str:
+        """Word テキスト抽出（後方互換）."""
+        return FileParser.parse_docx_rich(file_stream).content
+
+    @staticmethod
+    def parse_excel(file_stream: IO[bytes]) -> str:
+        """Excel テキスト抽出（後方互換）."""
+        return FileParser.parse_excel_rich(file_stream).content
 
     @staticmethod
     def parse_csv(file_stream: IO[str]) -> str:
-        """CSV からテキスト抽出（後方互換）."""
-        return FileParser.parse_csv_rich(file_stream).content
+        """CSV テキスト抽出（後方互換）."""
+        import csv
 
-    @staticmethod
-    def parse_csv_rich(file_stream: IO[str]) -> ParseResult:
-        """CSV からテキスト + メタデータを抽出."""
         reader = csv.reader(file_stream)
         rows = list(reader)
         if not rows:
-            return ParseResult(content="", metadata={"parser": "csv"}, file_type="text/csv")
-
+            return ""
         headers = rows[0]
-        text_chunks: list[str] = []
+        chunks: list[str] = []
         for row in rows[1:]:
-            chunk_parts: list[str] = []
-            for i, val in enumerate(row):
-                if i < len(headers):
-                    chunk_parts.append(f"{headers[i]}: {val}")
-                else:
-                    chunk_parts.append(val)
-            text_chunks.append(", ".join(chunk_parts))
-
-        return ParseResult(
-            content="\n---\n".join(text_chunks),
-            metadata={
-                "parser": "csv",
-                "row_count": len(rows) - 1,
-                "column_count": len(headers),
-                "columns": headers,
-            },
-            file_type="text/csv",
-            sections=headers,
-        )
-
-    # ---- プレーンテキスト ---------------------------------------------------
+            parts = [f"{headers[i]}: {v}" if i < len(headers) else v for i, v in enumerate(row)]
+            chunks.append(", ".join(parts))
+        return "\n---\n".join(chunks)
 
     @staticmethod
     def parse_text(file_content: str) -> str:
         """プレーンテキスト（後方互換）."""
         return file_content
+
+    # ---- Rich API（ParseResult 返却）--------------------------------------
+
+    @staticmethod
+    def parse_pdf_rich(file_stream: IO[bytes]) -> ParseResult:
+        """PDF → Markdown 変換."""
+        file_stream.seek(0)
+        data = file_stream.read()
+        result = _parse_with_markitdown(data, "doc.pdf")
+        if result is not None:
+            return result
+        return _LegacyParser.parse_pdf(io.BytesIO(data))
+
+    @staticmethod
+    def parse_docx_rich(file_stream: IO[bytes]) -> ParseResult:
+        """Word → Markdown 変換."""
+        file_stream.seek(0)
+        data = file_stream.read()
+        result = _parse_with_markitdown(data, "doc.docx")
+        if result is not None:
+            return result
+        return _LegacyParser.parse_docx(io.BytesIO(data))
+
+    @staticmethod
+    def parse_excel_rich(file_stream: IO[bytes]) -> ParseResult:
+        """Excel → Markdown 変換."""
+        file_stream.seek(0)
+        data = file_stream.read()
+        result = _parse_with_markitdown(data, "doc.xlsx")
+        if result is not None:
+            return result
+        return _LegacyParser.parse_excel(io.BytesIO(data))
 
     @staticmethod
     def parse_text_rich(file_content: str, filename: str = "") -> ParseResult:
@@ -335,39 +370,67 @@ class FileParser:
             file_type="text/plain",
         )
 
-    # ---- ストリームから自動判定 -------------------------------------------
+    # ---- 自動判定 ----------------------------------------------------------
 
     @staticmethod
     def parse_auto(
         file_bytes: bytes,
         filename: str,
     ) -> ParseResult:
-        """ファイル名の拡張子から適切なパーサーを自動選択して実行.
+        """ファイル名の拡張子から適切なパーサーを自動選択.
+
+        markitdown を優先し、失敗時にレガシーパーサーへフォールバック。
 
         Args:
             file_bytes: ファイルバイナリ
-            filename: ファイル名（拡張子で判定）
+            filename: ファイル名（拡張子判定用）
 
         Returns:
             ParseResult
 
         Raises:
-            ValueError: テキスト抽出に失敗した場合
+            ValueError: テキスト抽出に完全失敗した場合
         """
+        # markitdown を最優先で試行
+        result = _parse_with_markitdown(file_bytes, filename)
+        if result is not None:
+            return result
+
+        # レガシーフォールバック
         ext = Path(filename).suffix.lower()
         try:
             if ext == ".pdf":
-                return FileParser.parse_pdf_rich(io.BytesIO(file_bytes))
+                return _LegacyParser.parse_pdf(io.BytesIO(file_bytes))
             if ext in {".docx", ".doc"}:
-                return FileParser.parse_docx_rich(io.BytesIO(file_bytes))
+                return _LegacyParser.parse_docx(io.BytesIO(file_bytes))
             if ext in {".xlsx", ".xls"}:
-                return FileParser.parse_excel_rich(io.BytesIO(file_bytes))
+                return _LegacyParser.parse_excel(io.BytesIO(file_bytes))
             if ext == ".csv":
+                import csv as _csv
+
                 text = file_bytes.decode("utf-8")
-                return FileParser.parse_csv_rich(io.StringIO(text))
-            # テキスト系フォールバック
+                reader = _csv.reader(io.StringIO(text))
+                rows = list(reader)
+                if not rows:
+                    return ParseResult(content="", metadata={"parser": "csv"}, file_type="text/csv")
+                headers = rows[0]
+                chunks: list[str] = []
+                for row in rows[1:]:
+                    parts = [f"{headers[i]}: {v}" if i < len(headers) else v for i, v in enumerate(row)]
+                    chunks.append(", ".join(parts))
+                return ParseResult(
+                    content="\n---\n".join(chunks),
+                    metadata={"parser": "csv", "row_count": len(rows) - 1, "columns": headers},
+                    file_type="text/csv",
+                    sections=headers,
+                )
+            # テキスト系
             text = file_bytes.decode("utf-8")
-            return FileParser.parse_text_rich(text, filename)
+            return ParseResult(
+                content=text,
+                metadata={"parser": "text"},
+                file_type="text/plain",
+            )
         except ImportError:
             raise
         except UnicodeDecodeError as exc:
@@ -377,17 +440,44 @@ class FileParser:
             msg = f"ファイル '{filename}' のパースに失敗: {exc}"
             raise ValueError(msg) from exc
 
+    # ---- パス指定の直接変換 ------------------------------------------------
+
+    @staticmethod
+    def parse_file(file_path: str | Path) -> ParseResult:
+        """ファイルパスから直接変換.
+
+        markitdown を使う場合はテンポラリファイル不要。
+        """
+        p = Path(file_path)
+        # markitdown はパスを直接受け付けるので最高効率
+        result = _parse_with_markitdown_path(p)
+        if result is not None:
+            return result
+        # フォールバック: バイトを読んで parse_auto
+        return FileParser.parse_auto(p.read_bytes(), p.name)
+
 
 # ---------------------------------------------------------------------------
 # ヘルパー
 # ---------------------------------------------------------------------------
 
 
-def _merge_pdf_metadata(source: dict[str, Any] | Any, target: dict[str, Any]) -> None:
-    """PDF メタデータを target 辞書にマージ."""
-    if not isinstance(source, dict):
-        return
-    for key in ("title", "author", "subject", "creator"):
-        value = source.get(key)
-        if value and isinstance(value, str) and value.strip():
-            target[key] = value.strip()
+_MIME_MAP: dict[str, str] = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".doc": "application/msword",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".xls": "application/vnd.ms-excel",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".csv": "text/csv",
+    ".json": "application/json",
+    ".html": "text/html",
+    ".htm": "text/html",
+    ".md": "text/markdown",
+    ".txt": "text/plain",
+}
+
+
+def _ext_to_mime(ext: str) -> str:
+    """拡張子から MIME タイプに変換."""
+    return _MIME_MAP.get(ext, "application/octet-stream")

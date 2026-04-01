@@ -535,29 +535,97 @@ class HTMLLoader(DocumentLoader):
         return path.suffix.lower() in {".html", ".htm"}
 
 
+class MarkItDownLoader(DocumentLoader):
+    """Microsoft markitdown を使った汎用ローダー.
+
+    Word (.docx), Excel (.xlsx/.xls), PowerPoint (.pptx), PDF 等を
+    Markdown に変換してチャンキングする。
+    """
+
+    _SUPPORTED_EXTENSIONS = {".docx", ".doc", ".xlsx", ".xls", ".pptx"}
+
+    async def load(self, source: str | Path) -> list[DocumentChunk]:
+        """markitdown でファイルを Markdown に変換しチャンク分割."""
+        path = Path(source)
+
+        try:
+            from markitdown import MarkItDown
+        except ImportError as exc:
+            msg = "markitdown が必要: pip install markitdown[all]"
+            raise ImportError(msg) from exc
+
+        md = MarkItDown()
+        result = md.convert(str(path))
+        markdown_text = result.markdown or ""
+        if not markdown_text.strip():
+            self._logger.warning("markitdown: 空のテキスト: %s", path)
+            return []
+
+        chunks = self._chunk_text(markdown_text, str(path))
+
+        extra_meta: dict[str, Any] = {
+            "loader": "markitdown",
+            "file_size": path.stat().st_size,
+            "loaded_at": datetime.now(UTC).isoformat(),
+        }
+        if result.title:
+            extra_meta["title"] = result.title
+
+        for chunk in chunks:
+            chunk.metadata.update(extra_meta)
+
+        self._logger.info("Loaded %d chunks from %s (markitdown)", len(chunks), path)
+        return chunks
+
+    def supports(self, source: str | Path) -> bool:
+        """markitdown がサポートする拡張子."""
+        return Path(source).suffix.lower() in self._SUPPORTED_EXTENSIONS
+
+
 class DocxLoader(DocumentLoader):
-    """Word (.docx) ローダー."""
+    """Word (.docx) ローダー — markitdown 優先、フォールバック python-docx."""
 
     async def load(self, source: str | Path) -> list[DocumentChunk]:
         """Word ファイルを読み込み."""
         path = Path(source)
 
+        # markitdown 優先
+        try:
+            from markitdown import MarkItDown
+
+            md = MarkItDown()
+            result = md.convert(str(path))
+            if result.markdown and result.markdown.strip():
+                chunks = self._chunk_text(result.markdown, str(path))
+                meta: dict[str, Any] = {
+                    "loader": "markitdown",
+                    "file_size": path.stat().st_size,
+                    "loaded_at": datetime.now(UTC).isoformat(),
+                }
+                if result.title:
+                    meta["title"] = result.title
+                for chunk in chunks:
+                    chunk.metadata.update(meta)
+                self._logger.info("Loaded %d chunks from %s (markitdown)", len(chunks), path)
+                return chunks
+        except ImportError:
+            pass
+        except Exception:
+            self._logger.debug("markitdown DOCX 失敗 — python-docx フォールバック", exc_info=True)
+
+        # python-docx フォールバック
         try:
             from docx import Document as DocxDocument
         except ImportError as exc:
-            msg = "Word パースには python-docx が必要: pip install python-docx"
+            msg = "Word パースには markitdown または python-docx が必要"
             raise ImportError(msg) from exc
 
         doc = DocxDocument(str(path))
-
-        # 段落テキスト
         paragraphs: list[str] = []
         for para in doc.paragraphs:
             text = para.text.strip()
             if text:
                 paragraphs.append(text)
-
-        # テーブルテキスト
         for table in doc.tables:
             rows: list[str] = []
             for row in table.rows:
@@ -567,24 +635,14 @@ class DocxLoader(DocumentLoader):
             if rows:
                 paragraphs.append("\n".join(rows))
 
-        full_text = "\n\n".join(paragraphs)
-        chunks = self._chunk_text(full_text, str(path))
-
-        # メタデータ付与
-        props = doc.core_properties
+        chunks = self._chunk_text("\n\n".join(paragraphs), str(path))
         extra_meta: dict[str, Any] = {
             "loader": "docx",
             "file_size": path.stat().st_size,
             "loaded_at": datetime.now(UTC).isoformat(),
         }
-        if props and props.title:
-            extra_meta["title"] = props.title
-        if props and props.author:
-            extra_meta["author"] = props.author
-
         for chunk in chunks:
             chunk.metadata.update(extra_meta)
-
         self._logger.info("Loaded %d chunks from %s", len(chunks), path)
         return chunks
 
@@ -594,33 +652,54 @@ class DocxLoader(DocumentLoader):
 
 
 class ExcelLoader(DocumentLoader):
-    """Excel (.xlsx / .xls) ローダー."""
+    """Excel (.xlsx/.xls) ローダー — markitdown 優先、フォールバック openpyxl."""
 
     async def load(self, source: str | Path) -> list[DocumentChunk]:
         """Excel ファイルを読み込み."""
         path = Path(source)
 
+        # markitdown 優先
+        try:
+            from markitdown import MarkItDown
+
+            md = MarkItDown()
+            result = md.convert(str(path))
+            if result.markdown and result.markdown.strip():
+                chunks = self._chunk_text(result.markdown, str(path))
+                meta: dict[str, Any] = {
+                    "loader": "markitdown",
+                    "file_size": path.stat().st_size,
+                    "loaded_at": datetime.now(UTC).isoformat(),
+                }
+                if result.title:
+                    meta["title"] = result.title
+                for chunk in chunks:
+                    chunk.metadata.update(meta)
+                self._logger.info("Loaded %d chunks from %s (markitdown)", len(chunks), path)
+                return chunks
+        except ImportError:
+            pass
+        except Exception:
+            self._logger.debug("markitdown Excel 失敗 — openpyxl フォールバック", exc_info=True)
+
+        # openpyxl フォールバック
         try:
             import openpyxl as _openpyxl
         except ImportError as exc:
-            msg = "Excel パースには openpyxl が必要: pip install openpyxl"
+            msg = "Excel パースには markitdown または openpyxl が必要"
             raise ImportError(msg) from exc
 
         wb = _openpyxl.load_workbook(str(path), read_only=True, data_only=True)
         all_chunks: list[DocumentChunk] = []
-
-        for sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
+        for sn in wb.sheetnames:
+            ws = wb[sn]
             rows_data: list[list[str]] = []
             for row in ws.iter_rows(values_only=True):
-                cell_values = [str(c) if c is not None else "" for c in row]
-                if any(v.strip() for v in cell_values):
-                    rows_data.append(cell_values)
-
+                vals = [str(c) if c is not None else "" for c in row]
+                if any(v.strip() for v in vals):
+                    rows_data.append(vals)
             if not rows_data:
                 continue
-
-            # 1行目をヘッダーとして使用
             headers = rows_data[0]
             row_texts: list[str] = []
             for data_row in rows_data[1:]:
@@ -628,26 +707,23 @@ class ExcelLoader(DocumentLoader):
                 for i, val in enumerate(data_row):
                     if not val.strip():
                         continue
-                    header = headers[i] if i < len(headers) and headers[i].strip() else f"Col{i + 1}"
-                    parts.append(f"{header}: {val}")
+                    h = headers[i] if i < len(headers) and headers[i].strip() else f"Col{i + 1}"
+                    parts.append(f"{h}: {val}")
                 if parts:
                     row_texts.append(", ".join(parts))
-
             if row_texts:
-                sheet_text = f"[シート: {sheet_name}]\n" + "\n".join(row_texts)
+                sheet_text = f"[シート: {sn}]\n" + "\n".join(row_texts)
             else:
-                sheet_text = f"[シート: {sheet_name}]\n" + " | ".join(h for h in headers if h.strip())
-
+                sheet_text = f"[シート: {sn}]\n" + " | ".join(h for h in headers if h.strip())
             sheet_chunks = self._chunk_text(sheet_text, str(path))
             for chunk in sheet_chunks:
                 chunk.metadata.update({
                     "loader": "excel",
-                    "sheet_name": sheet_name,
+                    "sheet_name": sn,
                     "file_size": path.stat().st_size,
                     "loaded_at": datetime.now(UTC).isoformat(),
                 })
             all_chunks.extend(sheet_chunks)
-
         wb.close()
         self._logger.info("Loaded %d chunks from %s", len(all_chunks), path)
         return all_chunks
@@ -679,6 +755,7 @@ class UniversalLoader:
         """
         self._chunking_config = chunking_config or ChunkingConfig()
         self._loaders: list[DocumentLoader] = [
+            MarkItDownLoader(self._chunking_config),
             PDFLoader(self._chunking_config),
             DocxLoader(self._chunking_config),
             ExcelLoader(self._chunking_config),

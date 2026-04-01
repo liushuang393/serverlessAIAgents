@@ -522,9 +522,9 @@ class DocumentManager:
 
 
 def _parse_binary_file(raw: bytes, filename: str) -> str:
-    """バイナリファイル (PDF/DOCX/XLSX) をテキストに変換.
+    """バイナリファイル (PDF/DOCX/XLSX/PPTX 等) をテキストに変換.
 
-    apps/faq_system のパーサーを使い、抽出失敗時は空文字列を返す。
+    Microsoft markitdown を優先し、失敗時のみレガシーパーサーにフォールバック。
 
     Args:
         raw: ファイルバイナリ
@@ -535,11 +535,25 @@ def _parse_binary_file(raw: bytes, filename: str) -> str:
     """
     import io as _io
 
+    # markitdown を最優先で試行
+    try:
+        from markitdown import MarkItDown, StreamInfo
+
+        md = MarkItDown()
+        ext = Path(filename).suffix.lower()
+        stream_info = StreamInfo(extension=ext, filename=filename)
+        result = md.convert_stream(_io.BytesIO(raw), stream_info=stream_info)
+        if result.markdown and result.markdown.strip():
+            return result.markdown
+    except ImportError:
+        logger.debug("markitdown 未インストール — レガシーパーサーを使用")
+    except Exception:
+        logger.debug("markitdown 変換失敗 (%s) — フォールバック", filename, exc_info=True)
+
+    # レガシーフォールバック
     ext = Path(filename).suffix.lower()
 
-    # PDF
     if ext == ".pdf":
-        # pdfplumber 優先
         try:
             import pdfplumber
 
@@ -558,14 +572,12 @@ def _parse_binary_file(raw: bytes, filename: str) -> str:
             logger.warning("PDF パースライブラリが未インストール: %s", filename)
             return ""
 
-    # DOCX
     if ext in {".docx", ".doc"}:
         try:
             from docx import Document as DocxDocument
 
             doc = DocxDocument(_io.BytesIO(raw))
             paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
-            # テーブルも抽出
             for table in doc.tables:
                 for row in table.rows:
                     cells = [c.text.strip() for c in row.cells if c.text.strip()]
@@ -576,15 +588,14 @@ def _parse_binary_file(raw: bytes, filename: str) -> str:
             logger.warning("python-docx が未インストール: %s", filename)
             return ""
 
-    # Excel
     if ext in {".xlsx", ".xls"}:
         try:
-            import openpyxl
+            import openpyxl as _openpyxl
 
-            wb = openpyxl.load_workbook(_io.BytesIO(raw), read_only=True, data_only=True)
+            wb = _openpyxl.load_workbook(_io.BytesIO(raw), read_only=True, data_only=True)
             texts: list[str] = []
-            for sheet_name in wb.sheetnames:
-                ws = wb[sheet_name]
+            for sn in wb.sheetnames:
+                ws = wb[sn]
                 rows_data: list[list[str]] = []
                 for row in ws.iter_rows(values_only=True):
                     vals = [str(c) if c is not None else "" for c in row]
@@ -604,7 +615,7 @@ def _parse_binary_file(raw: bytes, filename: str) -> str:
                     if parts:
                         row_strs.append(", ".join(parts))
                 if row_strs:
-                    texts.append(f"[シート: {sheet_name}]\n" + "\n".join(row_strs))
+                    texts.append(f"[シート: {sn}]\n" + "\n".join(row_strs))
             wb.close()
             return "\n\n".join(texts)
         except ImportError:

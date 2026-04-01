@@ -103,10 +103,7 @@ apps = [
     "tenacity>=8.5.0",  # Retry for ingestion I/O operations
 
     # ドキュメントパース（RAG インジェスト用）
-    "openpyxl>=3.1.0",   # Excel (.xlsx) パース
-    "pdfplumber>=0.11.0", # PDF テキスト抽出（高精度）
-    "pypdf>=4.0.0",       # PDF フォールバック
-    "python-docx>=1.1.0", # Word (.docx) パース
+    "markitdown[all]>=0.1.5",  # Microsoft 製ドキュメント→Markdown 変換（PDF/Office/Excel 等）
 
     # Platform-specific
     "python-telegram-bot>=20.0",  # For messaging_hub
