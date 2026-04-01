@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from apps.legacy_modernization_geo_platform.backend.intelligence import (
     _load_intelligence_providers,
@@ -25,8 +29,7 @@ def test_load_providers_from_app_config(tmp_path: Path, monkeypatch: object) -> 
 
     import apps.legacy_modernization_geo_platform.backend.intelligence as mod
 
-    original = Path(__file__).resolve
-    monkeypatch.setattr(  # type: ignore[union-attr]
+    monkeypatch.setattr(
         mod,
         "_load_intelligence_providers",
         lambda: _load_with_path(config_file),

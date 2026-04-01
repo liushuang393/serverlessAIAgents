@@ -1,11 +1,11 @@
-"""DecisionScoringService のユニットテスト."""
+from typing import Any
 
 from apps.decision_governance_engine.services.decision_scoring_service import (
     score_decision_results,
 )
 
 
-def _build_sample_results() -> dict:
+def _build_sample_results() -> dict[str, Any]:
     return {
         "dao": {
             "death_traps": [],

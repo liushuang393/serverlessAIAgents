@@ -13,7 +13,7 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -22,7 +22,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class PriceStrategy(str, Enum):
+class PriceStrategy(StrEnum):
     """価格戦略."""
 
     PENETRATION = "penetration"  # 市場浸透価格（低価格参入）
@@ -32,7 +32,7 @@ class PriceStrategy(str, Enum):
     ECONOMY = "economy"  # エコノミー価格（低価格維持）
 
 
-class MarketPosition(str, Enum):
+class MarketPosition(StrEnum):
     """市場ポジション."""
 
     LEADER = "leader"  # 市場リーダー

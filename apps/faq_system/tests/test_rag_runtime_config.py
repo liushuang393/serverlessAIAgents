@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.services.rag_runtime_config import load_rag_runtime_config
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _write_config(path: Path, payload: dict) -> None:
+def _write_config(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 

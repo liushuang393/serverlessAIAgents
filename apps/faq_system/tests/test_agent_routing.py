@@ -78,11 +78,15 @@ async def mock_require_auth() -> UserInfo:
         role="admin",
         department="IT",
         position="Developer",
+        roles=[],
+        tenant_id=None,
+        scopes=[],
+        azp=None,
     )
 
 
 @pytest.fixture
-def mock_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+def mock_auth(monkeypatch: pytest.MonkeyPatch) -> Any:
     app.dependency_overrides[require_auth] = mock_require_auth
     yield
     app.dependency_overrides.pop(require_auth, None)

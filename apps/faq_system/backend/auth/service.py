@@ -15,7 +15,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from sqlalchemy import delete, select, update
@@ -323,7 +323,7 @@ class AuthService:
         try:
             import jwt as pyjwt
 
-            decoded = pyjwt.decode(
+            return pyjwt.decode(
                 token,
                 self._jwt_config.secret_key,
                 algorithms=[self._jwt_config.algorithm],
@@ -331,7 +331,6 @@ class AuthService:
                 issuer=self._jwt_config.issuer,
             )
             # PyJWT 2.0+ decode returns dict (verified by MyPy reachable code)
-            return cast("dict[str, Any]", decoded)
         except Exception:
             return None
 

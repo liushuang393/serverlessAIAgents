@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -24,7 +24,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class AlertSeverity(str, Enum):
+class AlertSeverity(StrEnum):
     """アラート重要度."""
 
     CRITICAL = "critical"
@@ -32,7 +32,7 @@ class AlertSeverity(str, Enum):
     INFO = "info"
 
 
-class MetricTrend(str, Enum):
+class MetricTrend(StrEnum):
     """指標トレンド."""
 
     UP = "up"

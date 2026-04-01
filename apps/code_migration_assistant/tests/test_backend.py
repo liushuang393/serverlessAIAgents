@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -28,6 +28,10 @@ from apps.code_migration_assistant.backend.migration_task_store import (
     TaskStore,
 )
 from apps.code_migration_assistant.pipeline.engine import MigrationEngine
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 # ============================================================
@@ -314,7 +318,7 @@ class TestShouldHITL:
 
 
 @pytest.fixture
-def test_client(tmp_path: Path) -> TestClient:
+def test_client(tmp_path: Path) -> Generator[TestClient]:
     """テスト用 FastAPI TestClient を生成する.
 
     パイプラインは実行しない（upload 後は pending 状態のまま）。

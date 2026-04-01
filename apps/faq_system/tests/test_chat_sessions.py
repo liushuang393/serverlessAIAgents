@@ -46,6 +46,10 @@ async def mock_require_auth() -> UserInfo:
         role="user",
         department="QA",
         position="Tester",
+        roles=[],
+        tenant_id=None,
+        scopes=[],
+        azp=None,
     )
 
 

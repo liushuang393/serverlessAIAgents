@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from kernel.agents.agent_block import AgentBlock
@@ -25,7 +25,7 @@ from kernel.agents.agent_block import AgentBlock
 logger = logging.getLogger(__name__)
 
 
-class ReportFormat(str, Enum):
+class ReportFormat(StrEnum):
     """レポート形式."""
 
     MARKDOWN = "markdown"
@@ -34,7 +34,7 @@ class ReportFormat(str, Enum):
     TEXT = "text"
 
 
-class TrendIndicator(str, Enum):
+class TrendIndicator(StrEnum):
     """トレンド指標."""
 
     UP = "↑"

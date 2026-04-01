@@ -13,10 +13,14 @@ import argparse
 import asyncio
 import json as _json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+
+if TYPE_CHECKING:
+    from _pytest.capture import CaptureFixture
 
 from apps.code_migration_assistant.cli import (
     _print_progress_cli,
@@ -36,21 +40,21 @@ from apps.code_migration_assistant.pipeline.engine import SSEEvent
 class TestCmdList:
     """cmd_list のユニットテスト."""
 
-    def test_nonexistent_dir_returns_1(self, tmp_path: Path, capsys) -> None:
+    def test_nonexistent_dir_returns_1(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """存在しない出力ディレクトリは 1 を返す."""
         args = argparse.Namespace(output=str(tmp_path / "nonexistent"))
         result = cmd_list(args)
         assert result == 1
         assert "存在しません" in capsys.readouterr().err
 
-    def test_empty_dir_returns_0(self, tmp_path: Path, capsys) -> None:
+    def test_empty_dir_returns_0(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """プログラムが1件もない場合は 0 を返す."""
         args = argparse.Namespace(output=str(tmp_path))
         result = cmd_list(args)
         assert result == 0
         assert "移行済みプログラムはありません" in capsys.readouterr().out
 
-    def test_lists_programs_with_versions(self, tmp_path: Path, capsys) -> None:
+    def test_lists_programs_with_versions(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """プログラムが存在する場合は名前とバージョン数を表示する."""
         prog_dir = tmp_path / "SAMPLE"
         prog_dir.mkdir()
@@ -64,7 +68,7 @@ class TestCmdList:
         assert "SAMPLE" in out
         assert "2 バージョン" in out
 
-    def test_report_status_markers(self, tmp_path: Path, capsys) -> None:
+    def test_report_status_markers(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """最新バージョンの report 有無マーカーが表示される."""
         prog_dir = tmp_path / "SAMPLE"
         prog_dir.mkdir()
@@ -81,7 +85,7 @@ class TestCmdList:
         out = capsys.readouterr().out
         assert "report=·" in out
 
-    def test_lists_multiple_programs(self, tmp_path: Path, capsys) -> None:
+    def test_lists_multiple_programs(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """複数プログラムが全て表示される."""
         for name in ("AAAA", "BBBB", "CCCC"):
             p = tmp_path / name
@@ -103,7 +107,7 @@ class TestCmdList:
 class TestCmdShow:
     """cmd_show のユニットテスト."""
 
-    def test_missing_program_returns_1(self, tmp_path: Path, capsys) -> None:
+    def test_missing_program_returns_1(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """存在しないプログラム名は 1 を返す."""
         args = argparse.Namespace(output=str(tmp_path), program="MISSING", verbose=False)
         result = cmd_show(args)
@@ -111,7 +115,7 @@ class TestCmdShow:
         err = capsys.readouterr().err
         assert "MISSING" in err
 
-    def test_existing_program_returns_0(self, tmp_path: Path, capsys) -> None:
+    def test_existing_program_returns_0(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """存在するプログラムは 0 を返しバージョン情報を表示する."""
         prog_dir = tmp_path / "SAMPLE"
         prog_dir.mkdir()
@@ -126,7 +130,7 @@ class TestCmdShow:
         assert "SAMPLE" in out
         assert "1 バージョン" in out
 
-    def test_program_name_uppercased(self, tmp_path: Path, capsys) -> None:
+    def test_program_name_uppercased(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """program 引数は大文字変換される（小文字入力でも一致する）."""
         prog_dir = tmp_path / "SAMPLE"
         prog_dir.mkdir()
@@ -136,7 +140,7 @@ class TestCmdShow:
         result = cmd_show(args)
         assert result == 0
 
-    def test_shows_evolution_history(self, tmp_path: Path, capsys) -> None:
+    def test_shows_evolution_history(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """evolution.json が存在する場合 Evolution 履歴が表示される."""
         prog_dir = tmp_path / "SAMPLE"
         prog_dir.mkdir()
@@ -161,7 +165,7 @@ class TestCmdShow:
         assert "Evolution 履歴" in out
         assert "2 回" in out
 
-    def test_shows_stage_artifacts(self, tmp_path: Path, capsys) -> None:
+    def test_shows_stage_artifacts(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """成果物 JSON があるステージは ✓ で表示される."""
         prog_dir = tmp_path / "SAMPLE"
         prog_dir.mkdir()
@@ -188,7 +192,7 @@ class TestCmdRetry:
     FIXTURES_DIR = Path(__file__).parent / "fixtures"
     SAMPLE_CBL = FIXTURES_DIR / "sample.cbl"
 
-    def test_invalid_stage_returns_1(self, tmp_path: Path, capsys) -> None:
+    def test_invalid_stage_returns_1(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """無効なステージ名は 1 を返す."""
         args = argparse.Namespace(
             source=str(self.SAMPLE_CBL),
@@ -202,7 +206,7 @@ class TestCmdRetry:
         err = capsys.readouterr().err
         assert "無効なステージ名" in err
 
-    def test_all_valid_stages_pass_validation(self, tmp_path: Path, capsys) -> None:
+    def test_all_valid_stages_pass_validation(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """全ての有効なステージ名がバリデーションを通過する（ステージ名エラーを返さない）."""
         valid_stages = [
             "analyzer",
@@ -233,7 +237,7 @@ class TestCmdRetry:
             err = capsys.readouterr().err
             assert "無効なステージ名" not in err, f"ステージ '{stage}' が無効と判定された"
 
-    def test_no_existing_version_warns(self, tmp_path: Path, capsys) -> None:
+    def test_no_existing_version_warns(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """既存バージョンがない場合は警告して 1 を返す."""
         mock_cobol_file = MagicMock()
         mock_cobol_file.program_name = "SAMPLE"
@@ -269,7 +273,7 @@ class TestCmdMigrate:
     FIXTURES_DIR = Path(__file__).parent / "fixtures"
     SAMPLE_CBL = FIXTURES_DIR / "sample.cbl"
 
-    def test_file_not_found_returns_1(self, tmp_path: Path, capsys) -> None:
+    def test_file_not_found_returns_1(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """存在しないソースは 1 を返す."""
         args = argparse.Namespace(
             source=str(tmp_path / "nonexistent.cbl"),
@@ -282,7 +286,7 @@ class TestCmdMigrate:
         err = capsys.readouterr().err
         assert "エラー" in err
 
-    def test_no_cobol_files_returns_1(self, tmp_path: Path, capsys) -> None:
+    def test_no_cobol_files_returns_1(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """COBOLファイルが見つからない場合は 1 を返す."""
         args = argparse.Namespace(
             source=str(tmp_path),
@@ -300,7 +304,7 @@ class TestCmdMigrate:
         err = capsys.readouterr().err
         assert "COBOLファイルが見つかりません" in err
 
-    def test_success_returns_0_and_prints_result(self, tmp_path: Path, capsys) -> None:
+    def test_success_returns_0_and_prints_result(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """変換成功時は 0 を返し ✅ と PASSED を表示する."""
         from apps.code_migration_assistant.pipeline.engine import PipelineResult
 
@@ -338,7 +342,7 @@ class TestCmdMigrate:
         assert "PASSED" in out
         assert "✅" in out
 
-    def test_failure_returns_1_and_prints_warning(self, tmp_path: Path, capsys) -> None:
+    def test_failure_returns_1_and_prints_warning(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """変換失敗（ENV_ISSUE）は 1 を返し --fast ヒントを表示する."""
         from apps.code_migration_assistant.pipeline.engine import PipelineResult
 
@@ -466,7 +470,7 @@ class TestCmdMigrate:
 class TestPrintProgressCli:
     """_print_progress_cli のユニットテスト."""
 
-    def test_stage_start_shows_arrow(self, capsys) -> None:
+    def test_stage_start_shows_arrow(self, capsys: CaptureFixture[str]) -> None:
         """stage_start は ▶ アイコンで表示される."""
         event = SSEEvent(
             event_type="stage_start",
@@ -479,7 +483,7 @@ class TestPrintProgressCli:
         assert "analyzer" in out
         assert "COBOL解析中" in out
 
-    def test_stage_complete_shows_checkmark(self, capsys) -> None:
+    def test_stage_complete_shows_checkmark(self, capsys: CaptureFixture[str]) -> None:
         """stage_complete は ✓ アイコンで表示される."""
         event = SSEEvent(
             event_type="stage_complete",
@@ -491,7 +495,7 @@ class TestPrintProgressCli:
         assert "✓" in out
         assert "PASSED" in out
 
-    def test_evolution_shows_retry_icon(self, capsys) -> None:
+    def test_evolution_shows_retry_icon(self, capsys: CaptureFixture[str]) -> None:
         """evolution は ↺ アイコンで表示される."""
         event = SSEEvent(
             event_type="evolution",
@@ -502,7 +506,7 @@ class TestPrintProgressCli:
         out = capsys.readouterr().out
         assert "↺" in out
 
-    def test_complete_shows_checkmark_emoji(self, capsys) -> None:
+    def test_complete_shows_checkmark_emoji(self, capsys: CaptureFixture[str]) -> None:
         """complete は ✅ アイコンで表示される."""
         event = SSEEvent(
             event_type="complete",
@@ -513,7 +517,7 @@ class TestPrintProgressCli:
         out = capsys.readouterr().out
         assert "✅" in out
 
-    def test_error_shows_x_icon(self, capsys) -> None:
+    def test_error_shows_x_icon(self, capsys: CaptureFixture[str]) -> None:
         """error は ✗ アイコンで表示される."""
         event = SSEEvent(
             event_type="error",
@@ -524,7 +528,7 @@ class TestPrintProgressCli:
         out = capsys.readouterr().out
         assert "✗" in out
 
-    def test_unknown_event_type_shows_dot(self, capsys) -> None:
+    def test_unknown_event_type_shows_dot(self, capsys: CaptureFixture[str]) -> None:
         """未知のイベントタイプは · で表示される."""
         event = SSEEvent(
             event_type="unknown_type",
@@ -535,7 +539,7 @@ class TestPrintProgressCli:
         out = capsys.readouterr().out
         assert "·" in out
 
-    def test_none_stage_does_not_raise(self, capsys) -> None:
+    def test_none_stage_does_not_raise(self, capsys: CaptureFixture[str]) -> None:
         """stage が None でもエラーにならない."""
         event = SSEEvent(
             event_type="error",
@@ -546,7 +550,7 @@ class TestPrintProgressCli:
         out = capsys.readouterr().out
         assert "✗" in out
 
-    def test_decision_shown_when_no_message(self, capsys) -> None:
+    def test_decision_shown_when_no_message(self, capsys: CaptureFixture[str]) -> None:
         """message キーがなく decision だけある場合、decision を表示する."""
         event = SSEEvent(
             event_type="stage_complete",

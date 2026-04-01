@@ -4,12 +4,13 @@
 import json
 import urllib.error
 import urllib.request
+from typing import Any
 
 
 BASE = "http://localhost:8005"
 
 
-def req(method: str, path: str, data: dict | None = None, token: str | None = None) -> dict:
+def req(method: str, path: str, data: dict[str, Any] | None = None, token: str | None = None) -> dict[str, Any]:
     """HTTPリクエストを送信してJSONを返す."""
     url = BASE + path
     body = json.dumps(data).encode() if data else None

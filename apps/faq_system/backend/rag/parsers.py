@@ -26,7 +26,7 @@ except ImportError:
 try:
     import pdfplumber
 except ImportError:
-    pdfplumber = None  # type: ignore[assignment]
+    pdfplumber = None
 
 try:
     from docx import Document as DocxDocument
@@ -36,7 +36,7 @@ except ImportError:
 try:
     import openpyxl
 except ImportError:
-    openpyxl = None  # type: ignore[assignment]
+    openpyxl = None
 
 
 # ---------------------------------------------------------------------------
@@ -270,9 +270,7 @@ class FileParser:
 
         wb.close()
 
-        metadata["total_rows"] = sum(
-            1 for st in sheet_texts for _line in st.split("\n") if _line.strip()
-        )
+        metadata["total_rows"] = sum(1 for st in sheet_texts for _line in st.split("\n") if _line.strip())
 
         return ParseResult(
             content="\n\n".join(sheet_texts),
