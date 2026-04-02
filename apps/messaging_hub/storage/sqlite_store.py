@@ -158,6 +158,99 @@ class SQLiteMessagingHubStore:
                     last_active_at TEXT NOT NULL,
                     FOREIGN KEY (user_id) REFERENCES user_profiles(user_id)
                 );
+
+                CREATE TABLE IF NOT EXISTS assistant_jobs (
+                    job_id TEXT PRIMARY KEY,
+                    job_type TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    conversation_id TEXT,
+                    status TEXT NOT NULL,
+                    input_text TEXT NOT NULL DEFAULT '',
+                    run_id TEXT,
+                    context_json TEXT NOT NULL DEFAULT '{}',
+                    result_json TEXT,
+                    error TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS assistant_job_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS clarification_tickets (
+                    ticket_id TEXT PRIMARY KEY,
+                    job_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    original_question TEXT NOT NULL,
+                    questions_json TEXT NOT NULL DEFAULT '[]',
+                    answers_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS generated_artifacts (
+                    artifact_id TEXT PRIMARY KEY,
+                    artifact_type TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    capabilities_json TEXT NOT NULL DEFAULT '[]',
+                    scopes_json TEXT NOT NULL DEFAULT '[]',
+                    allowed_tools_json TEXT NOT NULL DEFAULT '[]',
+                    allowed_mcp_servers_json TEXT NOT NULL DEFAULT '[]',
+                    dependencies_json TEXT NOT NULL DEFAULT '[]',
+                    guardrails_json TEXT NOT NULL DEFAULT '[]',
+                    tests_json TEXT NOT NULL DEFAULT '[]',
+                    workflow_definition_json,
+                    runtime_binding_json,
+                    approval_request_id TEXT,
+                    metadata_json TEXT NOT NULL DEFAULT '{}',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS flight_watch_subscriptions (
+                    subscription_id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    conversation_id TEXT,
+                    status TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    request_json TEXT NOT NULL,
+                    ranking_weights_json TEXT NOT NULL DEFAULT '{}',
+                    notification_targets_json TEXT NOT NULL DEFAULT '[]',
+                    baseline_price REAL,
+                    target_price REAL,
+                    last_notified_price REAL,
+                    last_checked_at TEXT,
+                    next_check_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS flight_offer_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    subscription_id TEXT NOT NULL,
+                    provider TEXT NOT NULL,
+                    lowest_price REAL,
+                    offers_json TEXT NOT NULL,
+                    checked_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS notification_deliveries (
+                    delivery_id TEXT PRIMARY KEY,
+                    subscription_id TEXT,
+                    channel TEXT NOT NULL,
+                    destination TEXT,
+                    status TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    error TEXT,
+                    created_at TEXT NOT NULL
+                );
                 """
             )
             conn.commit()
@@ -642,3 +735,450 @@ class SQLiteMessagingHubStore:
             "DELETE FROM sessions WHERE session_id = ?",
             (session_id,),
         )
+
+    # =========================================================================
+    # Orchestration / Job 操作
+    # =========================================================================
+
+    async def upsert_assistant_job(self, job: dict[str, Any]) -> None:
+        """assistant job を保存する."""
+        created_at = str(job.get("created_at", _utc_now_iso()))
+        updated_at = str(job.get("updated_at", created_at))
+        await self._execute(
+            """
+            INSERT OR REPLACE INTO assistant_jobs (
+                job_id, job_type, user_id, conversation_id, status, input_text,
+                run_id, context_json, result_json, error, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(job.get("job_id", "")),
+                str(job.get("job_type", "orchestration")),
+                str(job.get("user_id", "system")),
+                job.get("conversation_id"),
+                str(job.get("status", "pending")),
+                str(job.get("input_text", "")),
+                job.get("run_id"),
+                _to_json(job.get("context", {})),
+                _to_json(job.get("result")) if job.get("result") is not None else None,
+                job.get("error"),
+                created_at,
+                updated_at,
+            ),
+        )
+
+    async def get_assistant_job(self, job_id: str) -> dict[str, Any] | None:
+        """job_id で assistant job を取得する."""
+        rows = await self._execute(
+            "SELECT * FROM assistant_jobs WHERE job_id = ?",
+            (job_id,),
+            fetch=True,
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        row["context"] = _from_json(row.pop("context_json", None), {})
+        row["result"] = _from_json(row.pop("result_json", None), None)
+        return row
+
+    async def list_assistant_jobs(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """assistant job 一覧を返す."""
+        if status:
+            rows = await self._execute(
+                """
+                SELECT * FROM assistant_jobs
+                WHERE status = ?
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (status, limit, offset),
+                fetch=True,
+            )
+        else:
+            rows = await self._execute(
+                """
+                SELECT * FROM assistant_jobs
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+                fetch=True,
+            )
+        for row in rows:
+            row["context"] = _from_json(row.pop("context_json", None), {})
+            row["result"] = _from_json(row.pop("result_json", None), None)
+        return rows
+
+    async def add_assistant_job_event(
+        self,
+        *,
+        job_id: str,
+        event_type: str,
+        payload: dict[str, Any],
+        created_at: str | None = None,
+    ) -> None:
+        """assistant job event を追加する."""
+        await self._execute(
+            """
+            INSERT INTO assistant_job_events (job_id, event_type, payload_json, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (job_id, event_type, _to_json(payload), str(created_at or _utc_now_iso())),
+        )
+
+    async def list_assistant_job_events(self, job_id: str, limit: int = 200) -> list[dict[str, Any]]:
+        """assistant job events を返す."""
+        rows = await self._execute(
+            """
+            SELECT * FROM assistant_job_events
+            WHERE job_id = ?
+            ORDER BY id ASC
+            LIMIT ?
+            """,
+            (job_id, limit),
+            fetch=True,
+        )
+        for row in rows:
+            row["payload"] = _from_json(row.pop("payload_json", None), {})
+        return rows
+
+    async def upsert_clarification_ticket(self, ticket: dict[str, Any]) -> None:
+        """clarification ticket を保存する."""
+        created_at = str(ticket.get("created_at", _utc_now_iso()))
+        updated_at = str(ticket.get("updated_at", created_at))
+        await self._execute(
+            """
+            INSERT OR REPLACE INTO clarification_tickets (
+                ticket_id, job_id, status, original_question, questions_json,
+                answers_json, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(ticket.get("ticket_id", "")),
+                str(ticket.get("job_id", "")),
+                str(ticket.get("status", "pending")),
+                str(ticket.get("original_question", "")),
+                _to_json(ticket.get("questions", [])),
+                _to_json(ticket.get("answers", {})),
+                created_at,
+                updated_at,
+            ),
+        )
+
+    async def get_clarification_ticket(self, ticket_id: str) -> dict[str, Any] | None:
+        """clarification ticket を取得する."""
+        rows = await self._execute(
+            "SELECT * FROM clarification_tickets WHERE ticket_id = ?",
+            (ticket_id,),
+            fetch=True,
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        row["questions"] = _from_json(row.pop("questions_json", None), [])
+        row["answers"] = _from_json(row.pop("answers_json", None), {})
+        return row
+
+    async def get_clarification_ticket_by_job(self, job_id: str) -> dict[str, Any] | None:
+        """job_id から clarification ticket を取得する."""
+        rows = await self._execute(
+            """
+            SELECT * FROM clarification_tickets
+            WHERE job_id = ?
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (job_id,),
+            fetch=True,
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        row["questions"] = _from_json(row.pop("questions_json", None), [])
+        row["answers"] = _from_json(row.pop("answers_json", None), {})
+        return row
+
+    # =========================================================================
+    # Generated Artifact 操作
+    # =========================================================================
+
+    async def upsert_generated_artifact(self, artifact: dict[str, Any]) -> None:
+        """generated artifact を保存する."""
+        created_at = str(artifact.get("created_at", _utc_now_iso()))
+        updated_at = str(artifact.get("updated_at", created_at))
+        await self._execute(
+            """
+            INSERT OR REPLACE INTO generated_artifacts (
+                artifact_id, artifact_type, name, description, status,
+                capabilities_json, scopes_json, allowed_tools_json, allowed_mcp_servers_json,
+                dependencies_json, guardrails_json, tests_json, workflow_definition_json,
+                runtime_binding_json, approval_request_id, metadata_json, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(artifact.get("artifact_id", "")),
+                str(artifact.get("artifact_type", "skill")),
+                str(artifact.get("name", "")),
+                str(artifact.get("description", "")),
+                str(artifact.get("status", "draft")),
+                _to_json(artifact.get("capabilities", [])),
+                _to_json(artifact.get("scopes", [])),
+                _to_json(artifact.get("allowed_tools", [])),
+                _to_json(artifact.get("allowed_mcp_servers", [])),
+                _to_json(artifact.get("dependencies", [])),
+                _to_json(artifact.get("guardrails", [])),
+                _to_json(artifact.get("tests", [])),
+                _to_json(artifact.get("workflow_definition"))
+                if artifact.get("workflow_definition") is not None
+                else None,
+                _to_json(artifact.get("runtime_binding"))
+                if artifact.get("runtime_binding") is not None
+                else None,
+                artifact.get("approval_request_id"),
+                _to_json(artifact.get("metadata", {})),
+                created_at,
+                updated_at,
+            ),
+        )
+
+    async def get_generated_artifact(self, artifact_id: str) -> dict[str, Any] | None:
+        """generated artifact を取得する."""
+        rows = await self._execute(
+            "SELECT * FROM generated_artifacts WHERE artifact_id = ?",
+            (artifact_id,),
+            fetch=True,
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        row["capabilities"] = _from_json(row.pop("capabilities_json", None), [])
+        row["scopes"] = _from_json(row.pop("scopes_json", None), [])
+        row["allowed_tools"] = _from_json(row.pop("allowed_tools_json", None), [])
+        row["allowed_mcp_servers"] = _from_json(row.pop("allowed_mcp_servers_json", None), [])
+        row["dependencies"] = _from_json(row.pop("dependencies_json", None), [])
+        row["guardrails"] = _from_json(row.pop("guardrails_json", None), [])
+        row["tests"] = _from_json(row.pop("tests_json", None), [])
+        row["workflow_definition"] = _from_json(row.pop("workflow_definition_json", None), None)
+        row["runtime_binding"] = _from_json(row.pop("runtime_binding_json", None), None)
+        row["metadata"] = _from_json(row.pop("metadata_json", None), {})
+        return row
+
+    async def list_generated_artifacts(
+        self,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """generated artifact 一覧を返す."""
+        if status:
+            rows = await self._execute(
+                """
+                SELECT * FROM generated_artifacts
+                WHERE status = ?
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (status, limit, offset),
+                fetch=True,
+            )
+        else:
+            rows = await self._execute(
+                """
+                SELECT * FROM generated_artifacts
+                ORDER BY updated_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+                fetch=True,
+            )
+        normalized: list[dict[str, Any]] = []
+        for row in rows:
+            artifact = await self.get_generated_artifact(str(row.get("artifact_id", "")))
+            if artifact is not None:
+                normalized.append(artifact)
+        return normalized
+
+    # =========================================================================
+    # Flight Watch 操作
+    # =========================================================================
+
+    async def upsert_flight_watch_subscription(self, subscription: dict[str, Any]) -> None:
+        """flight watch subscription を保存する."""
+        created_at = str(subscription.get("created_at", _utc_now_iso()))
+        updated_at = str(subscription.get("updated_at", created_at))
+        await self._execute(
+            """
+            INSERT OR REPLACE INTO flight_watch_subscriptions (
+                subscription_id, user_id, conversation_id, status, provider, request_json,
+                ranking_weights_json, notification_targets_json, baseline_price, target_price,
+                last_notified_price, last_checked_at, next_check_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(subscription.get("subscription_id", "")),
+                str(subscription.get("user_id", "system")),
+                subscription.get("conversation_id"),
+                str(subscription.get("status", "active")),
+                str(subscription.get("provider", "fake")),
+                _to_json(subscription.get("request", {})),
+                _to_json(subscription.get("ranking_weights", {})),
+                _to_json(subscription.get("notification_targets", [])),
+                subscription.get("baseline_price"),
+                subscription.get("target_price"),
+                subscription.get("last_notified_price"),
+                subscription.get("last_checked_at"),
+                str(subscription.get("next_check_at", _utc_now_iso())),
+                created_at,
+                updated_at,
+            ),
+        )
+
+    async def get_flight_watch_subscription(self, subscription_id: str) -> dict[str, Any] | None:
+        """flight watch subscription を取得する."""
+        rows = await self._execute(
+            "SELECT * FROM flight_watch_subscriptions WHERE subscription_id = ?",
+            (subscription_id,),
+            fetch=True,
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        row["request"] = _from_json(row.pop("request_json", None), {})
+        row["ranking_weights"] = _from_json(row.pop("ranking_weights_json", None), {})
+        row["notification_targets"] = _from_json(row.pop("notification_targets_json", None), [])
+        return row
+
+    async def list_flight_watch_subscriptions(
+        self,
+        *,
+        status: str | None = None,
+        due_before: str | None = None,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        """flight watch subscription 一覧を返す."""
+        conditions: list[str] = []
+        params: list[Any] = []
+        if status:
+            conditions.append("status = ?")
+            params.append(status)
+        if due_before:
+            conditions.append("next_check_at <= ?")
+            params.append(due_before)
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        rows = await self._execute(
+            f"""
+            SELECT * FROM flight_watch_subscriptions
+            {where_clause}
+            ORDER BY updated_at DESC
+            LIMIT ?
+            """,
+            (*params, limit),
+            fetch=True,
+        )
+        normalized: list[dict[str, Any]] = []
+        for row in rows:
+            subscription = await self.get_flight_watch_subscription(str(row.get("subscription_id", "")))
+            if subscription is not None:
+                normalized.append(subscription)
+        return normalized
+
+    async def add_flight_offer_snapshot(
+        self,
+        *,
+        subscription_id: str,
+        provider: str,
+        lowest_price: float | None,
+        offers: list[dict[str, Any]],
+        checked_at: str | None = None,
+    ) -> None:
+        """flight offer snapshot を追加する."""
+        await self._execute(
+            """
+            INSERT INTO flight_offer_snapshots (
+                subscription_id, provider, lowest_price, offers_json, checked_at
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                subscription_id,
+                provider,
+                lowest_price,
+                _to_json(offers),
+                str(checked_at or _utc_now_iso()),
+            ),
+        )
+
+    async def list_flight_offer_snapshots(self, subscription_id: str, limit: int = 50) -> list[dict[str, Any]]:
+        """flight offer snapshot 一覧を返す."""
+        rows = await self._execute(
+            """
+            SELECT * FROM flight_offer_snapshots
+            WHERE subscription_id = ?
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (subscription_id, limit),
+            fetch=True,
+        )
+        for row in rows:
+            row["offers"] = _from_json(row.pop("offers_json", None), [])
+        return rows
+
+    async def add_notification_delivery(self, delivery: dict[str, Any]) -> None:
+        """notification delivery を保存する."""
+        await self._execute(
+            """
+            INSERT OR REPLACE INTO notification_deliveries (
+                delivery_id, subscription_id, channel, destination, status,
+                payload_json, error, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(delivery.get("delivery_id", "")),
+                delivery.get("subscription_id"),
+                str(delivery.get("channel", "in_app")),
+                delivery.get("destination"),
+                str(delivery.get("status", "pending")),
+                _to_json(delivery.get("payload", {})),
+                delivery.get("error"),
+                str(delivery.get("created_at", _utc_now_iso())),
+            ),
+        )
+
+    async def list_notification_deliveries(
+        self,
+        *,
+        subscription_id: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """notification delivery 一覧を返す."""
+        if subscription_id:
+            rows = await self._execute(
+                """
+                SELECT * FROM notification_deliveries
+                WHERE subscription_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (subscription_id, limit),
+                fetch=True,
+            )
+        else:
+            rows = await self._execute(
+                """
+                SELECT * FROM notification_deliveries
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+                fetch=True,
+            )
+        for row in rows:
+            row["payload"] = _from_json(row.pop("payload_json", None), {})
+        return rows

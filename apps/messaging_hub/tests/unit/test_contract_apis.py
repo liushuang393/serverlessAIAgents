@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,9 +13,12 @@ import pytest
 import pytest_asyncio
 
 from apps.messaging_hub import main
+from apps.messaging_hub.agents.business_advisor_agent import BusinessAdvisorOutput
 from apps.messaging_hub.approval_manager import ApprovalManager
 from apps.messaging_hub.execution_tracker import ExecutionTracker
+from apps.messaging_hub.flight_watch import FlightOffer, FlightSearchResult, RankingWeights
 from apps.messaging_hub.skills_manager import SkillsManager
+from apps.messaging_hub.skills_manager import WorkflowRunResult
 from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 from kernel.skills import RiskLevel
 
@@ -37,11 +41,14 @@ async def client_with_state(
     monkeypatch.setattr(main, "_active_step_events", {})
     monkeypatch.setattr(main, "_run_started_at", {})
     monkeypatch.setattr(main, "_assistant_cli_proposals", {})
+    monkeypatch.setattr(main, "_platform_runtime_tasks", {})
+    monkeypatch.setattr(main, "background_tasks", [])
     monkeypatch.setattr(main, "setup_platforms", _noop_async)
     monkeypatch.setattr(main, "start_background_tasks", _noop_async)
     monkeypatch.setattr(main.gateway, "shutdown", _noop_async)
     main._approval_manager.on_request(main._on_approval_request)
     main._approval_manager.on_decision(main._on_approval_decision)
+    main._initialize_orchestration_services()
 
     headers = {"x-api-key": "test-key"}
     await main._store.initialize()
@@ -365,3 +372,274 @@ async def test_file_organizer_api_with_approval_flow(
         assert (workspace_dir / "Images" / "photo.jpg").exists()
     finally:
         shutil.rmtree(workspace_dir, ignore_errors=True)
+
+
+@pytest.mark.asyncio
+async def test_orchestration_requires_clarification_and_resumes(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+) -> None:
+    """機票条件不足時に clarification を返し、回答後に同一 task を再開すること."""
+    client, headers = client_with_state
+
+    created = await client.post(
+        "/api/orchestration/tasks",
+        headers=headers,
+        json={
+            "message": "请帮我监视便宜机票",
+            "user_id": "u1",
+            "conversation_id": "chat:flight",
+            "required_capability": "flight_watch",
+        },
+    )
+    assert created.status_code == 200
+    created_json = created.json()
+    assert created_json["status"] == "clarification_required"
+    assert isinstance(created_json["task_id"], str)
+    assert isinstance(created_json["clarification_ticket_id"], str)
+    assert len(created_json["clarification_questions"]) >= 4
+
+    task_id = str(created_json["task_id"])
+    resumed = await client.post(
+        f"/api/orchestration/tasks/{task_id}/clarifications",
+        headers=headers,
+        json={
+            "answers": {
+                "origin": "HND",
+                "destination": "LAX",
+                "depart_window": "2026-05-01..2026-05-03",
+                "return_window": "2026-05-10..2026-05-12",
+                "create_watch": "yes",
+            }
+        },
+    )
+    assert resumed.status_code == 200
+    resumed_json = resumed.json()
+    assert resumed_json["status"] == "monitoring"
+    assert resumed_json["result"]["search_result"]["offers"]
+    assert resumed_json["result"]["subscription"]["subscription_id"].startswith("fws_")
+
+    task_detail = await client.get(f"/api/orchestration/tasks/{task_id}", headers=headers)
+    assert task_detail.status_code == 200
+    task_payload = task_detail.json()["task"]
+    assert task_payload["status"] == "monitoring"
+    assert task_payload["context"]["harness_plan"]["blueprint_id"] == "structured_monitoring.flight_watch"
+    assert task_payload["context"]["harness_plan"]["provider_strategy"]["mode"] == "discover_first"
+    assert "user_preferences" in task_payload["context"]["harness_plan"]["memory_plan"]["main_agent_keys"]
+
+    events = await client.get(f"/api/orchestration/tasks/{task_id}/events", headers=headers)
+    assert events.status_code == 200
+    event_types = {item["event_type"] for item in events.json()["events"]}
+    assert "clarification.required" in event_types
+    assert "flow.complete" in event_types
+
+
+@pytest.mark.asyncio
+async def test_orchestration_routes_existing_agent_and_gap_fills(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """既存 agent routing と gap fill artifact 生成の両方を確認する."""
+    client, headers = client_with_state
+
+    async def _fake_business_process(input_data: Any) -> BusinessAdvisorOutput:
+        question = getattr(input_data, "question", "")
+        return BusinessAdvisorOutput(
+            advice=[{"title": "pricing", "content": "Focus on value-based pricing."}],
+            selected_skills=["biz_pricing"],
+            summary=f"Business advice for: {question}",
+        )
+
+    monkeypatch.setattr(main._business_advisor_agent, "process", _fake_business_process)
+
+    routed = await client.post(
+        "/api/orchestration/tasks",
+        headers=headers,
+        json={
+            "message": "Help me decide SaaS pricing",
+            "user_id": "u1",
+            "required_capability": "business_advice",
+        },
+    )
+    assert routed.status_code == 200
+    routed_json = routed.json()
+    assert routed_json["status"] == "completed"
+    assert routed_json["result"]["agent"] == "BusinessAdvisorAgent"
+    assert routed_json["result"]["harness_plan"]["workers"][0]["role"] == "main_agent"
+
+    gap_fill = await client.post(
+        "/api/orchestration/tasks",
+        headers=headers,
+        json={
+            "message": "Create a temporary specialist for travel reimbursement policy checks",
+            "user_id": "u1",
+            "required_capability": "travel_policy_review",
+        },
+    )
+    assert gap_fill.status_code == 200
+    gap_fill_json = gap_fill.json()
+    assert gap_fill_json["generated_artifact"] is not None
+    assert gap_fill_json["generated_artifact"]["status"] == "runtime_active"
+    runtime_agent_name = gap_fill_json["result"]["runtime_agent"]
+    assert isinstance(runtime_agent_name, str)
+
+    async def _fake_run_workflow(
+        workflow_id: str,
+        params: dict[str, Any] | None = None,
+        dry_run: bool = False,
+    ) -> WorkflowRunResult:
+        return WorkflowRunResult(
+            workflow_id=workflow_id,
+            run_id=f"run_{uuid.uuid4().hex}",
+            status="success",
+            step_results=[
+                {
+                    "step_id": "step_1",
+                    "skill_name": "web_search",
+                    "status": "success",
+                    "result": {"query": params.get("task_description", "") if params else ""},
+                    "dry_run": dry_run,
+                }
+            ],
+            started_at=datetime.now(),
+            completed_at=datetime.now(),
+            error=None,
+        )
+
+    monkeypatch.setattr(main._skills_manager, "run_workflow", _fake_run_workflow)
+
+    routed_runtime = await client.post(
+        "/api/orchestration/tasks",
+        headers=headers,
+        json={
+            "message": "Review our travel reimbursement policy exceptions",
+            "user_id": "u1",
+            "required_capability": "travel_policy_review",
+        },
+    )
+    assert routed_runtime.status_code == 200
+    routed_runtime_json = routed_runtime.json()
+    assert routed_runtime_json["status"] == "completed"
+    assert routed_runtime_json["result"]["agent"] == runtime_agent_name
+    assert routed_runtime_json["result"]["output"]["runtime_artifact_id"] == gap_fill_json["generated_artifact"]["artifact_id"]
+
+
+@pytest.mark.asyncio
+async def test_generated_artifact_lifecycle_and_skill_generate_endpoint(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+) -> None:
+    """生成物 lifecycle が approve 前 publish 不可であること."""
+    client, headers = client_with_state
+
+    generated = await client.post(
+        "/api/skills/generate",
+        headers=headers,
+        json={
+            "description": "Watch flight prices and notify users by email when a new low is found.",
+            "examples": ["Monitor HND to LAX fares"],
+            "requested_by": "u1",
+        },
+    )
+    assert generated.status_code == 200
+    generated_json = generated.json()
+    artifact = generated_json["artifact"]
+    artifact_id = str(artifact["artifact_id"])
+    assert artifact["status"] == "runtime_active"
+
+    pre_promote = await client.post(
+        f"/api/generated-artifacts/{artifact_id}/promote",
+        headers=headers,
+    )
+    assert pre_promote.status_code == 200
+    assert pre_promote.json()["artifact"]["status"] == "runtime_active"
+
+    approved = await client.post(
+        f"/api/generated-artifacts/{artifact_id}/approve",
+        headers=headers,
+        json={"approver_id": "reviewer"},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["artifact"]["status"] == "approved"
+
+    promoted = await client.post(
+        f"/api/generated-artifacts/{artifact_id}/promote",
+        headers=headers,
+    )
+    assert promoted.status_code == 200
+    assert promoted.json()["artifact"]["status"] == "published"
+
+
+@pytest.mark.asyncio
+async def test_flight_watch_notification_deduplicates_same_price(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """新しい最安値のみ通知し、同一価格では再通知しないこと."""
+    client, headers = client_with_state
+
+    created = await client.post(
+        "/api/flight-watch/subscriptions",
+        headers=headers,
+        json={
+            "user_id": "u1",
+            "conversation_id": "chat:watch",
+            "request": {
+                "origin": "HND",
+                "destination": "SFO",
+                "depart_window": {"start_date": "2026-06-01", "end_date": "2026-06-03"},
+                "return_window": {"start_date": "2026-06-10", "end_date": "2026-06-12"},
+                "provider": "fake",
+                "poll_interval_hours": 1,
+            },
+        },
+    )
+    assert created.status_code == 200
+    subscription = created.json()["subscription"]
+    subscription_id = str(subscription["subscription_id"])
+
+    async def _discounted_search(_request: Any) -> FlightSearchResult:
+        offer = FlightOffer(
+            offer_id="drop_offer",
+            provider="fake",
+            origin="HND",
+            destination="SFO",
+            depart_date="2026-06-01",
+            return_date="2026-06-10",
+            price=99.0,
+            currency="USD",
+            total_duration_minutes=640,
+            stops=0,
+            carrier="SkyJet",
+            red_eye=False,
+            airport_change=False,
+            layover_minutes=[],
+        )
+        return FlightSearchResult(
+            offers=[offer],
+            ranking_weights=RankingWeights(),
+            provider_used="fake",
+            recommended_offer=offer,
+        )
+
+    monkeypatch.setattr(main._flight_watch_service, "search", _discounted_search)
+
+    stored = await main._store.get_flight_watch_subscription(subscription_id)
+    assert stored is not None
+    stored["next_check_at"] = "2000-01-01T00:00:00+00:00"
+    await main._store.upsert_flight_watch_subscription(stored)
+
+    first_tick = await main._flight_watch_service.check_due_subscriptions()
+    assert first_tick["notified"] == 1
+
+    deliveries = await main._store.list_notification_deliveries(subscription_id=subscription_id)
+    assert len(deliveries) == 1
+
+    stored_again = await main._store.get_flight_watch_subscription(subscription_id)
+    assert stored_again is not None
+    stored_again["next_check_at"] = "2000-01-01T00:00:00+00:00"
+    await main._store.upsert_flight_watch_subscription(stored_again)
+
+    second_tick = await main._flight_watch_service.check_due_subscriptions()
+    assert second_tick["notified"] == 0
+
+    deliveries_after = await main._store.list_notification_deliveries(subscription_id=subscription_id)
+    assert len(deliveries_after) == 1

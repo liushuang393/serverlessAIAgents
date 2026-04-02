@@ -44,6 +44,7 @@ interface SubscriptionResponse {
   ok: boolean;
   subscription_id: string;
   ws_url: string;
+  rooms?: string[];
 }
 
 type ExportFormat = "json" | "csv" | "markdown";
@@ -114,6 +115,7 @@ export default function Conversations() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [wsUrl, setWsUrl] = useState("");
+  const [wsRooms, setWsRooms] = useState<string[]>([]);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [updatingMessage, setUpdatingMessage] = useState(false);
@@ -131,8 +133,9 @@ export default function Conversations() {
     return next;
   }, []);
 
-  const { isConnected, lastMessage } = useWebSocket(wsUrl);
+  const { isConnected, lastMessage, sendMessage } = useWebSocket(wsUrl);
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const subscribedRoomsRef = useRef<string[]>([]);
 
   const formats = [
     {
@@ -202,7 +205,11 @@ export default function Conversations() {
       eventType === "RunFinished" ||
       eventType === "ToolExecuted" ||
       eventType === "approval_decided" ||
-      eventType === "approval_request"
+      eventType === "approval_request" ||
+      eventType === "flow.complete" ||
+      eventType === "clarification.required" ||
+      eventType === "a2ui.component" ||
+      eventType === "notification"
     ) {
       void refreshConversations(false);
       if (selectedConversationId) {
@@ -218,6 +225,26 @@ export default function Conversations() {
     }
     messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
   }, [messages, sending]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      subscribedRoomsRef.current = [];
+      return;
+    }
+    const previousRooms = new Set(subscribedRoomsRef.current);
+    const nextRooms = new Set(wsRooms);
+    previousRooms.forEach((room) => {
+      if (!nextRooms.has(room)) {
+        sendMessage({ type: "unsubscribe", room, data: {} });
+      }
+    });
+    nextRooms.forEach((room) => {
+      if (!previousRooms.has(room)) {
+        sendMessage({ type: "subscribe", room, data: {} });
+      }
+    });
+    subscribedRoomsRef.current = [...wsRooms];
+  }, [isConnected, sendMessage, wsRooms]);
 
   const verifyAuth = async () => {
     try {
@@ -307,6 +334,7 @@ export default function Conversations() {
         body: JSON.stringify({
           client_id: clientId,
           conversation_id: conversationId,
+          user_id: userId || "admin_ui",
           event_types: [
             "RunStarted",
             "StepStarted",
@@ -314,6 +342,12 @@ export default function Conversations() {
             "ToolExecuted",
             "EvidenceAdded",
             "RunFinished",
+            "flow.start",
+            "progress",
+            "clarification.required",
+            "a2ui.component",
+            "flow.complete",
+            "flow.error",
           ],
         }),
       });
@@ -325,6 +359,7 @@ export default function Conversations() {
       if (data.ok) {
         setSubscriptionId(data.subscription_id);
         setWsUrl(data.ws_url);
+        setWsRooms(Array.isArray(data.rooms) ? data.rooms : []);
       }
     } catch (error) {
       setPageError(

@@ -51,6 +51,14 @@
       "business_base": "interaction",
       "pattern": "specialist",
       "agent_type": "specialist"
+    },
+    {
+      "name": "FlightWatchAgent",
+      "module": "apps.messaging_hub.agents.flight_watch_agent",
+      "capabilities": ["flight_watch", "travel_search", "monitoring", "notification"],
+      "business_base": "interaction",
+      "pattern": "specialist",
+      "agent_type": "specialist"
     }
   ],
   "services": {

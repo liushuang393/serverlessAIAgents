@@ -52,17 +52,25 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+from apps.messaging_hub.agents.flight_watch_agent import FlightWatchAgent
 from apps.messaging_hub.agents.file_organizer_agent import FileOrganizerAgent
+from apps.messaging_hub.agents.runtime_artifact_agent import RuntimeArtifactAgentRegistry
 from apps.messaging_hub.approval_manager import ApprovalManager, ApprovalRequest, ApprovalStatus
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 from apps.messaging_hub.execution_tracker import ExecutionEvent, ExecutionStatus, ExecutionTracker
+from apps.messaging_hub.flight_watch import FlightSearchRequest, FlightWatchService, SubscriptionStatus
+from apps.messaging_hub.generated_artifact_manager import ArtifactType, GeneratedArtifactManager
+from apps.messaging_hub.harness_memory import HarnessMemoryService
 from apps.messaging_hub.lazy_tool_loader import LazyToolLoader
 from apps.messaging_hub.mcp_manager import MCPInstallRequest, MCPManager
+from apps.messaging_hub.orchestration_service import OrchestrationService, OrchestrationTaskResult
 from apps.messaging_hub.skills_manager import SkillsManager, Workflow, WorkflowStatus
 from apps.messaging_hub.storage import SQLiteMessagingHubStore
 from harness.budget.service import BudgetConfig, TokenBudgetManager
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension, ScoringResult
+from kernel.protocols.agui_events import A2UIComponentEvent, ApprovalRequiredEvent
+from kernel.protocols.a2ui.components import CardComponent, TextComponent
 from kernel.runtime import WebSocketHub
 from kernel.skills import (
     ChatBotSkill,
@@ -290,6 +298,7 @@ def _risk_level_from_reason(reason: str) -> RiskLevel:
 
 _store = SQLiteMessagingHubStore.from_default_path()
 _skill_gateway = _build_skill_gateway()
+_harness_memory_service = HarnessMemoryService()
 
 _approval_manager = ApprovalManager(websocket_hub=hub)
 _execution_tracker = ExecutionTracker(websocket_hub=hub)
@@ -312,10 +321,18 @@ from kernel.protocols.a2a_hub import get_hub as _get_a2a_hub
 
 
 _a2a_hub = _get_a2a_hub()
-if _a2a_hub.discover(_file_organizer_agent.name) is None:
-    _a2a_hub.register(_file_organizer_agent)
-if _a2a_hub.discover(_business_advisor_agent.name) is None:
-    _a2a_hub.register(_business_advisor_agent)
+
+
+def _register_runtime_agent(agent_instance: Any) -> None:
+    """A2A hub に runtime agent を登録する."""
+    if _a2a_hub.discover(agent_instance.name) is None:
+        _a2a_hub.register(agent_instance)
+        return
+    _a2a_hub.register(agent_instance, replace=True)
+
+
+_register_runtime_agent(_file_organizer_agent)
+_register_runtime_agent(_business_advisor_agent)
 
 _active_step_events: dict[str, str] = {}
 _run_started_at: dict[str, float] = {}
@@ -682,6 +699,23 @@ def _resolve_assistant_message_text(result: dict[str, Any]) -> str:
     return "⚠️ 応答を生成できませんでした。設定を確認して再試行してください。"
 
 
+def _resolve_orchestration_message_text(result: OrchestrationTaskResult) -> str:
+    """オーケストレーション結果からチャット表示文面を解決する."""
+    payload = result.result if isinstance(result.result, dict) else None
+    if payload is not None:
+        if "raw_results" in payload or "summary" in payload or "answer" in payload:
+            return _resolve_assistant_message_text(payload)
+        nested_output = payload.get("output")
+        if isinstance(nested_output, dict):
+            nested_text = _extract_text_fields(nested_output)
+            if nested_text is not None:
+                return nested_text
+            nested_summary = _non_empty_text(nested_output.get("summary"))
+            if nested_summary is not None:
+                return nested_summary
+    return result.summary
+
+
 def _score_assistant_response(
     *,
     input_text: str,
@@ -750,6 +784,37 @@ async def _on_approval_request(request: ApprovalRequest) -> None:
             "created_at": request.created_at.isoformat(),
         },
     )
+    approval_event = ApprovalRequiredEvent(
+        timestamp=time.time(),
+        flow_id=request.id,
+        data={"user_id": request.user_id, "skill_name": request.skill_name},
+        request_id=request.id,
+        action=request.skill_name,
+        reason=request.reason,
+        risk_level=request.risk_level.value,
+        context={"params": request.params},
+    )
+    approval_card = CardComponent(
+        title="Approval Required",
+        children=[
+            TextComponent(f"skill: {request.skill_name}"),
+            TextComponent(f"reason: {request.reason}"),
+            TextComponent(f"risk: {request.risk_level.value}"),
+        ],
+    )
+    component_event = A2UIComponentEvent(
+        timestamp=time.time(),
+        flow_id=request.id,
+        surface_id=f"user:{request.user_id}",
+        component=approval_card.to_dict(),
+        data={"request_id": request.id},
+    )
+    for message in (
+        {"type": approval_event.event_type.value, "data": approval_event.to_dict()},
+        {"type": component_event.event_type.value, "data": component_event.to_dict()},
+    ):
+        await hub.broadcast_room(f"user:{request.user_id}", message)
+        await hub.broadcast(message)
 
 
 async def _on_approval_decision(request: ApprovalRequest) -> None:
@@ -897,8 +962,53 @@ assistant = PersonalAssistantCoordinator(
     lazy_tool_loader=_lazy_tool_loader,
 )
 
-if _a2a_hub.discover(assistant.name) is None:
-    _a2a_hub.register(assistant)
+_register_runtime_agent(assistant)
+
+_generated_artifact_manager: GeneratedArtifactManager
+_flight_watch_service: FlightWatchService
+_flight_watch_agent: FlightWatchAgent
+_orchestration_service: OrchestrationService
+_runtime_artifact_registry: RuntimeArtifactAgentRegistry
+
+
+def _initialize_orchestration_services() -> None:
+    """orchestration 関連サービスを再初期化する."""
+    global _generated_artifact_manager
+    global _flight_watch_agent
+    global _flight_watch_service
+    global _orchestration_service
+    global _runtime_artifact_registry
+
+    _generated_artifact_manager = GeneratedArtifactManager(
+        store=_store,
+        skills_manager=_skills_manager,
+    )
+    _runtime_artifact_registry = RuntimeArtifactAgentRegistry(
+        skills_manager=_skills_manager,
+        memory_service=_harness_memory_service,
+    )
+    _flight_watch_service = FlightWatchService(
+        store=_store,
+        websocket_hub=hub,
+        skill_gateway=_skill_gateway,
+    )
+    _flight_watch_agent = FlightWatchAgent(service=_flight_watch_service)
+    _register_runtime_agent(_flight_watch_agent)
+    _orchestration_service = OrchestrationService(
+        store=_store,
+        websocket_hub=hub,
+        assistant=assistant,
+        flight_watch_service=_flight_watch_service,
+        generated_artifact_manager=_generated_artifact_manager,
+        security_mode=_get_security_mode(),
+        skill_gateway=_skill_gateway,
+        mcp_manager=_mcp_manager,
+        memory_service=_harness_memory_service,
+        runtime_artifact_registry=_runtime_artifact_registry,
+    )
+
+
+_initialize_orchestration_services()
 
 
 def _standard_event_names() -> list[str]:
@@ -910,6 +1020,14 @@ def _standard_event_names() -> list[str]:
         "ToolExecuted",
         "EvidenceAdded",
         "RunFinished",
+        "flow.start",
+        "node.start",
+        "progress",
+        "clarification.required",
+        "approval_required",
+        "a2ui.component",
+        "flow.complete",
+        "flow.error",
     ]
 
 
@@ -1019,6 +1137,7 @@ async def lifespan(app: FastAPI) -> Any:
 
     # 1. 永続化層の初期化と復元
     await _store.initialize()
+    await _harness_memory_service.start()
     approval_rows = await _store.list_approvals(limit=5000)
     pending_requests: list[ApprovalRequest] = []
     history_requests: list[ApprovalRequest] = []
@@ -1053,6 +1172,12 @@ async def lifespan(app: FastAPI) -> Any:
     for wf_def in get_default_workflows():
         await _skills_manager.create_workflow(wf_def)
     logger.info("ビジネスワークフロー %d 件登録完了", len(get_default_workflows()))
+    restored_artifacts = await _generated_artifact_manager.restore_runtime_bindings()
+    restored_agent_names = await _runtime_artifact_registry.restore(_generated_artifact_manager)
+    if restored_agent_names:
+        logger.info("復元した runtime artifact agents: %s", ", ".join(restored_agent_names))
+    elif restored_artifacts:
+        logger.info("復元した runtime artifacts: %d", len(restored_artifacts))
 
     # 3. プラットフォームアダプターを登録
     await setup_platforms()
@@ -1078,6 +1203,7 @@ async def lifespan(app: FastAPI) -> Any:
 
     # ゲートウェイを停止
     await gateway.shutdown()
+    await _harness_memory_service.stop()
 
     logger.info("Messaging Hub shut down")
 
@@ -1095,6 +1221,7 @@ async def setup_platforms() -> None:
 async def start_background_tasks() -> None:
     """バックグラウンドタスクを開始する。"""
     await _ensure_discord_runtime_task()
+    await _ensure_flight_watch_monitor_task()
 
     # 必要に応じて他のバックグラウンドタスクも追加する
 
@@ -1118,6 +1245,39 @@ async def _ensure_discord_runtime_task() -> None:
     _platform_runtime_tasks["discord"] = task
     background_tasks.append(task)
     logger.info("Started Discord bot task")
+
+
+async def _ensure_flight_watch_monitor_task() -> None:
+    """Flight watch の定期監視タスクを起動する."""
+    current_task = _platform_runtime_tasks.get("flight_watch_monitor")
+    if current_task and not current_task.done():
+        return
+
+    task = asyncio.create_task(_flight_watch_monitor_loop())
+    _platform_runtime_tasks["flight_watch_monitor"] = task
+    background_tasks.append(task)
+    logger.info("Started flight watch monitor task")
+
+
+async def _flight_watch_monitor_loop() -> None:
+    """機票監視購読を定期実行する."""
+    interval_seconds = max(int(os.getenv("MESSAGING_HUB_FLIGHT_WATCH_LOOP_SECONDS", "60")), 30)
+    while True:
+        try:
+            result = await _flight_watch_service.check_due_subscriptions()
+            checked = int(result.get("checked", 0))
+            notified = int(result.get("notified", 0))
+            if checked > 0 or notified > 0:
+                logger.info(
+                    "Flight watch monitor tick: checked=%d notified=%d",
+                    checked,
+                    notified,
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.warning("Flight watch monitor loop failed: %s", exc, exc_info=True)
+        await asyncio.sleep(interval_seconds)
 
 
 async def _connect_platform_from_env(platform_name: str) -> tuple[bool, str]:
@@ -1235,18 +1395,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     client_id = websocket.query_params.get("client_id", "anonymous")
 
     try:
-        await hub.connect(websocket, client_id=client_id)
-        logger.info(f"WebSocket client connected: {client_id}")
-
-        # 接続を維持
-        while True:
-            # クライアントメッセージを受信（任意）
-            data = await websocket.receive_json()
-            logger.debug(f"Received from {client_id}: {data}")
-
-            # クライアントメッセージ処理は必要に応じて拡張する
-            # ...
-
+        await hub.handle_connection(websocket, client_id=client_id)
     except WebSocketDisconnect:
         logger.info(f"WebSocket client disconnected: {client_id}")
     except Exception as e:
@@ -1813,6 +1962,7 @@ class SkillGenerateRequest(BaseModel):
 
     description: str = Field(..., min_length=1)
     examples: list[str] = Field(default_factory=list)
+    requested_by: str = Field(default="admin", min_length=1)
 
 
 class SkillCallRequest(BaseModel):
@@ -1821,6 +1971,49 @@ class SkillCallRequest(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
     dry_run: bool = Field(default=False)
     user_id: str = Field(default="admin")
+
+
+class GeneratedArtifactApproveRequest(BaseModel):
+    """生成物承認リクエスト."""
+
+    approver_id: str = Field(default="admin", min_length=1)
+
+
+class GeneratedArtifactRejectRequest(BaseModel):
+    """生成物却下リクエスト."""
+
+    rejected_by: str = Field(default="admin", min_length=1)
+    reason: str = Field(..., min_length=1)
+
+
+class OrchestrationTaskCreateRequest(BaseModel):
+    """オーケストレーション task 作成リクエスト."""
+
+    message: str = Field(..., min_length=1)
+    user_id: str = Field(default="default", min_length=1)
+    conversation_id: str | None = None
+    required_capability: str | None = None
+    input_data: dict[str, Any] = Field(default_factory=dict)
+
+
+class OrchestrationClarificationRequest(BaseModel):
+    """clarification 回答リクエスト."""
+
+    answers: dict[str, Any] = Field(default_factory=dict)
+
+
+class FlightWatchSearchAPIRequest(BaseModel):
+    """機票検索 API リクエスト."""
+
+    request: FlightSearchRequest
+
+
+class FlightWatchSubscriptionAPIRequest(BaseModel):
+    """機票監視購読 API リクエスト."""
+
+    request: FlightSearchRequest
+    user_id: str = Field(default="default", min_length=1)
+    conversation_id: str | None = None
 
 
 class FileOrganizerAnalyzeRequest(BaseModel):
@@ -2062,11 +2255,18 @@ async def api_disable_skill(skill_name: str) -> dict[str, Any]:
 
 @app.post("/api/skills/generate")
 async def api_generate_skill(request: SkillGenerateRequest) -> dict[str, Any]:
-    """自然言語からスキルを生成."""
-    return await _skills_manager.generate_skill_from_description(
+    """自然言語から runtime artifact を生成する."""
+    artifact = await _generated_artifact_manager.create_runtime_artifact(
         description=request.description,
         examples=request.examples,
+        requested_by=request.requested_by,
+        artifact_type=ArtifactType.SKILL,
     )
+    return {
+        "ok": True,
+        "artifact": artifact.model_dump(mode="json"),
+        "status": artifact.status.value,
+    }
 
 
 @app.post("/api/skills/{skill_name}/call")
@@ -2078,6 +2278,165 @@ async def api_call_skill(skill_name: str, request: SkillCallRequest) -> dict[str
         user_id=request.user_id,
         dry_run=request.dry_run,
     )
+
+
+@app.get("/api/generated-artifacts")
+async def api_generated_artifacts(status: str | None = None) -> dict[str, Any]:
+    """生成物一覧."""
+    artifacts = await _generated_artifact_manager.list_artifacts(status=status)
+    return {
+        "artifacts": [artifact.model_dump(mode="json") for artifact in artifacts],
+        "total": len(artifacts),
+    }
+
+
+@app.post("/api/generated-artifacts/{artifact_id}/approve", response_model=None)
+async def api_approve_generated_artifact(
+    artifact_id: str,
+    request: GeneratedArtifactApproveRequest,
+) -> JSONResponse | dict[str, Any]:
+    """生成物を承認する."""
+    artifact = await _generated_artifact_manager.approve_artifact(
+        artifact_id,
+        approver_id=request.approver_id,
+    )
+    if artifact is None:
+        return JSONResponse({"ok": False, "error": "artifact_not_found"}, status_code=404)
+    return {"ok": True, "artifact": artifact.model_dump(mode="json")}
+
+
+@app.post("/api/generated-artifacts/{artifact_id}/reject", response_model=None)
+async def api_reject_generated_artifact(
+    artifact_id: str,
+    request: GeneratedArtifactRejectRequest,
+) -> JSONResponse | dict[str, Any]:
+    """生成物を却下する."""
+    artifact = await _generated_artifact_manager.reject_artifact(
+        artifact_id,
+        rejected_by=request.rejected_by,
+        reason=request.reason,
+    )
+    if artifact is None:
+        return JSONResponse({"ok": False, "error": "artifact_not_found"}, status_code=404)
+    return {"ok": True, "artifact": artifact.model_dump(mode="json")}
+
+
+@app.post("/api/generated-artifacts/{artifact_id}/promote", response_model=None)
+async def api_promote_generated_artifact(artifact_id: str) -> JSONResponse | dict[str, Any]:
+    """承認済み生成物を publish へ昇格する."""
+    artifact = await _generated_artifact_manager.promote_artifact(artifact_id)
+    if artifact is None:
+        return JSONResponse({"ok": False, "error": "artifact_not_found"}, status_code=404)
+    return {"ok": True, "artifact": artifact.model_dump(mode="json")}
+
+
+@app.post("/api/orchestration/tasks")
+async def api_create_orchestration_task(
+    request: OrchestrationTaskCreateRequest,
+) -> dict[str, Any]:
+    """オーケストレーション task を作成して実行する."""
+    result = await _orchestration_service.create_task(
+        message=request.message,
+        user_id=request.user_id,
+        conversation_id=request.conversation_id,
+        required_capability=request.required_capability,
+        input_data=request.input_data,
+    )
+    return result.model_dump(mode="json")
+
+
+@app.get("/api/orchestration/tasks/{task_id}", response_model=None)
+async def api_get_orchestration_task(task_id: str) -> JSONResponse | dict[str, Any]:
+    """task 詳細を返す."""
+    task = await _orchestration_service.get_task(task_id)
+    if task is None:
+        return JSONResponse({"ok": False, "error": "task_not_found"}, status_code=404)
+    return {"ok": True, "task": task}
+
+
+@app.post("/api/orchestration/tasks/{task_id}/clarifications", response_model=None)
+async def api_submit_orchestration_clarification(
+    task_id: str,
+    request: OrchestrationClarificationRequest,
+) -> JSONResponse | dict[str, Any]:
+    """clarification 回答を送信して task を再開する."""
+    result = await _orchestration_service.resume_task_with_clarifications(
+        task_id=task_id,
+        answers=request.answers,
+    )
+    if result is None:
+        return JSONResponse({"ok": False, "error": "task_not_found"}, status_code=404)
+    return result.model_dump(mode="json")
+
+
+@app.get("/api/orchestration/tasks/{task_id}/events")
+async def api_list_orchestration_task_events(task_id: str) -> dict[str, Any]:
+    """task event 一覧を返す."""
+    events = await _orchestration_service.list_task_events(task_id)
+    return {"ok": True, "events": events, "total": len(events)}
+
+
+@app.post("/api/flight-watch/search")
+async def api_flight_watch_search(request: FlightWatchSearchAPIRequest) -> dict[str, Any]:
+    """機票検索を実行する."""
+    result = await _flight_watch_service.search(request.request)
+    return {"ok": True, "result": result.model_dump(mode="json")}
+
+
+@app.post("/api/flight-watch/subscriptions")
+async def api_create_flight_watch_subscription(
+    request: FlightWatchSubscriptionAPIRequest,
+) -> dict[str, Any]:
+    """機票監視購読を作成する."""
+    subscription = await _flight_watch_service.create_subscription(
+        request=request.request,
+        user_id=request.user_id,
+        conversation_id=request.conversation_id,
+    )
+    return {"ok": True, "subscription": subscription.model_dump(mode="json")}
+
+
+@app.get("/api/flight-watch/subscriptions")
+async def api_list_flight_watch_subscriptions(status: str | None = None) -> dict[str, Any]:
+    """機票監視購読一覧."""
+    items = await _store.list_flight_watch_subscriptions(status=status)
+    return {"ok": True, "subscriptions": items, "total": len(items)}
+
+
+@app.post("/api/flight-watch/subscriptions/{subscription_id}/pause", response_model=None)
+async def api_pause_flight_watch_subscription(subscription_id: str) -> JSONResponse | dict[str, Any]:
+    """購読を一時停止する."""
+    updated = await _flight_watch_service.update_subscription_status(
+        subscription_id,
+        SubscriptionStatus.PAUSED,
+    )
+    if updated is None:
+        return JSONResponse({"ok": False, "error": "subscription_not_found"}, status_code=404)
+    return {"ok": True, "subscription": updated}
+
+
+@app.post("/api/flight-watch/subscriptions/{subscription_id}/resume", response_model=None)
+async def api_resume_flight_watch_subscription(subscription_id: str) -> JSONResponse | dict[str, Any]:
+    """購読を再開する."""
+    updated = await _flight_watch_service.update_subscription_status(
+        subscription_id,
+        SubscriptionStatus.ACTIVE,
+    )
+    if updated is None:
+        return JSONResponse({"ok": False, "error": "subscription_not_found"}, status_code=404)
+    return {"ok": True, "subscription": updated}
+
+
+@app.post("/api/flight-watch/subscriptions/{subscription_id}/cancel", response_model=None)
+async def api_cancel_flight_watch_subscription(subscription_id: str) -> JSONResponse | dict[str, Any]:
+    """購読を解約する."""
+    updated = await _flight_watch_service.update_subscription_status(
+        subscription_id,
+        SubscriptionStatus.CANCELLED,
+    )
+    if updated is None:
+        return JSONResponse({"ok": False, "error": "subscription_not_found"}, status_code=404)
+    return {"ok": True, "subscription": updated}
 
 
 @app.get("/api/workflows")
@@ -2275,6 +2634,7 @@ class SREventSubscribeRequest(BaseModel):
 
     client_id: str = Field(..., min_length=1)
     conversation_id: str | None = None
+    user_id: str | None = None
     event_types: list[str] = Field(default_factory=_standard_event_names)
 
 
@@ -2366,14 +2726,14 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
         logger.warning("sr_chat: 入力Token数が大きい (tokens=%d, run_id=%s)", input_token_count, run_id)
 
     start_time = time.monotonic()
-    result = await assistant.process(
-        request.text,
+    orchestration_result = await _orchestration_service.create_task(
+        message=request.text,
         user_id=request.user_id,
-        context={"run_id": run_id, "conversation_id": request.conversation_id},
+        conversation_id=request.conversation_id,
     )
     elapsed = time.monotonic() - start_time
 
-    assistant_text = _resolve_assistant_message_text(result)
+    assistant_text = _resolve_orchestration_message_text(orchestration_result)
 
     # 応答品質スコアリング
     scoring = _score_assistant_response(
@@ -2401,7 +2761,13 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
             "updated_at": response_time,
             "metadata": {
                 "run_id": run_id,
-                "intent": result.get("intent", {}),
+                "task_id": orchestration_result.task_id,
+                "status": orchestration_result.status.value,
+                "intent": (
+                    orchestration_result.result.get("intent", {})
+                    if isinstance(orchestration_result.result, dict)
+                    else {}
+                ),
                 "score": scoring.overall_score,
                 "elapsed_seconds": round(elapsed, 3),
             },
@@ -2420,15 +2786,26 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
             delivery_error = str(exc)
 
     return {
-        "ok": True,
+        "ok": orchestration_result.ok,
         "conversation_id": request.conversation_id,
         "run_id": run_id,
+        "task_id": orchestration_result.task_id,
+        "status": orchestration_result.status.value,
         "message": {
             "id": assistant_message_id,
             "role": "assistant",
             "text": assistant_text,
         },
-        "intent": result.get("intent", {}),
+        "summary": orchestration_result.summary,
+        "headline": orchestration_result.headline,
+        "intent": (
+            orchestration_result.result.get("intent", {})
+            if isinstance(orchestration_result.result, dict)
+            else {}
+        ),
+        "clarification_ticket_id": orchestration_result.clarification_ticket_id,
+        "clarification_questions": orchestration_result.clarification_questions,
+        "generated_artifact": orchestration_result.generated_artifact,
         "delivery_error": delivery_error,
         "quality": {
             "score": scoring.overall_score,
@@ -2494,11 +2871,17 @@ async def sr_chat_events_subscribe(
     ws_scheme = "wss" if request.url.scheme == "https" else "ws"
     port = f":{request.url.port}" if request.url.port else ""
     ws_url = f"{ws_scheme}://{request.url.hostname}{port}/ws?{urlencode({'client_id': payload.client_id})}"
+    rooms: list[str] = []
+    if payload.conversation_id:
+        rooms.extend([payload.conversation_id, f"conversation:{payload.conversation_id}"])
+    if payload.user_id:
+        rooms.append(f"user:{payload.user_id}")
     return {
         "ok": True,
         "subscription_id": subscription_id,
         "events": payload.event_types,
         "ws_url": ws_url,
+        "rooms": rooms,
     }
 
 
@@ -2567,15 +2950,14 @@ async def process_assistant_request(
             )
 
         start_time = time.monotonic()
-        result = await assistant.process(
-            request.message,
+        result = await _orchestration_service.create_task(
+            message=request.message,
             user_id=request.user_id,
-            context={"run_id": run_id},
         )
         elapsed = time.monotonic() - start_time
 
         # 応答品質スコアリング
-        summary_text = str(result.get("summary", ""))
+        summary_text = result.summary
         scoring = _score_assistant_response(
             input_text=request.message,
             response_text=summary_text,
@@ -2591,22 +2973,29 @@ async def process_assistant_request(
         )
 
         response: dict[str, Any] = {
-            "ok": True,
-            "summary": result.get("summary", ""),
-            "headline": result.get("headline", ""),
-            "key_points": result.get("key_points", []),
-            "actions": result.get("actions", []),
-            "risks": result.get("risks", []),
-            "intent": result.get("intent", {}),
-            "run_id": result.get("run_id", run_id),
+            "ok": result.ok,
+            "status": result.status.value,
+            "task_id": result.task_id,
+            "summary": result.summary,
+            "headline": result.headline,
+            "key_points": result.key_points,
+            "actions": result.actions,
+            "risks": result.risks,
+            "intent": result.result.get("intent", {}) if isinstance(result.result, dict) else {},
+            "run_id": result.result.get("run_id", run_id) if isinstance(result.result, dict) else run_id,
+            "clarification_ticket_id": result.clarification_ticket_id,
+            "clarification_questions": result.clarification_questions,
+            "generated_artifact": result.generated_artifact,
+            "result": result.result,
             "quality": {
                 "score": scoring.overall_score,
                 "elapsed_seconds": round(elapsed, 3),
                 "input_tokens": input_token_count,
             },
         }
-        if result.get("needs_cli_confirmation") is True:
-            proposal = result.get("cli_proposal")
+        raw_result = result.result if isinstance(result.result, dict) else {}
+        if raw_result.get("needs_cli_confirmation") is True:
+            proposal = raw_result.get("cli_proposal")
             if isinstance(proposal, dict):
                 proposal_id = str(proposal.get("proposal_id", "")).strip()
                 if proposal_id:
