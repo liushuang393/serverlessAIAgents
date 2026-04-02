@@ -126,7 +126,10 @@ class KnowledgeSearchTool(MCPTool):
             related_dicts: list[dict[str, Any]] = []
             if expand_related and result.documents:
                 related_docs = await self._expand_related_documents(
-                    result.documents, pipeline, query_text, top_k,
+                    result.documents,
+                    pipeline,
+                    query_text,
+                    top_k,
                 )
                 related_dicts = [
                     {

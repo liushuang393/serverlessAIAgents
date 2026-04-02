@@ -25,13 +25,13 @@ from typing import TYPE_CHECKING, Any
 from kernel.agents.agent_block import AgentBlock
 from kernel.agents.local_agent_bus import LocalAgentBus, get_agent_bus
 from kernel.agents.resilient_agent import ResilientAgent
-from kernel.protocols.a2a_hub import LocalA2AHub
 
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from kernel.agent_decorator import RegisteredAgent
+    from kernel.protocols.a2a_hub import LocalA2AHub
 
 
 _logger = logging.getLogger(__name__)

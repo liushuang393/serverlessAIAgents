@@ -183,11 +183,11 @@ def descriptor_from_agent_metadata(metadata: AgentMetadata) -> AgentDescriptor:
         "type": "object",
         "properties": {},
     }
-    for item in metadata.interfaces.outputs:
-        item_schema: dict[str, Any] = {"type": item.type}
-        if item.output_schema:
-            item_schema.update(item.output_schema)
-        output_schema["properties"][item.name] = item_schema
+    for item_out in metadata.interfaces.outputs:
+        item_schema_out: dict[str, Any] = {"type": item_out.type}
+        if item_out.output_schema:
+            item_schema_out.update(item_out.output_schema)
+        output_schema["properties"][item_out.name] = item_schema_out
 
     return AgentDescriptor(
         agent_id=metadata.meta.id,

@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from apps.faq_system.backend.auth.dependencies import require_auth
+from apps.faq_system.backend.utils.summarizer import summarize_to_title
 from apps.faq_system.routers.dependencies import (
     build_agent_conversation_history,
     extract_assistant_content,
@@ -22,7 +23,6 @@ from apps.faq_system.routers.dependencies import (
     register_artifacts,
     resolve_session_id,
 )
-from apps.faq_system.backend.utils.summarizer import summarize_to_title
 from kernel.protocols.a2a_hub import get_hub
 
 
@@ -79,8 +79,8 @@ async def chat(
     )
     # 初回メッセージ判定とタイトル要約
     existing_messages = await history_svc.list_messages(session_id=session_id, limit=1, user=user)
-    msg_metadata = {"options": request.options}
-    
+    msg_metadata: dict[str, Any] = {"options": request.options}
+
     if not existing_messages:
         agent = get_faq_agent()
         # FAQAgent の LLM を共有して要約
@@ -165,8 +165,8 @@ async def chat_stream(
     )
     # 初回メッセージ判定とタイトル要約
     existing_messages = await history_svc.list_messages(session_id=session_id, limit=1, user=user)
-    msg_metadata = {"options": request.options}
-    
+    msg_metadata: dict[str, Any] = {"options": request.options}
+
     if not existing_messages:
         agent = get_faq_agent()
         summary = await summarize_to_title(request.message, getattr(agent, "_llm_client", None))

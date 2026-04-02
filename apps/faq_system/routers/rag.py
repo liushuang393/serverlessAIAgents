@@ -349,7 +349,20 @@ async def rag_ingest_run_events(
 # ナレッジベース ディレクトリロード API
 # ---------------------------------------------------------------------------
 
-_SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".md", ".txt", ".json", ".jsonl", ".html", ".htm"}
+_SUPPORTED_EXTENSIONS = {
+    ".pdf",
+    ".docx",
+    ".doc",
+    ".xlsx",
+    ".xls",
+    ".csv",
+    ".md",
+    ".txt",
+    ".json",
+    ".jsonl",
+    ".html",
+    ".htm",
+}
 
 
 class KBLoadDirectoryRequest(BaseModel):
@@ -393,7 +406,10 @@ async def kb_load_directory(
     if not dir_path.exists():
         raise HTTPException(
             status_code=400,
-            detail={"message": f"ディレクトリが見つかりません: {request.directory}", "error_code": "directory_not_found"},
+            detail={
+                "message": f"ディレクトリが見つかりません: {request.directory}",
+                "error_code": "directory_not_found",
+            },
         )
     if not dir_path.is_dir():
         raise HTTPException(
@@ -407,10 +423,7 @@ async def kb_load_directory(
     else:
         files = list(dir_path.glob(request.glob_pattern))
 
-    target_files = [
-        f for f in files
-        if f.is_file() and f.suffix.lower() in _SUPPORTED_EXTENSIONS
-    ]
+    target_files = [f for f in files if f.is_file() and f.suffix.lower() in _SUPPORTED_EXTENSIONS]
 
     if request.dry_run:
         return {

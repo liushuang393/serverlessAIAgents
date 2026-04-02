@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.messaging_hub.flight_watch import FlightSearchRequest, FlightWatchService
-from control_plane.services.agent_aggregator import AgentAggregatorService
+
+
+if TYPE_CHECKING:
+    from control_plane.services.agent_aggregator import AgentAggregatorService
 
 
 class CapabilityRouter:
@@ -113,26 +116,33 @@ def build_agent_payload(
     user_id: str,
     conversation_id: str | None,
     input_data: dict[str, Any],
+    execution_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """agent 入力 payload を構築する."""
     if agent_name == "BusinessAdvisorAgent":
-        return {"question": message, "context": input_data.get("context", "")}
+        return {
+            "question": message,
+            "context": input_data.get("context", ""),
+            "execution_context": execution_context or {},
+        }
     if agent_name == "FileOrganizerAgent":
         return {
             "action": str(input_data.get("action", "analyze")),
             "path": str(input_data.get("path", ".")),
+            "execution_context": execution_context or {},
         }
     if agent_name == "MeetingAgent":
         return {
             "action": str(input_data.get("action", "brief")),
             "event_id": str(input_data.get("event_id", "")),
             "transcript": str(input_data.get("transcript", "")),
+            "execution_context": execution_context or {},
         }
     if agent_name == "PersonalAssistantCoordinator":
         return {
             "message": message,
             "user_id": user_id,
-            "context": {"conversation_id": conversation_id},
+            "context": {"conversation_id": conversation_id, "execution_context": execution_context or {}},
         }
     return {
         "message": message,
@@ -141,6 +151,7 @@ def build_agent_payload(
         "user_id": user_id,
         "conversation_id": conversation_id,
         "input_data": input_data,
+        "execution_context": execution_context or {},
         **input_data,
     }
 

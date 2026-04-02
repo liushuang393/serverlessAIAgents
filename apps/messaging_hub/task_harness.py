@@ -13,6 +13,12 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
+from apps.messaging_hub.execution_substrate import (
+    CheckpointPolicy,
+    ContextHierarchy,
+    ExecutionProfile,
+    GatePolicy,
+)
 from kernel.planner.service import ExecutionPlan, PlanStep, StepType
 from kernel.reviewer.service import ResultVerifier, VerificationResult, VerificationStrategy
 
@@ -111,6 +117,7 @@ class VerificationConstraint(BaseModel):
 class HarnessVerificationSpec(BaseModel):
     """検証仕様."""
 
+    verification_profile: str = Field(default="basic")
     strategy: VerificationStrategy = Field(default=VerificationStrategy.CONSTRAINT)
     completion_loop: str = Field(default="execute -> verify -> revise_or_replan")
     success_signals: list[str] = Field(default_factory=list)
@@ -145,6 +152,10 @@ class HarnessPlan(BaseModel):
     intent_summary: str
     goal: str
     execution_plan: dict[str, Any]
+    execution_profile: ExecutionProfile
+    context_hierarchy: ContextHierarchy
+    checkpoint_policy: CheckpointPolicy
+    gate_policy: GatePolicy
     workers: list[HarnessWorkerSpec] = Field(default_factory=list)
     memory_plan: HarnessMemoryPlan
     provider_strategy: ProviderStrategySpec
@@ -378,11 +389,13 @@ class TaskHarnessPlanner:
         *,
         skill_gateway: SkillGateway | None = None,
         mcp_manager: MCPManager | None = None,
+        security_mode: str = "approval_required",
     ) -> None:
         """初期化."""
         self._gateway = skill_gateway
         self._mcp_manager = mcp_manager
         self._registry = TaskBlueprintRegistry()
+        self._security_mode = security_mode
 
     async def build_plan(
         self,
@@ -399,7 +412,14 @@ class TaskHarnessPlanner:
             required_capability=required_capability,
         )
         missing_inputs = self._resolve_missing_inputs(blueprint, partial_request)
-        create_watch = bool(payload.get("request", {}).get("create_watch")) if isinstance(payload.get("request"), dict) else False
+        create_watch = (
+            bool(payload.get("request", {}).get("create_watch")) if isinstance(payload.get("request"), dict) else False
+        )
+        execution_profile = self._determine_execution_profile(
+            blueprint=blueprint,
+            required_capability=required_capability,
+            create_watch=create_watch,
+        )
         execution_plan = self._build_execution_plan(
             blueprint=blueprint,
             goal=message,
@@ -418,6 +438,17 @@ class TaskHarnessPlanner:
             intent_summary=self._summarize_intent(message=message, blueprint=blueprint),
             goal=message,
             execution_plan=execution_plan.model_dump(mode="json"),
+            execution_profile=execution_profile,
+            context_hierarchy=self._build_context_hierarchy(
+                message=message,
+                required_capability=required_capability,
+                input_data=payload,
+                missing_inputs=missing_inputs,
+                create_watch=create_watch,
+                selected_domains=[],
+            ),
+            checkpoint_policy=self._build_checkpoint_policy(execution_profile=execution_profile),
+            gate_policy=self._build_gate_policy(execution_profile=execution_profile),
             workers=self._build_workers(
                 blueprint=blueprint,
                 tool_context=tool_context,
@@ -428,7 +459,11 @@ class TaskHarnessPlanner:
                 blueprint=blueprint,
                 partial_request=partial_request or {},
             ),
-            verification=self._build_verification_spec(blueprint=blueprint, create_watch=create_watch),
+            verification=self._build_verification_spec(
+                blueprint=blueprint,
+                create_watch=create_watch,
+                execution_profile=execution_profile,
+            ),
             tool_context=tool_context,
             missing_inputs=missing_inputs,
         )
@@ -441,6 +476,32 @@ class TaskHarnessPlanner:
         """provider candidates を plan に反映する."""
         plan.provider_candidates = candidates
         plan.provider_strategy.selected_domains = [candidate.domain for candidate in candidates[:3]]
+        plan.context_hierarchy.retrieval_evidence_refs = [
+            {
+                "domain": candidate.domain,
+                "url": candidate.url,
+                "score": candidate.score,
+            }
+            for candidate in candidates[:5]
+        ]
+        return plan
+
+    def apply_execution_profile(
+        self,
+        plan: HarnessPlan,
+        execution_profile: ExecutionProfile,
+    ) -> HarnessPlan:
+        """plan に execution profile overlay を適用する."""
+        plan.execution_profile = execution_profile
+        plan.checkpoint_policy = self._build_checkpoint_policy(execution_profile=execution_profile)
+        plan.gate_policy = self._build_gate_policy(execution_profile=execution_profile)
+        plan.verification = self._build_verification_spec(
+            blueprint=self._registry.resolve(message=plan.goal, required_capability=None),
+            create_watch="subscription_created_if_requested" in plan.verification.success_signals,
+            execution_profile=execution_profile,
+        )
+        if execution_profile == ExecutionProfile.GAP_FILL_GOVERNED:
+            plan.context_hierarchy.open_actions = ["validate_artifact", "approve_artifact"]
         return plan
 
     @staticmethod
@@ -471,11 +532,60 @@ class TaskHarnessPlanner:
         return sorted(names)
 
     @staticmethod
+    def _determine_execution_profile(
+        *,
+        blueprint: TaskBlueprint,
+        required_capability: str | None,
+        create_watch: bool,
+    ) -> ExecutionProfile:
+        """要求に対応する execution profile を返す."""
+        if blueprint.blueprint_id == "structured_monitoring.flight_watch" and create_watch:
+            return ExecutionProfile.MONITORED_READ_THEN_WRITE
+        if required_capability:
+            return ExecutionProfile.CAPABILITY_ROUTE
+        return ExecutionProfile.LIGHTWEIGHT_DEFAULT
+
+    @staticmethod
     def _summarize_intent(message: str, blueprint: TaskBlueprint) -> str:
         """intent summary を返す."""
         if blueprint.blueprint_id == "structured_monitoring.flight_watch":
             return "ユーザー条件を補完し、適切な flight provider を探して比較・監視する"
         return f"ユーザー要求を {blueprint.task_kind} として実行する"
+
+    def _build_context_hierarchy(
+        self,
+        *,
+        message: str,
+        required_capability: str | None,
+        input_data: dict[str, Any],
+        missing_inputs: list[str],
+        create_watch: bool,
+        selected_domains: list[str],
+    ) -> ContextHierarchy:
+        """main/subagent/verifier 向けの階層化コンテキストを作る."""
+        open_actions = [f"clarify:{field_name}" for field_name in missing_inputs]
+        if create_watch:
+            open_actions.append("create_watch")
+        if required_capability:
+            open_actions.append(f"route:{required_capability}")
+        return ContextHierarchy(
+            global_policy={
+                "security_mode": self._security_mode,
+                "prompt_mode": "lightweight_baseline",
+                "strict_overlay": "gate_and_verification_only",
+            },
+            session_summary={
+                "summary": "高信号の session 要約のみ main agent に渡す",
+                "memory_mode": "summary_only_for_main",
+            },
+            request_context={
+                "current_message": message,
+                "required_capability": required_capability,
+                "input_keys": sorted(input_data.keys()),
+            },
+            open_actions=open_actions,
+            retrieval_evidence_refs=[{"domain": domain} for domain in selected_domains],
+        )
 
     @staticmethod
     def _build_execution_plan(
@@ -712,34 +822,136 @@ class TaskHarnessPlanner:
         )
 
     @staticmethod
+    def _build_checkpoint_policy(
+        *,
+        execution_profile: ExecutionProfile,
+    ) -> CheckpointPolicy:
+        """execution profile ごとの checkpoint policy."""
+        if execution_profile == ExecutionProfile.MONITORED_READ_THEN_WRITE:
+            return CheckpointPolicy(
+                mode="strict_overlay",
+                triggers=["plan_created", "after_human_input", "before_mutation", "after_verification"],
+                requires_pre_mutation=True,
+                notes=["変更系操作の直前に必ず復元点を残す"],
+            )
+        if execution_profile == ExecutionProfile.GAP_FILL_GOVERNED:
+            return CheckpointPolicy(
+                mode="governed_gap_fill",
+                triggers=["plan_created", "artifact_created", "after_verification"],
+                requires_pre_mutation=False,
+                notes=["artifact lifecycle を replay 可能に残す"],
+            )
+        if execution_profile == ExecutionProfile.CAPABILITY_ROUTE:
+            return CheckpointPolicy(
+                mode="route_trace",
+                triggers=["plan_created", "route_selected", "after_verification"],
+                requires_pre_mutation=False,
+                notes=["routing judgement を再現できるようにする"],
+            )
+        return CheckpointPolicy(
+            mode="lightweight",
+            triggers=["plan_created", "after_verification"],
+            requires_pre_mutation=False,
+            notes=["prompt baseline は軽量のまま維持する"],
+        )
+
+    @staticmethod
+    def _build_gate_policy(
+        *,
+        execution_profile: ExecutionProfile,
+    ) -> GatePolicy:
+        """execution profile ごとの gate policy."""
+        if execution_profile == ExecutionProfile.MONITORED_READ_THEN_WRITE:
+            return GatePolicy(
+                mode="monitored_read_then_write",
+                verification_profile="constraint",
+                approval_actions=["write_subscription", "notify_user"],
+                allow_runtime_artifact=False,
+                artifact_governance_required=False,
+                notes=["read 系と mutation 系を同列に扱わない"],
+            )
+        if execution_profile == ExecutionProfile.GAP_FILL_GOVERNED:
+            return GatePolicy(
+                mode="gap_fill_governed",
+                verification_profile="artifact_governance",
+                approval_actions=["approve_artifact", "promote_artifact"],
+                allow_runtime_artifact=True,
+                artifact_governance_required=True,
+                notes=["runtime artifact は review/approve 前提で扱う"],
+            )
+        if execution_profile == ExecutionProfile.CAPABILITY_ROUTE:
+            return GatePolicy(
+                mode="capability_route",
+                verification_profile="basic",
+                approval_actions=[],
+                allow_runtime_artifact=False,
+                artifact_governance_required=False,
+                notes=["routing judgement と結果確認のみ強める"],
+            )
+        return GatePolicy(
+            mode="lightweight_default",
+            verification_profile="basic",
+            approval_actions=[],
+            allow_runtime_artifact=False,
+            artifact_governance_required=False,
+            notes=["prompt 自体は共通の軽量 baseline を使う"],
+        )
+
+    @staticmethod
     def _build_verification_spec(
         *,
         blueprint: TaskBlueprint,
         create_watch: bool,
+        execution_profile: ExecutionProfile,
     ) -> HarnessVerificationSpec:
         """completion criteria を返す."""
-        constraints = [
-            VerificationConstraint(
-                label="result_present",
-                constraint_type="required",
-                field="search_result",
-            ),
-            VerificationConstraint(
-                label="offers_found",
-                constraint_type="min",
-                field="offers_found",
-                value=1,
-            ),
-        ]
-        if create_watch:
-            constraints.append(
+        constraints: list[VerificationConstraint]
+        if blueprint.blueprint_id == "structured_monitoring.flight_watch":
+            constraints = [
                 VerificationConstraint(
-                    label="watch_created",
+                    label="result_present",
                     constraint_type="required",
-                    field="subscription",
+                    field="search_result",
+                ),
+                VerificationConstraint(
+                    label="offers_found",
+                    constraint_type="min",
+                    field="offers_found",
+                    value=1,
+                ),
+            ]
+            if create_watch:
+                constraints.append(
+                    VerificationConstraint(
+                        label="watch_created",
+                        constraint_type="required",
+                        field="subscription",
+                    )
                 )
-            )
+        elif execution_profile == ExecutionProfile.GAP_FILL_GOVERNED:
+            constraints = [
+                VerificationConstraint(
+                    label="artifact_created",
+                    constraint_type="required",
+                    field="generated_artifact",
+                )
+            ]
+        else:
+            constraints = [
+                VerificationConstraint(
+                    label="result_payload",
+                    constraint_type="required",
+                    field="result_payload",
+                )
+            ]
         return HarnessVerificationSpec(
+            verification_profile=(
+                "artifact_governance"
+                if execution_profile == ExecutionProfile.GAP_FILL_GOVERNED
+                else "constraint"
+                if execution_profile == ExecutionProfile.MONITORED_READ_THEN_WRITE
+                else "basic"
+            ),
             strategy=VerificationStrategy.CONSTRAINT,
             completion_loop="execute -> verify -> replan_or_gap_fill when constraints fail",
             success_signals=list(blueprint.success_signals),

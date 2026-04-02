@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from kernel.agents.contracts import AgentDescriptor, descriptor_from_agent_metadata
 from kernel.core.metadata import AgentMetadata, InputField, OutputField
-from kernel.protocols.a2a_card import AgentCard, AgentSkill
+from kernel.protocols.a2a_card import AgentCapabilities, AgentCard, AgentSkill
 
 
 if TYPE_CHECKING:
@@ -153,11 +153,11 @@ class ProtocolAdapter:
             version=descriptor.version,
             author=metadata.get("author"),
             skills=skills,
-            capabilities={
-                "streaming": descriptor.supports_streaming,
-                "push_notifications": False,
-                "state_transition_history": True,
-            },
+            capabilities=AgentCapabilities(
+                streaming=descriptor.supports_streaming,
+                push_notifications=False,
+                state_transition_history=True,
+            ),
             metadata=metadata,
         )
 
@@ -174,9 +174,7 @@ class ProtocolAdapter:
         return [
             item
             for item in descriptor.capabilities
-            if item
-            and item != category
-            and item not in {"specialist", "planner", "executor", "reactor", "reporter"}
+            if item and item != category and item not in {"specialist", "planner", "executor", "reactor", "reporter"}
         ]
 
     @staticmethod

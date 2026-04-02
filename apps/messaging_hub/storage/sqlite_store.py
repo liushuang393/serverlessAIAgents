@@ -405,6 +405,7 @@ class SQLiteMessagingHubStore:
     async def list_execution_events(
         self,
         *,
+        run_id: str | None = None,
         status: str | None = None,
         skill_name: str | None = None,
         started_date: str | None = None,
@@ -414,6 +415,9 @@ class SQLiteMessagingHubStore:
         """execution_events 一覧を返す."""
         conditions: list[str] = []
         params: list[Any] = []
+        if run_id:
+            conditions.append("run_id = ?")
+            params.append(run_id)
         if status:
             conditions.append("status = ?")
             params.append(status)
@@ -937,9 +941,7 @@ class SQLiteMessagingHubStore:
                 _to_json(artifact.get("workflow_definition"))
                 if artifact.get("workflow_definition") is not None
                 else None,
-                _to_json(artifact.get("runtime_binding"))
-                if artifact.get("runtime_binding") is not None
-                else None,
+                _to_json(artifact.get("runtime_binding")) if artifact.get("runtime_binding") is not None else None,
                 artifact.get("approval_request_id"),
                 _to_json(artifact.get("metadata", {})),
                 created_at,

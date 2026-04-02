@@ -123,6 +123,23 @@ async def test_sr_chat_api_and_backward_routes(
     assert assistant_json["ok"] is True
     assert isinstance(assistant_json["run_id"], str)
 
+    tool_contracts = await client.get(
+        "/api/tools/contracts?template_name=report&format=markdown",
+        headers=headers,
+    )
+    assert tool_contracts.status_code == 200
+    contracts_payload = tool_contracts.json()
+    assert contracts_payload["total"] == 2
+    assert contracts_payload["contracts"][0]["action_name"] == "create_report_draft"
+    assert contracts_payload["contracts"][1]["action_name"] == "persist_report_draft"
+
+    monitoring = await client.get("/api/orchestration/monitoring/summary", headers=headers)
+    assert monitoring.status_code == 200
+    monitoring_payload = monitoring.json()["summary"]
+    assert monitoring_payload["total_sessions"] >= 1
+    assert "by_profile" in monitoring_payload
+    assert "unsafe_action_rate" in monitoring_payload
+
     auth_test = await client.post("/api/sr_chat/auth.test", headers=headers)
     assert auth_test.status_code == 200
     assert auth_test.json()["ok"] is True
@@ -137,6 +154,9 @@ async def test_sr_chat_api_and_backward_routes(
     assert posted_json["ok"] is True
     assert posted_json["conversation_id"] == "chat:test"
     assert isinstance(posted_json["run_id"], str)
+    assert isinstance(posted_json["execution_session_id"], str)
+    assert posted_json["execution_session_id"].startswith("exec_")
+    assert posted_json["execution_summary"]["feedback_count"] >= 1
 
     conversations = await client.get("/api/sr_chat/conversations.list", headers=headers)
     assert conversations.status_code == 200
@@ -181,6 +201,36 @@ async def test_sr_chat_post_message_prefers_direct_answer_text(
     payload = posted.json()
     assert payload["ok"] is True
     assert payload["message"]["text"] == "私は Messaging Hub のアシスタントです。質問に回答できます。"
+
+
+@pytest.mark.asyncio
+async def test_assistant_process_includes_main_agent_execution_context(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """general path で main agent execution context を渡すこと."""
+    client, headers = client_with_state
+    captured: dict[str, Any] = {}
+
+    async def _fake_process(message: str, *, user_id: str, context: dict[str, Any]) -> dict[str, Any]:
+        captured["message"] = message
+        captured["user_id"] = user_id
+        captured["context"] = context
+        return _fake_assistant_result()
+
+    monkeypatch.setattr(main.assistant, "process", _fake_process)
+
+    response = await client.post(
+        "/assistant/process",
+        headers=headers,
+        json={"message": "Summarize my unread messages", "user_id": "u1"},
+    )
+    assert response.status_code == 200
+    execution_context = captured["context"]["execution_context"]["main_agent"]
+    assert execution_context["current_message"] == "Summarize my unread messages"
+    assert execution_context["task_goal"] == "Summarize my unread messages"
+    assert "policy_summary" in execution_context
+    assert "open_actions" in execution_context
 
 
 @pytest.mark.asyncio
@@ -397,6 +447,8 @@ async def test_orchestration_requires_clarification_and_resumes(
     assert isinstance(created_json["task_id"], str)
     assert isinstance(created_json["clarification_ticket_id"], str)
     assert len(created_json["clarification_questions"]) >= 4
+    assert created_json["execution_session_id"].startswith("exec_")
+    assert created_json["execution_summary"]["checkpoint_count"] >= 1
 
     task_id = str(created_json["task_id"])
     resumed = await client.post(
@@ -417,6 +469,8 @@ async def test_orchestration_requires_clarification_and_resumes(
     assert resumed_json["status"] == "monitoring"
     assert resumed_json["result"]["search_result"]["offers"]
     assert resumed_json["result"]["subscription"]["subscription_id"].startswith("fws_")
+    assert resumed_json["execution_session_id"].startswith("exec_")
+    assert resumed_json["execution_summary"]["checkpoint_count"] >= 3
 
     task_detail = await client.get(f"/api/orchestration/tasks/{task_id}", headers=headers)
     assert task_detail.status_code == 200
@@ -425,12 +479,46 @@ async def test_orchestration_requires_clarification_and_resumes(
     assert task_payload["context"]["harness_plan"]["blueprint_id"] == "structured_monitoring.flight_watch"
     assert task_payload["context"]["harness_plan"]["provider_strategy"]["mode"] == "discover_first"
     assert "user_preferences" in task_payload["context"]["harness_plan"]["memory_plan"]["main_agent_keys"]
+    assert task_payload["execution_session_id"].startswith("exec_")
+    assert task_payload["execution_summary"]["action_count"] >= 2
 
     events = await client.get(f"/api/orchestration/tasks/{task_id}/events", headers=headers)
     assert events.status_code == 200
     event_types = {item["event_type"] for item in events.json()["events"]}
     assert "clarification.required" in event_types
     assert "flow.complete" in event_types
+
+    execution = await client.get(f"/api/orchestration/tasks/{task_id}/execution", headers=headers)
+    assert execution.status_code == 200
+    execution_json = execution.json()["execution"]
+    assert execution_json["execution_session"]["session_id"].startswith("exec_")
+    assert execution_json["latest_checkpoint"]["stage"] in {"after_verification", "pre_mutation_subscription"}
+    decision_steps = {item["decision"]["step"] for item in execution_json["decisions"]}
+    assert "clarification_required" in decision_steps
+    assert execution_json["feedback_summary"]["by_source"]["human"] >= 1
+
+    await main._store.upsert_execution_event(
+        {
+            "id": f"evt_{uuid.uuid4().hex}",
+            "run_id": task_id,
+            "skill_name": "flight_watch.search",
+            "params": {"origin": "HND", "destination": "LAX"},
+            "status": "success",
+            "started_at": "2026-05-01T00:00:00+00:00",
+            "completed_at": "2026-05-01T00:00:01+00:00",
+            "result": {"offers_found": 1},
+            "user_id": "u1",
+            "metadata": {"step_id": "flight_search"},
+        }
+    )
+
+    replay = await client.get(f"/api/orchestration/tasks/{task_id}/replay", headers=headers)
+    assert replay.status_code == 200
+    replay_timeline = replay.json()["replay"]["timeline"]
+    replay_kinds = {item["kind"] for item in replay_timeline}
+    assert {"action_log", "decision", "checkpoint", "feedback", "agui_event", "execution_event"}.issubset(
+        replay_kinds
+    )
 
 
 @pytest.mark.asyncio
@@ -465,6 +553,7 @@ async def test_orchestration_routes_existing_agent_and_gap_fills(
     assert routed_json["status"] == "completed"
     assert routed_json["result"]["agent"] == "BusinessAdvisorAgent"
     assert routed_json["result"]["harness_plan"]["workers"][0]["role"] == "main_agent"
+    assert routed_json["execution_session_id"].startswith("exec_")
 
     gap_fill = await client.post(
         "/api/orchestration/tasks",
@@ -481,6 +570,15 @@ async def test_orchestration_routes_existing_agent_and_gap_fills(
     assert gap_fill_json["generated_artifact"]["status"] == "runtime_active"
     runtime_agent_name = gap_fill_json["result"]["runtime_agent"]
     assert isinstance(runtime_agent_name, str)
+    assert gap_fill_json["execution_summary"]["artifact_refs"] == [gap_fill_json["generated_artifact"]["artifact_id"]]
+
+    gap_fill_execution = await client.get(
+        f"/api/orchestration/tasks/{gap_fill_json['task_id']}/execution",
+        headers=headers,
+    )
+    assert gap_fill_execution.status_code == 200
+    gap_fill_execution_json = gap_fill_execution.json()["execution"]
+    assert gap_fill_execution_json["action_log_summary"]["by_type"]["create_runtime_artifact"] == 1
 
     async def _fake_run_workflow(
         workflow_id: str,
@@ -521,6 +619,59 @@ async def test_orchestration_routes_existing_agent_and_gap_fills(
     assert routed_runtime_json["status"] == "completed"
     assert routed_runtime_json["result"]["agent"] == runtime_agent_name
     assert routed_runtime_json["result"]["output"]["runtime_artifact_id"] == gap_fill_json["generated_artifact"]["artifact_id"]
+    assert routed_runtime_json["execution_summary"]["decision_count"] >= 1
+
+
+@pytest.mark.asyncio
+async def test_capability_route_includes_specialist_and_verifier_execution_context(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """capability route で specialist/verifier context が残ること."""
+    client, headers = client_with_state
+    captured_payloads: list[dict[str, Any]] = []
+
+    async def _fake_a2a_call(agent_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+        captured_payloads.append({"agent_name": agent_name, "payload": payload})
+        return {"summary": f"handled by {agent_name}", "answer": "ok"}
+
+    monkeypatch.setattr(
+        main._orchestration_service._capability_router,
+        "select_best_candidate",
+        lambda required_capability: {"name": "BusinessAdvisorAgent", "app_name": "messaging_hub"},
+    )
+    monkeypatch.setattr(main._orchestration_service._a2a_hub, "call", _fake_a2a_call)
+
+    routed = await client.post(
+        "/api/orchestration/tasks",
+        headers=headers,
+        json={
+            "message": "Help me decide SaaS pricing",
+            "user_id": "u1",
+            "required_capability": "business_advice",
+        },
+    )
+    assert routed.status_code == 200
+    routed_json = routed.json()
+    assert captured_payloads
+    specialist = captured_payloads[0]["payload"]["execution_context"]["specialist"]
+    assert specialist["required_capability"] == "business_advice"
+    assert isinstance(specialist["allowed_tools"], list)
+
+    replay = await client.get(
+        f"/api/orchestration/tasks/{routed_json['task_id']}/replay",
+        headers=headers,
+    )
+    assert replay.status_code == 200
+    verifier_entries = [
+        item
+        for item in replay.json()["replay"]["timeline"]
+        if item["kind"] == "feedback" and item["payload"]["title"] == "capability_route_verification"
+    ]
+    assert verifier_entries
+    verifier_context = verifier_entries[0]["payload"]["metadata"]["verifier_context"]["verifier"]
+    assert verifier_context["goal"] == "Help me decide SaaS pricing"
+    assert verifier_context["verification_profile"] == "basic"
 
 
 @pytest.mark.asyncio

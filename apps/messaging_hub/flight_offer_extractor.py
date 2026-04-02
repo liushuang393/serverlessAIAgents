@@ -6,10 +6,9 @@ import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from apps.messaging_hub.task_harness import ProviderCandidate
-
 
 if TYPE_CHECKING:
+    from apps.messaging_hub.task_harness import ProviderCandidate
     from kernel.skills.gateway import SkillGateway
 
 
@@ -32,9 +31,7 @@ class DiscoveredFlightOfferExtractor:
         """初期化."""
         self._gateway = skill_gateway
         self._skill_names = (
-            {skill.name for skill in skill_gateway.list_available_skills()}
-            if skill_gateway is not None
-            else set()
+            {skill.name for skill in skill_gateway.list_available_skills()} if skill_gateway is not None else set()
         )
 
     async def extract(
@@ -74,6 +71,8 @@ class DiscoveredFlightOfferExtractor:
 
     async def _fetch_via_http(self, url: str) -> str:
         """HTTP で本文を取得する."""
+        if self._gateway is None:
+            return ""
         try:
             result = await self._gateway.call(
                 "http_request",
@@ -96,6 +95,8 @@ class DiscoveredFlightOfferExtractor:
 
     async def _fetch_via_browser(self, url: str) -> str:
         """ブラウザで本文を取得する."""
+        if self._gateway is None:
+            return ""
         try:
             nav_result = await self._gateway.call("browser_navigate", {"url": url})
         except Exception:

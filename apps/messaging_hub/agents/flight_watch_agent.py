@@ -18,6 +18,7 @@ class FlightWatchAgentInput(BaseModel):
     user_id: str = Field(default="system")
     conversation_id: str | None = Field(default=None)
     subscription_id: str | None = Field(default=None)
+    execution_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class FlightWatchAgentOutput(BaseModel):
@@ -59,3 +60,5 @@ class FlightWatchAgent(ResilientAgent[FlightWatchAgentInput, FlightWatchAgentOut
         result = await self._service.search(input_data.request)
         return FlightWatchAgentOutput(status="completed", search_result=result.model_dump())
 
+
+FlightWatchAgentInput.model_rebuild(_types_namespace={"FlightSearchRequest": FlightSearchRequest})

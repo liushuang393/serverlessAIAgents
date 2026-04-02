@@ -164,6 +164,7 @@ class MeetingAgentInput(BaseModel):
     action: str = Field(default="brief")
     event_id: str = Field(default="")
     transcript: str = Field(default="")
+    execution_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class MeetingAgentOutput(BaseModel):

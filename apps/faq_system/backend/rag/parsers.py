@@ -31,17 +31,17 @@ except ImportError:
 try:
     from pypdf import PdfReader
 except ImportError:
-    PdfReader = None  # type: ignore[assignment,misc]
+    PdfReader = None
 
 try:
     import pdfplumber
 except ImportError:
-    pdfplumber = None  # type: ignore[assignment]
+    pdfplumber = None
 
 try:
     from docx import Document as DocxDocument
 except ImportError:
-    DocxDocument = None  # type: ignore[assignment,misc]
+    DocxDocument = None
 
 try:
     import openpyxl
@@ -209,30 +209,27 @@ class _LegacyParser:
 
         file_stream.seek(0)
         reader = PdfReader(file_stream)
-        pages: list[str] = []
-        sections: list[str] = []
+        pages_legacy: list[str] = []
+        sections_legacy: list[str] = []
         for i, page in enumerate(reader.pages):
             text = page.extract_text() or ""
             if text:
-                pages.append(text)
-                sections.append(f"Page {i + 1}")
+                pages_legacy.append(text)
+                sections_legacy.append(f"Page {i + 1}")
 
         metadata["page_count"] = len(reader.pages)
         reader_metadata = reader.metadata
         if reader_metadata is not None:
             _merge_pdf_metadata(
-                {
-                    key: getattr(reader_metadata, key, None)
-                    for key in ("title", "author", "subject", "creator")
-                },
+                {key: getattr(reader_metadata, key, None) for key in ("title", "author", "subject", "creator")},
                 metadata,
             )
 
         return ParseResult(
-            content="\n\n".join(pages),
+            content="\n\n".join(pages_legacy),
             metadata=metadata,
             file_type="application/pdf",
-            sections=sections,
+            sections=sections_legacy,
         )
 
     @staticmethod

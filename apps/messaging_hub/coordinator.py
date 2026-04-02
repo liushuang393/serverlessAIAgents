@@ -38,6 +38,18 @@ from kernel.router import (
     TaskParameter,
     TaskTemplate,
 )
+from apps.messaging_hub.focused_subagents import (
+    ActionRouterSubagent,
+    FocusedTaskPlan,
+    SemanticToolContractRegistry,
+    SummarySubagent,
+    TaskTriageSubagent,
+)
+from apps.messaging_hub.control_plane import (
+    ControlPlaneDecision,
+    ControlPlaneEvaluation,
+    CoordinatorControlPlane,
+)
 
 
 if TYPE_CHECKING:
@@ -116,6 +128,12 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
 
         # タスクテンプレート登録
         self._register_templates()
+
+        self._semantic_contract_registry = SemanticToolContractRegistry()
+        self._task_triage_subagent = TaskTriageSubagent(self._semantic_contract_registry)
+        self._action_router_subagent = ActionRouterSubagent()
+        self._summary_subagent = SummarySubagent()
+        self._control_plane = CoordinatorControlPlane()
 
         # 専門エージェント（遅延初期化）
         self._agents: dict[str, Any] = {}
@@ -209,6 +227,23 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
         if self._lazy_tool_loader is None:
             return ""
         return self._lazy_tool_loader.get_index_for_prompt()
+
+    def list_semantic_tool_contracts(
+        self,
+        *,
+        template_name: str | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """semantic tool contracts を返す."""
+        if template_name:
+            return [
+                contract.model_dump(mode="json")
+                for contract in self._semantic_contract_registry.contracts_for_template(
+                    template_name=template_name,
+                    params=params,
+                )
+            ]
+        return self._semantic_contract_registry.list_contracts()
 
     async def _ask_llm(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         """LLM へ問い合わせ、失敗時は空文字を返す."""
@@ -333,6 +368,26 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
                 },
             )
         return result
+
+    @staticmethod
+    def _blocked_by_control_plane(
+        *,
+        evaluation: ControlPlaneEvaluation,
+        template_name: str,
+        parameters: dict[str, Any],
+    ) -> dict[str, Any]:
+        """control plane による事前停止レスポンス."""
+        payload: dict[str, Any] = {
+            "blocked": True,
+            "processed": 0,
+            "summary_points": [evaluation.reason],
+            "recommended_actions": list(evaluation.required_actions),
+            "risks": ["blocked_by_control_plane"],
+            "control_plane": evaluation.model_dump(mode="json"),
+        }
+        if template_name == "report":
+            payload["title"] = str(parameters.get("title", "report"))
+        return payload
 
     @staticmethod
     def _is_troubleshooting_message(message: str) -> bool:
@@ -674,15 +729,45 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
                 )
                 return response
 
+            focused_plan: FocusedTaskPlan | None = None
+            if intent.category == IntentCategory.TASK_EXECUTION:
+                focused_plan = self._task_triage_subagent.plan(
+                    template_name=intent.template_name,
+                    parameters=intent.parameters,
+                    original_text=intent.original_text,
+                    security_mode=self._config.security_mode,
+                )
+                context["focused_plan"] = focused_plan.model_dump(mode="json")
+                context["semantic_tool_contracts"] = [
+                    contract.model_dump(mode="json") for contract in focused_plan.semantic_contracts
+                ]
+                control_plane = self._control_plane.evaluate(
+                    plan=focused_plan,
+                    security_mode=self._config.security_mode,
+                )
+                context["control_plane"] = control_plane.model_dump(mode="json")
+
             # 2. カテゴリ別処理
             if intent.category == IntentCategory.TASK_EXECUTION:
-                result = await self._execute_task(intent, user_id, context)
+                if focused_plan is not None and control_plane.decision == ControlPlaneDecision.DENY:
+                    result = self._blocked_by_control_plane(
+                        evaluation=control_plane,
+                        template_name=focused_plan.template_name,
+                        parameters=intent.parameters,
+                    )
+                else:
+                    result = await self._execute_task(intent, user_id, context, focused_plan=focused_plan)
             elif intent.category == IntentCategory.INFORMATION_QUERY:
                 result = await self._answer_query(intent, user_id, context)
             elif intent.category == IntentCategory.STATUS_CHECK:
                 result = await self._check_status(intent, user_id, context)
             else:
                 result = await self._handle_general(intent, user_id, context)
+
+            if focused_plan is not None:
+                if isinstance(result, dict) and "control_plane" not in result:
+                    result["control_plane"] = control_plane.model_dump(mode="json")
+                result = self._summary_subagent.enrich_result(plan=focused_plan, result=result)
 
             # 3. サマリー生成
             summary = await self._summary_builder.build(
@@ -740,29 +825,37 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
         intent: Intent,
         user_id: str,
         context: dict[str, Any],
+        focused_plan: FocusedTaskPlan | None = None,
     ) -> dict[str, Any]:
         """タスクを実行."""
-        template_name = intent.template_name or "general"
         params = intent.parameters
+        plan = focused_plan or self._task_triage_subagent.plan(
+            template_name=intent.template_name,
+            parameters=params,
+            original_text=intent.original_text,
+            security_mode=self._config.security_mode,
+        )
 
-        self._logger.info("タスク実行: %s, params=%s", template_name, params)
-
-        # テンプレート別の実行
-        if template_name == "email_organize":
-            return await self._execute_email_organize(params, context)
-        if template_name == "file_organize":
-            return await self._execute_file_organize(params, context)
-        if template_name == "system_optimize":
-            return await self._execute_system_optimize(params, context)
-        if template_name == "research":
-            return await self._execute_research(params, context)
-        if template_name == "competitor_analysis":
-            return await self._execute_competitor_analysis(params, context)
-        if template_name == "report":
-            return await self._execute_report(params, context)
-        if template_name == "business_advice":
-            return await self._execute_business_advice(intent, context)
-        return await self._execute_general_task(intent.original_text, context)
+        self._logger.info("タスク実行: %s, params=%s", plan.template_name, params)
+        handler = self._action_router_subagent.resolve_handler(
+            plan=plan,
+            available_handlers={
+                "_execute_email_organize": self._execute_email_organize,
+                "_execute_file_organize": self._execute_file_organize,
+                "_execute_system_optimize": self._execute_system_optimize,
+                "_execute_research": self._execute_research,
+                "_execute_competitor_analysis": self._execute_competitor_analysis,
+                "_execute_report": self._execute_report,
+                "_execute_business_advice": self._execute_business_advice,
+                "_execute_general_task": self._execute_general_task,
+            },
+        )
+        handler_name = getattr(handler, "__name__", "")
+        if handler_name == "_execute_business_advice":
+            return await handler(intent, context)
+        if handler_name == "_execute_general_task":
+            return await handler(intent.original_text, context)
+        return await handler(params, context)
 
     async def _answer_query(
         self,
@@ -1270,26 +1363,31 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
         output_path: str | None = None
 
         if fmt == "markdown" and self._has_gateway_skill("write_file"):
-            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-            safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", title)[:60] or "report"
-            output_path = str(self._config.workspace_path / "reports" / f"{safe_title}_{timestamp}.md")
-            write_result = await self._call_gateway_skill(
-                skill_name="write_file",
-                params={"path": output_path, "content": report_text},
-                context=context,
-            )
-            evidence.extend(write_result.get("evidence", []))
-            risk_flags.extend(write_result.get("risk_flags", []))
-            if write_result.get("success") is True:
-                artifacts.append(
-                    {
-                        "type": "report_file",
-                        "location": output_path,
-                    }
-                )
+            control_plane = context.get("control_plane", {})
+            blocked_actions = control_plane.get("blocked_operations", []) if isinstance(control_plane, dict) else []
+            if "persist_report_draft" in blocked_actions:
+                risk_flags.append("write_blocked_by_control_plane")
             else:
-                output_path = None
-                risk_flags.append("report_file_write_failed")
+                timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+                safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", title)[:60] or "report"
+                output_path = str(self._config.workspace_path / "reports" / f"{safe_title}_{timestamp}.md")
+                write_result = await self._call_gateway_skill(
+                    skill_name="write_file",
+                    params={"path": output_path, "content": report_text},
+                    context=context,
+                )
+                evidence.extend(write_result.get("evidence", []))
+                risk_flags.extend(write_result.get("risk_flags", []))
+                if write_result.get("success") is True:
+                    artifacts.append(
+                        {
+                            "type": "report_file",
+                            "location": output_path,
+                        }
+                    )
+                else:
+                    output_path = None
+                    risk_flags.append("report_file_write_failed")
 
         estimated_pages = max((len(report_text) // 1800) + 1, 1)
         result = {

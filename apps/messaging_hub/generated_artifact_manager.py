@@ -7,12 +7,15 @@ import re
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from apps.messaging_hub.skills_manager import SkillsManager, Workflow, WorkflowStatus
-from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
+from apps.messaging_hub.skills_manager import SkillsManager, WorkflowStatus
+
+
+if TYPE_CHECKING:
+    from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 
 
 class ArtifactType(StrEnum):
@@ -377,7 +380,9 @@ class GeneratedArtifactManager:
         if not allowed and "web_search" in available_tools:
             allowed.append("web_search")
         if (
-            any(capability in {"flight_watch", "travel_search", "research", "monitoring"} for capability in capabilities)
+            any(
+                capability in {"flight_watch", "travel_search", "research", "monitoring"} for capability in capabilities
+            )
             and "http_request" in available_tools
             and "http_request" not in allowed
         ):

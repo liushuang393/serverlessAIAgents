@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -13,11 +13,14 @@ from apps.messaging_hub.generated_artifact_manager import (
     GeneratedArtifactManager,
     GeneratedArtifactRecord,
 )
-from apps.messaging_hub.harness_memory import HarnessMemoryService
-from apps.messaging_hub.skills_manager import SkillsManager
 from kernel.agents.contracts import descriptor_from_agent_instance
 from kernel.agents.resilient_agent import ResilientAgent
 from kernel.protocols.a2a_hub import get_hub
+
+
+if TYPE_CHECKING:
+    from apps.messaging_hub.harness_memory import HarnessMemoryService
+    from apps.messaging_hub.skills_manager import SkillsManager
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,6 +34,7 @@ class RuntimeArtifactAgentInput(BaseModel):
     user_id: str = Field(default="system")
     conversation_id: str | None = Field(default=None)
     task_id: str | None = Field(default=None)
+    execution_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class RuntimeArtifactAgentOutput(BaseModel):

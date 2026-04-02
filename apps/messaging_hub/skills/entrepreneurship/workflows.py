@@ -41,9 +41,7 @@ def _step(
         "skill_name": skill_name,
         "params": {
             "user_input": "${params.user_input}",
-            "context": "${results." + step_id + "_prev.advice}"
-            if on_success
-            else "${params.context}",
+            "context": "${results." + step_id + "_prev.advice}" if on_success else "${params.context}",
         },
         "on_success": on_success,
         "on_failure": on_failure,
@@ -62,8 +60,7 @@ def get_default_workflows() -> list[dict[str, Any]]:
         {
             "name": "製品発見ジャーニー",
             "description": (
-                "コミュニティ発見 → アイデア検証 → プロセス化 → MVP定義。"
-                "どの製品を作るべきかを段階的に明確化する。"
+                "コミュニティ発見 → アイデア検証 → プロセス化 → MVP定義。どの製品を作るべきかを段階的に明確化する。"
             ),
             "steps": [
                 {
@@ -116,10 +113,7 @@ def get_default_workflows() -> list[dict[str, Any]]:
         # 2. 製品発売ジャーニー
         {
             "name": "製品発売ジャーニー",
-            "description": (
-                "MVP → 価格設定 → 顧客獲得 → マーケティング。"
-                "製品を市場に投入するための完全プロセス。"
-            ),
+            "description": ("MVP → 価格設定 → 顧客獲得 → マーケティング。製品を市場に投入するための完全プロセス。"),
             "steps": [
                 {
                     "id": "mvp",
@@ -172,8 +166,7 @@ def get_default_workflows() -> list[dict[str, Any]]:
         {
             "name": "収益性レビュー",
             "description": (
-                "価格見直し → 持続可能成長 → ミニマリストレビュー。"
-                "収益性を維持・向上させるための定期チェック。"
+                "価格見直し → 持続可能成長 → ミニマリストレビュー。収益性を維持・向上させるための定期チェック。"
             ),
             "steps": [
                 {
@@ -217,8 +210,7 @@ def get_default_workflows() -> list[dict[str, Any]]:
         {
             "name": "製品改善サイクル",
             "description": (
-                "ミニマリストレビュー → アイデア再検証 → 次期MVP。"
-                "製品改善を監視し、次の改善サイクルを回す。"
+                "ミニマリストレビュー → アイデア再検証 → 次期MVP。製品改善を監視し、次の改善サイクルを回す。"
             ),
             "steps": [
                 {

@@ -344,11 +344,7 @@ def discover_and_load_all_packs(
             continue
 
         # SKILL.md を含むサブディレクトリがあるかチェック
-        has_skills = any(
-            (sub / "SKILL.md").exists()
-            for sub in candidate.iterdir()
-            if sub.is_dir()
-        )
+        has_skills = any((sub / "SKILL.md").exists() for sub in candidate.iterdir() if sub.is_dir())
         if has_skills:
             pack_name = candidate.name
             # パック名からプレフィックスを生成（例: minimalist-entrepreneur-skills → biz）

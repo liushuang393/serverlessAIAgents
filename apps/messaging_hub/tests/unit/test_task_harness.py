@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 
+from apps.messaging_hub.execution_substrate import ExecutionProfile
 from apps.messaging_hub.task_harness import (
     ProviderDiscoveryMode,
     TaskHarnessPlanner,
@@ -116,7 +117,11 @@ async def test_task_harness_builds_generic_flight_plan() -> None:
     )
 
     assert plan.blueprint_id == "structured_monitoring.flight_watch"
+    assert plan.execution_profile == ExecutionProfile.MONITORED_READ_THEN_WRITE
     assert plan.provider_strategy.mode == ProviderDiscoveryMode.DISCOVER_FIRST
+    assert plan.checkpoint_policy.requires_pre_mutation is True
+    assert plan.gate_policy.verification_profile == "constraint"
+    assert plan.verification.verification_profile == "constraint"
     assert "destination" in plan.missing_inputs
     assert "return_window" in plan.missing_inputs
     assert any(worker.role.value == "main_agent" for worker in plan.workers)
@@ -125,6 +130,54 @@ async def test_task_harness_builds_generic_flight_plan() -> None:
     assert "user_preferences" in plan.memory_plan.main_agent_keys
     assert "provider_candidates" in plan.memory_plan.shared_task_keys
     assert "browser" in plan.tool_context.available_mcp_servers
+    assert "create_watch" in plan.context_hierarchy.open_actions
+
+
+@pytest.mark.asyncio
+async def test_task_harness_builds_lightweight_general_plan() -> None:
+    """general task は lightweight default を選ぶこと."""
+    planner = TaskHarnessPlanner(
+        skill_gateway=_DummyGateway(),
+        mcp_manager=_DummyMCPManager(),
+    )
+
+    plan = await planner.build_plan(
+        message="Summarize my unread messages",
+        required_capability=None,
+        input_data={},
+    )
+
+    assert plan.execution_profile == ExecutionProfile.LIGHTWEIGHT_DEFAULT
+    assert plan.gate_policy.mode == "lightweight_default"
+    assert plan.gate_policy.verification_profile == "basic"
+    assert plan.verification.verification_profile == "basic"
+    assert plan.checkpoint_policy.requires_pre_mutation is False
+    assert plan.verification.constraints[0].field == "result_payload"
+
+
+@pytest.mark.asyncio
+async def test_task_harness_capability_route_can_upgrade_to_gap_fill_profile() -> None:
+    """explicit capability route と gap fill overlay が切り替わること."""
+    planner = TaskHarnessPlanner(
+        skill_gateway=_DummyGateway(),
+        mcp_manager=_DummyMCPManager(),
+    )
+
+    plan = await planner.build_plan(
+        message="Review travel reimbursement exceptions",
+        required_capability="travel_policy_review",
+        input_data={},
+    )
+
+    assert plan.execution_profile == ExecutionProfile.CAPABILITY_ROUTE
+    assert plan.gate_policy.mode == "capability_route"
+    updated = planner.apply_execution_profile(plan, ExecutionProfile.GAP_FILL_GOVERNED)
+    assert updated.execution_profile == ExecutionProfile.GAP_FILL_GOVERNED
+    assert updated.gate_policy.artifact_governance_required is True
+    assert updated.gate_policy.allow_runtime_artifact is True
+    assert updated.verification.verification_profile == "artifact_governance"
+    assert updated.verification.constraints[0].field == "generated_artifact"
+    assert "approve_artifact" in updated.context_hierarchy.open_actions
 
 
 @pytest.mark.asyncio

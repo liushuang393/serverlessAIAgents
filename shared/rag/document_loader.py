@@ -717,12 +717,14 @@ class ExcelLoader(DocumentLoader):
                 sheet_text = f"[シート: {sn}]\n" + " | ".join(h for h in headers if h.strip())
             sheet_chunks = self._chunk_text(sheet_text, str(path))
             for chunk in sheet_chunks:
-                chunk.metadata.update({
-                    "loader": "excel",
-                    "sheet_name": sn,
-                    "file_size": path.stat().st_size,
-                    "loaded_at": datetime.now(UTC).isoformat(),
-                })
+                chunk.metadata.update(
+                    {
+                        "loader": "excel",
+                        "sheet_name": sn,
+                        "file_size": path.stat().st_size,
+                        "loaded_at": datetime.now(UTC).isoformat(),
+                    }
+                )
             all_chunks.extend(sheet_chunks)
         wb.close()
         self._logger.info("Loaded %d chunks from %s", len(all_chunks), path)

@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from apps.code_migration_assistant.engine import CodeMigrationEngine
+from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 

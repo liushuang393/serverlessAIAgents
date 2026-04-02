@@ -10,12 +10,17 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from apps.messaging_hub.execution_substrate import (
+    ActionLogStatus,
+    ExecutionFeedbackSource,
+    ExecutionProfile,
+    ExecutionSubstrateService,
+)
 from apps.messaging_hub.flight_watch import FlightSearchRequest, FlightWatchService
 from apps.messaging_hub.generated_artifact_manager import (
     ArtifactType,
     GeneratedArtifactManager,
 )
-from apps.messaging_hub.harness_memory import HarnessMemoryService
 from apps.messaging_hub.orchestration_support import (
     CapabilityRouter,
     build_agent_payload,
@@ -25,18 +30,24 @@ from apps.messaging_hub.orchestration_support import (
     is_flight_request,
     summarize_flight_result,
 )
-from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 from apps.messaging_hub.task_harness import (
     HarnessPlan,
     ProviderCandidate,
     TaskHarnessPlanner,
     TaskHarnessVerifier,
 )
-from apps.messaging_hub.agents.runtime_artifact_agent import RuntimeArtifactAgentRegistry
+from contracts.policy import EvalResult, PolicyDecision
 from control_plane.services.agent_aggregator import AgentAggregatorService
 from control_plane.services.app_discovery import AppDiscoveryService
 from kernel.protocols.a2a_hub import get_hub
-from kernel.protocols.a2ui.components import CardComponent, FormComponent, InputComponent, ListComponent, TextComponent
+from kernel.protocols.a2ui.components import (
+    A2UIComponent,
+    CardComponent,
+    FormComponent,
+    InputComponent,
+    ListComponent,
+    TextComponent,
+)
 from kernel.protocols.agui_events import (
     A2UIComponentEvent,
     ClarificationQuestion,
@@ -45,14 +56,17 @@ from kernel.protocols.agui_events import (
     FlowErrorEvent,
     FlowStartEvent,
     NodeCompleteEvent,
-    NodeErrorEvent,
     NodeStartEvent,
     ProgressEvent,
     to_legacy_dict,
 )
+from kernel.state.models import DecisionType
 
 
 if TYPE_CHECKING:
+    from apps.messaging_hub.agents.runtime_artifact_agent import RuntimeArtifactAgentRegistry
+    from apps.messaging_hub.harness_memory import HarnessMemoryService
+    from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
     from kernel.runtime.websocket import WebSocketHub
 
 
@@ -83,6 +97,8 @@ class OrchestrationTaskResult(BaseModel):
     clarification_ticket_id: str | None = Field(default=None)
     clarification_questions: list[dict[str, Any]] = Field(default_factory=list)
     generated_artifact: dict[str, Any] | None = Field(default=None)
+    execution_session_id: str = Field(default="")
+    execution_summary: dict[str, Any] = Field(default_factory=dict)
 
 
 class OrchestrationService:
@@ -115,6 +131,7 @@ class OrchestrationService:
         mcp_manager: Any | None = None,
         memory_service: HarnessMemoryService | None = None,
         runtime_artifact_registry: RuntimeArtifactAgentRegistry | None = None,
+        execution_substrate: ExecutionSubstrateService | None = None,
     ) -> None:
         """初期化."""
         self._store = store
@@ -135,10 +152,12 @@ class OrchestrationService:
         self._harness_planner = TaskHarnessPlanner(
             skill_gateway=skill_gateway,
             mcp_manager=mcp_manager,
+            security_mode=security_mode,
         )
         self._harness_verifier = TaskHarnessVerifier()
         self._memory_service = memory_service
         self._runtime_artifact_registry = runtime_artifact_registry
+        self._execution_substrate = execution_substrate
 
     async def ensure_catalog_loaded(self) -> None:
         """agent catalog を読み込む."""
@@ -159,6 +178,7 @@ class OrchestrationService:
         """新規 task を作成して実行する."""
         task_id = f"task_{uuid.uuid4().hex}"
         now_iso = datetime.now(UTC).isoformat()
+        execution_session_id = ""
         partial_request: dict[str, Any] | None = None
         if is_flight_request(message=message, required_capability=required_capability, input_data=input_data):
             partial_request = extract_partial_flight_request(message=message, input_data=input_data or {})
@@ -176,6 +196,43 @@ class OrchestrationService:
                 conversation_id=conversation_id,
             )
             harness_plan.memory_context = memory_snapshot.model_dump(mode="json")
+        if self._execution_substrate is not None:
+            session = await self._execution_substrate.start_session(
+                task_id=task_id,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                execution_profile=harness_plan.execution_profile,
+                context_snapshot=self._build_execution_context_snapshot(
+                    message=message,
+                    required_capability=required_capability,
+                    input_data=input_data or {},
+                    harness_plan=harness_plan,
+                ),
+                status=OrchestrationTaskStatus.RUNNING.value,
+                metadata={"task_kind": harness_plan.task_kind},
+            )
+            execution_session_id = session.session_id
+            await self._execution_substrate.record_decision(
+                task_id=task_id,
+                step="blueprint_resolution",
+                decision_type=DecisionType.BRANCH,
+                choice=harness_plan.blueprint_id,
+                reason=harness_plan.intent_summary,
+                metadata={
+                    "task_kind": harness_plan.task_kind,
+                    "required_capability": required_capability,
+                    "execution_profile": harness_plan.execution_profile.value,
+                },
+            )
+            await self._execution_substrate.record_checkpoint(
+                task_id=task_id,
+                stage="plan_created",
+                snapshot={
+                    "required_capability": required_capability,
+                    "missing_inputs": harness_plan.missing_inputs,
+                    "harness_plan": harness_plan.model_dump(mode="json"),
+                },
+            )
         await self._store.upsert_assistant_job(
             {
                 "job_id": task_id,
@@ -189,6 +246,7 @@ class OrchestrationService:
                     "required_capability": required_capability,
                     "input_data": input_data or {},
                     "harness_plan": harness_plan.model_dump(mode="json"),
+                    "execution_session_id": execution_session_id,
                 },
                 "result": None,
                 "created_at": now_iso,
@@ -241,7 +299,9 @@ class OrchestrationService:
                 result=None,
                 error=str(exc),
             )
+            await self._record_failure_feedback(task_id=task_id, message=str(exc))
             await self._emit_error(task_id, conversation_id, str(exc))
+            execution_fields = await self._execution_response_fields(task_id)
             return OrchestrationTaskResult(
                 ok=False,
                 task_id=task_id,
@@ -249,6 +309,8 @@ class OrchestrationService:
                 summary=f"❌ オーケストレーションに失敗しました: {exc}",
                 headline="実行失敗",
                 risks=[str(exc)],
+                execution_session_id=execution_fields["execution_session_id"],
+                execution_summary=execution_fields["execution_summary"],
             )
 
     async def resume_task_with_clarifications(
@@ -279,6 +341,19 @@ class OrchestrationService:
             input_data={"request": merged, "resume": True},
             partial_request=merged,
         )
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_feedback(
+                task_id=task_id,
+                source=ExecutionFeedbackSource.HUMAN,
+                title="clarification_answers_received",
+                feedback="ユーザー補足を受領しました",
+                metadata={"answers": answers},
+            )
+            await self._execution_substrate.record_checkpoint(
+                task_id=task_id,
+                stage="after_clarification",
+                snapshot={"answers": answers, "merged_request": merged},
+            )
         return await self._handle_flight_task(
             task_id=task_id,
             message=str(task.get("input_text", "")),
@@ -296,11 +371,43 @@ class OrchestrationService:
         ticket = await self._store.get_clarification_ticket_by_job(task_id)
         if ticket is not None:
             task["clarification"] = ticket
+        execution_fields = await self._execution_response_fields(task_id)
+        task["execution_session_id"] = execution_fields["execution_session_id"]
+        task["execution_summary"] = execution_fields["execution_summary"]
         return task
 
     async def list_task_events(self, task_id: str) -> list[dict[str, Any]]:
         """task events を返す."""
         return await self._store.list_assistant_job_events(task_id)
+
+    async def get_task_execution(self, task_id: str) -> dict[str, Any] | None:
+        """task execution inspection を返す."""
+        if self._execution_substrate is None:
+            return None
+        inspection = await self._execution_substrate.inspect_task(task_id)
+        if inspection is None:
+            return None
+        return inspection.model_dump(mode="json")
+
+    async def get_task_replay(self, task_id: str) -> dict[str, Any] | None:
+        """task replay を返す."""
+        if self._execution_substrate is None:
+            return None
+        replay = await self._execution_substrate.replay_task(
+            task_id=task_id,
+            agui_events=await self._store.list_assistant_job_events(task_id),
+            execution_events=await self._store.list_execution_events(run_id=task_id, limit=500),
+        )
+        if replay is None:
+            return None
+        return replay.model_dump(mode="json")
+
+    async def get_monitoring_summary(self, approvals: list[dict[str, Any]]) -> dict[str, Any] | None:
+        """execution monitoring summary を返す."""
+        if self._execution_substrate is None:
+            return None
+        summary = await self._execution_substrate.monitoring_summary(approvals=approvals)
+        return summary.model_dump(mode="json")
 
     async def _handle_flight_task(
         self,
@@ -351,6 +458,11 @@ class OrchestrationService:
                 "request": request.model_dump(),
                 "user_id": user_id,
                 "conversation_id": conversation_id,
+                "execution_context": self._build_specialist_execution_context(
+                    harness_plan=harness_plan,
+                    required_capability="flight_watch",
+                    selected_provider_evidence=[],
+                ),
             },
         )
         search_payload = search_result.get("search_result", search_result)
@@ -365,6 +477,28 @@ class OrchestrationService:
                 harness_plan,
                 provider_candidates,
             )
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_action(
+                task_id=task_id,
+                stage="provider_discovery",
+                action_type="discover_provider_candidates",
+                summary="provider discovery を実行しました",
+                details={
+                    "candidate_domains": harness_plan.provider_strategy.selected_domains,
+                    "provider_used": search_payload.get("provider_used"),
+                },
+            )
+            await self._execution_substrate.record_decision(
+                task_id=task_id,
+                step="provider_routing",
+                decision_type=DecisionType.ACTION,
+                choice=str(search_payload.get("provider_used", "unknown")),
+                reason="provider discovery と検索結果に基づき実行先を確定しました",
+                alternatives=harness_plan.provider_strategy.selected_domains,
+                metadata={
+                    "candidate_count": len(provider_candidates_raw) if isinstance(provider_candidates_raw, list) else 0
+                },
+            )
         await self._emit_node_complete(task_id, conversation_id, "flight_search", "Flight Search", search_payload)
         await self._emit_progress(task_id, conversation_id, current=1, total=total_steps, message="フライト検索完了")
         await self._emit_flight_results_component(task_id, conversation_id, search_payload)
@@ -377,6 +511,16 @@ class OrchestrationService:
         actions = ["検索結果を確認してください"]
         risks: list[str] = []
         if request.create_watch:
+            if self._execution_substrate is not None:
+                await self._execution_substrate.record_checkpoint(
+                    task_id=task_id,
+                    stage="pre_mutation_subscription",
+                    snapshot={
+                        "request": request.model_dump(mode="json"),
+                        "search_result": search_payload,
+                    },
+                    metadata={"reason": "subscription mutation 前の復元点"},
+                )
             await self._emit_node_start(task_id, conversation_id, "flight_watch", "Flight Watch")
             subscription_result = await self._invoke_best_agent(
                 required_capability="flight_watch",
@@ -385,13 +529,28 @@ class OrchestrationService:
                     "request": request.model_dump(),
                     "user_id": user_id,
                     "conversation_id": conversation_id,
+                    "execution_context": self._build_specialist_execution_context(
+                        harness_plan=harness_plan,
+                        required_capability="flight_watch",
+                        selected_provider_evidence=harness_plan.context_hierarchy.retrieval_evidence_refs,
+                    ),
                 },
             )
             subscription_payload = subscription_result.get("subscription", subscription_result)
             result_payload["subscription"] = subscription_payload
             status = OrchestrationTaskStatus.MONITORING
             actions = ["値下がり通知を待機してください", "必要なら購読を一時停止または解除してください"]
-            await self._emit_node_complete(task_id, conversation_id, "flight_watch", "Flight Watch", subscription_payload)
+            if self._execution_substrate is not None:
+                await self._execution_substrate.record_action(
+                    task_id=task_id,
+                    stage="subscription",
+                    action_type="create_subscription",
+                    summary="flight watch subscription を作成しました",
+                    details={"subscription_id": subscription_payload.get("subscription_id")},
+                )
+            await self._emit_node_complete(
+                task_id, conversation_id, "flight_watch", "Flight Watch", subscription_payload
+            )
             await self._emit_progress(task_id, conversation_id, current=2, total=2, message="監視購読を作成")
             await self._emit_watch_status_component(task_id, conversation_id, subscription_payload)
 
@@ -410,6 +569,18 @@ class OrchestrationService:
         if not verification.is_acceptable:
             risks.append(verification.feedback)
             actions.append("provider discovery を見直して再計画してください")
+        await self._record_verification_feedback(
+            task_id=task_id,
+            title="flight_task_verification",
+            verification=verification,
+            metadata={
+                "task_kind": "flight_watch",
+                "verifier_context": self._build_verifier_context(
+                    harness_plan=harness_plan,
+                    result_payload=result_payload,
+                ),
+            },
+        )
         if self._memory_service is not None:
             await self._memory_service.remember_from_plan(
                 harness_plan=harness_plan,
@@ -441,15 +612,20 @@ class OrchestrationService:
             extra_context={"harness_plan": harness_plan.model_dump(mode="json")},
         )
         await self._emit_flow_complete(task_id, conversation_id, result_payload)
+        execution_fields = await self._execution_response_fields(task_id)
         return OrchestrationTaskResult(
             task_id=task_id,
             status=status,
-            summary="機票検索を完了しました。" if status == OrchestrationTaskStatus.COMPLETED else "機票監視を開始しました。",
+            summary="機票検索を完了しました。"
+            if status == OrchestrationTaskStatus.COMPLETED
+            else "機票監視を開始しました。",
             headline="Flight Watch",
             key_points=summarize_flight_result(search_payload),
             actions=actions,
             risks=risks,
             result=result_payload,
+            execution_session_id=execution_fields["execution_session_id"],
+            execution_summary=execution_fields["execution_summary"],
         )
 
     async def _create_clarification_result(
@@ -485,6 +661,21 @@ class OrchestrationService:
             error=None,
             extra_context={"partial_request": partial_request, "task_kind": "flight_watch"},
         )
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_decision(
+                task_id=task_id,
+                step="clarification_required",
+                decision_type=DecisionType.BRANCH,
+                choice="clarification_required",
+                reason="必須入力が不足しているため同一 task を中断して補足を待機します",
+                alternatives=missing_fields,
+                metadata={"missing_fields": missing_fields},
+            )
+            await self._execution_substrate.record_checkpoint(
+                task_id=task_id,
+                stage="clarification_requested",
+                snapshot={"partial_request": partial_request, "missing_fields": missing_fields},
+            )
         clarification_questions = [
             ClarificationQuestion(
                 id=str(item.get("id", "")),
@@ -505,6 +696,7 @@ class OrchestrationService:
         )
         await self._emit_agui_event(task_id, conversation_id, event)
         await self._emit_clarification_component(task_id, conversation_id, ticket_id, questions)
+        execution_fields = await self._execution_response_fields(task_id)
         return OrchestrationTaskResult(
             task_id=task_id,
             status=OrchestrationTaskStatus.CLARIFICATION_REQUIRED,
@@ -516,6 +708,8 @@ class OrchestrationService:
             result={"missing_fields": missing_fields},
             clarification_ticket_id=ticket_id,
             clarification_questions=questions,
+            execution_session_id=execution_fields["execution_session_id"],
+            execution_summary=execution_fields["execution_summary"],
         )
 
     async def _handle_capability_task(
@@ -533,6 +727,28 @@ class OrchestrationService:
         await self.ensure_catalog_loaded()
         candidate = self._capability_router.select_best_candidate(required_capability)
         if candidate is None:
+            harness_plan = self._harness_planner.apply_execution_profile(
+                harness_plan,
+                ExecutionProfile.GAP_FILL_GOVERNED,
+            )
+            policy_decision = PolicyDecision(
+                policy_name="runtime_artifact_governance",
+                decision="approval_required",
+                reason="新規 runtime artifact は validate / approve を経て運用へ昇格させる",
+                action="create_runtime_artifact",
+                metadata={"required_capability": required_capability},
+            )
+            if self._execution_substrate is not None:
+                await self._execution_substrate.record_decision(
+                    task_id=task_id,
+                    step="agent_route",
+                    decision_type=DecisionType.FALLBACK,
+                    choice="runtime_artifact_gap_fill",
+                    reason="既存 agent が見つからないため runtime artifact で capability gap を埋めます",
+                    alternatives=[required_capability],
+                    metadata={"required_capability": required_capability},
+                    policy_decision=policy_decision,
+                )
             artifact = await self._generated_artifact_manager.create_runtime_artifact(
                 description=message,
                 requested_by=user_id,
@@ -557,6 +773,31 @@ class OrchestrationService:
                 "harness_plan": harness_plan.model_dump(mode="json"),
                 "runtime_agent": runtime_agent_name,
             }
+            if self._execution_substrate is not None:
+                await self._execution_substrate.record_action(
+                    task_id=task_id,
+                    stage="gap_fill",
+                    action_type="create_runtime_artifact",
+                    summary="runtime artifact を生成しました",
+                    details={"artifact_name": artifact.name, "runtime_agent": runtime_agent_name},
+                    artifact_refs=[artifact.artifact_id],
+                )
+                await self._execution_substrate.record_feedback(
+                    task_id=task_id,
+                    source=ExecutionFeedbackSource.VERIFIER,
+                    title="gap_fill_artifact_created",
+                    feedback="runtime artifact が生成され、後続 review 対象になりました",
+                    passed=True,
+                    score=1.0,
+                    eval_result=EvalResult(
+                        evaluator="gap_fill_artifact_verifier",
+                        passed=True,
+                        score=1.0,
+                        reason="generated_artifact が存在します",
+                        artifact_id=artifact.artifact_id,
+                        metadata={"runtime_agent": runtime_agent_name},
+                    ),
+                )
             await self._update_task_record(
                 task_id,
                 status=OrchestrationTaskStatus.COMPLETED,
@@ -565,6 +806,7 @@ class OrchestrationService:
                 extra_context={"harness_plan": harness_plan.model_dump(mode="json")},
             )
             await self._emit_flow_complete(task_id, conversation_id, result_payload)
+            execution_fields = await self._execution_response_fields(task_id)
             return OrchestrationTaskResult(
                 task_id=task_id,
                 status=OrchestrationTaskStatus.COMPLETED,
@@ -575,13 +817,28 @@ class OrchestrationService:
                     f"artifact={artifact.name}",
                     f"runtime_agent={runtime_agent_name or 'pending'}",
                 ],
-                actions=["artifact を validate / approve してください", "同じ capability 要求は runtime agent が引き継げます"],
+                actions=[
+                    "artifact を validate / approve してください",
+                    "同じ capability 要求は runtime agent が引き継げます",
+                ],
                 risks=["runtime artifact は未 publish です"],
                 result=result_payload,
                 generated_artifact=artifact.model_dump(mode="json"),
+                execution_session_id=execution_fields["execution_session_id"],
+                execution_summary=execution_fields["execution_summary"],
             )
 
         node_id = f"agent_{candidate['name']}"
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_decision(
+                task_id=task_id,
+                step="agent_route",
+                decision_type=DecisionType.ACTION,
+                choice=str(candidate["name"]),
+                reason="capability router が最適候補を選択しました",
+                alternatives=[required_capability],
+                metadata={"required_capability": required_capability},
+            )
         await self._emit_node_start(task_id, conversation_id, node_id, candidate["name"])
         payload = build_agent_payload(
             agent_name=candidate["name"],
@@ -590,10 +847,41 @@ class OrchestrationService:
             user_id=user_id,
             conversation_id=conversation_id,
             input_data=input_data,
+            execution_context=self._build_specialist_execution_context(
+                harness_plan=harness_plan,
+                required_capability=required_capability,
+                selected_provider_evidence=harness_plan.context_hierarchy.retrieval_evidence_refs,
+            ),
         )
         result_payload = await self._invoke_agent(candidate["name"], payload)
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_action(
+                task_id=task_id,
+                stage="capability_execution",
+                action_type="invoke_agent",
+                summary=f"{candidate['name']} を実行しました",
+                details={"required_capability": required_capability},
+            )
         await self._emit_node_complete(task_id, conversation_id, node_id, candidate["name"], result_payload)
         await self._emit_progress(task_id, conversation_id, current=1, total=1, message=f"{candidate['name']} 実行完了")
+        verification = await self._harness_verifier.verify(
+            goal=harness_plan.goal,
+            result={"result_payload": result_payload},
+            spec=harness_plan.verification,
+        )
+        await self._record_verification_feedback(
+            task_id=task_id,
+            title="capability_route_verification",
+            verification=verification,
+            metadata={
+                "agent": candidate["name"],
+                "required_capability": required_capability,
+                "verifier_context": self._build_verifier_context(
+                    harness_plan=harness_plan,
+                    result_payload=result_payload,
+                ),
+            },
+        )
         if self._memory_service is not None:
             await self._memory_service.remember_from_plan(
                 harness_plan=harness_plan,
@@ -623,6 +911,7 @@ class OrchestrationService:
             extra_context={"harness_plan": harness_plan.model_dump(mode="json")},
         )
         await self._emit_flow_complete(task_id, conversation_id, result_payload)
+        execution_fields = await self._execution_response_fields(task_id)
         return OrchestrationTaskResult(
             task_id=task_id,
             status=OrchestrationTaskStatus.COMPLETED,
@@ -636,6 +925,8 @@ class OrchestrationService:
                 "output": result_payload,
                 "harness_plan": harness_plan.model_dump(mode="json"),
             },
+            execution_session_id=execution_fields["execution_session_id"],
+            execution_summary=execution_fields["execution_summary"],
         )
 
     async def _handle_general_task(
@@ -663,9 +954,38 @@ class OrchestrationService:
         result = await self._assistant.process(
             message,
             user_id=user_id,
-            context={"run_id": task_id, "conversation_id": conversation_id},
+            context={
+                "run_id": task_id,
+                "conversation_id": conversation_id,
+                "execution_context": self._build_main_agent_context(harness_plan=harness_plan),
+            },
         )
         result["harness_plan"] = harness_plan.model_dump(mode="json")
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_action(
+                task_id=task_id,
+                stage="general_execution",
+                action_type="assistant_process",
+                summary="default assistant fast-path を実行しました",
+                details={"hinted_capability": hinted_capability},
+            )
+        verification = await self._harness_verifier.verify(
+            goal=harness_plan.goal,
+            result={"result_payload": result},
+            spec=harness_plan.verification,
+        )
+        await self._record_verification_feedback(
+            task_id=task_id,
+            title="general_task_verification",
+            verification=verification,
+            metadata={
+                "task_kind": harness_plan.task_kind,
+                "verifier_context": self._build_verifier_context(
+                    harness_plan=harness_plan,
+                    result_payload=result,
+                ),
+            },
+        )
         if self._memory_service is not None:
             await self._memory_service.remember_from_plan(
                 harness_plan=harness_plan,
@@ -682,6 +1002,7 @@ class OrchestrationService:
             extra_context={"harness_plan": harness_plan.model_dump(mode="json")},
         )
         await self._emit_flow_complete(task_id, conversation_id, result)
+        execution_fields = await self._execution_response_fields(task_id)
         return OrchestrationTaskResult(
             task_id=task_id,
             status=OrchestrationTaskStatus.COMPLETED,
@@ -691,6 +1012,8 @@ class OrchestrationService:
             actions=result.get("actions", []) if isinstance(result.get("actions"), list) else [],
             risks=result.get("risks", []) if isinstance(result.get("risks"), list) else [],
             result=result,
+            execution_session_id=execution_fields["execution_session_id"],
+            execution_summary=execution_fields["execution_summary"],
         )
 
     async def _invoke_best_agent(self, required_capability: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -698,7 +1021,8 @@ class OrchestrationService:
         await self.ensure_catalog_loaded()
         candidate = self._capability_router.select_best_candidate(required_capability)
         if candidate is None:
-            raise RuntimeError(f"a2a_candidate_not_found:{required_capability}")
+            msg = f"a2a_candidate_not_found:{required_capability}"
+            raise RuntimeError(msg)
         return await self._invoke_agent(candidate["name"], payload)
 
     async def _invoke_agent(self, agent_name: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -737,6 +1061,12 @@ class OrchestrationService:
             error=None,
             extra_context={"harness_plan": refreshed.model_dump(mode="json")},
         )
+        if self._execution_substrate is not None:
+            await self._execution_substrate.record_checkpoint(
+                task_id=task_id,
+                stage="plan_refreshed",
+                snapshot={"harness_plan": refreshed.model_dump(mode="json"), "partial_request": partial_request},
+            )
         return refreshed
 
     async def _update_task_record(
@@ -763,6 +1093,226 @@ class OrchestrationService:
         task["context"] = context
         task["updated_at"] = datetime.now(UTC).isoformat()
         await self._store.upsert_assistant_job(task)
+        if self._execution_substrate is not None:
+            await self._execution_substrate.sync_task_status(
+                task_id=task_id,
+                status=status.value,
+                context_snapshot=context,
+            )
+
+    async def record_quality_feedback(
+        self,
+        *,
+        task_id: str,
+        source: str,
+        score: float,
+        elapsed_seconds: float,
+        input_tokens: int,
+    ) -> None:
+        """外部 quality scoring を execution feedback として記録する."""
+        if self._execution_substrate is None:
+            return
+        await self._execution_substrate.record_feedback(
+            task_id=task_id,
+            source=ExecutionFeedbackSource.SCORER,
+            title=f"{source}_quality_score",
+            feedback="応答品質スコアを記録しました",
+            passed=score >= 0.5,
+            score=score,
+            eval_result=EvalResult(
+                evaluator=source,
+                passed=score >= 0.5,
+                score=score,
+                reason="multi-dimensional response scoring",
+                metrics={"elapsed_seconds": elapsed_seconds, "input_tokens": float(input_tokens)},
+            ),
+            metadata={"elapsed_seconds": elapsed_seconds, "input_tokens": input_tokens},
+        )
+
+    def _build_execution_context_snapshot(
+        self,
+        *,
+        message: str,
+        required_capability: str | None,
+        input_data: dict[str, Any],
+        harness_plan: HarnessPlan,
+    ) -> dict[str, Any]:
+        """execution session に保存する context snapshot."""
+        return {
+            "message": message,
+            "required_capability": required_capability,
+            "input_data": input_data,
+            "task_kind": harness_plan.task_kind,
+            "execution_profile": harness_plan.execution_profile.value,
+            "context_hierarchy": harness_plan.context_hierarchy.model_dump(mode="json"),
+            "gate_policy": harness_plan.gate_policy.model_dump(mode="json"),
+            "checkpoint_policy": harness_plan.checkpoint_policy.model_dump(mode="json"),
+        }
+
+    def _build_main_agent_context(self, *, harness_plan: HarnessPlan) -> dict[str, Any]:
+        """main agent に渡す高信号コンテキスト."""
+        return {
+            "main_agent": {
+                "session_summary": harness_plan.context_hierarchy.session_summary,
+                "current_message": harness_plan.context_hierarchy.request_context.get("current_message", ""),
+                "open_actions": list(harness_plan.context_hierarchy.open_actions),
+                "task_goal": harness_plan.goal,
+                "policy_summary": {
+                    "global_policy": harness_plan.context_hierarchy.global_policy,
+                    "gate_policy": harness_plan.gate_policy.model_dump(mode="json"),
+                },
+            }
+        }
+
+    def _build_specialist_execution_context(
+        self,
+        *,
+        harness_plan: HarnessPlan,
+        required_capability: str,
+        selected_provider_evidence: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """specialist に渡す実行コンテキスト."""
+        allowed_tools = self._allowed_tools_for_role(harness_plan, role_name="specialist")
+        return {
+            "specialist": {
+                "required_capability": required_capability,
+                "request_context": harness_plan.context_hierarchy.request_context,
+                "selected_provider_evidence": selected_provider_evidence,
+                "allowed_tools": allowed_tools,
+            }
+        }
+
+    def _build_verifier_context(
+        self,
+        *,
+        harness_plan: HarnessPlan,
+        result_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """verifier に渡す実行コンテキスト."""
+        return {
+            "verifier": {
+                "goal": harness_plan.goal,
+                "result": result_payload,
+                "verification_profile": harness_plan.verification.verification_profile,
+                "success_signals": list(harness_plan.verification.success_signals),
+            }
+        }
+
+    @staticmethod
+    def _allowed_tools_for_role(harness_plan: HarnessPlan, *, role_name: str) -> list[str]:
+        """指定 role の allowed tools を返す."""
+        for worker in harness_plan.workers:
+            if worker.role.value == role_name:
+                return list(worker.allowed_tools)
+        return []
+
+    async def _record_verification_feedback(
+        self,
+        *,
+        task_id: str,
+        title: str,
+        verification: Any,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """VerificationResult を feedback / decision へ変換する."""
+        if self._execution_substrate is None:
+            return
+        await self._execution_substrate.record_action(
+            task_id=task_id,
+            stage="verification",
+            action_type="verify_result",
+            summary=title,
+            status=ActionLogStatus.COMPLETED
+            if bool(getattr(verification, "is_acceptable", False))
+            else ActionLogStatus.FAILED,
+            details={
+                "verification_profile": str(
+                    (metadata or {}).get("verifier_context", {}).get("verifier", {}).get("verification_profile", "")
+                ),
+                "score": float(getattr(verification, "score", 0.0)),
+            },
+        )
+        await self._execution_substrate.record_feedback(
+            task_id=task_id,
+            source=ExecutionFeedbackSource.VERIFIER,
+            title=title,
+            feedback=str(getattr(verification, "feedback", "")),
+            passed=bool(getattr(verification, "is_acceptable", False)),
+            score=float(getattr(verification, "score", 0.0)),
+            eval_result=EvalResult(
+                evaluator=title,
+                passed=bool(getattr(verification, "is_acceptable", False)),
+                score=float(getattr(verification, "score", 0.0)),
+                reason=str(getattr(verification, "feedback", "")),
+                metadata=metadata or {},
+            ),
+            metadata={
+                "should_replan": bool(getattr(verification, "should_replan", False)),
+                "details": dict(getattr(verification, "details", {}) or {}),
+                **(metadata or {}),
+            },
+        )
+        await self._execution_substrate.record_decision(
+            task_id=task_id,
+            step=title,
+            decision_type=DecisionType.BRANCH,
+            choice="accept" if bool(getattr(verification, "is_acceptable", False)) else "replan",
+            reason=str(getattr(verification, "feedback", "")),
+            alternatives=["accept", "replan"],
+            metadata={
+                "score": float(getattr(verification, "score", 0.0)),
+                "should_replan": bool(getattr(verification, "should_replan", False)),
+                **(metadata or {}),
+            },
+        )
+        await self._execution_substrate.record_checkpoint(
+            task_id=task_id,
+            stage="after_verification",
+            snapshot={
+                "title": title,
+                "is_acceptable": bool(getattr(verification, "is_acceptable", False)),
+                "score": float(getattr(verification, "score", 0.0)),
+            },
+        )
+
+    async def _record_failure_feedback(
+        self,
+        *,
+        task_id: str,
+        message: str,
+    ) -> None:
+        """失敗を feedback として残す."""
+        if self._execution_substrate is None:
+            return
+        await self._execution_substrate.record_feedback(
+            task_id=task_id,
+            source=ExecutionFeedbackSource.VERIFIER,
+            title="execution_failure",
+            feedback=message,
+            passed=False,
+            score=0.0,
+            eval_result=EvalResult(
+                evaluator="execution_failure",
+                passed=False,
+                score=0.0,
+                reason=message,
+            ),
+        )
+
+    async def _execution_response_fields(self, task_id: str) -> dict[str, Any]:
+        """レスポンスへ追加する execution fields を返す."""
+        if self._execution_substrate is None:
+            return {"execution_session_id": "", "execution_summary": {}}
+        inspection = await self._execution_substrate.inspect_task(task_id)
+        if inspection is None:
+            return {"execution_session_id": "", "execution_summary": {}}
+        execution_session = inspection.execution_session
+        if not isinstance(execution_session, dict):
+            execution_session = {}  # type: ignore[unreachable]
+        return {
+            "execution_session_id": str(execution_session.get("session_id", "")),
+            "execution_summary": inspection.execution_summary,
+        }
 
     async def _emit_flow_start(self, task_id: str, conversation_id: str | None, message: str) -> None:
         """flow.start を送信する."""
@@ -864,7 +1414,7 @@ class OrchestrationService:
     ) -> None:
         """flight result list の A2UI を送信する."""
         offers_raw = search_payload.get("offers", [])
-        items: list[TextComponent] = []
+        items: list[A2UIComponent] = []
         for offer in offers_raw[:5]:
             if not isinstance(offer, dict):
                 continue
@@ -922,7 +1472,7 @@ class OrchestrationService:
         questions: list[dict[str, Any]],
     ) -> None:
         """clarification form を送信する."""
-        fields = [
+        fields: list[A2UIComponent] = [
             InputComponent(
                 name=str(question.get("id", "")),
                 input_type="text" if str(question.get("type", "text")) != "select" else "select",
@@ -954,7 +1504,9 @@ class OrchestrationService:
     ) -> None:
         """AG-UI イベントを永続化し、WS に配信する."""
         payload = event.to_dict()
-        await self._store.add_assistant_job_event(job_id=task_id, event_type=str(payload.get("event_type", "")), payload=payload)
+        await self._store.add_assistant_job_event(
+            job_id=task_id, event_type=str(payload.get("event_type", "")), payload=payload
+        )
         rooms = [f"task:{task_id}", task_id]
         if conversation_id:
             rooms.append(conversation_id)

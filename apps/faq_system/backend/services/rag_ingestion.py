@@ -16,7 +16,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from sqlalchemy import Select, select
@@ -821,7 +821,7 @@ class S3SourceAdapter(SourceAdapter):
             )
 
         if boto3 is None:
-            return _failed_source_result(
+            return _failed_source_result(  # type: ignore[unreachable]
                 source=source,
                 message="boto3 is required for s3 ingestion",
                 reason_code="dependency_missing",
@@ -2008,7 +2008,7 @@ def _guard_select_sql(sql: str, *, dialect: str) -> dict[str, Any]:
         return {"ok": False, "message": "empty SQL query", "sql": ""}
 
     if sqlglot is None or sql_exp is None:
-        return _regex_guard_select_sql(query)
+        return _regex_guard_select_sql(query)  # type: ignore[unreachable]
 
     try:
         parsed = sqlglot.parse(query, read=_sqlglot_dialect(dialect))
@@ -2044,7 +2044,7 @@ def _guard_select_sql(sql: str, *, dialect: str) -> dict[str, Any]:
     if not has_select:
         return {"ok": False, "message": "only SELECT/CTE queries are allowed", "sql": ""}
 
-    normalized_sql = cast("str", stmt.sql(dialect=_sqlglot_dialect(dialect) or ""))
+    normalized_sql = stmt.sql(dialect=_sqlglot_dialect(dialect) or "")
     return {"ok": True, "message": "", "sql": normalized_sql}
 
 

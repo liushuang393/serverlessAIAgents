@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from infrastructure.llm.providers import LLMProvider
@@ -43,14 +44,14 @@ async def summarize_to_title(text: str, llm: LLMProvider | None) -> str:
         summary = str(response.get("content", "")).strip()
         # 引用符が入る場合があるので除去
         summary = summary.strip('"').strip("'").strip("「").strip("」")
-        
+
         if not summary:
             return _truncate_title(text)
-            
+
         # 万が一長すぎる場合は切り詰め
         if len(summary) > 22:
             return summary[:20] + "…"
-            
+
         return summary
     except Exception as e:
         logger.warning(f"Failed to summarize title with LLM, falling back to truncation: {e}")

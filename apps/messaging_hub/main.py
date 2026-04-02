@@ -52,11 +52,12 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from apps.messaging_hub.agents.flight_watch_agent import FlightWatchAgent
 from apps.messaging_hub.agents.file_organizer_agent import FileOrganizerAgent
+from apps.messaging_hub.agents.flight_watch_agent import FlightWatchAgent
 from apps.messaging_hub.agents.runtime_artifact_agent import RuntimeArtifactAgentRegistry
 from apps.messaging_hub.approval_manager import ApprovalManager, ApprovalRequest, ApprovalStatus
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
+from apps.messaging_hub.execution_substrate import ExecutionSubstrateService, SQLiteExecutionSubstrateStore
 from apps.messaging_hub.execution_tracker import ExecutionEvent, ExecutionStatus, ExecutionTracker
 from apps.messaging_hub.flight_watch import FlightSearchRequest, FlightWatchService, SubscriptionStatus
 from apps.messaging_hub.generated_artifact_manager import ArtifactType, GeneratedArtifactManager
@@ -69,8 +70,8 @@ from apps.messaging_hub.storage import SQLiteMessagingHubStore
 from harness.budget.service import BudgetConfig, TokenBudgetManager
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension, ScoringResult
-from kernel.protocols.agui_events import A2UIComponentEvent, ApprovalRequiredEvent
 from kernel.protocols.a2ui.components import CardComponent, TextComponent
+from kernel.protocols.agui_events import A2UIComponentEvent, ApprovalRequiredEvent
 from kernel.runtime import WebSocketHub
 from kernel.skills import (
     ChatBotSkill,
@@ -965,6 +966,7 @@ assistant = PersonalAssistantCoordinator(
 _register_runtime_agent(assistant)
 
 _generated_artifact_manager: GeneratedArtifactManager
+_execution_substrate_service: ExecutionSubstrateService
 _flight_watch_service: FlightWatchService
 _flight_watch_agent: FlightWatchAgent
 _orchestration_service: OrchestrationService
@@ -974,11 +976,13 @@ _runtime_artifact_registry: RuntimeArtifactAgentRegistry
 def _initialize_orchestration_services() -> None:
     """orchestration 関連サービスを再初期化する."""
     global _generated_artifact_manager
+    global _execution_substrate_service
     global _flight_watch_agent
     global _flight_watch_service
     global _orchestration_service
     global _runtime_artifact_registry
 
+    _execution_substrate_service = ExecutionSubstrateService(SQLiteExecutionSubstrateStore(db_path=_store.db_path))
     _generated_artifact_manager = GeneratedArtifactManager(
         store=_store,
         skills_manager=_skills_manager,
@@ -1005,6 +1009,7 @@ def _initialize_orchestration_services() -> None:
         mcp_manager=_mcp_manager,
         memory_service=_harness_memory_service,
         runtime_artifact_registry=_runtime_artifact_registry,
+        execution_substrate=_execution_substrate_service,
     )
 
 
@@ -2376,6 +2381,32 @@ async def api_list_orchestration_task_events(task_id: str) -> dict[str, Any]:
     return {"ok": True, "events": events, "total": len(events)}
 
 
+@app.get("/api/orchestration/tasks/{task_id}/execution", response_model=None)
+async def api_get_orchestration_task_execution(task_id: str) -> JSONResponse | dict[str, Any]:
+    """task execution inspection を返す."""
+    execution = await _orchestration_service.get_task_execution(task_id)
+    if execution is None:
+        return JSONResponse({"ok": False, "error": "task_not_found"}, status_code=404)
+    return {"ok": True, "execution": execution}
+
+
+@app.get("/api/orchestration/tasks/{task_id}/replay", response_model=None)
+async def api_get_orchestration_task_replay(task_id: str) -> JSONResponse | dict[str, Any]:
+    """task replay を返す."""
+    replay = await _orchestration_service.get_task_replay(task_id)
+    if replay is None:
+        return JSONResponse({"ok": False, "error": "task_not_found"}, status_code=404)
+    return {"ok": True, "replay": replay}
+
+
+@app.get("/api/orchestration/monitoring/summary", response_model=None)
+async def api_get_orchestration_monitoring_summary() -> dict[str, Any]:
+    """execution monitoring summary を返す."""
+    approvals = await _store.list_approvals(limit=5000)
+    summary = await _orchestration_service.get_monitoring_summary(approvals)
+    return {"ok": True, "summary": summary or {}}
+
+
 @app.post("/api/flight-watch/search")
 async def api_flight_watch_search(request: FlightWatchSearchAPIRequest) -> dict[str, Any]:
     """機票検索を実行する."""
@@ -2589,6 +2620,19 @@ async def api_tool_stats() -> dict[str, Any]:
     return _lazy_tool_loader.get_stats()
 
 
+@app.get("/api/tools/contracts")
+async def api_tool_contracts(
+    template_name: str | None = None,
+    format: str | None = None,
+) -> dict[str, Any]:
+    """semantic tool contracts を返す."""
+    params: dict[str, Any] | None = None
+    if format is not None:
+        params = {"format": format}
+    contracts = assistant.list_semantic_tool_contracts(template_name=template_name, params=params)
+    return {"contracts": contracts, "total": len(contracts)}
+
+
 @app.post("/api/tools/reset")
 async def api_tool_reset() -> dict[str, Any]:
     """ツールセッションリセット."""
@@ -2749,6 +2793,15 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
         input_token_count,
         run_id,
     )
+    await _orchestration_service.record_quality_feedback(
+        task_id=orchestration_result.task_id,
+        source="sr_chat",
+        score=scoring.overall_score,
+        elapsed_seconds=round(elapsed, 3),
+        input_tokens=input_token_count,
+    )
+    execution = await _orchestration_service.get_task_execution(orchestration_result.task_id)
+    execution_summary = execution.get("execution_summary", {}) if isinstance(execution, dict) else {}
 
     response_time = datetime.now(UTC).isoformat()
     await _store.upsert_sr_message(
@@ -2799,13 +2852,13 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dic
         "summary": orchestration_result.summary,
         "headline": orchestration_result.headline,
         "intent": (
-            orchestration_result.result.get("intent", {})
-            if isinstance(orchestration_result.result, dict)
-            else {}
+            orchestration_result.result.get("intent", {}) if isinstance(orchestration_result.result, dict) else {}
         ),
         "clarification_ticket_id": orchestration_result.clarification_ticket_id,
         "clarification_questions": orchestration_result.clarification_questions,
         "generated_artifact": orchestration_result.generated_artifact,
+        "execution_session_id": orchestration_result.execution_session_id,
+        "execution_summary": execution_summary,
         "delivery_error": delivery_error,
         "quality": {
             "score": scoring.overall_score,
@@ -2971,11 +3024,22 @@ async def process_assistant_request(
             input_token_count,
             run_id,
         )
+        await _orchestration_service.record_quality_feedback(
+            task_id=result.task_id,
+            source="assistant_process",
+            score=scoring.overall_score,
+            elapsed_seconds=round(elapsed, 3),
+            input_tokens=input_token_count,
+        )
+        execution = await _orchestration_service.get_task_execution(result.task_id)
+        execution_summary = execution.get("execution_summary", {}) if isinstance(execution, dict) else {}
 
         response: dict[str, Any] = {
             "ok": result.ok,
             "status": result.status.value,
             "task_id": result.task_id,
+            "execution_session_id": result.execution_session_id,
+            "execution_summary": execution_summary,
             "summary": result.summary,
             "headline": result.headline,
             "key_points": result.key_points,

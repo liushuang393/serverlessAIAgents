@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING, Any, Protocol
 from pydantic import BaseModel, Field, model_validator
 
 from apps.messaging_hub.flight_offer_extractor import DiscoveredFlightOfferExtractor
-from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 from apps.messaging_hub.task_harness import ProviderCandidate, TaskProviderDiscoveryService
 
 
 if TYPE_CHECKING:
+    from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
     from kernel.runtime.websocket import WebSocketHub
     from kernel.skills.gateway import SkillGateway
 
@@ -73,7 +73,7 @@ class RankingWeights(BaseModel):
     convenience: float = Field(default=0.2, ge=0.0)
 
     @model_validator(mode="after")
-    def normalize(self) -> "RankingWeights":
+    def normalize(self) -> RankingWeights:
         """重み合計を 1.0 に正規化する."""
         total = self.price + self.duration + self.convenience
         if total <= 0:
@@ -198,9 +198,7 @@ class FakeFlightProvider:
     ) -> list[FlightOffer]:
         """疑似フライト提案を返す."""
         seed = hashlib.sha1(
-            f"{request.origin}|{request.destination}|{request.depart_window.start_date}|{request.return_window.start_date}".encode(
-                "utf-8"
-            )
+            f"{request.origin}|{request.destination}|{request.depart_window.start_date}|{request.return_window.start_date}".encode()
         ).hexdigest()
         base_price = 220 + (int(seed[:4], 16) % 300)
         base_duration = 660 + (int(seed[4:8], 16) % 260)
@@ -263,7 +261,13 @@ class WebAggregatorFlightProvider:
             if not result.success:
                 continue
             payload = result.result
-            current_items = payload if isinstance(payload, list) else payload.get("results", []) if isinstance(payload, dict) else []
+            current_items = (
+                payload
+                if isinstance(payload, list)
+                else payload.get("results", [])
+                if isinstance(payload, dict)
+                else []
+            )
             if isinstance(current_items, list):
                 items.extend(item for item in current_items if isinstance(item, dict))
             if items:
@@ -271,8 +275,6 @@ class WebAggregatorFlightProvider:
 
         offers: list[FlightOffer] = []
         for index, item in enumerate(items[:5]):
-            if not isinstance(item, dict):
-                continue
             text = " ".join(str(item.get(key, "")) for key in ("title", "snippet", "content"))
             price_match = re.search(r"(?:USD|\$)\s*([0-9]+(?:\.[0-9]+)?)", text)
             if price_match is None:
@@ -441,7 +443,8 @@ class FlightNotificationService:
         password = os.getenv("MESSAGING_HUB_SMTP_PASSWORD", "").strip()
         smtp_port = int(os.getenv("MESSAGING_HUB_SMTP_PORT", "587"))
         if not smtp_host or not from_email:
-            raise RuntimeError("smtp_not_configured")
+            msg = "smtp_not_configured"
+            raise RuntimeError(msg)
 
         message = EmailMessage()
         message["Subject"] = "[MessagingHub][FlightWatch] Price drop detected"
@@ -512,10 +515,7 @@ class FlightWatchService:
             "travel",
         ]
         return await self._provider_discovery.discover(
-            query=(
-                f"best websites to compare round trip flight prices "
-                f"{request.origin} {request.destination}"
-            ),
+            query=(f"best websites to compare round trip flight prices {request.origin} {request.destination}"),
             task_kind="structured_monitoring",
             keywords=keywords,
             candidate_limit=5,
@@ -558,7 +558,9 @@ class FlightWatchService:
         )
         return subscription
 
-    async def update_subscription_status(self, subscription_id: str, status: SubscriptionStatus) -> dict[str, Any] | None:
+    async def update_subscription_status(
+        self, subscription_id: str, status: SubscriptionStatus
+    ) -> dict[str, Any] | None:
         """購読状態を更新する."""
         subscription = await self._store.get_flight_watch_subscription(subscription_id)
         if subscription is None:
@@ -571,7 +573,9 @@ class FlightWatchService:
     async def check_due_subscriptions(self) -> dict[str, Any]:
         """期限到来した購読をチェックする."""
         now_iso = datetime.now(UTC).isoformat()
-        due = await self._store.list_flight_watch_subscriptions(status=SubscriptionStatus.ACTIVE.value, due_before=now_iso)
+        due = await self._store.list_flight_watch_subscriptions(
+            status=SubscriptionStatus.ACTIVE.value, due_before=now_iso
+        )
         checked = 0
         notified = 0
         for raw_subscription in due:
@@ -649,7 +653,9 @@ class FlightWatchService:
         if "origin" in missing_fields:
             questions.append({"id": "origin", "text": "出発地を入力してください", "type": "text", "required": True})
         if "destination" in missing_fields:
-            questions.append({"id": "destination", "text": "目的地を入力してください", "type": "text", "required": True})
+            questions.append(
+                {"id": "destination", "text": "目的地を入力してください", "type": "text", "required": True}
+            )
         if "depart_window" in missing_fields:
             questions.append(
                 {

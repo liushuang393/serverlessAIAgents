@@ -65,6 +65,7 @@ class BusinessAdvisorInput(BaseModel):
 
     question: str = Field(description="ユーザーのビジネス関連の質問")
     context: str = Field(default="", description="追加コンテキスト")
+    execution_context: dict[str, Any] = Field(default_factory=dict, description="実行基盤コンテキスト")
 
 
 class BusinessAdvisorOutput(BaseModel):
@@ -153,10 +154,7 @@ class BusinessAdvisorAgent(ResilientAgent[BusinessAdvisorInput, BusinessAdvisorO
             # 次のスキルのコンテキストに前の結果を追加
             if result.get("success"):
                 advice_text = result.get("advice", "")
-                accumulated_context = (
-                    f"{accumulated_context}\n\n"
-                    f"## {skill_name} の結果\n{advice_text}"
-                ).strip()
+                accumulated_context = (f"{accumulated_context}\n\n## {skill_name} の結果\n{advice_text}").strip()
 
         # 3. 要約を生成
         summary = await self._generate_summary(question, advice_results)
@@ -180,9 +178,7 @@ class BusinessAdvisorAgent(ResilientAgent[BusinessAdvisorInput, BusinessAdvisorO
         Returns:
             選択されたスキル名リスト（最大 3 つ）
         """
-        skill_list = "\n".join(
-            f"- **{name}**: {desc}" for name, desc in _SKILL_CATALOG.items()
-        )
+        skill_list = "\n".join(f"- **{name}**: {desc}" for name, desc in _SKILL_CATALOG.items())
         prompt = _SELECTOR_PROMPT.format(skill_list=skill_list, question=question)
 
         llm = get_llm(temperature=0.1)
@@ -284,10 +280,7 @@ class BusinessAdvisorAgent(ResilientAgent[BusinessAdvisorInput, BusinessAdvisorO
             return successful[0].get("advice", "")
 
         # 複数結果の統合要約
-        advice_texts = "\n\n---\n\n".join(
-            f"## {r['skill_name']}\n{r.get('advice', '')}"
-            for r in successful
-        )
+        advice_texts = "\n\n---\n\n".join(f"## {r['skill_name']}\n{r.get('advice', '')}" for r in successful)
 
         llm = get_llm(temperature=0.3)
         response = await llm.generate(
@@ -295,10 +288,7 @@ class BusinessAdvisorAgent(ResilientAgent[BusinessAdvisorInput, BusinessAdvisorO
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "複数のビジネスアドバイスを統合し、"
-                        "簡潔で実行可能な要約を日本語で作成してください。"
-                    ),
+                    "content": ("複数のビジネスアドバイスを統合し、簡潔で実行可能な要約を日本語で作成してください。"),
                 },
                 {
                     "role": "user",

@@ -158,11 +158,12 @@ class ChatHistoryService:
             metadata = metadatas.get(row.session_id, {})
             # メタデータに要約タイトルがあれば優先する
             stored_title = metadata.get("session_title")
-            
+
             results.append(
                 {
                     "session_id": row.session_id,
-                    "title": stored_title or (self._auto_title_from_text(preview_text) if preview_text else row.session_id),
+                    "title": stored_title
+                    or (self._auto_title_from_text(preview_text) if preview_text else row.session_id),
                     "message_count": row.message_count,
                     "last_message_at": row.last_message_at.isoformat() if row.last_message_at else None,
                     "preview": (preview_text or "")[:80],

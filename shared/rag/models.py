@@ -145,7 +145,9 @@ class DocumentRecordModel(Base):
 
     # --- グループ・関連性 ---
     document_group_id: Mapped[str | None] = mapped_column(
-        String(64), nullable=True, index=True,
+        String(64),
+        nullable=True,
+        index=True,
     )
     tags_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
 
@@ -204,7 +206,8 @@ class DocumentRelationModel(Base):
     source_document_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     target_document_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     relation_type: Mapped[str] = mapped_column(
-        String(64), nullable=False,
+        String(64),
+        nullable=False,
     )
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     created_by: Mapped[str] = mapped_column(String(128), nullable=False, default="auto")
