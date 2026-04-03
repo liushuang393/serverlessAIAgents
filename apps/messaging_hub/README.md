@@ -185,10 +185,10 @@ vim apps/messaging_hub/.env
 ```bash
 # ローカル開発（ホットリロード有効）
 # host / port は 明示指定 > app_config.json の順で解決し、共通 launcher 経由で起動
-conda run -n agentflow python apps/messaging_hub/scripts/dev.py --reload
+python apps/messaging_hub/scripts/dev.py --reload
 
 # 本番相当のローカル起動（リロードなし）
-conda run -n agentflow python apps/messaging_hub/scripts/dev.py --no-reload --workers 2
+python apps/messaging_hub/scripts/dev.py --no-reload --workers 2
 ```
 
 起動後のアクセス先：

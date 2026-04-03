@@ -379,7 +379,7 @@ export default function Conversations() {
     setStatusMessage("新規会話を作成しました");
   };
 
-  const sendMessage = async () => {
+  const submitMessage = async () => {
     const text = draft.trim();
     if (!text || sending || !selectedConversationId) {
       return;
@@ -788,7 +788,7 @@ export default function Conversations() {
               </label>
               <div className="flex justify-end">
                 <button
-                  onClick={sendMessage}
+                  onClick={submitMessage}
                   disabled={sending || !selectedConversationId || !draft.trim()}
                   className="neo-button flex items-center gap-2 px-4 py-2 disabled:opacity-50"
                 >
