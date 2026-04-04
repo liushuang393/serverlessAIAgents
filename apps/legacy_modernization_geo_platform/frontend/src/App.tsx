@@ -356,11 +356,27 @@ export default function App() {
       }
     };
 
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+
     source.onerror = () => {
       source.close();
+      if (retryCount < MAX_RETRIES) {
+        retryCount += 1;
+        const baseDelay = 1000;
+        const jitter = Math.random() * 500;
+        const delay = baseDelay * Math.pow(2, retryCount - 1) + jitter;
+        setTimeout(() => {
+          const nextSource = new EventSource(buildStreamUrl(streamPath));
+          nextSource.onmessage = source.onmessage;
+          nextSource.onerror = source.onerror;
+          eventSourceRef.current = nextSource;
+        }, delay);
+      }
     };
 
     return () => {
+      retryCount = MAX_RETRIES; // クリーンアップ時は再接続しない
       source.close();
     };
   }, [streamPath, taskId]);

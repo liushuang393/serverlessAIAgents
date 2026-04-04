@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,6 +18,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.observability.startup import log_startup_info
 from kernel.skills.builtin.design_skills.engine import DesignSkillsEngine
 
 
@@ -81,10 +83,37 @@ class DesignRequest(BaseModel):
         return self.model_dump(exclude_none=True)
 
 
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """起動時に統一 startup summary を出力する."""
+    app_config = _load_app_config()
+    log_startup_info(
+        app_name=str(app_config.get("display_name") or "Design Skills Engine"),
+        app_config_path=_APP_CONFIG_PATH,
+        runtime_overrides={
+            "db": {
+                "backend": "",
+                "url": "",
+            },
+            "vectordb": {
+                "backend": "",
+                "path": "",
+                "collection": "",
+                "index": "",
+            },
+        },
+        extra_info={
+            "version": str(app_config.get("version") or "1.0.0"),
+        },
+    )
+    yield
+
+
 app = FastAPI(
     title="Design Skills Engine",
     description="Pipeline app for multi-image generation via ComfyUI",
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 _engine: DesignSkillsEngine | None = None

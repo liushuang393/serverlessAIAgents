@@ -430,6 +430,24 @@ docker compose up --build -d
 | auth_service | http://localhost:8010 | http://localhost:3000 | 认证・用户管理 |
 | control_plane | http://localhost:8900 | http://localhost:3200 | 平台管理 |
 
+### 应用调用模式一览
+
+> 规约详情: [`code-rules/project/calling-patterns.md`](code-rules/project/calling-patterns.md)
+
+| 应用 | 后端模式 | 前端通信 | 说明 |
+| --- | --- | --- | --- |
+| FAQ System | A + C | fetch + SSE | 通过 A2AHub 调用 Agent + 聊天流式传输 |
+| Decision Governance Engine | B-1 + B-2 | fetch + SSE (EventSource) | PipelineEngine 驱动的 8 Agent 顺序流水线 |
+| Code Migration Assistant | B-2 | fetch + SSE (EventSource) | BaseEngine 驱动的 9 Agent 异步流水线 |
+| Market Trend Monitor | B-1 | fetch | kernel Flow 驱动的 7 Agent 工作流 |
+| Messaging Hub | B-Coordinator | fetch + WS | ResilientAgent + A2AHub 多渠道 Agent 路由 |
+| Legacy Modernization GEO | B-2 | fetch + SSE (EventSource) | BaseEngine 驱动的 11 阶段并行流水线 |
+| Design Skills Engine | B-1 | — | PipelineEngine 驱动的图像生成流水线 |
+| Developer Studio | A | — | Service 直接调用（纯 API） |
+| Orchestration Guardian | A | — | 通过 A2AHub 调用 Agent（验证 API） |
+
+**模式说明**: A = 单次处理、B-1 = 同步流水线、B-2 = 异步流水线 + SSE、B-Coordinator = 意图分类→路由→专业 Agent、C = 实时对话
+
 ### 各应用 README
 
 | 应用                       | README                                                                                 | 说明                      |

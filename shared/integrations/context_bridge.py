@@ -30,7 +30,7 @@ import logging
 import uuid
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -118,7 +118,7 @@ class FlowContext(BaseModel):
     )
 
     # タイムスタンプ
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # カスタム拡張
     extensions: dict[str, Any] = Field(

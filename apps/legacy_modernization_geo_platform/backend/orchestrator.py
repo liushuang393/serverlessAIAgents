@@ -55,6 +55,7 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
 )
 from apps.legacy_modernization_geo_platform.backend.settings import APP_CONFIG_PATH
 from kernel.agents.app_agent_runtime import bootstrap_app_agents
+from kernel.engines.base import BaseEngine
 
 
 if TYPE_CHECKING:
@@ -86,8 +87,12 @@ class GeoTaskRuntime:
     cancel_requested: asyncio.Event = field(default_factory=asyncio.Event)
 
 
-class GeoOrchestrator:
-    """タスクライフサイクル、イベントストリーミング、成果物生成を管理する."""
+class GeoOrchestrator(BaseEngine):
+    """タスクライフサイクル、イベントストリーミング、成果物生成を管理する.
+
+    kernel BaseEngine を継承し、呼び出しパターン B-2（非同期パイプライン + SSE）に準拠。
+    内部では asyncio.gather による並列ステージ実行と承認フローを管理する。
+    """
 
     def __init__(
         self,
@@ -99,6 +104,7 @@ class GeoOrchestrator:
         publisher: GeoPublisher | None = None,
         agent_runtime: AppAgentRuntime | None = None,
     ) -> None:
+        super().__init__()
         self._settings = settings
         self._repository = repository
         self._intelligence = intelligence_adapter or GeoIntelligenceAdapter()
@@ -293,6 +299,23 @@ class GeoOrchestrator:
             ),
         )
         return result_payload
+
+    # ------------------------------------------------------------------
+    # BaseEngine 抽象メソッド実装
+    # ------------------------------------------------------------------
+
+    async def _initialize(self) -> None:
+        """BaseEngine 初期化（Agent は __init__ で bootstrap 済み）."""
+
+    async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        """BaseEngine 実行エントリポイント.
+
+        start() 経由の非同期タスクとして実行されるため、
+        直接呼び出しでは最新タスクの結果を返す。
+        """
+        request = GeoExecuteRequest(**inputs)
+        task_id = await self.start(request)
+        return {"task_id": task_id}
 
     # ------------------------------------------------------------------
     # パイプライン実行（async + 並列ステージ）

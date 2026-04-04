@@ -1,6 +1,10 @@
-"""Decision Governance Engine - プロンプト管理モジュール.
+"""Decision Governance Engine - プロンプト管理モジュール（6層プロンプトレイヤー対応版）.
 
 全Agentのシステムプロンプトを一元管理し、外部ファイルからの読み込みをサポート。
+kernel/prompts の 6 層モデルに準拠し、L1(CoreSystem) を共通化、
+L2(TaskSystem) を Agent ごとに定義する。
+
+パターン: MULTI_STEP（パイプライン処理 — 道→法→術→器→レビュー）
 
 構成:
     prompts/
@@ -16,6 +20,8 @@
 
 from pathlib import Path
 from typing import Any
+
+from kernel.prompts.models import CoreSystemLayer, TaskSystemLayer
 
 
 # プロンプトディレクトリのパス
@@ -81,10 +87,78 @@ def build_full_prompt(agent_name: str, user_context: dict[str, Any] | None = Non
     return full_prompt
 
 
+# ---------------------------------------------------------------------------
+# 6層プロンプトレイヤー定義
+# ---------------------------------------------------------------------------
+
+# L1: 全 Agent 共通 CoreSystem
+CORE_SYSTEM = CoreSystemLayer(
+    role=(
+        "あなたは回答生成AIではない。"
+        "あなたの役割は「意思決定が成立する前提構造」を検査・制御することである。"
+        "「正しい答え」を出すためのものではなく、"
+        "「誤った意思決定が行われる確率を下げる」ためのものである。"
+    ),
+    success_criteria=[
+        "構造化データ（JSON）を優先する",
+        "具体的な数値・期限・条件を明示する",
+    ],
+    prohibitions=[
+        "結論を急がない — 評価対象・判断レイヤー・動機が未定義なら分析を進めない",
+        "一般論禁止 — 教科書的分類・網羅的整理は禁止",
+        "迎合禁止 — 迎合・楽観・曖昧な肯定は禁止",
+        "曖昧な表現（「適切に」「効果的に」）は禁止",
+    ],
+    output_principles=[
+        "自由文テキストは最小限に",
+        "出力は「行動や意思決定を変える」ものでなければ無効である",
+    ],
+)
+
+# L2: 各 Agent 固有の TaskSystem
+DAO_TASK = TaskSystemLayer(
+    goal="本質分析（道）：議題の根本構造と因果関係を解明する",
+    deliverables=["本質分析レポート"],
+)
+
+FA_TASK = TaskSystemLayer(
+    goal="戦略選定（法）：分析結果に基づき最適な戦略を選定する",
+    deliverables=["戦略選定レポート"],
+)
+
+SHU_TASK = TaskSystemLayer(
+    goal="実行計画（術）：戦略を具体的な実行ステップに展開する",
+    deliverables=["実行計画書"],
+)
+
+QI_TASK = TaskSystemLayer(
+    goal="技術実装（器）：実行計画を技術的に具体化する",
+    deliverables=["技術実装提案"],
+)
+
+REVIEW_TASK = TaskSystemLayer(
+    goal="検証：全工程の成果物を検証し、品質を判定する",
+    deliverables=["検証レポート"],
+)
+
+COGNITIVE_GATE_TASK = TaskSystemLayer(
+    goal="認知前処理：入力の曖昧さ・矛盾・不足を検出し、分析前に品質を担保する",
+    constraints=["不足情報がある場合は必ず明示し補足を要求する"],
+)
+
+
 __all__ = [
     "PROMPTS_DIR",
     "build_full_prompt",
     "get_agent_prompt",
     "get_common_system_prompt",
     "load_prompt",
+    # 6層レイヤー
+    "CORE_SYSTEM",
+    "DAO_TASK",
+    "FA_TASK",
+    "SHU_TASK",
+    "QI_TASK",
+    "REVIEW_TASK",
+    "COGNITIVE_GATE_TASK",
 ]

@@ -66,6 +66,7 @@
 | [`code-rules/AGENTS.md` § フレームワーク概要](code-rules/AGENTS.md#-agentflow-フレームワーク概要) | Agent/Engine/Flow/HITL の Public API 設計規約とシナリオ別構成例       | AgentFlow の Public API を設計・実装するとき |
 | [`code-rules/AGENTS.md` § 15](code-rules/AGENTS.md#15-agent-登録標準app_configjson--ai-必読) | `app_config.json` の `agents[]` 登録フォーマットと DoD チェックリスト | 新規 Agent を追加・登録するとき              |
 | [`code-rules/global/principles.md`](code-rules/global/principles.md)       | 品質優先・インクリメンタル改善・設計原則などの開発方針                | 設計・実装方針を確認したいとき               |
+| [`code-rules/project/prompt-layers.md`](code-rules/project/prompt-layers.md) | 6層プロンプト設計・4パターン判定・各App適用表・品質チェック規約       | Agent のプロンプトを新規作成・改修するとき   |
 
 ### 🧪 品質・テスト・CI
 

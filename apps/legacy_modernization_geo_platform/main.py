@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +41,7 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
 )
 from apps.legacy_modernization_geo_platform.backend.settings import APP_ROOT, GeoPlatformSettings
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.observability.startup import log_startup_info
 from kernel.agents.app_agent_runtime import bootstrap_app_agents
 from kernel.protocols.a2ui.components import A2UIComponent, CardComponent, TextComponent
 from kernel.protocols.agui_events import (
@@ -112,10 +114,32 @@ def create_app(
         auth_client_factory=auth_client_factory,
     )
 
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        """起動時に統一 startup summary を出力する."""
+        log_startup_info(
+            app_name="Legacy Modernization GEO Platform",
+            app_config_path=_APP_CONFIG_PATH,
+            runtime_overrides={
+                "db": {
+                    "backend": "sqlite",
+                    "url": f"sqlite:///{resolved_settings.db_path}",
+                },
+                "vectordb": {
+                    "backend": "",
+                    "path": "",
+                    "collection": "",
+                    "index": "",
+                },
+            },
+        )
+        yield
+
     app = FastAPI(
         title="Legacy Modernization GEO Platform",
         version="0.1.0",
         description="Demand capture, content planning, approval, and publishing for legacy modernization GEO.",
+        lifespan=lifespan,
     )
     app.state.settings = resolved_settings
     app.state.repository = repository

@@ -15,6 +15,8 @@ import yaml
 
 from infrastructure.observability.startup import log_startup_info as _framework_log_startup
 
+_APP_CONFIG_PATH = Path(__file__).parent / "app_config.json"
+
 
 def _load_agent_config() -> dict[str, Any]:
     """agent.yaml から設定を読み込み.
@@ -61,9 +63,20 @@ def log_startup_info() -> dict[str, Any]:
         "agents": agents,
         "rag_sources": rag_sources,
     }
+    from apps.decision_governance_engine.repositories.database import get_database_url
+
+    database_url = get_database_url()
+    backend = "postgresql" if "postgres" in database_url.lower() else "sqlite"
 
     # フレームワーク層の関数を呼び出し
     return _framework_log_startup(
         app_name="Decision Governance Engine",
+        app_config_path=_APP_CONFIG_PATH,
+        runtime_overrides={
+            "db": {
+                "backend": backend,
+                "url": database_url,
+            }
+        },
         extra_info=extra_info,
     )

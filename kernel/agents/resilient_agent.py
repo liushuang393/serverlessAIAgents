@@ -476,6 +476,65 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         return ""
 
     # ========================================
+    # 6層プロンプト合成
+    # ========================================
+
+    def _build_prompt(
+        self,
+        layers: Any,
+        pattern: Any | None = None,
+        token_budget: int | None = None,
+    ) -> Any:
+        """6層プロンプトアセンブリ.
+
+        PromptAssemblerを使用してレイヤーセットから最終プロンプトを合成する。
+        従来の _load_skill_prompt() + _call_llm() とは並存し、
+        新規Agentでの段階的採用を可能にする。
+
+        Args:
+            layers: PromptLayerSet インスタンス
+            pattern: PromptPattern（Noneの場合は自動選択）
+            token_budget: トークン予算（Noneの場合はmax_tokensを使用）
+
+        Returns:
+            AssembledPrompt インスタンス
+
+        使用例:
+            >>> from kernel.prompts import (
+            ...     PromptLayerSet, CoreSystemLayer, TaskSystemLayer,
+            ...     RuntimeContextLayer, PromptPattern,
+            ... )
+            >>> layers = PromptLayerSet(
+            ...     core_system=CoreSystemLayer(role="分析エージェント"),
+            ...     task_system=TaskSystemLayer(goal="データ分析"),
+            ...     runtime_context=RuntimeContextLayer(user_request="分析して"),
+            ... )
+            >>> result = self._build_prompt(layers, PromptPattern.SINGLE_TASK)
+            >>> response = await self._call_llm(result.system_prompt)
+        """
+        from kernel.prompts import PromptAssembler, select_pattern
+
+        assembler = PromptAssembler(
+            default_budget=token_budget or self.max_tokens,
+        )
+
+        if pattern is None:
+            # レイヤーセットから自動選択
+            has_tools = getattr(layers, "tool_environment", None) is not None
+            conv_state = getattr(layers, "conversation_state", None)
+            turn_count = getattr(conv_state, "turn_count", 0) if conv_state else 0
+            pattern = select_pattern(
+                has_tools=has_tools,
+                turn_count=turn_count,
+            )
+
+        return assembler.assemble(
+            layers=layers,
+            pattern=pattern,
+            token_budget=token_budget,
+        )
+
+    # ========================================
     # LLM 呼び出し
     # ========================================
 

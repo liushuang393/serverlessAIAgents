@@ -180,14 +180,18 @@ def _log_faq_startup(host: str, port: int) -> None:
     # フレームワーク共通情報（LLM / DB / VectorDB / Embedding）
     log_startup_info(
         app_name=cfg.get("display_name", "FAQ System"),
+        app_config_path=_APP_CONFIG_PATH,
+        runtime_overrides={
+            "db": {
+                "backend": _detect_database_backend(db_manager.resolved_url),
+                "url": db_manager.resolved_url,
+            }
+        },
         extra_info={
             "version": cfg.get("version", "unknown"),
             "agents": agent_names,
         },
     )
-    faq_db_url = db_manager.resolved_url
-    logger.info("[FAQ DB] Backend: %s", _detect_database_backend(faq_db_url))
-    logger.info("[FAQ DB] URL: %s", _mask_database_url(faq_db_url))
 
     # アクセス情報
     display_host = "localhost" if host in ("0.0.0.0", "::") else host

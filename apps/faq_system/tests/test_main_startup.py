@@ -27,3 +27,41 @@ def test_mask_database_url_hides_credentials() -> None:
     masked = faq_main._mask_database_url("postgresql+asyncpg://user:secret@localhost:5432/faq_system")
 
     assert masked == "***@localhost:5432/faq_system"
+
+
+def test_log_faq_startup_uses_unified_startup_summary(monkeypatch) -> None:
+    """FAQ 起動時は統一 startup summary API を呼ぶ."""
+    recorded: dict[str, object] = {}
+
+    def _fake_log_startup_info(*args, **kwargs):
+        recorded["args"] = args
+        recorded["kwargs"] = kwargs
+        return {}
+
+    monkeypatch.setattr(faq_main, "log_startup_info", _fake_log_startup_info)
+    monkeypatch.setattr(
+        faq_main,
+        "_load_app_config",
+        lambda: {
+            "display_name": "FAQ System",
+            "version": "1.2.3",
+            "agents": [{"name": "FAQAgent", "capabilities": ["chat", "rag"]}],
+            "services": {},
+        },
+    )
+    monkeypatch.setattr(
+        type(faq_main.db_manager),
+        "resolved_url",
+        property(lambda self: "postgresql+asyncpg://faq:secret@localhost:5433/faq_system"),
+    )
+
+    faq_main._log_faq_startup("0.0.0.0", 8000)
+
+    kwargs = recorded["kwargs"]
+    assert kwargs["app_config_path"] == faq_main._APP_CONFIG_PATH
+    assert kwargs["runtime_overrides"] == {
+        "db": {
+            "backend": "postgresql",
+            "url": "postgresql+asyncpg://faq:secret@localhost:5433/faq_system",
+        }
+    }

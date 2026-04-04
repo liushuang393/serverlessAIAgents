@@ -6,6 +6,7 @@ import logging
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from apps.code_migration_assistant.backend.task_store import RedisTaskStore
 from apps.code_migration_assistant.engine import CodeMigrationEngine
 from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.observability.startup import log_startup_info
 from shared.config.manifest import load_app_manifest
 
 
@@ -169,6 +171,17 @@ _redis_store = _create_distributed_store()
 def _load_app_config() -> dict[str, Any]:
     """app_config.json を読み込む."""
     return _auth_guard.load_app_config()
+
+
+def _build_startup_runtime_overrides() -> dict[str, Any]:
+    """Code Migration Assistant の runtime 上書き値を構築する."""
+    knowledge_db_path = _APP_ROOT / "data" / "knowledge.db"
+    return {
+        "db": {
+            "backend": "sqlite",
+            "url": f"sqlite+aiosqlite:///{knowledge_db_path}",
+        }
+    }
 
 
 def _is_auth_required() -> bool:
@@ -698,7 +711,23 @@ async def run_migration_task(task_id: str, runtime: TaskRuntime) -> None:
 _cors_origins = _resolve_cors_origins()
 _cors_allow_credentials = not (len(_cors_origins) == 1 and _cors_origins[0] == "*")
 
-app = FastAPI(title="Code Migration Assistant API")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    await _init_knowledge_managers()
+    app_config_path = _APP_ROOT / "app_config.json"
+    app_config = _load_app_config()
+    log_startup_info(
+        app_name=str(app_config.get("display_name") or "Code Migration Assistant API"),
+        app_config_path=app_config_path,
+        runtime_overrides=_build_startup_runtime_overrides(),
+        extra_info={
+            "version": str(app_config.get("version") or "1.0.0"),
+        },
+    )
+    yield
+
+
+app = FastAPI(title="Code Migration Assistant API", lifespan=_lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -786,11 +815,6 @@ async def _init_knowledge_managers() -> None:
         logger.info("Knowledge managers initialized")
     except Exception as e:
         logger.warning("Knowledge manager init failed (non-critical): %s", e)
-
-
-@app.on_event("startup")
-async def _startup_knowledge() -> None:
-    await _init_knowledge_managers()
 
 
 async def _start_task(body: MigrationRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:

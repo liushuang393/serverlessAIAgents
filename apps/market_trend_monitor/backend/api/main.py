@@ -33,6 +33,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+from infrastructure.observability.startup import log_startup_info
+from shared.config.manifest import load_app_manifest_dict
 
 
 # ロギング設定
@@ -60,6 +62,50 @@ _auth_guard = ContractAuthGuard(
         default_api_key_env_var="MARKET_TREND_API_KEY",
     ),
 )
+
+
+def _load_app_config() -> dict[str, Any]:
+    """Load app_config.json or return an empty dict."""
+    if not _APP_CONFIG_PATH.is_file():
+        return {}
+    try:
+        return load_app_manifest_dict(_APP_CONFIG_PATH)
+    except (OSError, ValueError):
+        return {}
+
+
+def _detect_database_backend(database_url: str) -> str:
+    """DB URL から backend を推定する."""
+    normalized = database_url.lower()
+    if normalized.startswith("sqlite"):
+        return "sqlite"
+    if "postgres" in normalized:
+        return "postgresql"
+    return "unknown"
+
+
+def _log_market_trend_startup() -> None:
+    """統一 startup summary を出力する."""
+    app_config = _load_app_config()
+    log_startup_info(
+        app_name=str(app_config.get("display_name") or "Market Trend Monitor API"),
+        app_config_path=_APP_CONFIG_PATH,
+        runtime_overrides={
+            "db": {
+                "backend": _detect_database_backend(config.database.url),
+                "url": config.database.url,
+            },
+            "vectordb": {
+                "collection": config.vectordb.collection_name,
+            },
+            "embedding": {
+                "model": config.embedding.model_name,
+            },
+        },
+        extra_info={
+            "version": str(app_config.get("version") or "1.0.0"),
+        },
+    )
 
 
 @asynccontextmanager
@@ -102,6 +148,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             )
         )
     logger.info("中断ジョブのリセット完了")
+    _log_market_trend_startup()
 
     yield
 

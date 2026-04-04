@@ -81,6 +81,7 @@ from kernel.skills import (
     create_skill_gateway,
 )
 from kernel.tools.cli.runtime_manager import CLIRuntimeManager
+from infrastructure.observability.startup import log_startup_info
 from shared.channels import (
     DiscordAdapter,
     MessageGateway,
@@ -199,6 +200,30 @@ _load_local_env_file()
 def _load_app_config() -> dict[str, Any]:
     """Load app_config.json or return an empty dict."""
     return _auth_guard.load_app_config()
+
+
+def _log_startup_summary() -> None:
+    """統一 startup summary を出力する."""
+    app_config = _load_app_config()
+    log_startup_info(
+        app_name=str(app_config.get("display_name") or "Messaging Hub"),
+        app_config_path=_APP_CONFIG_PATH,
+        runtime_overrides={
+            "db": {
+                "backend": "sqlite",
+                "url": f"sqlite:///{_store.db_path}",
+            },
+            "vectordb": {
+                "backend": "",
+                "path": "",
+                "collection": "",
+                "index": "",
+            },
+        },
+        extra_info={
+            "version": str(app_config.get("version") or "1.0.0"),
+        },
+    )
 
 
 def _get_security_mode() -> str:
@@ -1192,6 +1217,7 @@ async def lifespan(app: FastAPI) -> Any:
 
     # 5. バックグラウンドタスクを開始（Discord bot）
     await start_background_tasks()
+    _log_startup_summary()
 
     logger.info("Messaging Hub started successfully")
     logger.info(f"Registered platforms: {gateway.list_channels()}")

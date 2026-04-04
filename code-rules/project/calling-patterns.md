@@ -300,27 +300,22 @@ type ChatStreamEvent =
 
 ## 各 App の適用パターン
 
-### 現状 → 目標マッピング
+### 各 App の準拠状況
 
-| App | 現状パターン | 目標パターン | 変更内容 |
-|-----|-------------|-------------|----------|
-| **faq_system** | A (A2AHub) + D (Service) + C (WS/SSE) | **A + C** ✅ | 既に準拠。WS → SSE 検討のみ |
-| **decision_governance** | B-1 (PipelineEngine 同期) + B-2 (SSE) | **B-1 + B-2** ✅ | 既に準拠。模範例 |
-| **code_migration** | B-2 (BaseEngine + 独自バックグラウンド) | **B-2** △ | バックグラウンド管理を標準化 |
-| **market_trend** | Flow ラッパー + PipelineEngine 並存 | **B-1 or B-2** | 2 パスを 1 つに統一 |
-| **messaging_hub** | 独自 Coordinator (59KB) | **B-Coordinator** | CoordinatorEngine 化 + ファイル分割 |
-| **legacy_modernization** | 独自 GeoOrchestrator + asyncio.gather | **B-2** | PipelineEngine + then_parallel() 移行 |
-| **design_skills_engine** | PipelineEngine | **B-1** ✅ | 既に準拠 |
-| **dev_studio** | Service 直接 | **A** ✅ | 既に準拠 |
-| **orchestration_guardian** | Agent 直接呼び出し | **A** | A2AHub 経由に変更 |
+| App | バックエンド | フロントエンド | 準拠状態 |
+|-----|-------------|--------------|:---:|
+| **faq_system** | A (A2AHub) + C (SSE stream) | fetch + Zustand + Bearer token | ✅ |
+| **decision_governance** | B-1 + B-2 (PipelineEngine) | fetch + Zustand + Cookie 認証 (※1) | ✅ |
+| **code_migration** | B-2 (BaseEngine + BackgroundTasks) | vanilla JS + SSE + API key | ✅ (※2) |
+| **market_trend** | B-1 (kernel Flow) | fetch + Zustand | ✅ |
+| **messaging_hub** | B-Coordinator (ResilientAgent + A2AHub) | fetch + WS + API key | ✅ |
+| **legacy_modernization** | B-2 (BaseEngine + asyncio.gather) | fetch + SSE (再接続付き) | ✅ |
+| **design_skills_engine** | B-1 (PipelineEngine) | FE なし | ✅ |
+| **dev_studio** | A (Service 直接) | FE なし | ✅ |
+| **orchestration_guardian** | A (A2AHub 経由) | FE なし | ✅ |
 
-### 要対応 App（優先順）
-
-1. **legacy_modernization** — 独自 asyncio.gather → PipelineEngine + then_parallel()
-2. **market_trend** — 2 パス並存 → 1 パスに統一
-3. **messaging_hub** — 独自 Coordinator → CoordinatorEngine + ファイル分割
-4. **orchestration_guardian** — Agent 直接 → A2AHub 経由
-5. **code_migration** — バックグラウンド管理の標準化
+**※1**: decision_governance はバックエンドがセッション Cookie ベースで設計されているため、Cookie 認証は「CSRF 保護が必要な特殊ケース」として許容。
+**※2**: code_migration のフロントエンドは vanilla JS (TypeScript 未使用)。将来的な TS 化は別途計画。
 
 ---
 

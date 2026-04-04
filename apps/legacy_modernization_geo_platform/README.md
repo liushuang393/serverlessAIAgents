@@ -11,7 +11,7 @@
 | **B-2（非同期パイプライン + SSE）** | GEO コンテンツ生成パイプライン（11 ステージ） | Router → GeoOrchestrator → 12 Agent（並列 + 承認ゲート） |
 | **A（単発処理）** | タスク状態取得、承認送信、アーティファクト取得 | Router → Repository / Service |
 
-- Engine: 現状は独自 GeoOrchestrator + asyncio.gather（※ kernel PipelineEngine + then_parallel() に移行予定）
+- Engine: kernel `BaseEngine` 継承の `GeoOrchestrator`（内部で asyncio.gather 並列実行 + 承認フロー管理）
 - 11 ステージ: BrandMemory‖DemandSignal → AccountScore → QuestionGraph‖LegacySemantics → EvidenceMatrix → ContentBlueprint → ContentDraft → GeoQA(承認) → Publishing → ReportAssembler
 - フロントエンド: fetch + SSE (EventSource) + Bearer token 認証
 

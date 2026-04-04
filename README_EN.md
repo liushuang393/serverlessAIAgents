@@ -430,6 +430,24 @@ docker compose up --build -d
 | auth_service | http://localhost:8010 | http://localhost:3000 | Authentication & user management |
 | control_plane | http://localhost:8900 | http://localhost:3200 | Platform management |
 
+### App Calling Patterns
+
+> Specification: [`code-rules/project/calling-patterns.md`](code-rules/project/calling-patterns.md)
+
+| App | BE Pattern | FE Transport | Description |
+| --- | --- | --- | --- |
+| FAQ System | A + C | fetch + SSE | Agent via A2AHub + chat stream |
+| Decision Governance Engine | B-1 + B-2 | fetch + SSE (EventSource) | 8-agent sequential pipeline via PipelineEngine |
+| Code Migration Assistant | B-2 | fetch + SSE (EventSource) | 9-agent async pipeline via BaseEngine |
+| Market Trend Monitor | B-1 | fetch | 7-agent flow via kernel Flow |
+| Messaging Hub | B-Coordinator | fetch + WS | Multi-channel agent via ResilientAgent + A2AHub |
+| Legacy Modernization GEO | B-2 | fetch + SSE (EventSource) | 11-stage parallel pipeline via BaseEngine |
+| Design Skills Engine | B-1 | — | Image generation pipeline via PipelineEngine |
+| Developer Studio | A | — | Direct service calls (API only) |
+| Orchestration Guardian | A | — | Agent via A2AHub (validation API only) |
+
+**Pattern legend**: A = Single operation, B-1 = Sync pipeline, B-2 = Async pipeline + SSE, B-Coordinator = Intent routing → specialist agent, C = Real-time conversation
+
 ### App-specific READMEs
 
 | App                        | README                                                                                 | Description                          |

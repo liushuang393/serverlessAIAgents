@@ -35,7 +35,7 @@
 | **B-1（同期パイプライン）** | 市場データ収集・分析・レポート生成 | Router → MarketTrendWorkflow → kernel Flow.run() → 7 Agent |
 | **A（単発処理）** | トレンド一覧、レポート取得、ジョブ状態確認 | Router → Service / DB |
 
-- Engine: kernel `Flow` (`create_flow().then()`) + `PipelineEngine` の 2 パスが並存（※統一予定）
+- Engine: kernel `Flow` (`create_flow().then().build()`) + `MarketTrendWorkflow`（Safety/Budget/Risk ラッパー）
 - 7 Agent フロー: Collector → EvidenceLedger → Analyzer → SignalScorer → Reporter → RedTeam → Notifier
 - フロントエンド: axios + Zustand + ポーリング（3 秒間隔）
 

@@ -430,6 +430,24 @@ docker compose up --build -d
 | auth_service | http://localhost:8010 | http://localhost:3000 | 認証・ユーザー管理 |
 | control_plane | http://localhost:8900 | http://localhost:3200 | プラットフォーム管理 |
 
+### アプリ呼び出しパターン一覧
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](code-rules/project/calling-patterns.md)
+
+| アプリ | BE パターン | FE 通信 | 説明 |
+| --- | --- | --- | --- |
+| FAQ System | A + C | fetch + SSE | A2AHub 経由 Agent + チャットストリーム |
+| Decision Governance Engine | B-1 + B-2 | fetch + SSE (EventSource) | PipelineEngine による 8 Agent 順次パイプライン |
+| Code Migration Assistant | B-2 | fetch + SSE (EventSource) | BaseEngine による 9 Agent 非同期パイプライン |
+| Market Trend Monitor | B-1 | fetch | kernel Flow による 7 Agent フロー |
+| Messaging Hub | B-Coordinator | fetch + WS | ResilientAgent + A2AHub によるマルチチャネル Agent |
+| Legacy Modernization GEO | B-2 | fetch + SSE (EventSource) | BaseEngine による 11 ステージ並列パイプライン |
+| Design Skills Engine | B-1 | — | PipelineEngine による画像生成パイプライン |
+| Developer Studio | A | — | Service 直接呼び出し（API 専用） |
+| Orchestration Guardian | A | — | A2AHub 経由 Agent（検証 API 専用） |
+
+**パターン凡例**: A = 単発処理、B-1 = 同期パイプライン、B-2 = 非同期パイプライン + SSE、B-Coordinator = 意図分類→ルーティング、C = リアルタイム対話
+
 ### アプリ別 README
 
 | アプリ | README | 説明 |

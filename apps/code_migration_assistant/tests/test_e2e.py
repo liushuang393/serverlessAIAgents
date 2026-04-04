@@ -14,8 +14,6 @@ ANTHROPIC_API_KEY が設定されている場合のみ実行される。
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -24,16 +22,12 @@ import pytest
 from apps.code_migration_assistant.evolution.manager import EvolutionManager
 from apps.code_migration_assistant.output.organizer import OutputOrganizer
 from apps.code_migration_assistant.output.packager import OutputPackager
-from apps.code_migration_assistant.pipeline.project import COBOLProject
+from apps.code_migration_assistant.cobol_project import COBOLProject
 
 
 # サンプルCOBOLファイルのパス
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 SAMPLE_CBL = FIXTURES_DIR / "sample.cbl"
-
-# APIキーが設定されているか確認
-HAS_API_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
-
 
 # ============================================================
 # COBOLProject テスト（APIキー不要）
@@ -286,91 +280,3 @@ class TestEvolutionManager:
         data = json.loads(evolution_path.read_text(encoding="utf-8"))
         assert data["total_iterations"] == 1
         assert len(data["iterations"]) == 1
-
-
-# ============================================================
-# E2Eテスト（APIキーが必要）
-# ============================================================
-
-
-@pytest.mark.skipif(not HAS_API_KEY, reason="ANTHROPIC_API_KEY が設定されていません")
-class TestMigrationPipelineFast:
-    """パイプラインのE2Eテスト（APIキー必要、高速モード）."""
-
-    def test_single_file_fast_mode(self, tmp_path: Path) -> None:
-        """単一COBOLファイルを高速モードで変換できる."""
-        from apps.code_migration_assistant.pipeline.engine import run_migration_sync
-        from apps.code_migration_assistant.pipeline.project import COBOLProject
-
-        project = COBOLProject(source=SAMPLE_CBL, work_dir=tmp_path)
-        project.setup()
-        cobol_file = project.get_cobol_files()[0]
-
-        result = run_migration_sync(
-            cobol_file=cobol_file,
-            output_root=tmp_path / "output",
-            fast_mode=True,
-        )
-
-        assert result.program_name == "SAMPLE"
-        assert result.decision in (
-            "PASSED",
-            "KNOWN_LEGACY",
-            "DESIGN_ISSUE",
-            "TRANSFORM_ISSUE",
-            "TEST_ISSUE",
-            "ENV_ISSUE",
-        )
-
-        # 出力ディレクトリが作成されていること
-        output_dir = tmp_path / "output" / "SAMPLE"
-        assert output_dir.exists()
-
-
-# ============================================================
-# パイプライン単体テスト（モック使用）
-# ============================================================
-
-
-class TestMigrationEngineUnit:
-    """MigrationEngineの単体テスト（モック使用）."""
-
-    def test_build_prompt_analyzer(self) -> None:
-        """analyzer ステージのプロンプトが正しく構築される."""
-        from apps.code_migration_assistant.pipeline.engine import MigrationEngine
-
-        with tempfile.TemporaryDirectory() as tmp:
-            engine = MigrationEngine(Path(tmp))
-            prompt = engine._build_prompt(
-                stage="analyzer",
-                cobol_content="PROGRAM-ID. SAMPLE.",
-                artifacts={},
-                fast_mode=False,
-            )
-            assert "PROGRAM-ID" in prompt
-            assert "SAMPLE" in prompt
-
-    def test_parse_stage_result_json_block(self) -> None:
-        """JSONブロックを正しくパースできる."""
-        from apps.code_migration_assistant.pipeline.engine import MigrationEngine
-
-        result_text = '```json\n{"programs": [{"id": "SAMPLE"}]}\n```'
-        parsed = MigrationEngine._parse_stage_result("analyzer", result_text)
-        assert parsed["programs"][0]["id"] == "SAMPLE"
-
-    def test_parse_stage_result_raw_json(self) -> None:
-        """生JSONを正しくパースできる."""
-        from apps.code_migration_assistant.pipeline.engine import MigrationEngine
-
-        result_text = '{"decision": "PASSED", "reason": "ok"}'
-        parsed = MigrationEngine._parse_stage_result("quality_gate", result_text)
-        assert parsed["decision"] == "PASSED"
-
-    def test_parse_stage_result_transformer_fallback(self) -> None:
-        """transformer ステージはJSONでない場合もtarget_codeとして保存."""
-        from apps.code_migration_assistant.pipeline.engine import MigrationEngine
-
-        result_text = "public class Sample {}"
-        parsed = MigrationEngine._parse_stage_result("transformer", result_text)
-        assert "target_code" in parsed
-        assert "public class" in parsed["target_code"]

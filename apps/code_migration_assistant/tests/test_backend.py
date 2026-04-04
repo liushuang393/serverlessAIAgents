@@ -27,7 +27,11 @@ from apps.code_migration_assistant.backend.migration_task_store import (
     TaskStatus,
     TaskStore,
 )
-from apps.code_migration_assistant.pipeline.engine import MigrationEngine
+from apps.code_migration_assistant.workflow.control_plane import (
+    ExecutionOptions,
+    map_tool_risk_to_hitl,
+    should_require_human_approval,
+)
 
 
 if TYPE_CHECKING:
@@ -230,86 +234,40 @@ class TestTaskStore:
 
 
 # ============================================================
-# MigrationEngine._should_hitl テスト
+# Engine-centric HITL policy テスト
 # ============================================================
 
 
-class TestShouldHITL:
-    """MigrationEngine._should_hitl の条件テスト."""
+class TestHumanApprovalPolicy:
+    """workflow.control_plane の承認ポリシー契約テスト."""
 
-    def test_false_when_no_conditions(self) -> None:
-        """条件ゼロの場合は False."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": [],
-                "has_database_access": False,
-                "has_external_calls": False,
-            }
-        )
-        assert result is False
+    def test_map_tool_risk_medium_to_normal(self) -> None:
+        """tool risk medium は HITL 判定で normal に正規化される."""
+        assert map_tool_risk_to_hitl("medium") == "normal"
 
-    def test_false_when_few_unknowns(self) -> None:
-        """unknowns が 4 件以下は False."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": ["a", "b", "c", "d"],
-            }
-        )
-        assert result is False
+    def test_map_tool_risk_high_passthrough(self) -> None:
+        """tool risk high は high のまま扱う."""
+        assert map_tool_risk_to_hitl("high") == "high"
 
-    def test_true_when_five_unknowns(self) -> None:
-        """unknowns が 5 件以上で True."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": ["a", "b", "c", "d", "e"],
-            }
-        )
-        assert result is True
+    def test_manual_all_always_requires_approval(self) -> None:
+        """human_policy=manual_all は常に承認必須."""
+        options = ExecutionOptions(human_policy="manual_all")
+        assert should_require_human_approval(tool_risk="low", execution_options=options) is True
 
-    def test_true_when_many_unknowns(self) -> None:
-        """unknowns が多数でも True."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": [f"field_{i}" for i in range(10)],
-            }
-        )
-        assert result is True
+    def test_risk_based_high_risk_requires_approval(self) -> None:
+        """risk_based で high/critical は承認必須."""
+        options = ExecutionOptions(human_policy="risk_based", risk_profile="normal")
+        assert should_require_human_approval(tool_risk="high", execution_options=options) is True
 
-    def test_true_when_database_access(self) -> None:
-        """has_database_access が True なら True."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": [],
-                "has_database_access": True,
-            }
-        )
-        assert result is True
+    def test_risk_based_low_risk_skips_approval(self) -> None:
+        """risk_based + low risk + normal profile では承認不要."""
+        options = ExecutionOptions(human_policy="risk_based", risk_profile="normal")
+        assert should_require_human_approval(tool_risk="low", execution_options=options) is False
 
-    def test_true_when_external_calls(self) -> None:
-        """has_external_calls が True なら True."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": [],
-                "has_external_calls": True,
-            }
-        )
-        assert result is True
-
-    def test_true_when_combined(self) -> None:
-        """複数条件が重なっても True（最初にマッチした条件で判定）."""
-        result = MigrationEngine._should_hitl(
-            {
-                "unknowns": ["a"],
-                "has_database_access": True,
-                "has_external_calls": True,
-            }
-        )
-        assert result is True
-
-    def test_false_with_empty_dict(self) -> None:
-        """空 dict は False."""
-        result = MigrationEngine._should_hitl({})
-        assert result is False
+    def test_high_profile_forces_approval(self) -> None:
+        """実行リスクプロファイル高設定は tool risk が低くても承認必須."""
+        options = ExecutionOptions(human_policy="risk_based", risk_profile="high")
+        assert should_require_human_approval(tool_risk="low", execution_options=options) is True
 
 
 # ============================================================
@@ -501,16 +459,15 @@ class TestRouterEndpoints:
         assert download.status_code == 409
 
     def test_hitl_unknown_task(self, test_client: TestClient) -> None:
-        """存在しない task_id への HITL は 404 または 501."""
+        """存在しない task_id への HITL は 404."""
         response = test_client.post(
             "/api/migrate/nonexistent-id/hitl",
             json={"request_id": "req-1", "approved": True},
         )
-        # cma_cli バックエンドでは 501、legacy では 404
-        assert response.status_code in (404, 501)
+        assert response.status_code == 404
 
     def test_hitl_no_pending_hitl(self, test_client: TestClient) -> None:
-        """HITL 要求がないタスクへの HITL 応答は 409 または 501."""
+        """HITL 要求がないタスクへの HITL 応答は 409."""
         cobol_content = self.SAMPLE_CBL.read_bytes()
         upload = test_client.post(
             "/api/migrate/upload",
@@ -522,8 +479,7 @@ class TestRouterEndpoints:
             f"/api/migrate/{task_id}/hitl",
             json={"request_id": "req-001", "approved": True},
         )
-        # cma_cli バックエンドでは 501（未サポート）
-        assert response.status_code in (409, 501)
+        assert response.status_code == 409
 
 
 # ============================================================

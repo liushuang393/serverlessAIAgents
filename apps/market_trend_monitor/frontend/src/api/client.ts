@@ -6,9 +6,10 @@
  *   - Input: API リクエストパラメータ
  *   - Output: 型付きレスポンス
  * 注意: エラーハンドリングを適切に行うこと
+ *
+ * 呼び出しパターン: fetch ベース（axios 不使用、規約準拠）
  */
 
-import axios, { AxiosInstance, AxiosError } from "axios";
 import type {
   CollectJob,
   CollectRequest,
@@ -16,6 +17,8 @@ import type {
   TrendsResponse,
   ReportsResponse,
 } from "@/types";
+
+declare const __MARKET_TREND_MONITOR_API_BASE_URL__: string | undefined;
 
 function normalizeBaseURL(baseURL: string): string {
   return baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
@@ -105,64 +108,81 @@ export class ApiError extends Error {
 }
 
 /**
- * API クライアントクラス.
+ * レスポンスを処理し、エラー時は ApiError をスローする.
+ */
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let details: unknown;
+    try {
+      details = await response.json();
+    } catch {
+      details = undefined;
+    }
+    const message = extractErrorMessage(details) ?? response.statusText;
+    throw new ApiError(message, response.status, details);
+  }
+  return (await response.json()) as T;
+}
+
+/**
+ * クエリパラメータをURLに付与する.
+ */
+function buildURL(
+  base: string,
+  path: string,
+  params?: Record<string, unknown>,
+): string {
+  const url = `${base}${path}`;
+  if (!params) return url;
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      searchParams.set(key, String(value));
+    }
+  }
+  const qs = searchParams.toString();
+  return qs ? `${url}?${qs}` : url;
+}
+
+/**
+ * API クライアントクラス（fetch ベース）.
  */
 class ApiClient {
-  private client: AxiosInstance;
+  private baseURL: string;
 
   constructor(baseURL: string = resolveApiBaseURL()) {
-    this.client = axios.create({
-      baseURL: normalizeBaseURL(baseURL),
-      timeout: 30000,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    // レスポンスインターセプター
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        const details = error.response?.data;
-        const message = extractErrorMessage(details) ?? error.message;
-        throw new ApiError(message, error.response?.status, details);
-      },
-    );
+    this.baseURL = normalizeBaseURL(baseURL);
   }
 
   /**
    * データ収集を実行.
    */
   async collect(request: CollectRequest): Promise<CollectResponse> {
-    const response = await this.client.post<CollectResponse>(
-      "/collect",
-      request,
-      {
-        // 収集処理は外部API呼び出しを含むため、通常APIより長いタイムアウトを設定
-        timeout: 120000,
-      },
-    );
-    return response.data;
+    const response = await fetch(`${this.baseURL}/collect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: AbortSignal.timeout(120000),
+    });
+    return handleResponse<CollectResponse>(response);
   }
 
   /**
    * トレンド一覧を取得.
    */
   async getTrends(limit?: number): Promise<TrendsResponse> {
-    const response = await this.client.get<TrendsResponse>("/trends", {
-      params: { limit },
-    });
-    return response.data;
+    const url = buildURL(this.baseURL, "/trends", limit !== undefined ? { limit } : undefined);
+    const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+    return handleResponse<TrendsResponse>(response);
   }
 
   /**
    * レポート一覧を取得.
    */
   async getReports(limit?: number): Promise<ReportsResponse> {
-    const response = await this.client.get<ReportsResponse>("/reports", {
-      params: { limit },
-    });
-    return response.data;
+    const url = buildURL(this.baseURL, "/reports", limit !== undefined ? { limit } : undefined);
+    const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+    return handleResponse<ReportsResponse>(response);
   }
 
   /**
@@ -172,21 +192,20 @@ class ApiClient {
     reportId: string,
     format: "pdf",
   ): Promise<{ blob: Blob; filename: string }> {
-    const response = await this.client.get<Blob>(
-      `/reports/${reportId}/export/${format}`,
-      {
-        responseType: "blob",
-      },
+    const response = await fetch(
+      `${this.baseURL}/reports/${reportId}/export/${format}`,
+      { signal: AbortSignal.timeout(30000) },
     );
+    if (!response.ok) {
+      throw new ApiError(response.statusText, response.status);
+    }
 
-    const disposition = response.headers["content-disposition"] as
-      | string
-      | undefined;
+    const disposition = response.headers.get("content-disposition");
     const matched = disposition?.match(/filename="?([^";]+)"?/i);
     const filename = matched?.[1] ?? `market_trend_report_${reportId}.pdf`;
 
     return {
-      blob: response.data,
+      blob: await response.blob(),
       filename,
     };
   }
@@ -195,8 +214,10 @@ class ApiClient {
    * 指定ジョブIDの状態を取得.
    */
   async getJob(jobId: string): Promise<CollectJob> {
-    const response = await this.client.get<CollectJob>(`/jobs/${jobId}`);
-    return response.data;
+    const response = await fetch(`${this.baseURL}/jobs/${jobId}`, {
+      signal: AbortSignal.timeout(30000),
+    });
+    return handleResponse<CollectJob>(response);
   }
 
   /**
@@ -204,8 +225,11 @@ class ApiClient {
    */
   async getLatestJob(): Promise<CollectJob | null> {
     try {
-      const response = await this.client.get<CollectJob>("/jobs/latest");
-      return response.data;
+      const response = await fetch(`${this.baseURL}/jobs/latest`, {
+        signal: AbortSignal.timeout(30000),
+      });
+      if (response.status === 404) return null;
+      return handleResponse<CollectJob>(response);
     } catch (error) {
       if (error instanceof ApiError && error.statusCode === 404) {
         return null;
@@ -218,8 +242,10 @@ class ApiClient {
    * ヘルスチェック.
    */
   async healthCheck(): Promise<{ status: string }> {
-    const response = await this.client.get<{ status: string }>("/health");
-    return response.data;
+    const response = await fetch(`${this.baseURL}/health`, {
+      signal: AbortSignal.timeout(30000),
+    });
+    return handleResponse<{ status: string }>(response);
   }
 
   /**
@@ -231,8 +257,10 @@ class ApiClient {
     path: string,
     config?: { params?: Record<string, unknown> },
   ): Promise<{ data: T }> {
-    const response = await this.client.get<T>(path, config);
-    return { data: response.data };
+    const url = buildURL(this.baseURL, path, config?.params);
+    const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
+    const data = await handleResponse<T>(response);
+    return { data };
   }
 
   /**
@@ -245,8 +273,15 @@ class ApiClient {
     data?: unknown,
     config?: { params?: Record<string, unknown>; timeout?: number },
   ): Promise<{ data: T }> {
-    const response = await this.client.post<T>(path, data, config);
-    return { data: response.data };
+    const url = buildURL(this.baseURL, path, config?.params);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      signal: AbortSignal.timeout(config?.timeout ?? 30000),
+    });
+    const result = await handleResponse<T>(response);
+    return { data: result };
   }
 
   /**
@@ -259,8 +294,15 @@ class ApiClient {
     data?: unknown,
     config?: { params?: Record<string, unknown> },
   ): Promise<{ data: T }> {
-    const response = await this.client.put<T>(path, data, config);
-    return { data: response.data };
+    const url = buildURL(this.baseURL, path, config?.params);
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+      signal: AbortSignal.timeout(30000),
+    });
+    const result = await handleResponse<T>(response);
+    return { data: result };
   }
 }
 

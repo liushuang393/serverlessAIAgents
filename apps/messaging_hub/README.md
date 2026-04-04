@@ -46,7 +46,7 @@ Messaging Hub は、複数のメッセージプラットフォームを単一の
 | **B-Coordinator** | メッセージ受信 → 意図分類 → 専門 Agent 実行 | Gateway → PersonalAssistantCoordinator → IntentRouter → Specialist Agent |
 | **A（単発処理）** | Admin API（統計、セッション管理、エクスポート） | Router → Service |
 
-- Engine: 現状は独自 Coordinator パターン（※ kernel CoordinatorEngine 化を予定）
+- Engine: `ResilientAgent` 継承の `PersonalAssistantCoordinator`（A2AHub 登録済み）
 - Specialist Agent: FileOrganizer, Meeting, BusinessAdvisor, FlightWatch
 - Admin UI: fetch + WebSocket（リアルタイム通知）+ API key 認証
 - ゲートウェイ: Telegram / Slack / Discord / Teams / WhatsApp / Signal

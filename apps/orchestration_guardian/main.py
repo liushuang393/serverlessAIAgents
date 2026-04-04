@@ -14,8 +14,9 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
@@ -25,9 +26,14 @@ from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGu
 from harness.replay.service import ReplayRecorder
 from harness.risk.service import RiskAssessor, RiskFactor, RiskLevel
 from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension
+from infrastructure.observability.startup import log_startup_info
 from kernel import __version__ as kernel_version
 from kernel.agents.resilient_agent import ResilientAgent
+from kernel.protocols.a2a_hub import get_hub
 from shared.config.manifest import load_app_manifest_dict
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 _logger = logging.getLogger(__name__)
@@ -98,10 +104,37 @@ class VerifyResponse(BaseModel):
     harness_score: dict[str, Any]
 
 
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """起動時に統一 startup summary を出力する."""
+    app_config = _load_app_config()
+    log_startup_info(
+        app_name=str(app_config.get("display_name") or "Orchestration Guardian"),
+        app_config_path=_APP_CONFIG_PATH,
+        runtime_overrides={
+            "db": {
+                "backend": "",
+                "url": "",
+            },
+            "vectordb": {
+                "backend": "",
+                "path": "",
+                "collection": "",
+                "index": "",
+            },
+        },
+        extra_info={
+            "version": str(app_config.get("version") or "1.0.0"),
+        },
+    )
+    yield
+
+
 app = FastAPI(
     title="Orchestration Guardian",
     description="Orchestration and protocol readiness checker",
     version="1.0.0",
+    lifespan=_lifespan,
 )
 
 
@@ -287,14 +320,10 @@ def _build_verify_result(app_name: str, checks: dict[str, bool]) -> dict[str, An
 
 @app.post("/api/verify")
 async def verify(payload: VerifyRequest) -> dict[str, Any]:
-    """harness Scoring/Risk/Replay を使ってオーケストレーション準備状況を評価（手動トリガー）."""
-    checks = {
-        "streaming": payload.has_streaming,
-        "a2a": payload.has_a2a,
-        "rag_contract": payload.has_rag_contract,
-        "auth_baseline": payload.has_auth_baseline,
-    }
-    return _build_verify_result(payload.app_name, checks)
+    """harness Scoring/Risk/Replay を使ってオーケストレーション準備状況を評価（A2AHub 経由）."""
+    agent = _get_guardian_agent()
+    hub = get_hub()
+    return await hub.call(agent.name, payload.model_dump())
 
 
 def main() -> None:
@@ -349,6 +378,23 @@ class OrchestrationGuardianAgent(ResilientAgent[VerifyRequest, VerifyResponse]):
     def _parse_input(self, input_data: dict[str, Any]) -> VerifyRequest:
         """入力辞書を VerifyRequest に変換."""
         return VerifyRequest(**input_data)
+
+
+# ---------------------------------------------------------------------------
+# Agent 遅延初期化 + A2AHub 登録（パターン A 準拠）
+# ---------------------------------------------------------------------------
+_guardian_agent: OrchestrationGuardianAgent | None = None
+
+
+def _get_guardian_agent() -> OrchestrationGuardianAgent:
+    """OrchestrationGuardianAgent を遅延初期化し A2AHub に登録する."""
+    global _guardian_agent
+    if _guardian_agent is None:
+        _guardian_agent = OrchestrationGuardianAgent()
+        hub = get_hub()
+        if hub.discover(_guardian_agent.name) is None:
+            hub.register(_guardian_agent)
+    return _guardian_agent
 
 
 if __name__ == "__main__":

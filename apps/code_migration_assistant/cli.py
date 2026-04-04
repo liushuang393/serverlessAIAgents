@@ -829,7 +829,7 @@ async def _run_migrate_command(args: argparse.Namespace) -> int:
         if event_type in {"stage_start", "stage_complete"}:
             print(f"[{event_type}] {stage} {message}")
         elif event_type == "complete":
-            print(f"[complete] decision={event.get('decision')} output={event.get('output_dir')}")
+            print(f"✅ [complete] decision={event.get('decision')} output={event.get('output_dir')}")
         elif event_type == "error":
             print(f"[error] {event.get('message')}", file=sys.stderr)
 
@@ -891,7 +891,7 @@ def cmd_migrate(args: argparse.Namespace) -> int:
         if event_type in {"stage_start", "stage_complete"}:
             print(f"[{event_type}] {stage} {message}")
         elif event_type == "complete":
-            print(f"[complete] decision={event.get('decision')} output={event.get('output_dir')}")
+            print(f"✅ [complete] decision={event.get('decision')} output={event.get('output_dir')}")
         elif event_type == "error":
             print(f"[error] {event.get('message')}", file=sys.stderr)
 
@@ -1097,7 +1097,7 @@ def cmd_retry(args: argparse.Namespace) -> int:
         if event_type in {"stage_start", "stage_complete"}:
             print(f"[{event_type}] {stage} {message}")
         elif event_type == "complete":
-            print(f"[complete] decision={event.get('decision')} output={event.get('output_dir')}")
+            print(f"✅ [complete] decision={event.get('decision')} output={event.get('output_dir')}")
         elif event_type == "error":
             print(f"[error] {event.get('message')}", file=sys.stderr)
 
