@@ -4,7 +4,10 @@ from harness.replay.service import (
     ReplayEvent,
     ReplayMode,
     ReplayRecorder,
+    ReplayResult,
+    ReplayRunner,
     ReplaySession,
+    StepDiscrepancy,
 )
 
 
@@ -12,5 +15,8 @@ __all__ = [
     "ReplayEvent",
     "ReplayMode",
     "ReplayRecorder",
+    "ReplayResult",
+    "ReplayRunner",
     "ReplaySession",
+    "StepDiscrepancy",
 ]

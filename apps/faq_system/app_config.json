@@ -134,6 +134,16 @@
       "health": "http://localhost:8005/api/health",
       "database": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system"
     },
+    "databases": {
+      "app_db": {
+        "kind": "sqlite",
+        "url": "sqlite+aiosqlite:///./apps/faq_system/data/faq_system.db"
+      },
+      "sql_source_db": {
+        "kind": "postgresql",
+        "url": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system"
+      }
+    },
     "database": {
       "kind": "postgresql",
       "url": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system",

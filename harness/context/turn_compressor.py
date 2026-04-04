@@ -26,6 +26,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Protocol
 
+from harness.budget.service import SimpleTokenCounter, TokenCounter
 from harness.context.key_notes import KeyNotesStore, NoteImportance
 
 
@@ -139,6 +140,7 @@ class TurnBasedCompressor:
         config: TurnConfig | None = None,
         key_notes_store: KeyNotesStore | None = None,
         llm_summarizer: LLMSummarizer | None = None,
+        token_counter: TokenCounter | None = None,
     ) -> None:
         """初期化.
 
@@ -146,15 +148,28 @@ class TurnBasedCompressor:
             config: 圧縮設定
             key_notes_store: KeyNotesストア
             llm_summarizer: LLM要約器
+            token_counter: Token計数器（省略時は SimpleTokenCounter にフォールバック）
         """
         self._config = config or TurnConfig()
         self._key_notes = key_notes_store or KeyNotesStore()
         self._summarizer = llm_summarizer
+        self._token_counter: TokenCounter = token_counter or SimpleTokenCounter()
         self._messages: list[Message] = []
         self._turn_count = 0
         self._last_compression_turn = 0
         self._summaries: list[str] = []  # 過去の要約を保持
         self._logger = logging.getLogger(__name__)
+
+    def _count_tokens(self, text: str) -> int:
+        """テキストのToken数を計算.
+
+        Args:
+            text: 対象テキスト
+
+        Returns:
+            Token数
+        """
+        return self._token_counter.count(text)
 
     def add_message(
         self,
@@ -202,8 +217,8 @@ class TurnBasedCompressor:
         if turns_since_compression >= self._config.turn_threshold:
             return True
 
-        # Token数チェック（概算）
-        total_tokens = sum(len(m.content) // 4 for m in self._messages)
+        # Token数チェック
+        total_tokens = sum(self._count_tokens(m.content) for m in self._messages)
         return total_tokens >= self._config.token_threshold
 
     async def compress(self) -> CompressionResult:
@@ -259,8 +274,8 @@ class TurnBasedCompressor:
         compressed_messages.extend([m for m in recent_messages if m.role != MessageRole.SYSTEM])
 
         # Token削減率計算
-        original_tokens = sum(len(m.content) // 4 for m in self._messages)
-        compressed_tokens = sum(len(m.content) // 4 for m in compressed_messages)
+        original_tokens = sum(self._count_tokens(m.content) for m in self._messages)
+        compressed_tokens = sum(self._count_tokens(m.content) for m in compressed_messages)
         reduction = 1.0 - (compressed_tokens / original_tokens) if original_tokens > 0 else 0.0
 
         # 状態更新
@@ -436,5 +451,5 @@ class TurnBasedCompressor:
             "last_compression_turn": self._last_compression_turn,
             "summary_count": len(self._summaries),
             "key_notes_count": len(self._key_notes.get_all_notes()),
-            "estimated_tokens": sum(len(m.content) // 4 for m in self._messages),
+            "estimated_tokens": sum(self._count_tokens(m.content) for m in self._messages),
         }

@@ -15,9 +15,13 @@ BizCore AI is the **full-stack enterprise development foundation** that realizes
 
 ---
 
-## Seven Core Layers Plus Apps
+## Architecture
 
-BizCore AI is organized into seven core layers, with `apps/` as the outer product-assembly layer.
+BizCore AI should be understood from distinct viewpoints rather than compressed into one mixed diagram.
+
+### A. Static Architecture - Eight Layers (Seven Core Layers Plus Apps)
+
+BizCore AI is organized into eight layers in total: seven core layers plus `apps/` as the outer product-assembly layer.
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -52,6 +56,158 @@ BizCore AI is organized into seven core layers, with `apps/` as the outer produc
 | **BizCore Studios**       | `apps/*/`         | Product layer for Migration / FAQ / Assistant / custom apps                        |
 
 > **Design Principle**: `contracts / infrastructure / shared / kernel / harness / domain` must not depend on `apps/`. `domain` must not depend on `control_plane`. `control_plane` can orchestrate lower layers but is not their source of truth.
+
+### B-1. Runtime Flow
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '18px'}, 'flowchart': {'useMaxWidth': false, 'nodeSpacing': 40, 'rankSpacing': 70, 'diagramPadding': 24}} }%%
+flowchart TB
+    subgraph L1A["Layer 1 Experience / Entry"]
+        direction TB
+        entry["CLI / REST / MCP Entry<br/>issue request_id / trace_id"]
+    end
+
+    subgraph L2["Layer 2 Contracts"]
+        direction TB
+        contract_in["Request DTO / ContextPack<br/>contracts.context.ContextPack"]
+        contract_flow["FlowDefinition / FlowExecutionState<br/>contracts.flow.*"]
+        contract_policy["PolicyDecision / ApprovalRequest<br/>contracts.policy.*"]
+        contract_trace["TraceRecord<br/>contracts.trace.TraceRecord"]
+    end
+
+    subgraph L4A["Layer 4 Harness - Pre / In-flight Governance"]
+        direction TB
+        validate_in["Validation-In<br/>SchemaValidator / ContractValidator"]
+        policy["Policy / Security<br/>PolicyEngine"]
+        risk["Risk<br/>RiskAssessor"]
+        budget["Budget<br/>TokenBudgetManager"]
+        context["Context Engineering<br/>ContextEngineer / RetrievalGate / KeyNotes"]
+        approval_gate["Approval<br/>ApprovalManager / Checkpointer"]
+    end
+
+    subgraph L3["Layer 3 Kernel"]
+        direction TB
+        builder["FlowBuilder / create_flow<br/>gate / then / parallel / review"]
+        executor["FlowExecutor<br/>step transitions / revise / early_return"]
+        bus["LocalAgentBus<br/>canonical internal invocation"]
+        agent["ResilientAgent.run()<br/>retry / timeout / typed I/O"]
+        tools["KernelToolExecutor / ToolExecutor<br/>side-effect execution surface"]
+        memory["MemoryManager<br/>sensory / short / long-term"]
+    end
+
+    subgraph L5["Layer 5 Integration"]
+        direction TB
+        integration["shared.integrations / protocol adapters<br/>MCP / A2A / SSE / WS"]
+    end
+
+    subgraph L6["Layer 6 Infrastructure / Gateway"]
+        direction TB
+        gateway["LLM Gateway / Provider routing"]
+        storage["Vector / DB / Cache / Sandbox"]
+        trace_export["Trace exporter / observability"]
+    end
+
+    subgraph L4B["Layer 4 Harness - Post Governance"]
+        direction TB
+        validate_out["Validation-Out<br/>ContractValidator / evidence check"]
+        score["Score<br/>ExecutionScorer"]
+        replay["Replay<br/>ReplayRecorder"]
+        trace_audit["Trace / Audit<br/>TraceService / EnterpriseAuditLogger"]
+    end
+
+    subgraph L1B["Layer 1 Experience / Return"]
+        direction TB
+        return["SSE / WS / API Response<br/>return result / event / artifact"]
+    end
+
+    entry --> contract_in --> validate_in --> policy --> risk --> budget --> context --> contract_flow --> builder --> executor
+    executor --> bus --> agent
+    agent --> memory
+    agent --> tools --> integration --> gateway
+    gateway --> storage
+    executor --> validate_out --> score --> replay --> trace_audit --> contract_trace --> trace_export --> return
+    risk -->|approval_required| contract_policy --> approval_gate
+    approval_gate -->|approved / resumed| executor
+    tools -->|high-risk side effect| approval_gate
+    agent --> contract_trace
+    integration --> contract_trace
+
+    classDef harness fill:#FFF2CC,stroke:#C69200,stroke-width:2px,color:#222;
+    class validate_in,policy,risk,budget,context,approval_gate,validate_out,score,replay,trace_audit harness;
+```
+
+Harness is not only a pre/post wrapper. It also injects `ContextEngineer`, `TokenBudgetManager`, and `ApprovalManager` into the live execution path so long multi-step runs stay bounded, typed, and evidence-backed.
+
+If this diagram is used to harden framework contracts, the minimum fixed boundaries are:
+
+- Entry → Contracts: require `ContextPack`, `trace_id`, and normalized request DTOs across UI / API / CLI
+- Contracts → Kernel: fix `FlowDefinition`, `FlowExecutionState`, and per-step input/output schemas so `FlowExecutor` remains traceable
+- Kernel → Harness: standardize `PolicyDecision`, `ApprovalRequest`, and `ExecutionEvent` so approval, reject, resume, and audit all follow the same path
+- Kernel / Integration → Trace: emit `TraceRecord` plus artifact IDs from every step to support Replay, Scoring, and Audit from shared evidence
+
+### B-2. Context, Memory, Safety, and Self-Improvement Loop
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '18px'}, 'flowchart': {'useMaxWidth': false, 'nodeSpacing': 40, 'rankSpacing': 70, 'diagramPadding': 24}} }%%
+flowchart LR
+    task["New task / next-step input"]
+    ctx["ContextEngineer<br/>budgeting / compression / KeyNotes injection"]
+    retrieve["RetrievalGate<br/>decide whether retrieval is needed"]
+    mem_recall["MemoryManager.recall()<br/>reuse long / short-term memory"]
+    execute["FlowExecutor / ResilientAgent<br/>multi-step execution"]
+    safety["Policy / Risk / Validation<br/>safety, contract, drift checks"]
+    score["ExecutionScorer<br/>quality and precision evaluation"]
+    replay["ReplayRecorder / TraceService<br/>persist step evidence"]
+    evolve["EvolutionEngine<br/>extract strategy / register candidate / update score"]
+    next_ctx["Next-run improvement<br/>compression rules / strategy hints / memory importance"]
+
+    task --> ctx --> retrieve
+    retrieve -->|yes| mem_recall --> execute
+    retrieve -->|no| execute
+    execute --> safety --> score --> replay --> evolve --> next_ctx --> ctx
+```
+
+The goal of this loop is not just successful execution. It is to preserve precision across many steps by retaining evidence, compressing context intelligently, and feeding successful strategies back into the next run.
+
+### C. Cross-Cutting Governance Subsystems (Harness)
+
+| Subsystem | What It Is Used For | Injection Point (Layer / Stage) | Contribution to Precision and Autonomy | Main Components |
+| --- | --- | --- | --- | --- |
+| Policy / Security | Decide whether an action is allowed and whether subject-resource-action matches policy | Layer 2→4, immediately after entry and before tool execution | Prevents unsafe or unauthorized forward progress | PolicyEngine, AuthContext, PolicyDecision |
+| Risk | Detect high-risk, high-cost, or high-impact branches | Layer 4, after planning / before execution / before delivery | Makes approval requirements explicit and blocks risky drift | RiskAssessor, RiskAssessment, RiskFactor |
+| Approval | Human approval, waiting, resume, timeout handling | Layer 4, stop-point before `interrupt()` | Prevents duplicate execution around non-idempotent operations | ApprovalManager, ApprovalRequest, Checkpointer |
+| Validation | Detect schema violations, missing fields, and output shape drift | Layer 2↔4, at entry, per-step completion, and final output | Keeps multi-step pipelines from silently degrading structure | SchemaValidator, ContractValidator |
+| Budget | Enforce token, cost, and context-window ceilings | Layer 4, before prompt build, retrieval, and step transitions | Preserves focus under long execution and prevents context saturation | TokenBudgetManager |
+| Context Engineering | Compress history, extract key notes, decide retrieval necessity, rebuild context | Layer 4, on every turn and before each step | Maintains relevance instead of letting long context reduce accuracy | ContextEngineer, RetrievalGate, KeyNotesStore |
+| Replay | Reproduce execution for debugging and framework tuning | Layer 4, on each step completion and failure event | Makes precision loss reproducible instead of anecdotal | ReplayRecorder, ReplayRunner |
+| Score | Quantify execution quality | Layer 4, after steps and final result | Evaluates completeness, safety, and cost alongside accuracy | ExecutionScorer, DimensionScore |
+| Trace / Audit | Persist spans, artifacts, and decision evidence | Layer 2 / 4 / 6, across all steps | Creates a shared evidence plane for audit and self-improvement | TraceRecord, TraceService, EnterpriseAuditLogger |
+
+Harness should be treated as a control layer inserted along Kernel step execution, not as a passive observer around the edges.
+
+### D. Approval Flow (HITL / Non-Idempotent Action Guard)
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '18px'}, 'flowchart': {'useMaxWidth': false, 'nodeSpacing': 36, 'rankSpacing': 64, 'diagramPadding': 24}} }%%
+flowchart TD
+    step["FlowExecutor / Agent step<br/>right before external write or tool side effect"]
+    policy["PolicyEngine / RiskAssessor<br/>decide approval_required"]
+    req["Create ApprovalRequest<br/>contracts.policy.ApprovalRequest"]
+    event["Emit ApprovalRequiredEvent<br/>contracts.harness.execution_events"]
+    save["Checkpointer.save()<br/>Memory / Redis / Postgres"]
+    wait["ApprovalManager.request_approval()<br/>notify / wait / timeout / escalation"]
+    human["Human reviewer<br/>approve / reject / modify"]
+    resume["Resume from checkpoint when approved"]
+    reject["Stop on reject / expire<br/>record trace / audit"]
+
+    step --> policy
+    policy -->|allow| resume
+    policy -->|approval_required| req --> event --> save --> wait --> human
+    human -->|approve| resume
+    human -->|reject / expire| reject
+```
+
+Do not perform non-idempotent actions before `interrupt()`. Always create an `ApprovalRequest`, persist the stop-point through `Checkpointer`, and only then wait for approval so resume does not duplicate side effects.
 
 ---
 
@@ -90,6 +246,7 @@ BizCore AI is organized into seven core layers, with `apps/` as the outer produc
 BizCore AI forbids direct Provider SDK calls. All LLM requests go through `LLM Orchestrator → LLM Gateway`.
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '18px'}, 'flowchart': {'useMaxWidth': false, 'nodeSpacing': 40, 'rankSpacing': 70, 'diagramPadding': 24}} }%%
 flowchart TB
 
 subgraph APP["BizCore Studios"]
@@ -124,11 +281,20 @@ SHARED --> INFRA
 INFRA --> PROVIDER
 ```
 
+### Runtime Defaults and Operational Notes
+
+- If an app does not define `contracts.llm`, the default text-generation path is not a single hard-coded model from settings. It goes through the Gateway `reasoning` role. The default alias is `reasoning_claude` (`anthropic / claude-sonnet-4-6`) with fallback order `coding_openai` → `cheap_gemini` → `local_vllm_default`.
+- If an app defines `contracts.llm.defaults.text` or `contracts.llm.defaults.embedding`, those contract values are canonical. Apps such as FAQ should pin `platform_text_default` and `platform_embedding_default` explicitly.
+- If an app does not pin an embedding model, the fallback chain is `OLLAMA_EMBEDDING_MODEL` → `OPENAI_EMBEDDING_MODEL` → local `all-MiniLM-L6-v2` → `mock`. That means the actual default is environment-dependent, so production apps should fix it through `contracts.llm`.
+- If app config, runtime config, and env all omit the database, the default DB is `MockDBProvider`. If the vector store is also unspecified, the default is `MockVectorDBProvider(collection=default)`.
+- The FAQ app now splits databases by responsibility: `FAQ_DATABASE_URL` / `FAQ_APP_DATABASE_URL` for the auth/session `app_db`, `FAQ_SQL_SOURCE_DATABASE_URL` for the Text2SQL `sql_source_db`, and `contracts.rag.data_sources[]` for RAG ingestion sources.
+- `contracts.rag` is the canonical RAG source of truth. `services.rag` and `services.vector_db` may remain for transition compatibility, but runtime resolution now prefers `contracts.rag`.
+
 ---
 
 ## Repository Structure
 
-### Seven Core Layers
+### Seven Core Layers + Apps Outer Layer
 
 - `contracts/`: Protocol and interface definitions (Versioned)
 - `infrastructure/`: Low-level foundation (LLM Provider / Storage / Cache / Queue)
@@ -140,7 +306,7 @@ INFRA --> PROVIDER
 
 ### Product Layer
 
-- `apps/`: BizCore Studios and custom apps, assembled on top of the seven core layers
+- `apps/`: BizCore Studios and custom apps, serving as the eighth and outermost product layer
 
 ### Transition Notes
 
@@ -356,7 +522,7 @@ A skill pack based on Sahil Lavingia's (Gumroad founder) book *The Minimalist En
 | Concept / Reference | Summary |
 | --- | --- |
 | [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) | Inspired BizCore's execution/training decoupling model and distributed trace design |
-| **Clean Architecture** — Robert C. Martin | Layer separation and dependency-direction principles behind the 7-layer architecture |
+| **Clean Architecture** — Robert C. Martin | Layer separation and dependency-direction principles behind BizCore's layered architecture |
 | **ReAct Pattern** — Yao et al., 2022 | Agent loop design combining Reasoning + Acting, foundational to the Kernel runtime |
 | **RAG (Retrieval-Augmented Generation)** — Lewis et al., 2020 | Knowledge integration via retrieval augmentation; theoretical basis for RAGEngine / RetrievalGate |
 | **HITL (Human-in-the-Loop)** | Design philosophy for embedding human oversight into AI governance (Harness / ApprovalManager) |

@@ -37,6 +37,7 @@ Agent 間通信:
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import importlib
 import logging
 from abc import ABC, abstractmethod
@@ -59,6 +60,11 @@ if TYPE_CHECKING:
 # 型変数（Pydantic モデルを制約）
 InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
+
+# A2A コンテキスト用 ContextVar（並行Flow安全性のため、インスタンス変数ではなくスレッド/タスクローカル）
+_a2a_context_var: contextvars.ContextVar[Any] = contextvars.ContextVar(
+    "_a2a_context_var", default=None
+)
 
 __all__ = [
     "BaseDecisionAgent",
@@ -156,8 +162,8 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         self._retry_prompt_hint: str | None = None
         self._retry_temperature_override: float | None = None
 
-        # A2A コンテキスト（オプション — Hub/Executor が注入）
-        self._a2a_context: Any | None = None
+        # A2A コンテキストは ContextVar で管理（並行Flow安全性のため）
+        # _a2a_context_var を参照
 
         # コード実行機能の設定
         if enable_code_execution is not None:
@@ -173,22 +179,26 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         """
         self._initialized = True
 
-        # LLM クライアントを自動取得（松耦合）
+        # LLM クライアントを Gateway 経由で自動取得（infrastructure 直叩き禁止）
         if self._llm is None:
             try:
-                from infrastructure.llm.providers import get_llm
+                from shared.gateway.llm.service import get_llm_client
 
-                self._llm = get_llm(temperature=self.temperature)
-                self._logger.debug(f"{self.name}: LLM auto-injected")
+                self._llm = get_llm_client(temperature=self.temperature)
+                self._logger.debug(f"{self.name}: LLM auto-injected via Gateway")
             except Exception as e:
                 self._logger.warning(f"{self.name}: Failed to auto-inject LLM: {e}")
 
-        # 内蔵ツールを自動登録
+        # 内蔵ツールを自動登録（infrastructure は shared 経由でアクセス）
         if self._enable_code_execution:
             try:
-                from infrastructure.sandbox.tool_provider import ToolProvider
-
-                tool_provider_cls = ToolProvider
+                # shared 層に ToolProvider ラッパーがない場合は infrastructure 直接（暫定）
+                try:
+                    from shared.gateway.tool_provider import get_tool_provider
+                    tool_provider_cls = get_tool_provider()
+                except ImportError:
+                    from infrastructure.sandbox.tool_provider import ToolProvider
+                    tool_provider_cls = ToolProvider
                 self._tool_provider = tool_provider_cls.discover()
                 self._logger.debug(f"{self.name}: 内蔵ツール登録完了")
             except Exception as e:
@@ -558,11 +568,11 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         Returns:
             出力データ
         """
-        self._a2a_context = context
+        token = _a2a_context_var.set(context)
         try:
             return await self.run(input_data)
         finally:
-            self._a2a_context = None
+            _a2a_context_var.reset(token)
 
     async def emit_progress(self, text: str) -> None:
         """process() 内から呼べる進捗通知.
@@ -572,7 +582,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         Args:
             text: 進捗メッセージ
         """
-        ctx = self._a2a_context
+        ctx = _a2a_context_var.get()
         if ctx is not None and hasattr(ctx, "emit_status"):
             from kernel.protocols.a2a.types import A2ATaskState
 
@@ -587,7 +597,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
         Args:
             data: 構造化データ
         """
-        ctx = self._a2a_context
+        ctx = _a2a_context_var.get()
         if ctx is not None and hasattr(ctx, "emit_data"):
             await ctx.emit_data(data)
 
@@ -597,7 +607,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
 
         A2A コンテキストが存在しない場合は常に False。
         """
-        ctx = self._a2a_context
+        ctx = _a2a_context_var.get()
         if ctx is not None and hasattr(ctx, "is_cancelled"):
             is_cancelled = ctx.is_cancelled
             return is_cancelled if isinstance(is_cancelled, bool) else False
@@ -609,7 +619,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
 
         A2A コンテキストが存在しない場合は None。
         """
-        ctx = self._a2a_context
+        ctx = _a2a_context_var.get()
         if ctx is not None and hasattr(ctx, "task_id"):
             task_id = ctx.task_id
             return task_id if isinstance(task_id, str) else None

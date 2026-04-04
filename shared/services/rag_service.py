@@ -349,7 +349,7 @@ class RAGService(ServiceBase[dict[str, Any]]):
 
         yield self._emit_progress(execution_id, 80, "保存中...", phase="store")
 
-        await self._vectordb.add(
+        await self._vectordb.add_documents(
             documents=contents,
             ids=ids,
             embeddings=embeddings,
@@ -396,7 +396,7 @@ class RAGService(ServiceBase[dict[str, Any]]):
             ids = [chunk.id]
             embeddings = await self._embedding.embed_batch(contents)
 
-            await self._vectordb.add(
+            await self._vectordb.add_documents(
                 documents=contents,
                 ids=ids,
                 embeddings=embeddings,
@@ -433,16 +433,20 @@ class RAGService(ServiceBase[dict[str, Any]]):
 
         query_embedding = await self._embedding.embed_text(query)
 
-        results = await self._vectordb.search(
+        results = await self._vectordb.similarity_search(
             query=query,
             query_embedding=query_embedding,
-            top_k=search_k,
-            filter_metadata=filters,
+            k=search_k,
+            filter=filters,
         )
 
         documents = []
         for r in results:
-            similarity = 1.0 - r.get("distance", 1.0)
+            raw_score = r.get("score")
+            if isinstance(raw_score, int | float):
+                similarity = float(raw_score)
+            else:
+                similarity = 1.0 - float(r.get("distance", 1.0))
             if similarity >= self._config.min_similarity:
                 documents.append(
                     RAGDocument(

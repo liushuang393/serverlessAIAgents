@@ -309,17 +309,20 @@ def get_llm(
     _new_instance=True または context 指定時はキャッシュせず新規生成する。
     """
     global _default_llm
+    from contracts.runtime.context import get_runtime_context
+
+    active_context = context or get_runtime_context()
 
     # context 付き or 強制新規 → キャッシュしない
-    if context is not None or _new_instance:
+    if active_context is not None or _new_instance:
         from infrastructure.config import resolve_settings
 
         return LLMProvider(
             role=role,
             temperature=temperature,
             max_tokens=max_tokens,
-            settings=resolve_settings(context),
-            context=context,
+            settings=resolve_settings(active_context),
+            context=active_context,
         )
 
     # パラメータ付き → キャッシュから取得 or 新規生成してキャッシュ

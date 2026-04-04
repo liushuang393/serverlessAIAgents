@@ -67,6 +67,22 @@ class TestGetVectorDB:
         vdb2 = get_vectordb()
         assert vdb1 is vdb2
 
+    def test_cache_isolated_by_collection(self) -> None:
+        """コレクションごとに別インスタンスを返す."""
+        reset_vectordb()
+        vdb1 = get_vectordb(collection="collection_a")
+        vdb2 = get_vectordb(collection="collection_b")
+
+        assert vdb1 is not vdb2
+
+    def test_cache_reuses_same_collection(self) -> None:
+        """同一コレクションはキャッシュを再利用する."""
+        reset_vectordb()
+        vdb1 = get_vectordb(collection="shared_collection")
+        vdb2 = get_vectordb(collection="shared_collection")
+
+        assert vdb1 is vdb2
+
     def test_vector_database_type_faiss(self) -> None:
         """VECTOR_DATABASE_TYPE=faiss 测试."""
         with patch.dict(os.environ, {"VECTOR_DATABASE_TYPE": "faiss"}, clear=True):
@@ -116,6 +132,24 @@ class TestMockVectorDBProvider:
         # similarity_search はプロトコル準拠のメソッド名
         results = await provider.similarity_search("Hello", k=1)
         assert len(results) >= 1
+
+    @pytest.mark.asyncio
+    async def test_legacy_add_and_search_aliases_delegate_to_canonical(
+        self,
+        provider: MockVectorDBProvider,
+    ) -> None:
+        """legacy メソッド名も canonical 実装へ委譲される."""
+        await provider.add(
+            documents=["Legacy hello world"],
+            ids=["legacy-1"],
+            metadatas=[{"type": "legacy"}],
+        )
+
+        results = await provider.search("Legacy hello", top_k=1)
+
+        assert len(results) == 1
+        assert results[0]["id"] == "legacy-1"
+        assert results[0]["metadata"] == {"type": "legacy"}
 
     @pytest.mark.asyncio
     async def test_delete(self, provider: MockVectorDBProvider) -> None:

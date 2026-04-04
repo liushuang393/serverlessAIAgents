@@ -142,6 +142,19 @@ def test_contract_consistency_detects_rag_and_mcp_mismatch(tmp_path: Path) -> No
     assert "MCP_SERVICE_WITHOUT_SERVER_BINDING" in codes
 
 
+def test_contract_consistency_does_not_require_services_rag_when_contract_present(tmp_path: Path) -> None:
+    """contracts.rag が正本なら services.rag 不在を警告しない."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["contracts"]["rag"] = {"enabled": True, "collections": ["contract_docs"]}
+
+    config = AppConfig.model_validate(manifest)
+    issues = service._check_contract_consistency(config)
+    codes = {issue.code for issue in issues}
+
+    assert "RAG_CONTRACT_ENABLED_BUT_SERVICE_MISSING" not in codes
+
+
 def test_orchestration_protocols_warn_when_stream_and_a2a_missing(tmp_path: Path) -> None:
     """coordinator 編成で stream/A2A がなければ警告を出す."""
     service = _audit_service(tmp_path)

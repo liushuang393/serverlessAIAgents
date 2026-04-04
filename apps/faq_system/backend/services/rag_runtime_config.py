@@ -47,6 +47,10 @@ class RAGRuntimeConfig:
     rag_top_k: int
     indexing_schedule: str | None
     data_sources: list[RAGDataSourceConfig]
+    app_db_url: str | None
+    app_db_kind: str | None
+    sql_source_db_url: str | None
+    sql_source_db_kind: str | None
     sql_schema: dict[str, list[str]]
     sql_dialect: str
     database_url: str | None
@@ -56,6 +60,11 @@ class RAGRuntimeConfig:
     def hybrid_enabled(self) -> bool:
         """RAG+SQL 並行経路の有効可否."""
         return self.rag_enabled and self.sql_enabled
+
+    @property
+    def rag_ingestion_sources(self) -> list[RAGDataSourceConfig]:
+        """RAG ingest 用 source 一覧."""
+        return self.data_sources
 
 
 def load_rag_runtime_config(config_path: Path | None = None) -> RAGRuntimeConfig:
@@ -71,89 +80,89 @@ def load_rag_runtime_config(config_path: Path | None = None) -> RAGRuntimeConfig
     rag_contract = _as_dict(contracts.get("rag"))
     rag_service = _as_dict(services.get("rag"))
     sql_service = _as_dict(services.get("sql"))
+    vector_service = _as_dict(services.get("vector_db"))
+    has_rag_contract = bool(rag_contract)
 
     runtime_urls = _as_dict(runtime.get("urls"))
     runtime_database = _as_dict(runtime.get("database"))
+    runtime_databases = _as_dict(runtime.get("databases"))
+    runtime_app_db = _as_dict(runtime_databases.get("app_db"))
+    runtime_sql_source_db = _as_dict(runtime_databases.get("sql_source_db"))
 
-    rag_collection = (
-        _first_collection_name(rag_contract.get("collections"))
-        or _first_collection_name(rag_service.get("collections"))
-        or _as_non_empty_str(_as_dict(services.get("vector_db")).get("collection"))
-        or _as_non_empty_str(os.getenv("RAG_COLLECTION"))
-        or "faq_knowledge"
-    )
-
-    raw_data_sources = _pick_with_contract_priority(
-        contract=rag_contract,
-        key="data_sources",
-        service=rag_service,
-        default=[],
-    )
-    rag_enabled = _resolve_feature_flag(
-        contract=rag_contract,
-        service=rag_service,
-        fallback=bool(rag_service) or bool(rag_contract) or bool(raw_data_sources),
-    )
-    data_sources = _normalize_data_sources(raw_data_sources)
-
-    indexing_schedule = _as_non_empty_str(
-        _pick_with_contract_priority(
-            contract=rag_contract,
-            key="indexing_schedule",
-            service=rag_service,
-            default=None,
+    if has_rag_contract and (rag_service or vector_service):
+        logger.info(
+            "contracts.rag is present; FAQ runtime ignores services.rag/services.vector_db for canonical RAG settings"
         )
-    )
+
+    if has_rag_contract:
+        rag_collection = _first_collection_name(rag_contract.get("collections")) or "faq_knowledge"
+        raw_data_sources = rag_contract.get("data_sources", [])
+        rag_enabled = _resolve_contract_enabled(
+            contract=rag_contract,
+            fallback=bool(rag_contract) or bool(raw_data_sources),
+        )
+        indexing_schedule = _as_non_empty_str(rag_contract.get("indexing_schedule"))
+        chunk_strategy = _as_non_empty_str(rag_contract.get("chunk_strategy")) or "recursive"
+        reranker = _as_non_empty_str(rag_contract.get("rerank_model")) or "bm25"
+        top_k = _coerce_int(
+            rag_contract.get("default_top_k"),
+            default=5,
+            min_value=1,
+            max_value=50,
+        )
+    else:
+        rag_collection = (
+            _first_collection_name(rag_service.get("collections"))
+            or _as_non_empty_str(vector_service.get("collection"))
+            or _as_non_empty_str(os.getenv("RAG_COLLECTION"))
+            or "faq_knowledge"
+        )
+        raw_data_sources = rag_service.get("data_sources", [])
+        rag_enabled = _resolve_feature_flag(
+            contract=rag_contract,
+            service=rag_service,
+            fallback=bool(rag_service) or bool(raw_data_sources),
+        )
+        indexing_schedule = _as_non_empty_str(rag_service.get("indexing_schedule"))
+        chunk_strategy = _as_non_empty_str(_as_dict(rag_service.get("chunking")).get("strategy")) or "recursive"
+        reranker = _as_non_empty_str(_as_dict(rag_service.get("retrieval")).get("reranker")) or "bm25"
+        top_k = _coerce_int(
+            _as_dict(rag_service.get("retrieval")).get("top_k"),
+            default=5,
+            min_value=1,
+            max_value=50,
+        )
+
+    data_sources = _normalize_data_sources(raw_data_sources)
 
     sql_schema = _normalize_schema(sql_service.get("schema"))
     sql_dialect = (
-        _as_non_empty_str(sql_service.get("dialect")) or _as_non_empty_str(runtime_database.get("kind")) or "postgresql"
+        _as_non_empty_str(sql_service.get("dialect"))
+        or _as_non_empty_str(runtime_sql_source_db.get("kind"))
+        or _as_non_empty_str(runtime_database.get("kind"))
+        or "postgresql"
     )
-    database_url = _as_non_empty_str(runtime_database.get("url")) or _as_non_empty_str(runtime_urls.get("database"))
-    database_kind = _as_non_empty_str(runtime_database.get("kind")) or _infer_database_kind(database_url)
+    app_db_url = _as_non_empty_str(runtime_app_db.get("url"))
+    app_db_kind = _as_non_empty_str(runtime_app_db.get("kind")) or _infer_database_kind(app_db_url)
+
+    sql_source_db_url = (
+        _as_non_empty_str(runtime_sql_source_db.get("url"))
+        or _as_non_empty_str(runtime_database.get("url"))
+        or _as_non_empty_str(runtime_urls.get("database"))
+    )
+    sql_source_db_kind = (
+        _as_non_empty_str(runtime_sql_source_db.get("kind"))
+        or _as_non_empty_str(runtime_database.get("kind"))
+        or _infer_database_kind(sql_source_db_url)
+    )
+    database_url = sql_source_db_url
+    database_kind = sql_source_db_kind
 
     sql_enabled = _resolve_sql_enabled(
         sql_service=sql_service,
-        database_url=database_url,
-        database_kind=database_kind,
+        database_url=sql_source_db_url,
+        database_kind=sql_source_db_kind,
         sql_schema=sql_schema,
-    )
-
-    chunk_strategy = (
-        _as_non_empty_str(
-            _pick_with_contract_priority(
-                contract=rag_contract,
-                key="chunk_strategy",
-                service=_as_dict(rag_service.get("chunking")),
-                service_key="strategy",
-                default="recursive",
-            )
-        )
-        or "recursive"
-    )
-    reranker = (
-        _as_non_empty_str(
-            _pick_with_contract_priority(
-                contract=rag_contract,
-                key="rerank_model",
-                service=_as_dict(rag_service.get("retrieval")),
-                service_key="reranker",
-                default="bm25",
-            )
-        )
-        or "bm25"
-    )
-    top_k = _coerce_int(
-        _pick_with_contract_priority(
-            contract=rag_contract,
-            key="default_top_k",
-            service=_as_dict(rag_service.get("retrieval")),
-            service_key="top_k",
-            default=5,
-        ),
-        default=5,
-        min_value=1,
-        max_value=50,
     )
 
     return RAGRuntimeConfig(
@@ -167,6 +176,10 @@ def load_rag_runtime_config(config_path: Path | None = None) -> RAGRuntimeConfig
         rag_top_k=top_k,
         indexing_schedule=indexing_schedule,
         data_sources=data_sources,
+        app_db_url=app_db_url,
+        app_db_kind=app_db_kind,
+        sql_source_db_url=sql_source_db_url,
+        sql_source_db_kind=sql_source_db_kind,
         sql_schema=sql_schema,
         sql_dialect=sql_dialect,
         database_url=database_url,
@@ -179,8 +192,11 @@ def sync_runtime_env(config: RAGRuntimeConfig) -> None:
     os.environ.setdefault("RAG_COLLECTION", config.rag_collection)
     os.environ.setdefault("FAQ_ENABLE_RAG", "1" if config.rag_enabled else "0")
     os.environ.setdefault("FAQ_ENABLE_SQL", "1" if config.sql_enabled else "0")
-    if config.database_url:
-        os.environ.setdefault("FAQ_DATABASE_URL", config.database_url)
+    if config.app_db_url:
+        os.environ.setdefault("FAQ_DATABASE_URL", config.app_db_url)
+        os.environ.setdefault("FAQ_APP_DATABASE_URL", config.app_db_url)
+    if config.sql_source_db_url:
+        os.environ.setdefault("FAQ_SQL_SOURCE_DATABASE_URL", config.sql_source_db_url)
     if config.sql_schema and "DB_SCHEMA" not in os.environ:
         os.environ["DB_SCHEMA"] = json.dumps(config.sql_schema, ensure_ascii=False)
 
@@ -241,6 +257,18 @@ def _resolve_feature_flag(
             return resolved
     if "enabled" in service:
         resolved = _as_bool(service.get("enabled"))
+        if resolved is not None:
+            return resolved
+    return fallback
+
+
+def _resolve_contract_enabled(
+    *,
+    contract: dict[str, Any],
+    fallback: bool,
+) -> bool:
+    if "enabled" in contract:
+        resolved = _as_bool(contract.get("enabled"))
         if resolved is not None:
             return resolved
     return fallback

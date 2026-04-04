@@ -6,7 +6,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import logging
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from kernel.agents.contracts import AgentDescriptor, descriptor_from_agent_metadata
 from kernel.core.metadata import AgentMetadata, InputField, OutputField
@@ -16,6 +17,110 @@ from kernel.protocols.a2a_card import AgentCapabilities, AgentCard, AgentSkill
 if TYPE_CHECKING:
     from kernel.core.engine import AgentFlowEngine
     from kernel.protocols.agui_emitter import AGUIEventEmitter
+
+_logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class ProtocolAdapterInterface(Protocol):
+    """プロトコルアダプターインターフェース.
+
+    各プロトコル（MCP / A2A / AG-UI）のアダプターが実装すべき Protocol。
+    """
+
+    def generate_tools(self, descriptor: AgentDescriptor) -> list[dict[str, Any]]:
+        """descriptor からツール定義を生成.
+
+        Args:
+            descriptor: エージェント記述子
+
+        Returns:
+            ツール定義リスト
+        """
+        ...
+
+    def generate_card(self, descriptor: AgentDescriptor) -> AgentCard:
+        """descriptor から AgentCard を生成.
+
+        Args:
+            descriptor: エージェント記述子
+
+        Returns:
+            AgentCard
+        """
+        ...
+
+
+class ProtocolAdapterRegistry:
+    """プロトコルアダプターのレジストリ.
+
+    プロトコル名でアダプターを登録・取得するディスパッチャー。
+
+    Example:
+        >>> registry = ProtocolAdapterRegistry()
+        >>> registry.register("mcp", my_mcp_adapter)
+        >>> adapter = registry.get("mcp")
+    """
+
+    def __init__(self) -> None:
+        """初期化."""
+        self._adapters: dict[str, ProtocolAdapterInterface] = {}
+
+    def register(self, protocol_name: str, adapter: ProtocolAdapterInterface) -> None:
+        """アダプターを登録.
+
+        Args:
+            protocol_name: プロトコル名（例: "mcp", "a2a", "agui"）
+            adapter: アダプター実装
+        """
+        self._adapters[protocol_name] = adapter
+        _logger.debug("プロトコルアダプター登録: %s", protocol_name)
+
+    def get(self, protocol_name: str) -> ProtocolAdapterInterface | None:
+        """アダプターを取得.
+
+        Args:
+            protocol_name: プロトコル名
+
+        Returns:
+            アダプターまたは None
+        """
+        return self._adapters.get(protocol_name)
+
+    def list_protocols(self) -> list[str]:
+        """登録済みプロトコル名一覧を取得.
+
+        Returns:
+            プロトコル名リスト
+        """
+        return list(self._adapters.keys())
+
+    def unregister(self, protocol_name: str) -> bool:
+        """アダプターを削除.
+
+        Args:
+            protocol_name: プロトコル名
+
+        Returns:
+            削除できたか
+        """
+        if protocol_name in self._adapters:
+            del self._adapters[protocol_name]
+            return True
+        return False
+
+
+# モジュールレベルのデフォルトレジストリインスタンス
+_default_registry = ProtocolAdapterRegistry()
+
+
+def get_default_protocol_adapter_registry() -> ProtocolAdapterRegistry:
+    """デフォルトのプロトコルアダプターレジストリを取得.
+
+    Returns:
+        デフォルトレジストリ
+    """
+    return _default_registry
 
 
 class ProtocolAdapter:
@@ -107,7 +212,15 @@ class ProtocolAdapter:
 
     @staticmethod
     def generate_mcp_tools_from_descriptor(descriptor: AgentDescriptor) -> list[dict[str, Any]]:
-        """descriptor から MCP tool 定義を生成."""
+        """descriptor から MCP tool 定義を生成.
+
+        レジストリに "mcp" アダプターが登録されている場合はそちらに委譲する。
+        """
+        # レジストリに登録済みのアダプターがあれば委譲
+        registry_adapter = _default_registry.get("mcp")
+        if registry_adapter is not None:
+            return registry_adapter.generate_tools(descriptor)
+
         fallback_default = not descriptor.metadata.get("a2a_skills")
         tool_names = ProtocolAdapter._resolve_skill_names(descriptor) or [descriptor.agent_id.replace("-", "_")]
         return [
@@ -125,7 +238,15 @@ class ProtocolAdapter:
 
     @staticmethod
     def generate_a2a_card_from_descriptor(descriptor: AgentDescriptor) -> AgentCard:
-        """descriptor から A2A card を生成."""
+        """descriptor から A2A card を生成.
+
+        レジストリに "a2a" アダプターが登録されている場合はそちらに委譲する。
+        """
+        # レジストリに登録済みのアダプターがあれば委譲
+        registry_adapter = _default_registry.get("a2a")
+        if registry_adapter is not None:
+            return registry_adapter.generate_card(descriptor)
+
         fallback_default = not descriptor.metadata.get("a2a_skills")
         skill_names = ProtocolAdapter._resolve_skill_names(descriptor)
         if not skill_names:

@@ -74,6 +74,7 @@ class Flow:
         name: str,
         graph: FlowGraph,
         config: FlowConfig,
+        state_schema: type[Any] | None = None,
     ) -> None:
         """初期化.
 
@@ -82,6 +83,7 @@ class Flow:
             name: フロー名
             graph: フローグラフ
             config: 設定
+            state_schema: 型付き State スキーマ（Pydantic BaseModel）
         """
         self._logger = logging.getLogger("kernel.flow")
         self.flow_id = flow_id
@@ -89,7 +91,7 @@ class Flow:
         self._graph = graph
         self._config = config
 
-        self._context = FlowContext(flow_id)
+        self._context = FlowContext(flow_id, state_schema_=state_schema)
         self._executor = FlowExecutor(
             graph,
             enable_progress=config.enable_progress,

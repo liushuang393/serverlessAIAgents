@@ -26,7 +26,7 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from kernel.flow.graph import FlowGraph
-from kernel.flow.nodes import AgentNode, GateNode, ParallelNode, ReviewNode
+from kernel.flow.nodes import AgentNode, BranchNode, GateNode, ParallelNode, ReviewNode
 from kernel.flow.types import AgentProtocol, FlowConfig
 
 
@@ -47,16 +47,25 @@ class FlowBuilder:
         name: フロー名
     """
 
-    def __init__(self, flow_id: str, *, name: str | None = None) -> None:
+    def __init__(
+        self,
+        flow_id: str,
+        *,
+        name: str | None = None,
+        state_schema: type[Any] | None = None,
+    ) -> None:
         """初期化.
 
         Args:
             flow_id: フロー一意ID
             name: フロー表示名（デフォルトはIDと同じ）
+            state_schema: 型付き State スキーマ（Pydantic BaseModel）。
+                指定すると FlowContext の set_result 時に検証を行う。
         """
         self._logger = logging.getLogger("kernel.flow.builder")
         self.flow_id = flow_id
         self.name = name or flow_id
+        self._state_schema = state_schema
 
         self._graph = FlowGraph()
         self._config = FlowConfig()
@@ -263,6 +272,56 @@ class FlowBuilder:
         self._logger.debug(f"レビューノードを追加: {node_id}, ロールバック先: {retry_from}")
         return self
 
+    def branch(
+        self,
+        condition: Callable[[FlowContext], str],
+        routes: dict[str, AgentProtocol | type],
+        *,
+        default: AgentProtocol | type | None = None,
+        id: str | None = None,
+        name: str | None = None,
+        input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None,
+    ) -> FlowBuilder:
+        """条件分岐ノードを追加.
+
+        condition 関数の戻り値に基づいて、routes から対応する Agent を選択・実行する。
+
+        Args:
+            condition: FlowContext を受け取り、ルートキー（str）を返す関数
+            routes: ルートキー → Agent のマッピング
+            default: どのルートにもマッチしない場合のフォールバック Agent
+            id: ノードID
+            name: ノード名
+            input_mapper: 入力マッピング関数
+
+        Returns:
+            self
+
+        Example:
+            >>> .branch(
+            ...     condition=lambda ctx: ctx.get_result("classifier")["category"],
+            ...     routes={"technical": TechAgent, "business": BizAgent},
+            ...     default=GeneralAgent,
+            ... )
+        """
+        node_id = id or self._next_id("branch")
+        resolved_routes = {
+            key: self._resolve_agent(agent) for key, agent in routes.items()
+        }
+        resolved_default = self._resolve_agent(default) if default else None
+
+        node = BranchNode(
+            id=node_id,
+            name=name or f"条件分岐({len(routes)}ルート)",
+            condition=condition,
+            routes=resolved_routes,
+            default_agent=resolved_default,
+            input_mapper=input_mapper,
+        )
+        self._graph.add_node(node)
+        self._logger.debug(f"分岐ノードを追加: {node_id}, ルート: {list(routes.keys())}")
+        return self
+
     def with_config(
         self,
         *,
@@ -315,10 +374,16 @@ class FlowBuilder:
             name=self.name,
             graph=self._graph,
             config=self._config,
+            state_schema=self._state_schema,
         )
 
 
-def create_flow(flow_id: str, *, name: str | None = None) -> FlowBuilder:
+def create_flow(
+    flow_id: str,
+    *,
+    name: str | None = None,
+    state_schema: type[Any] | None = None,
+) -> FlowBuilder:
     """フロービルダーを作成.
 
     これはFlowを構築する推奨エントリーポイント。
@@ -339,7 +404,7 @@ def create_flow(flow_id: str, *, name: str | None = None) -> FlowBuilder:
         ...     .build()
         ... )
     """
-    return FlowBuilder(flow_id, name=name)
+    return FlowBuilder(flow_id, name=name, state_schema=state_schema)
 
 
 __all__ = ["FlowBuilder", "create_flow"]

@@ -59,6 +59,7 @@ from harness.context.turn_compressor import (
 )
 from shared.evolution.types import RetrievalDecisionInput, RetrievalMode, StalenessRisk
 
+from contracts.context.provider import ContextChunk, ContextProvider
 
 if TYPE_CHECKING:
     from infrastructure.sandbox.tool_provider import RegisteredTool
@@ -152,6 +153,7 @@ class ContextEngineer:
         config: ContextConfig | None = None,
         embedding_provider: Any | None = None,
         llm_client: Any | None = None,
+        extra_providers: list[ContextProvider] | None = None,
     ) -> None:
         """初期化.
 
@@ -159,10 +161,12 @@ class ContextEngineer:
             config: コンテキスト設定
             embedding_provider: 埋め込みプロバイダ（ツール選択用）
             llm_client: LLMクライアント（要約・抽出用）
+            extra_providers: 追加コンテキストプロバイダ（プラガブル拡張）
         """
         self._config = config or ContextConfig()
         self._embedding = embedding_provider
         self._llm = llm_client
+        self._extra_providers: list[ContextProvider] = list(extra_providers or [])
 
         # コンポーネント初期化
         self._budget_manager = TokenBudgetManager(
@@ -275,6 +279,12 @@ class ContextEngineer:
         )
         if notes_context:
             system_prompt = f"{system_prompt}\n\n{notes_context}"
+
+        # 6.5. 追加プロバイダからコンテキストを収集
+        if self._extra_providers:
+            provider_context = await self._collect_provider_chunks(query)
+            if provider_context:
+                system_prompt = f"{system_prompt}\n\n{provider_context}"
 
         # 7. メッセージ取得
         messages = self._compressor.get_messages_as_dicts()
@@ -443,6 +453,60 @@ class ContextEngineer:
             return f"# 参考情報\n{allocation.content}"
         return ""
 
+    async def _collect_provider_chunks(self, query: str) -> str:
+        """追加プロバイダからコンテキストチャンクを収集し結合.
+
+        残りトークン予算内で、優先度の高いチャンクから順に取り込む。
+
+        Args:
+            query: ユーザークエリ
+
+        Returns:
+            結合されたプロバイダコンテキスト文字列（空の場合は空文字列）
+        """
+        usage_summary = self._budget_manager.get_usage_summary()
+        total_budget: int = usage_summary.get("total_budget", 0)
+        total_used: int = usage_summary.get("total_used", 0)
+        remaining_budget = max(total_budget - total_used, 0)
+        all_chunks: list[ContextChunk] = []
+
+        for provider in self._extra_providers:
+            if remaining_budget <= 0:
+                break
+            try:
+                chunks = await provider.provide(query, remaining_budget)
+                all_chunks.extend(chunks)
+            except Exception as e:
+                self._logger.warning(
+                    "ContextProvider '%s' でエラー: %s",
+                    provider.name,
+                    e,
+                )
+
+        if not all_chunks:
+            return ""
+
+        # 優先度降順でソート（同一優先度はトークン数昇順）
+        all_chunks.sort(key=lambda c: (-c.priority, c.token_count))
+
+        selected_parts: list[str] = []
+        used_tokens = 0
+        for chunk in all_chunks:
+            if used_tokens + chunk.token_count > remaining_budget:
+                continue
+            selected_parts.append(chunk.content)
+            used_tokens += chunk.token_count
+
+        if not selected_parts:
+            return ""
+
+        self._logger.debug(
+            "追加プロバイダから %d チャンク取得（%d tokens）",
+            len(selected_parts),
+            used_tokens,
+        )
+        return "# 追加コンテキスト\n" + "\n\n".join(selected_parts)
+
     def _build_metadata(
         self,
         query: str,
@@ -485,6 +549,15 @@ class ContextEngineer:
     # =========================================================================
     # 便利メソッド
     # =========================================================================
+
+    def register_provider(self, provider: ContextProvider) -> None:
+        """コンテキストプロバイダを実行時に登録.
+
+        Args:
+            provider: 追加するコンテキストプロバイダ
+        """
+        self._extra_providers.append(provider)
+        self._logger.info("ContextProvider '%s' を登録", provider.name)
 
     def add_domain_keywords(self, keywords: list[str]) -> None:
         """ドメインキーワードを追加.

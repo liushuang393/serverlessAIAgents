@@ -5,11 +5,13 @@
 - 条件分岐の処理（Gateインターセプト）
 - ロールバックロジックの処理（REVISE）
 - 進捗イベントの発行
+- ミドルウェアチェーン（ガバナンス・監査・安全チェック）
 
 設計原則:
 - ステートマシンパターン：明確な状態遷移
 - 中断可能：早期リターンをサポート
 - 観測可能：イベントを自動発行
+- ミドルウェア拡張：FlowMiddleware で実行前後に介入可能
 """
 
 from __future__ import annotations
@@ -18,9 +20,10 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
+from contracts.flow.contracts import FlowMiddleware, MiddlewareDecision, MiddlewareResult
 from kernel.flow.context import FlowContext
 from kernel.flow.progress import ProgressTracker
-from kernel.flow.types import NextAction, NodeType
+from kernel.flow.types import NextAction, NodeResult, NodeType
 from kernel.protocols.agui_events import (
     FlowCompleteEvent,
     FlowErrorEvent,
@@ -31,7 +34,7 @@ from kernel.protocols.agui_events import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Sequence
 
     from kernel.flow.graph import FlowGraph
 
@@ -42,9 +45,9 @@ class FlowExecutor:
     Example:
         >>> executor = FlowExecutor(graph, config)
         >>> result = await executor.execute({"question": "..."})
-        >>> # またはストリーム実行
-        >>> async for event in executor.execute_stream(inputs):
-        ...     print(event)
+        >>> # ミドルウェア付き実行
+        >>> executor = FlowExecutor(graph, middlewares=[governance_mw, audit_mw])
+        >>> result = await executor.execute({"question": "..."})
     """
 
     def __init__(
@@ -54,6 +57,7 @@ class FlowExecutor:
         enable_progress: bool = True,
         max_revisions: int = 2,
         honor_termination: bool = False,
+        middlewares: Sequence[FlowMiddleware] | None = None,
     ) -> None:
         """初期化.
 
@@ -62,12 +66,82 @@ class FlowExecutor:
             enable_progress: 進捗追跡を有効化するか
             max_revisions: 最大リビジョン回数
             honor_termination: 終了判定を尊重して中断するか
+            middlewares: ノード実行前後に介入するミドルウェアチェーン
         """
         self._logger = logging.getLogger("kernel.flow.executor")
         self._graph = graph
         self._enable_progress = enable_progress
         self._max_revisions = max_revisions
         self._honor_termination = honor_termination
+        self._middlewares: list[FlowMiddleware] = list(middlewares or [])
+
+    def add_middleware(self, middleware: FlowMiddleware) -> None:
+        """ミドルウェアを追加.
+
+        Args:
+            middleware: 追加するミドルウェア
+        """
+        self._middlewares.append(middleware)
+
+    async def _run_before_middlewares(
+        self,
+        node_id: str,
+        node_name: str,
+        inputs: dict[str, Any],
+    ) -> MiddlewareResult:
+        """全ミドルウェアの before_node を順次実行.
+
+        最初に DENY を返したミドルウェアで停止する。
+        """
+        for mw in self._middlewares:
+            try:
+                result = await mw.before_node(node_id, node_name, inputs)
+                if result.decision != MiddlewareDecision.ALLOW:
+                    self._logger.info(
+                        "ミドルウェア %s がノード %s を %s: %s",
+                        mw.name, node_name, result.decision, result.reason,
+                    )
+                    return result
+            except Exception:
+                self._logger.exception("ミドルウェア %s の before_node で例外", mw.name)
+        return MiddlewareResult(decision=MiddlewareDecision.ALLOW)
+
+    async def _run_after_middlewares(
+        self,
+        node_id: str,
+        node_name: str,
+        result_data: dict[str, Any],
+        success: bool,
+    ) -> MiddlewareResult:
+        """全ミドルウェアの after_node を順次実行.
+
+        modified_result があれば後続ミドルウェアにも伝播する。
+        """
+        current_data = result_data
+        final_metadata: dict[str, Any] = {}
+        for mw in self._middlewares:
+            try:
+                mw_result = await mw.after_node(node_id, node_name, current_data, success)
+                final_metadata.update(mw_result.metadata)
+                if mw_result.modified_result is not None:
+                    current_data = mw_result.modified_result
+                if mw_result.decision == MiddlewareDecision.DENY:
+                    self._logger.warning(
+                        "ミドルウェア %s がノード %s の結果を拒否: %s",
+                        mw.name, node_name, mw_result.reason,
+                    )
+                    return MiddlewareResult(
+                        decision=MiddlewareDecision.DENY,
+                        reason=mw_result.reason,
+                        metadata=final_metadata,
+                    )
+            except Exception:
+                self._logger.exception("ミドルウェア %s の after_node で例外", mw.name)
+        return MiddlewareResult(
+            decision=MiddlewareDecision.ALLOW,
+            modified_result=current_data if current_data is not result_data else None,
+            metadata=final_metadata,
+        )
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """フローを同期実行.
@@ -132,8 +206,88 @@ class FlowExecutor:
                 if tracker:
                     yield tracker.on_node_start(node)
 
+                # ミドルウェア before_node チェック
+                if self._middlewares:
+                    mw_before = await self._run_before_middlewares(
+                        node.id, node.name, ctx.inputs,
+                    )
+                    if mw_before.decision == MiddlewareDecision.DENY:
+                        # ガバナンスにより拒否 → ノードをスキップしエラーイベント発行
+                        deny_msg = f"ミドルウェアにより拒否: {mw_before.reason}"
+                        if tracker:
+                            yield tracker.on_node_error(node, deny_msg, "GovernanceDenied")
+                        else:
+                            error_event = NodeErrorEvent(
+                                timestamp=time.time(),
+                                flow_id=ctx.flow_id,
+                                node_id=node.id,
+                                node_name=node.name,
+                                error_message=deny_msg,
+                                error_type="GovernanceDenied",
+                            )
+                            yield to_legacy_dict(error_event)
+                        yield {
+                            "type": "middleware_denied",
+                            "data": {
+                                "node_id": node.id,
+                                "reason": mw_before.reason,
+                                "metadata": mw_before.metadata,
+                            },
+                        }
+                        idx += 1
+                        continue
+                    if mw_before.decision == MiddlewareDecision.APPROVAL_REQUIRED:
+                        # fail-closed: 承認なしでは実行しない
+                        yield {
+                            "type": "approval_required",
+                            "data": {
+                                "node_id": node.id,
+                                "node_name": node.name,
+                                "reason": mw_before.reason,
+                                "metadata": mw_before.metadata,
+                            },
+                        }
+                        # ノードをスキップ（承認済みで再実行される前提）
+                        deny_msg = f"承認が必要: {mw_before.reason}"
+                        if tracker:
+                            yield tracker.on_node_error(node, deny_msg, "ApprovalRequired")
+                        idx += 1
+                        continue
+
                 # ノードを実行
                 result = await node.execute(ctx)
+
+                # ミドルウェア after_node チェック
+                if self._middlewares and result.success:
+                    mw_after = await self._run_after_middlewares(
+                        node.id, node.name, result.data, result.success,
+                    )
+                    if mw_after.decision == MiddlewareDecision.DENY:
+                        # 実行後ガバナンスにより結果を拒否
+                        deny_msg = f"ミドルウェアにより結果拒否: {mw_after.reason}"
+                        if tracker:
+                            yield tracker.on_node_error(node, deny_msg, "GovernanceDenied")
+                        else:
+                            error_event = NodeErrorEvent(
+                                timestamp=time.time(),
+                                flow_id=ctx.flow_id,
+                                node_id=node.id,
+                                node_name=node.name,
+                                error_message=deny_msg,
+                                error_type="GovernanceDenied",
+                            )
+                            yield to_legacy_dict(error_event)
+                        idx += 1
+                        continue
+                    if mw_after.modified_result is not None:
+                        # ミドルウェアが結果を変換した場合、NodeResultを再構築
+                        result = NodeResult(
+                            success=result.success,
+                            data=mw_after.modified_result,
+                            action=result.action,
+                            retry_from=result.retry_from,
+                            early_return_data=result.early_return_data,
+                        )
 
                 # ノード失敗時はエラーイベントを発行
                 if not result.success:

@@ -564,15 +564,6 @@ class FrameworkAuditService:
             rag_service_collections = self._normalize_str_list(rag_service.get("collections", []))
 
         rag_contract_collections = self._normalize_str_list(rag_contract.collections)
-        if rag_contract.enabled and not isinstance(rag_service, dict):
-            issues.append(
-                FrameworkAuditIssue(
-                    severity="warning",
-                    code="RAG_CONTRACT_ENABLED_BUT_SERVICE_MISSING",
-                    message="contracts.rag.enabled=true だが services.rag が未定義です",
-                    hint="services.rag を追加するか contracts.rag.enabled を見直してください",
-                ),
-            )
         if not rag_contract.enabled and isinstance(rag_service, dict):
             issues.append(
                 FrameworkAuditIssue(
@@ -583,13 +574,13 @@ class FrameworkAuditService:
                 ),
             )
         if rag_contract.enabled:
-            if not rag_contract_collections and not rag_service_collections:
+            if not rag_contract_collections:
                 issues.append(
                     FrameworkAuditIssue(
                         severity="warning",
                         code="RAG_COLLECTIONS_EMPTY",
                         message="RAG が有効だが collections が未設定です",
-                        hint=("contracts.rag.collections または services.rag.collections を設定してください"),
+                        hint="contracts.rag.collections を設定してください",
                     ),
                 )
             elif (

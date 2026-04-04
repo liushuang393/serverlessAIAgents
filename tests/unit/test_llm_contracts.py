@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from contracts.app.contracts import LLMContractConfig
 from infrastructure.llm.contracts import (
     LLMContractResolutionError,
     load_app_llm_contracts,
@@ -132,3 +133,34 @@ def test_resolve_contract_model_ref_rejects_disallowed_modality(
 
     with pytest.raises(LLMContractResolutionError, match="modality 'image'"):
         resolve_contract_model_ref(modality="image", app_name="faq_system")
+
+
+def test_app_contract_schema_accepts_runtime_llm_shape() -> None:
+    """contracts.app の型定義が runtime resolver と同じ shape を受け入れる."""
+    contract = LLMContractConfig.model_validate(
+        {
+            "enabled": True,
+            "defaults": {
+                "text": {"provider": "openai", "model_id": "platform_text_default", "model_type": "text"},
+                "embedding": {
+                    "provider": "openai",
+                    "model_id": "platform_embedding_default",
+                    "model_type": "embedding",
+                },
+            },
+            "agent_overrides": {
+                "FAQAgent": {
+                    "text": {"provider": "openai", "model_id": "faq_agent_text", "model_type": "text"}
+                }
+            },
+            "allowed_modalities": ["text", "embedding"],
+            "extra_model_refs": [
+                {"provider": "openai", "model_id": "extra_model", "model_type": "text"},
+            ],
+        }
+    )
+
+    assert contract.defaults.text is not None
+    assert contract.defaults.text.model_id == "platform_text_default"
+    assert contract.agent_overrides["FAQAgent"].text is not None
+    assert contract.allowed_modalities == ["text", "embedding"]

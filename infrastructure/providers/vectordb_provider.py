@@ -36,8 +36,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# グローバルシングルトン
-_vectordb_instance: "VectorDBProvider | None" = None
+# キャッシュ（provider / collection / app などで分離）
+_vectordb_instances: dict[tuple[Any, ...], "VectorDBProvider"] = {}
 
 
 @runtime_checkable
@@ -75,7 +75,44 @@ class VectorDBProvider(Protocol):
         ...
 
 
-class MockVectorDBProvider:
+def _normalize_legacy_search_result(result: Any) -> Any:
+    """legacy search 互換の distance / filter 名を補完する."""
+    if not isinstance(result, dict):
+        return result
+    normalized = dict(result)
+    score = normalized.get("score")
+    if "distance" not in normalized and isinstance(score, int | float):
+        normalized["distance"] = max(0.0, 1.0 - float(score))
+    return normalized
+
+
+class _LegacyVectorDBCompatMixin:
+    """旧 add/search API を canonical port へ委譲する互換層."""
+
+    async def add(self, documents: list[Any], **kwargs: Any) -> list[str]:
+        """旧 add API を canonical add_documents へ委譲する."""
+        return await self.add_documents(documents, **kwargs)
+
+    async def search(
+        self,
+        query: str,
+        *,
+        top_k: int = 4,
+        filter_metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
+        """旧 search API を canonical similarity_search へ委譲する."""
+        filter_payload = kwargs.pop("filter", None) or filter_metadata
+        results = await self.similarity_search(
+            query=query,
+            k=top_k,
+            filter=filter_payload,
+            **kwargs,
+        )
+        return [_normalize_legacy_search_result(item) for item in results]
+
+
+class MockVectorDBProvider(_LegacyVectorDBCompatMixin):
     """Mock Vector DB Provider（開発・テスト用）.
 
     API キーがない場合のインメモリ実装。
@@ -154,7 +191,7 @@ class MockVectorDBProvider:
         return "mock"
 
 
-class ChromaDBProvider:
+class ChromaDBProvider(_LegacyVectorDBCompatMixin):
     """ChromaDB Provider（ローカル向量DB）."""
 
     def __init__(self, persist_dir: str | None = None, collection: str = "default") -> None:
@@ -247,7 +284,7 @@ class ChromaDBProvider:
         return "chromadb"
 
 
-class QdrantProvider:
+class QdrantProvider(_LegacyVectorDBCompatMixin):
     """Qdrant Provider（クラウド/ローカル向量DB）.
 
     特徴:
@@ -421,7 +458,7 @@ class QdrantProvider:
         return "qdrant"
 
 
-class FAISSProvider:
+class FAISSProvider(_LegacyVectorDBCompatMixin):
     """FAISS Provider（Facebook AI Similarity Search）.
 
     特徴:
@@ -562,7 +599,7 @@ class FAISSProvider:
         return "faiss"
 
 
-class WeaviateProvider:
+class WeaviateProvider(_LegacyVectorDBCompatMixin):
     """Weaviate Provider（グラフベースセマンティック検索）.
 
     特徴:
@@ -741,7 +778,7 @@ class WeaviateProvider:
         return "weaviate"
 
 
-class SupabaseVectorProvider:
+class SupabaseVectorProvider(_LegacyVectorDBCompatMixin):
     """Supabase Vector Provider（PostgreSQL pgvector）.
 
     特徴:
@@ -895,26 +932,44 @@ def get_vectordb(
         VECTOR_DATABASE_TYPE: "faiss", "qdrant", "weaviate", "supabase", "chromadb"
         （指定がない場合は他の環境変数から自動検出）
     """
-    global _vectordb_instance
-
-    if _vectordb_instance is not None and context is None and not _new_instance:
-        return _vectordb_instance
-
-    from contracts.runtime.context import get_env
+    from contracts.runtime.context import get_env, get_runtime_context
     from infrastructure.config import resolve_settings
 
-    settings = resolve_settings(context) if context is not None else None
+    active_context = context or get_runtime_context()
+    settings = resolve_settings(active_context) if active_context is not None else None
+
+    def _context_namespace() -> tuple[Any, ...]:
+        if active_context is None:
+            return ("global",)
+        metadata = active_context.metadata if isinstance(active_context.metadata, dict) else {}
+        return (
+            "runtime",
+            active_context.tenant_id,
+            metadata.get("app_name"),
+            tuple(sorted(active_context.env_overrides.items())),
+        )
+
+    def _cached_or_create(key: tuple[Any, ...], factory: Any) -> VectorDBProvider:
+        if not _new_instance:
+            cached = _vectordb_instances.get(key)
+            if cached is not None:
+                return cached
+        provider_instance = factory()
+        if not _new_instance:
+            _vectordb_instances[key] = provider_instance
+        return provider_instance
 
     # 1. 明示的な VECTOR_DATABASE_TYPE 指定を優先
-    db_type = (get_env("VECTOR_DATABASE_TYPE", context=context) or "").lower()
+    db_type = (get_env("VECTOR_DATABASE_TYPE", context=active_context) or "").lower()
     provider: VectorDBProvider
 
     if db_type == "faiss":
         try:
             logger.info("Using FAISS provider")
-            provider = FAISSProvider(collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("faiss", collection, get_env("FAISS_INDEX_PATH", context=active_context), *_context_namespace()),
+                lambda: FAISSProvider(collection=collection),
+            )
             return provider
         except ImportError:
             logger.warning("faiss-cpu not installed. Falling back.")
@@ -922,23 +977,25 @@ def get_vectordb(
     if db_type == "qdrant":
         try:
             url = (settings.qdrant_url if settings else None) or get_env(
-                "QDRANT_URL", "http://localhost:6333", context=context
+                "QDRANT_URL", "http://localhost:6333", context=active_context
             )
             logger.info(f"Using Qdrant provider: {url}")
-            provider = QdrantProvider(url=url, collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("qdrant", collection, url, *_context_namespace()),
+                lambda: QdrantProvider(url=url, collection=collection),
+            )
             return provider
         except ImportError:
             logger.warning("qdrant-client not installed. Falling back.")
 
     if db_type == "weaviate":
         try:
-            url = get_env("WEAVIATE_URL", "http://localhost:8080", context=context)
+            url = get_env("WEAVIATE_URL", "http://localhost:8080", context=active_context)
             logger.info(f"Using Weaviate provider: {url}")
-            provider = WeaviateProvider(url=url, collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("weaviate", collection, url, *_context_namespace()),
+                lambda: WeaviateProvider(url=url, collection=collection),
+            )
             return provider
         except ImportError:
             logger.warning("weaviate-client not installed. Falling back.")
@@ -946,9 +1003,15 @@ def get_vectordb(
     if db_type == "supabase":
         try:
             logger.info("Using Supabase Vector provider")
-            provider = SupabaseVectorProvider(table=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                (
+                    "supabase",
+                    collection,
+                    (settings.supabase_url if settings else None) or get_env("SUPABASE_URL", context=active_context),
+                    *_context_namespace(),
+                ),
+                lambda: SupabaseVectorProvider(table=collection),
+            )
             return provider
         except ImportError:
             logger.warning("supabase package not installed. Falling back.")
@@ -956,81 +1019,91 @@ def get_vectordb(
     if db_type == "chromadb":
         try:
             chroma_dir = (settings.chroma_persist_dir if settings else None) or get_env(
-                "CHROMA_PERSIST_DIR", context=context
+                "CHROMA_PERSIST_DIR", context=active_context
             )
             logger.info(f"Using ChromaDB provider: {chroma_dir or 'in-memory'}")
-            provider = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("chromadb", collection, chroma_dir, *_context_namespace()),
+                lambda: ChromaDBProvider(persist_dir=chroma_dir, collection=collection),
+            )
             return provider
         except ImportError:
             logger.warning("chromadb not installed. Falling back.")
 
     # 2. 環境変数から自動検出（後方互換性）
-    if (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=context):
+    if (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=active_context):
         try:
-            url = (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=context)
+            url = (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=active_context)
             logger.info(f"Auto-detected Qdrant: {url}")
-            provider = QdrantProvider(url=url, collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("qdrant", collection, url, *_context_namespace()),
+                lambda: QdrantProvider(url=url, collection=collection),
+            )
             return provider
         except ImportError:
             pass
 
-    if get_env("WEAVIATE_URL", context=context):
+    if get_env("WEAVIATE_URL", context=active_context):
         try:
-            url = get_env("WEAVIATE_URL", context=context)
+            url = get_env("WEAVIATE_URL", context=active_context)
             logger.info(f"Auto-detected Weaviate: {url}")
-            provider = WeaviateProvider(url=url, collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("weaviate", collection, url, *_context_namespace()),
+                lambda: WeaviateProvider(url=url, collection=collection),
+            )
             return provider
         except ImportError:
             pass
 
-    if ((settings.supabase_url if settings else None) or get_env("SUPABASE_URL", context=context)) and (
-        (settings.supabase_key if settings else None) or get_env("SUPABASE_KEY", context=context)
+    if ((settings.supabase_url if settings else None) or get_env("SUPABASE_URL", context=active_context)) and (
+        (settings.supabase_key if settings else None) or get_env("SUPABASE_KEY", context=active_context)
     ):
         try:
             logger.info("Auto-detected Supabase Vector")
-            provider = SupabaseVectorProvider(table=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                (
+                    "supabase",
+                    collection,
+                    (settings.supabase_url if settings else None) or get_env("SUPABASE_URL", context=active_context),
+                    *_context_namespace(),
+                ),
+                lambda: SupabaseVectorProvider(table=collection),
+            )
             return provider
         except ImportError:
             pass
 
-    if get_env("FAISS_INDEX_PATH", context=context):
+    if get_env("FAISS_INDEX_PATH", context=active_context):
         try:
             logger.info("Auto-detected FAISS")
-            provider = FAISSProvider(collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("faiss", collection, get_env("FAISS_INDEX_PATH", context=active_context), *_context_namespace()),
+                lambda: FAISSProvider(collection=collection),
+            )
             return provider
         except ImportError:
             pass
 
-    if get_env("CHROMA_PERSIST_DIR", context=context) or get_env("USE_CHROMADB", context=context):
+    if get_env("CHROMA_PERSIST_DIR", context=active_context) or get_env("USE_CHROMADB", context=active_context):
         try:
-            chroma_dir = get_env("CHROMA_PERSIST_DIR", context=context)
+            chroma_dir = get_env("CHROMA_PERSIST_DIR", context=active_context)
             logger.info(f"Auto-detected ChromaDB: {chroma_dir or 'in-memory'}")
-            provider = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
-            if context is None and not _new_instance:
-                _vectordb_instance = provider
+            provider = _cached_or_create(
+                ("chromadb", collection, chroma_dir, *_context_namespace()),
+                lambda: ChromaDBProvider(persist_dir=chroma_dir, collection=collection),
+            )
             return provider
         except ImportError:
             pass
 
     # 3. フォールバック: Mock（開発/テスト用）
     logger.info("No VectorDB config found. Using mock provider.")
-    provider = MockVectorDBProvider(collection=collection)
-    if context is None and not _new_instance:
-        _vectordb_instance = provider
-    return provider
+    return _cached_or_create(
+        ("mock", collection, *_context_namespace()),
+        lambda: MockVectorDBProvider(collection=collection),
+    )
 
 
 def reset_vectordb() -> None:
     """VectorDBインスタンスをリセット（テスト用）."""
-    global _vectordb_instance
-    _vectordb_instance = None
+    _vectordb_instances.clear()

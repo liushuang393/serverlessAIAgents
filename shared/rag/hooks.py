@@ -123,18 +123,20 @@ class VectorSearchHook:
         query_embedding = await embedding.embed_text(query)
 
         # 検索実行
-        results = await vectordb.search(
+        results = await vectordb.similarity_search(
             query=query,
             query_embedding=query_embedding,
-            top_k=top_k,
-            filter_metadata=filters,
+            k=top_k,
+            filter=filters,
         )
 
         # 結果を変換
         search_results = []
         for result in results:
-            distance = result.get("distance", 1.0)
-            similarity = 1.0 - distance
+            raw_score = result.get("score")
+            similarity = float(raw_score) if isinstance(raw_score, int | float) else 1.0 - float(
+                result.get("distance", 1.0)
+            )
 
             if similarity >= min_sim:
                 search_results.append(
@@ -171,7 +173,7 @@ class VectorSearchHook:
         embeddings = await embedding.embed_batch(documents)
 
         # VectorDB に追加
-        await vectordb.add(
+        await vectordb.add_documents(
             documents=documents,
             ids=ids,
             embeddings=embeddings,

@@ -46,9 +46,9 @@ class LocalA2AHub:
             raise ValueError(msg)
         return resolved_card
 
-    def unregister(self, agent_name: str) -> None:
+    async def unregister(self, agent_name: str) -> None:
         """Agent を解除."""
-        self._bus.unregister(agent_name)
+        await self._bus.unregister(agent_name)
 
     async def call(self, agent_name: str, input_data: dict[str, Any]) -> dict[str, Any]:
         """Agent を呼び出す."""

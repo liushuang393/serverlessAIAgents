@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from kernel.protocols.mcp.client import MCPClient
+    from kernel.runtime.rag_runtime import RAGRuntime
     from kernel.skills.gateway import SkillGateway
-    from shared.rag.rag_pipeline import RAGPipeline
 
 
 @dataclass
@@ -17,7 +17,7 @@ class CapabilityBundle:
     """Stable runtime bundle exposed to apps and agents."""
 
     app_name: str
-    rag_engine: RAGPipeline | None = None
+    rag_engine: RAGRuntime | None = None
     skill_gateway: SkillGateway | None = None
     mcp_client: MCPClient | None = None
     llm_contracts: dict[str, Any] | None = None

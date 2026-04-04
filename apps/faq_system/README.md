@@ -153,6 +153,7 @@ python -m control_plane.main publish ./apps/faq_system --target docker
 - FAQ は `text` と `embedding` を使用し、Platform catalog の `platform_text_default` / `platform_embedding_default` を参照します。
 - Provider / model / API Key の正本は `control_plane` の `LLM Management` です。
 - `OPENAI_API_KEY` などの env は Platform 未設定時の fallback としてのみ利用します。
+- RAG 設定の正本は `app_config.json` の `contracts.rag` です。`services.rag` / `services.vector_db` は互換レイヤーとして残る場合がありますが、FAQ runtime は `contracts.rag` を優先します。
 
 **統合済み機能:**
 
@@ -965,6 +966,8 @@ FAQ の `.env` で `AUTH_SERVICE_URL=http://localhost:8010` と `AUTH_SERVICE_JW
 | `DB_SCHEMA`                        | DB スキーマ JSON                                      | `{}`                                                                | —      |
 | `FAQ_SALES_MATERIAL_DIR`           | 営業資料画像の出力先                                  | `/tmp/faq_sales_material`                                           | —      |
 | `FAQ_DATABASE_URL`                 | FAQ 認証/履歴用 DB 接続先                             | 未設定時は `sqlite+aiosqlite:///apps/faq_system/data/faq_system.db` | —      |
+| `FAQ_APP_DATABASE_URL`             | `FAQ_DATABASE_URL` の明示名（FAQ app DB 正本）        | `FAQ_DATABASE_URL` と同値                                            | —      |
+| `FAQ_SQL_SOURCE_DATABASE_URL`      | Text2SQL 用 SQL source DB 接続先                      | `app_config.json` の `runtime.databases.sql_source_db.url`          | —      |
 | `FAQ_DB_AUTO_CREATE`               | モデルから自動テーブル作成（ローカル検証向け）        | `false`                                                             | —      |
 | `FAQ_AUTH_PROVIDER`                | 認証方式 (`local_db`/`ldap`/`idp`)                    | `local_db`                                                          | —      |
 | `FAQ_AUTH_MAX_LOGIN_ATTEMPTS`      | アカウントロックまでの試行回数                        | `5`                                                                 | —      |

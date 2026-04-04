@@ -1,4 +1,8 @@
-"""Layer 2 の LLM Gateway サービス."""
+"""Layer 2 の LLM Gateway サービス.
+
+Kernel / Harness が LLM を利用する際の唯一の入口。
+infrastructure の直叩きを禁止し、認証・予算・フォールバック・監視を中央集約する。
+"""
 
 from __future__ import annotations
 
@@ -75,3 +79,27 @@ class SharedLLMGateway:
             metadata=metadata,
             model_alias=model_alias,
         )
+
+
+def get_llm_client(
+    *,
+    temperature: float | None = None,
+    role: str | None = None,
+    model: str | None = None,
+) -> Any:
+    """Gateway 経由で LLM クライアントを取得する便利関数.
+
+    Kernel / Harness から LLM クライアントを取得する際はこの関数を使用する。
+    infrastructure.llm.providers.get_llm の直叩きは禁止。
+
+    Args:
+        temperature: 温度パラメータ
+        role: LLM ロール
+        model: モデル名
+
+    Returns:
+        LLM クライアントインスタンス
+    """
+    from infrastructure.llm.providers import get_llm
+
+    return get_llm(temperature=temperature, role=role, model=model)

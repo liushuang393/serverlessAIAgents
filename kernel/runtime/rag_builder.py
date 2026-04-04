@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
-    from shared.rag.rag_pipeline import RAGPipeline
+    from kernel.runtime.rag_runtime import RAGRuntime
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,62 @@ class RagBootstrapConfig(BaseModel):
     score_threshold: float | None = Field(default=None)
 
 
-async def build_rag_engine(rag_config: RagPayload | None) -> RAGPipeline | None:
+class UnifiedRAGRuntimeAdapter:
+    """Canonical runtime adapter backed by UnifiedRAGService."""
+
+    def __init__(
+        self,
+        *,
+        service: Any,
+        top_k: int,
+        score_threshold: float | None,
+    ) -> None:
+        self._service = service
+        self._top_k = top_k
+        self._score_threshold = score_threshold
+
+    async def search(
+        self,
+        query: str,
+        top_k: int | None = None,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        results = await self._service.retrieve(
+            query,
+            top_k=top_k or self._top_k,
+            filter=filters,
+        )
+        threshold = self._score_threshold
+        if threshold is None:
+            return list(results)
+
+        filtered: list[dict[str, Any]] = []
+        for result in results:
+            similarity = _resolve_similarity(result)
+            if similarity >= threshold:
+                normalized = dict(result)
+                normalized["score"] = similarity
+                normalized.setdefault("distance", max(0.0, 1.0 - similarity))
+                filtered.append(normalized)
+        return filtered
+
+    async def query(
+        self,
+        query: str,
+        top_k: int | None = None,
+        filters: dict[str, Any] | None = None,
+    ) -> str:
+        return await self._service.query(
+            query,
+            top_k=top_k or self._top_k,
+            filter=filters,
+        )
+
+    async def close(self) -> None:
+        await self._service.close()
+
+
+async def build_rag_engine(rag_config: RagPayload | None) -> RAGRuntime | None:
     """Build a runtime RAG pipeline from canonical or legacy payloads."""
     normalized = _normalize_rag_payload(rag_config)
     if normalized is None:
@@ -46,25 +101,41 @@ async def build_rag_engine(rag_config: RagPayload | None) -> RAGPipeline | None:
         return None
 
     try:
-        from shared.rag.rag_pipeline import RAGConfig, RAGPipeline
+        from shared.services.unified_rag import RAGPattern, UnifiedRAGService
 
         collection_name = config.collections[0] if config.collections else "default"
-        rag_runtime_config = RAGConfig(
+        retrieval_method = (config.retrieval_method or "hybrid").strip().lower()
+        pattern = {
+            "basic": RAGPattern.BASIC,
+            "hybrid": RAGPattern.HYBRID,
+            "advanced": RAGPattern.ADVANCED,
+        }.get(retrieval_method, RAGPattern.HYBRID)
+        service = UnifiedRAGService(
             collection_name=collection_name,
-            top_k=config.default_top_k,
-            min_similarity=config.score_threshold or 0.3,
+            pattern=pattern,
         )
-        pipeline = RAGPipeline(config=rag_runtime_config)
-        await pipeline.start()
+        runtime = UnifiedRAGRuntimeAdapter(
+            service=service,
+            top_k=config.default_top_k,
+            score_threshold=config.score_threshold,
+        )
         logger.info(
-            "Runtime RAG pipeline ready: collection=%s top_k=%d",
+            "Runtime RAG adapter ready: collection=%s top_k=%d pattern=%s",
             collection_name,
             config.default_top_k,
+            pattern.value,
         )
-        return pipeline
+        return runtime
     except Exception as exc:
         logger.warning("Runtime RAG bootstrap failed: %s", exc, exc_info=True)
         return None
+
+
+def _resolve_similarity(result: dict[str, Any]) -> float:
+    raw_score = result.get("score")
+    if isinstance(raw_score, int | float):
+        return float(raw_score)
+    return 1.0 - float(result.get("distance", 1.0))
 
 
 def _normalize_rag_payload(rag_config: RagPayload | None) -> RagPayload | None:
@@ -98,4 +169,4 @@ def _normalize_rag_payload(rag_config: RagPayload | None) -> RagPayload | None:
     }
 
 
-__all__ = ["RagBootstrapConfig", "_normalize_rag_payload", "build_rag_engine"]
+__all__ = ["RagBootstrapConfig", "UnifiedRAGRuntimeAdapter", "_normalize_rag_payload", "build_rag_engine"]

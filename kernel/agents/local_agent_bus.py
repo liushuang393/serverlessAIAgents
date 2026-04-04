@@ -66,9 +66,17 @@ class LocalAgentBus:
         self._logger.info("Agent registered on LocalAgentBus: %s", runtime_descriptor.agent_id)
         return entry.descriptor or runtime_descriptor
 
-    def unregister(self, agent_name: str) -> bool:
-        """Agent を解除."""
-        removed = self._registry.unregister(agent_name)
+    async def unregister(self, agent_name: str, drain_timeout_seconds: float = 5.0) -> bool:
+        """Agent を解除（グレースフルシャットダウン対応）.
+
+        Args:
+            agent_name: エージェント名
+            drain_timeout_seconds: ドレイン待機秒数
+
+        Returns:
+            削除できたか
+        """
+        removed = await self._registry.unregister(agent_name, drain_timeout_seconds=drain_timeout_seconds)
         if removed:
             self._logger.info("Agent unregistered from LocalAgentBus: %s", agent_name)
         return removed

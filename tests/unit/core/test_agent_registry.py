@@ -116,12 +116,13 @@ class TestAgentRegistry:
 
         assert len(all_agents) == 2
 
-    def test_unregister(self, agent_registry, sample_capability):
+    @pytest.mark.asyncio
+    async def test_unregister(self, agent_registry, sample_capability):
         """Agent登録解除のテスト."""
         agent_registry.register("test", sample_capability, lambda: None)
         assert "test" in agent_registry
 
-        result = agent_registry.unregister("test")
+        result = await agent_registry.unregister("test")
 
         assert result is True
         assert "test" not in agent_registry

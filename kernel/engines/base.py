@@ -46,25 +46,22 @@ if TYPE_CHECKING:
     from kernel.patterns.progress_emitter import AgentMeta, ProgressEmitter
 
 
-@dataclass
-class HITLEngineConfig:
-    """HITL 関連の Engine 設定.
+# HITL 設定は harness 側 mixin から re-export（後方互換）
+# 実際の HITL ロジックは harness.engines.hitl_mixin.HITLEngineMixin で提供
+try:
+    from harness.engines.hitl_mixin import HITLEngineConfig
+except ImportError:
+    # harness が利用できない環境向けのフォールバック
+    @dataclass
+    class HITLEngineConfig:  # type: ignore[no-redef]
+        """HITL 関連の Engine 設定（フォールバック）."""
 
-    Attributes:
-        enabled: HITL を有効にするか
-        checkpointer: チェックポインター（状態永続化）
-        interrupt_before: 指定ノードの実行前に割り込み
-        interrupt_after: 指定ノードの実行後に割り込み
-        approval_required_for: 承認が必要なアクションパターン
-        default_timeout_seconds: デフォルト承認タイムアウト
-    """
-
-    enabled: bool = False
-    checkpointer: Checkpointer | None = None
-    interrupt_before: list[str] = field(default_factory=list)
-    interrupt_after: list[str] = field(default_factory=list)
-    approval_required_for: list[str] = field(default_factory=list)
-    default_timeout_seconds: int = 3600
+        enabled: bool = False
+        checkpointer: Any = None
+        interrupt_before: list[str] = field(default_factory=list)
+        interrupt_after: list[str] = field(default_factory=list)
+        approval_required_for: list[str] = field(default_factory=list)
+        default_timeout_seconds: int = 3600
 
 
 @dataclass
@@ -700,174 +697,44 @@ class BaseEngine(ABC):
     # HITL (Human-in-the-Loop) サポート
     # =========================================================================
 
+    # =========================================================================
+    # HITL デフォルト実装（no-op）
+    # 実際のロジックは harness.engines.hitl_mixin.HITLEngineMixin が提供する。
+    # HITLEngineMixin を合成すると、MRO により mixin 側のメソッドが優先される。
+    # =========================================================================
+
     def _setup_hitl_context(self) -> None:
-        """HITL コンテキストを設定."""
-        if not self._config.hitl.enabled:
-            return
-
-        from harness.approval.interrupt import set_checkpointer, set_thread_id
-
-        if self._config.hitl.checkpointer:
-            set_checkpointer(self._config.hitl.checkpointer)
-
-        if self._thread_id:
-            set_thread_id(self._thread_id)
+        """HITL コンテキストを設定（no-op: mixin 未合成時）."""
 
     def _cleanup_hitl_context(self) -> None:
-        """HITL コンテキストをクリーンアップ."""
-        if not self._config.hitl.enabled:
-            return
-
-        from harness.approval.interrupt import clear_interrupt
-
-        clear_interrupt()
+        """HITL コンテキストをクリーンアップ（no-op: mixin 未合成時）."""
 
     def _is_interrupt_signal(self, exc: Exception) -> bool:
-        """例外が InterruptSignal かどうかを判定."""
-        from harness.approval.interrupt import InterruptSignal
-
-        return isinstance(exc, InterruptSignal)
+        """例外が InterruptSignal かどうかを判定（no-op: mixin 未合成時は常に False）."""
+        return False
 
     async def _handle_interrupt(
         self,
         exc: Exception,
         inputs: dict[str, Any],
     ) -> None:
-        """割り込みを処理し、状態を保存."""
-        from harness.approval.checkpointer import CheckpointCursor, CheckpointData
-        from harness.approval.interrupt import InterruptSignal
-
-        if not isinstance(exc, InterruptSignal):
-            return
-
-        checkpointer = self._config.hitl.checkpointer
-        if checkpointer is None:
-            self._logger.warning("Checkpointer が未設定のため、状態を保存できません")
-            return
-
-        payload = exc.payload
-        cursor = CheckpointCursor(
-            node_id=payload.node_id,
-            flow_id=payload.flow_id or self._flow_id,
-            thread_id=self._thread_id,
-            run_id=self._run_id,
-        )
-        checkpoint = CheckpointData(
-            checkpoint_id=f"cp-{uuid.uuid4().hex[:12]}",
-            thread_id=self._thread_id or "",
-            flow_id=self._flow_id,
-            node_id=payload.node_id,
-            schema_version=2,
-            cursor=cursor,
-            run_id=self._run_id,
-            state=payload.state,
-            inputs=inputs,
-            interrupt_payload=payload.model_dump(),
-            parent_checkpoint_id=self._resume_checkpoint_id,
-        )
-
-        await checkpointer.save(checkpoint)
-        self._logger.info(f"Checkpoint saved: {checkpoint.checkpoint_id}")
+        """割り込みを処理（no-op: mixin 未合成時）."""
 
     async def resume(
         self,
         thread_id: str,
-        command: Command,
+        command: Any,
     ) -> dict[str, Any]:
         """中断されたワークフローを再開.
 
-        Args:
-            thread_id: スレッドID
-            command: 再開コマンド（approve/reject/update）
-
-        Returns:
-            実行結果
-
-        Raises:
-            InterruptError: チェックポイントが見つからない場合
+        HITL mixin 未合成時は NotImplementedError。
+        harness.engines.hitl_mixin.HITLEngineMixin を合成すると利用可能になる。
         """
-        from harness.approval.interrupt import InterruptError, resume_with_command
-
-        checkpointer = self._config.hitl.checkpointer
-        if checkpointer is None:
-            msg = "Checkpointer が設定されていません"
-            raise InterruptError(msg)
-
-        # 最新のチェックポイントを取得
-        checkpoint = await checkpointer.load_latest(thread_id)
-        if checkpoint is None:
-            msg = f"チェックポイントが見つかりません: {thread_id}"
-            raise InterruptError(msg)
-
-        self._logger.info(f"Resuming from checkpoint: {checkpoint.checkpoint_id} (command: {command.type.value})")
-
-        # スキーマバージョンの検証
-        schema_version = checkpoint.schema_version or 1
-        if schema_version not in {1, 2}:
-            msg = f"未対応のチェックポイントスキーマ: {schema_version}"
-            raise InterruptError(msg)
-
-        if schema_version >= 2 and checkpoint.cursor is None:
-            self._logger.warning("カーソル情報が欠落しているため、旧式の再開処理にフォールバックします")
-
-        # コマンドに基づいて承認レスポンスを生成
-        response = await resume_with_command(
-            command=command,
-            checkpointer=checkpointer,
-            checkpoint_id=checkpoint.checkpoint_id,
+        msg = (
+            "resume() は HITLEngineMixin が必要です。"
+            "Engine クラスに HITLEngineMixin を合成してください。"
         )
-
-        self._is_resuming = True
-        self._resume_checkpoint_id = checkpoint.checkpoint_id
-
-        # 入力データを復元して再実行
-        # 注意: 現段階ではカーソルを付与するだけの最小実装
-        inputs = self._rehydrate_inputs(checkpoint, response, command)
-
-        return await self.run(inputs, thread_id=thread_id)
-
-    def _rehydrate_inputs(
-        self,
-        checkpoint: CheckpointData,
-        response: ApprovalResponse,
-        command: Command,
-    ) -> dict[str, Any]:
-        """再開用の入力データを再構成.
-
-        カーソル情報を付与し、最小限の決定論的な再開を支援する。
-        """
-        inputs = checkpoint.inputs.copy()
-        inputs["_hitl_response"] = response.model_dump()
-        inputs["_hitl_command"] = command.model_dump()
-        if checkpoint.schema_version >= 2:
-            if checkpoint.cursor:
-                inputs["_hitl_cursor"] = checkpoint.cursor.model_dump()
-            if checkpoint.run_id:
-                inputs["_hitl_run_id"] = checkpoint.run_id
-            inputs["_hitl_schema_version"] = checkpoint.schema_version
-        return inputs
-
-    def _emit_approval_required(
-        self,
-        request_id: str,
-        action: str,
-        reason: str,
-        context: dict[str, Any],
-    ) -> dict[str, Any] | None:
-        """承認要求イベントを発行."""
-        if self._config.enable_events:
-            return {
-                "event_type": "approval_required",
-                "timestamp": time.time(),
-                "flow_id": self._flow_id or "",
-                "data": {
-                    "request_id": request_id,
-                    "action": action,
-                    "reason": reason,
-                    "context": context,
-                },
-            }
-        return None
+        raise NotImplementedError(msg)
 
     @property
     def thread_id(self) -> str | None:
@@ -878,12 +745,3 @@ class BaseEngine(ABC):
     def is_hitl_enabled(self) -> bool:
         """HITL が有効かどうか."""
         return self._config.hitl.enabled
-
-
-# Command のインポート用型ヒント
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    from harness.approval import ApprovalResponse, Command
-    from harness.approval.checkpointer import CheckpointData

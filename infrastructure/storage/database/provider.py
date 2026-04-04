@@ -27,8 +27,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# グローバルシングルトン
-_db_instance: "DBProvider | None" = None
+# キャッシュ（provider / DB URL / app などで分離）
+_db_instances: dict[tuple[Any, ...], "DBProvider"] = {}
 
 
 @runtime_checkable
@@ -549,60 +549,77 @@ def get_db(
         3. TURSO_URL + TURSO_AUTH_TOKEN → Turso
         4. なし → MockDBProvider
     """
-    global _db_instance
-
-    if _db_instance is not None and not _new_instance and context is None:
-        return _db_instance
-
-    from contracts.runtime.context import get_env
+    from contracts.runtime.context import get_env, get_runtime_context
     from infrastructure.config import resolve_settings
 
-    settings = resolve_settings(context) if context is not None else None
+    active_context = context or get_runtime_context()
+    settings = resolve_settings(active_context) if active_context is not None else None
     provider: DBProvider
 
+    def _context_namespace() -> tuple[Any, ...]:
+        if active_context is None:
+            return ("global",)
+        metadata = active_context.metadata if isinstance(active_context.metadata, dict) else {}
+        return (
+            "runtime",
+            active_context.tenant_id,
+            metadata.get("app_name"),
+            tuple(sorted(active_context.env_overrides.items())),
+        )
+
+    def _cached_or_create(key: tuple[Any, ...], factory: Any) -> DBProvider:
+        if not _new_instance:
+            cached = _db_instances.get(key)
+            if cached is not None:
+                return cached
+        provider_instance = factory()
+        if not _new_instance:
+            _db_instances[key] = provider_instance
+        return provider_instance
+
     explicit_db_url = (
-        get_env("FAQ_DATABASE_URL", context=context)
+        get_env("FAQ_SQL_SOURCE_DATABASE_URL", context=active_context)
+        or get_env("FAQ_DATABASE_URL", context=active_context)
         or (settings.database_url if settings else None)
-        or get_env("DATABASE_URL", context=context)
+        or get_env("DATABASE_URL", context=active_context)
     )
     if explicit_db_url:
         if _is_sqlalchemy_supported_url(explicit_db_url):
             logger.info("Using SQLAlchemy provider: %s", explicit_db_url.split("://", 1)[0])
-            provider = SQLAlchemyDBProvider(explicit_db_url)
-            if context is None and not _new_instance:
-                _db_instance = provider
-            return provider
+            return _cached_or_create(
+                ("sqlalchemy", explicit_db_url, *_context_namespace()),
+                lambda: SQLAlchemyDBProvider(explicit_db_url),
+            )
         logger.warning("Unsupported DATABASE_URL scheme, fallback provider used: %s", explicit_db_url[:24])
 
     # Supabase
-    supabase_url = settings.supabase_url if settings else get_env("SUPABASE_URL", context=context)
+    supabase_url = settings.supabase_url if settings else get_env("SUPABASE_URL", context=active_context)
     supabase_key = (
         (settings.supabase_key if settings else None)
-        or get_env("SUPABASE_KEY", context=context)
-        or get_env("SUPABASE_ANON_KEY", context=context)
+        or get_env("SUPABASE_KEY", context=active_context)
+        or get_env("SUPABASE_ANON_KEY", context=active_context)
     )
     if supabase_url and supabase_key:
         logger.info("Using Supabase provider (from env)")
-        provider = SupabaseDBProvider(supabase_url, supabase_key)
-        if context is None and not _new_instance:
-            _db_instance = provider
-        return provider
+        return _cached_or_create(
+            ("supabase", supabase_url, *_context_namespace()),
+            lambda: SupabaseDBProvider(supabase_url, supabase_key),
+        )
 
     # Turso (TODO: 実装)
-    turso_url = settings.turso_url if settings else get_env("TURSO_URL", context=context)
-    turso_token = get_env("TURSO_AUTH_TOKEN", context=context)
+    turso_url = settings.turso_url if settings else get_env("TURSO_URL", context=active_context)
+    turso_token = get_env("TURSO_AUTH_TOKEN", context=active_context)
     if turso_url and turso_token:
         logger.warning("Turso provider not yet implemented, using mock")
 
     # フォールバック: Mock
     logger.info("No DB config found in environment. Using mock provider.")
-    provider = MockDBProvider()
-    if context is None and not _new_instance:
-        _db_instance = provider
-    return provider
+    return _cached_or_create(
+        ("mock", *_context_namespace()),
+        lambda: MockDBProvider(),
+    )
 
 
 def reset_db() -> None:
     """DBインスタンスをリセット（テスト用）."""
-    global _db_instance
-    _db_instance = None
+    _db_instances.clear()

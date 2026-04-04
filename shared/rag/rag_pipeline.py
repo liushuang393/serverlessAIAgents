@@ -275,7 +275,7 @@ class RAGPipeline:
         embeddings = await embedding.embed_batch(contents)
 
         # VectorDB に追加
-        await vectordb.add(
+        await vectordb.add_documents(
             documents=contents,
             ids=[c.id for c in chunks],
             embeddings=embeddings,
@@ -313,15 +313,26 @@ class RAGPipeline:
         query_embedding = await embedding.embed_text(query)
 
         # 検索実行
-        results = await vectordb.search(
+        results = await vectordb.similarity_search(
             query=query,
             query_embedding=query_embedding,
-            top_k=top_k,
-            filter_metadata=filters,
+            k=top_k,
+            filter=filters,
         )
 
         # 類似度フィルタリング
-        return [r for r in results if r.get("distance", 1.0) <= (1.0 - min_similarity)]
+        filtered: list[dict[str, Any]] = []
+        for result in results:
+            raw_score = result.get("score")
+            similarity = float(raw_score) if isinstance(raw_score, int | float) else 1.0 - float(
+                result.get("distance", 1.0)
+            )
+            if similarity >= min_similarity:
+                normalized = dict(result)
+                normalized["score"] = similarity
+                normalized.setdefault("distance", max(0.0, 1.0 - similarity))
+                filtered.append(normalized)
+        return filtered
 
     async def query(
         self,
@@ -364,7 +375,7 @@ class RAGPipeline:
                     "id": result.get("id", ""),
                     "content": doc[:200] + "..." if len(doc) > 200 else doc,
                     "metadata": result.get("metadata", {}),
-                    "similarity": 1.0 - result.get("distance", 0.0),
+                    "similarity": float(result.get("score", 1.0 - result.get("distance", 0.0))),
                 }
             )
 

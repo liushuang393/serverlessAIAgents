@@ -61,6 +61,10 @@ class FlowContext(BaseModel):
     metadata: FlowMetadata = Field(default_factory=FlowMetadata)
     shared: dict[str, Any] = Field(default_factory=dict)
 
+    # --- 型付き State スキーマ（オプション） ---
+    # FlowBuilder(state_schema=MyModel) で指定すると、set_result 時に検証
+    state_schema_: type[Any] | None = Field(default=None, exclude=True)
+
     # --- 内部フィールド（後方互換のため維持） ---
     flow_id: str = ""
     results_: dict[str, dict[str, Any]] = Field(default_factory=dict)
@@ -111,7 +115,24 @@ class FlowContext(BaseModel):
     # ========================================
 
     def set_result(self, node_id: str, result: dict[str, Any]) -> None:
-        """ノード結果を保存."""
+        """ノード結果を保存.
+
+        state_schema_ が設定されている場合、結果を検証する。
+        """
+        # 型付き State 検証（オプション）
+        if self.state_schema_ is not None:
+            try:
+                if hasattr(self.state_schema_, "model_validate"):
+                    # Pydantic v2: 部分検証（結果キーがスキーマフィールドに存在するか）
+                    schema_fields = set(self.state_schema_.model_fields.keys())
+                    unknown_keys = set(result.keys()) - schema_fields
+                    if unknown_keys:
+                        self._logger.warning(
+                            "state_schema にないキー: %s (node: %s)", unknown_keys, node_id,
+                        )
+            except Exception as e:
+                self._logger.warning("state_schema 検証エラー: %s (node: %s)", e, node_id)
+
         deep = copy.deepcopy(result)
         self.results_[node_id] = deep
         # agent_outputsにも同期
@@ -271,4 +292,114 @@ class FlowContext(BaseModel):
         return f"FlowContext({self.flow_id!r}, completed={len(self.completed_nodes_)})"
 
 
-__all__ = ["FlowContext", "FlowMetadata"]
+class _ReadOnlyDict(dict[str, Any]):
+    """読み取り専用の dict ラッパー."""
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        msg = "ScopedContextView: 他の Agent の出力は読み取り専用です"
+        raise TypeError(msg)
+
+    def __delitem__(self, key: str) -> None:
+        msg = "ScopedContextView: 他の Agent の出力は読み取り専用です"
+        raise TypeError(msg)
+
+    def pop(self, *args: Any, **kwargs: Any) -> Any:
+        msg = "ScopedContextView: 他の Agent の出力は読み取り専用です"
+        raise TypeError(msg)
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        msg = "ScopedContextView: 他の Agent の出力は読み取り専用です"
+        raise TypeError(msg)
+
+    def clear(self) -> None:
+        msg = "ScopedContextView: 他の Agent の出力は読み取り専用です"
+        raise TypeError(msg)
+
+
+class ScopedContextView:
+    """Agent ごとのスコープ付きコンテキストビュー.
+
+    自 Agent の名前空間のみ書き込み可能。
+    他 Agent の出力は読み取り専用で参照可能。
+
+    Example:
+        >>> view = ScopedContextView(ctx, "agent_a")
+        >>> view.set_output({"answer": "hello"})  # 自分の出力を設定
+        >>> view.get_output("agent_b")              # 他 Agent の出力を取得（読み取り専用）
+        >>> view.get_peer_output("agent_b")         # 同上
+    """
+
+    def __init__(self, ctx: FlowContext, agent_id: str) -> None:
+        """初期化.
+
+        Args:
+            ctx: 元の FlowContext
+            agent_id: このビューが所属する Agent の ID
+        """
+        self._ctx = ctx
+        self._agent_id = agent_id
+
+    @property
+    def agent_id(self) -> str:
+        """このビューの Agent ID."""
+        return self._agent_id
+
+    @property
+    def inputs(self) -> dict[str, Any]:
+        """フロー入力（読み取り専用コピー）."""
+        return self._ctx.get_inputs()
+
+    @property
+    def flow_id(self) -> str:
+        """フロー ID."""
+        return self._ctx.flow_id
+
+    def set_output(self, data: dict[str, Any]) -> None:
+        """自 Agent の出力を設定."""
+        self._ctx.set_result(self._agent_id, data)
+
+    def get_my_output(self) -> dict[str, Any]:
+        """自 Agent の出力を取得."""
+        return self._ctx.get_result(self._agent_id)
+
+    def get_peer_output(
+        self, agent_id: str, default: Any = None
+    ) -> _ReadOnlyDict | Any:
+        """他 Agent の出力を読み取り専用で取得.
+
+        Args:
+            agent_id: 参照先の Agent ID
+            default: 結果が存在しない場合のデフォルト値
+        """
+        result = self._ctx.get_result(agent_id)
+        if not result:
+            return default
+        return _ReadOnlyDict(result)
+
+    def get_output(self, agent_id: str, default: Any = None) -> Any:
+        """任意の Agent の出力を取得.
+
+        自 Agent の場合は通常の dict、他 Agent の場合は読み取り専用。
+        """
+        if agent_id == self._agent_id:
+            return self.get_my_output()
+        return self.get_peer_output(agent_id, default)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """共有メモリから値を取得."""
+        return self._ctx.get(key, default)
+
+    def set(self, key: str, value: Any) -> None:
+        """共有メモリに値を設定."""
+        self._ctx.set(key, value)
+
+    @property
+    def completed_nodes(self) -> list[str]:
+        """完了したノードリスト."""
+        return self._ctx.completed_nodes
+
+    def __repr__(self) -> str:
+        return f"ScopedContextView({self._agent_id!r}, flow={self._ctx.flow_id!r})"
+
+
+__all__ = ["FlowContext", "FlowMetadata", "ScopedContextView"]

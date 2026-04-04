@@ -353,4 +353,64 @@ class ReviewNode(FlowNode):
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
 
-__all__ = ["AgentNode", "FlowNode", "GateNode", "ParallelNode", "ReviewNode"]
+@dataclass
+class BranchNode(FlowNode):
+    """条件分岐ノード.
+
+    condition 関数の戻り値に基づいて、routes から対応する Agent を選択・実行する。
+    マッチしない場合は default_agent を使用する。
+
+    Example:
+        >>> BranchNode(
+        ...     id="branch_1",
+        ...     name="カテゴリ分岐",
+        ...     condition=lambda ctx: ctx.get_result("classifier").get("category"),
+        ...     routes={"technical": tech_agent, "business": biz_agent},
+        ...     default_agent=general_agent,
+        ... )
+    """
+
+    condition: Callable[[FlowContext], str] | None = None
+    routes: dict[str, AgentProtocol] = field(default_factory=dict)
+    default_agent: AgentProtocol | None = None
+    input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        object.__setattr__(self, "node_type", NodeType.CONDITIONAL)
+
+    async def execute(self, ctx: FlowContext) -> NodeResult:
+        """条件分岐を実行."""
+        try:
+            if self.condition is None:
+                msg = "condition 関数が設定されていません"
+                raise RuntimeError(msg)
+
+            route_key = self.condition(ctx)
+            agent = self.routes.get(route_key, self.default_agent)
+
+            if agent is None:
+                self._logger.warning(
+                    "分岐キー %r に対応する Agent がありません（default も未設定）", route_key,
+                )
+                return NodeResult(
+                    success=False,
+                    data={"error": f"No agent for route: {route_key}", "route_key": route_key},
+                    action=NextAction.CONTINUE,
+                )
+
+            inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_inputs()
+            self._logger.info("分岐: %s → %s", route_key, getattr(agent, "name", "unknown"))
+
+            result = await agent.run(inputs)
+            ctx.set_result(self.id, result)
+            # ルート情報はメタデータとして context の shared に格納（結果を汚染しない）
+            ctx.set(f"_branch_route_{self.id}", route_key)
+
+            return NodeResult(success=True, data=result, action=NextAction.CONTINUE)
+        except Exception as e:
+            self._logger.exception(f"分岐実行失敗: {e}")
+            return NodeResult(success=False, data={"error": str(e)}, action=NextAction.CONTINUE)
+
+
+__all__ = ["AgentNode", "BranchNode", "FlowNode", "GateNode", "ParallelNode", "ReviewNode"]

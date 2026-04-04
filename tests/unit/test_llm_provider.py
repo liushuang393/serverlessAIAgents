@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from infrastructure.llm.providers.llm_provider import LLMProvider, _detect_provider_from_env, get_llm, reset_llm
+from kernel.runtime import RuntimeContext, use_runtime_context
 
 
 if TYPE_CHECKING:
@@ -144,6 +145,34 @@ async def test_stream_supports_legacy_style(
         chunks.append(token)
 
     assert chunks == ["Hello", " ", "World"]
+
+
+@pytest.mark.asyncio
+@patch("infrastructure.config.get_settings")
+@patch("infrastructure.llm.llm_client.LLMClient")
+async def test_get_llm_uses_runtime_context_metadata_when_context_is_implicit(
+    mock_llm_client: MagicMock,
+    mock_get_settings: MagicMock,
+) -> None:
+    mock_settings = MagicMock()
+    mock_settings.get_active_llm_config.return_value = {"provider": "openai", "model": "gpt-4o"}
+    mock_get_settings.return_value = mock_settings
+
+    mock_response = MagicMock()
+    mock_response.model_dump.return_value = {"content": "hello", "model": "openai/gpt-4o", "usage": {}}
+    client = MagicMock()
+    client.generate = AsyncMock(return_value=mock_response)
+    mock_llm_client.return_value = client
+
+    with use_runtime_context(RuntimeContext(metadata={"app_name": "faq_system", "agent_name": "FAQAgent"})):
+        provider = get_llm(_new_instance=True)
+        await provider.generate(role="reasoning", prompt="hello")
+
+    client.generate.assert_awaited_once()
+    assert client.generate.await_args.kwargs["metadata"] == {
+        "app_name": "faq_system",
+        "agent_name": "FAQAgent",
+    }
 
 
 @patch("infrastructure.config.get_settings")

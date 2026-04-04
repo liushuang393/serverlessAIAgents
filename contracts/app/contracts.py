@@ -200,14 +200,90 @@ class AuthContractConfig(BaseModel):
     session_ttl_minutes: int = Field(default=60, ge=5, le=10080, description="セッション有効期限（分）")
 
 
+LLMContractModality = Literal[
+    "text",
+    "embedding",
+    "image",
+    "speech_to_text",
+    "text_to_speech",
+]
+
+
+class LLMContractModelRef(BaseModel):
+    """Platform catalog 上の model_id 参照."""
+
+    provider: str = Field(..., min_length=1)
+    model_id: str = Field(..., min_length=1)
+    model_type: LLMContractModality = "text"
+
+    @field_validator("provider", "model_id")
+    @classmethod
+    def normalize_lower(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class LLMContractBinding(BaseModel):
+    """modality 単位の既定 binding."""
+
+    text: LLMContractModelRef | None = None
+    embedding: LLMContractModelRef | None = None
+    image: LLMContractModelRef | None = None
+    speech_to_text: LLMContractModelRef | None = None
+    text_to_speech: LLMContractModelRef | None = None
+
+    def get(self, modality: LLMContractModality) -> LLMContractModelRef | None:
+        """指定 modality の参照を返す."""
+        return getattr(self, modality, None)
+
+    def defined_modalities(self) -> list[LLMContractModality]:
+        """定義済み modality 一覧."""
+        defined: list[LLMContractModality] = []
+        for modality in ("text", "embedding", "image", "speech_to_text", "text_to_speech"):
+            if self.get(modality) is not None:
+                defined.append(modality)
+        return defined
+
+
 class LLMContractConfig(BaseModel):
     """LLM 契約設定."""
 
-    enabled: bool = Field(default=False, description="LLM 契約有効フラグ")
-    provider: str | None = Field(default=None, description="既定 provider")
-    model: str | None = Field(default=None, description="既定 model")
-    models: list[dict[str, Any]] = Field(default_factory=list, description="モデル参照定義")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="拡張メタデータ")
+    enabled: bool = Field(default=True, description="LLM 契約有効フラグ")
+    defaults: LLMContractBinding = Field(default_factory=LLMContractBinding, description="既定 binding")
+    agent_overrides: dict[str, LLMContractBinding] = Field(default_factory=dict, description="Agent 別上書き")
+    allowed_modalities: list[LLMContractModality] = Field(default_factory=list, description="許可 modality")
+    extra_model_refs: list[LLMContractModelRef] = Field(default_factory=list, description="追加 model 参照")
+
+    # 旧 schema 互換
+    provider: str | None = Field(default=None, description="旧 schema の既定 provider")
+    model: str | None = Field(default=None, description="旧 schema の既定 model")
+    models: list[dict[str, Any]] = Field(default_factory=list, description="旧 schema のモデル参照定義")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="旧 schema の拡張メタデータ")
+
+    @field_validator("agent_overrides", mode="before")
+    @classmethod
+    def normalize_agent_overrides(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        return {str(key).strip(): item for key, item in value.items() if str(key).strip()}
+
+    def is_modality_allowed(self, modality: LLMContractModality) -> bool:
+        """modality 使用可否."""
+        if self.allowed_modalities:
+            return modality in self.allowed_modalities
+        return modality in self.defaults.defined_modalities()
+
+    def resolve_ref(
+        self,
+        *,
+        modality: LLMContractModality,
+        agent_name: str | None = None,
+    ) -> LLMContractModelRef | None:
+        """agent override を考慮して model ref を解決."""
+        if agent_name:
+            binding = self.agent_overrides.get(agent_name)
+            if binding is not None and binding.get(modality) is not None:
+                return binding.get(modality)
+        return self.defaults.get(modality)
 
 
 class RAGContractConfig(BaseModel):

@@ -36,7 +36,7 @@ class RAGCapableMixin:
     """RAG 能力を付与する Mixin クラス.
 
     CapabilityBundle を保持し、retrieve_context() を通じて
-    RAGPipeline.search() を呼び出す。
+    canonical RAG runtime protocol の search() を呼び出す。
 
     Graceful Degradation:
         - bundle が None → 空リスト返却
