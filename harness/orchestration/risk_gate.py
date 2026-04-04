@@ -7,15 +7,19 @@ LOW=自動実行, MEDIUM=ログ強化+自動, HIGH=人間承認, CRITICAL=停止
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from contracts.flow.contracts import MiddlewareDecision, MiddlewareResult
-from harness.approval.approval_manager import ApprovalManager
 from harness.approval.types import ApprovalRequest, ApprovalStatus
 from harness.governance.audit import AuditEvent, AuditLogger
-from harness.orchestration.models import ExecutionPlan, PlanStep
 from harness.risk.service import RiskLevel
 from harness.security.policy_engine import AuthContext, AuthResult, PolicyEngine
+
+
+if TYPE_CHECKING:
+    from harness.approval.approval_manager import ApprovalManager
+    from harness.orchestration.models import ExecutionPlan, PlanStep
+
 
 _logger = logging.getLogger(__name__)
 
@@ -60,9 +64,7 @@ class RiskGateMiddleware:
         self._user_id = user_id
 
         # step_id → PlanStep の高速ルックアップ用
-        self._step_map: dict[str, PlanStep] = {
-            step.step_id: step for step in plan.steps
-        }
+        self._step_map: dict[str, PlanStep] = {step.step_id: step for step in plan.steps}
 
     @property
     def name(self) -> str:
@@ -76,7 +78,7 @@ class RiskGateMiddleware:
             return step
         # node_name でフォールバック検索
         for s in self._plan.steps:
-            if s.agent_id == node_name or s.description == node_name:
+            if node_name in (s.agent_id, s.description):
                 return s
         return None
 
@@ -187,7 +189,11 @@ class RiskGateMiddleware:
             if not auth_result.allowed:
                 reason = f"HIGH リスク + 認可拒否: {auth_result.reason}"
                 self._emit_audit(
-                    node_id, node_name, "deny", reason, RiskLevel.HIGH,
+                    node_id,
+                    node_name,
+                    "deny",
+                    reason,
+                    RiskLevel.HIGH,
                     auth_decision=auth_result.decision.value,
                 )
                 _logger.warning("リスクゲート: %s", reason)
@@ -215,8 +221,11 @@ class RiskGateMiddleware:
 
             if response.status == ApprovalStatus.APPROVED:
                 self._emit_audit(
-                    node_id, node_name, "allow_after_approval",
-                    "人間が承認済み", RiskLevel.HIGH,
+                    node_id,
+                    node_name,
+                    "allow_after_approval",
+                    "人間が承認済み",
+                    RiskLevel.HIGH,
                 )
                 return MiddlewareResult(decision=MiddlewareDecision.ALLOW)
 
@@ -257,7 +266,8 @@ class RiskGateMiddleware:
         risk = step.risk_level if step is not None else RiskLevel.LOW
 
         self._emit_audit(
-            node_id, node_name,
+            node_id,
+            node_name,
             "node_result",
             f"ノード実行{'成功' if success else '失敗'}",
             risk,

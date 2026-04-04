@@ -86,11 +86,10 @@ class ExecutionPlan(BaseModel):
         if not self.steps:
             return RiskLevel.LOW
         level_order = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL]
-        max_level = max(
+        return max(
             (s.risk_level for s in self.steps),
             key=lambda lv: level_order.index(lv),
         )
-        return max_level
 
 
 class PlannerInput(BaseModel):

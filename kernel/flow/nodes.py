@@ -391,7 +391,8 @@ class BranchNode(FlowNode):
 
             if agent is None:
                 self._logger.warning(
-                    "分岐キー %r に対応する Agent がありません（default も未設定）", route_key,
+                    "分岐キー %r に対応する Agent がありません（default も未設定）",
+                    route_key,
                 )
                 return NodeResult(
                     success=False,

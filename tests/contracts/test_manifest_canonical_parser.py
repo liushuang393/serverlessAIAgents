@@ -91,10 +91,10 @@ def test_app_bootstrapper_uses_canonical_text_loader() -> None:
     )
 
 
-def test_code_migration_api_uses_contract_auth_guard() -> None:
-    """Code Migration API は auth guard 経由で canonical app_config を読む."""
+def test_code_migration_backend_app_uses_contract_auth_guard() -> None:
+    """Code Migration backend/app.py は auth guard 経由で canonical app_config を読む."""
     assert _module_uses_symbol(
-        "apps/code_migration_assistant/api.py",
+        "apps/code_migration_assistant/backend/app.py",
         module="harness.gating.contract_auth_guard",
         symbol="ContractAuthGuard",
     )

@@ -99,7 +99,10 @@ class FlowExecutor:
                 if result.decision != MiddlewareDecision.ALLOW:
                     self._logger.info(
                         "ミドルウェア %s がノード %s を %s: %s",
-                        mw.name, node_name, result.decision, result.reason,
+                        mw.name,
+                        node_name,
+                        result.decision,
+                        result.reason,
                     )
                     return result
             except Exception:
@@ -128,7 +131,9 @@ class FlowExecutor:
                 if mw_result.decision == MiddlewareDecision.DENY:
                     self._logger.warning(
                         "ミドルウェア %s がノード %s の結果を拒否: %s",
-                        mw.name, node_name, mw_result.reason,
+                        mw.name,
+                        node_name,
+                        mw_result.reason,
                     )
                     return MiddlewareResult(
                         decision=MiddlewareDecision.DENY,
@@ -209,7 +214,9 @@ class FlowExecutor:
                 # ミドルウェア before_node チェック
                 if self._middlewares:
                     mw_before = await self._run_before_middlewares(
-                        node.id, node.name, ctx.inputs,
+                        node.id,
+                        node.name,
+                        ctx.inputs,
                     )
                     if mw_before.decision == MiddlewareDecision.DENY:
                         # ガバナンスにより拒否 → ノードをスキップしエラーイベント発行
@@ -260,7 +267,10 @@ class FlowExecutor:
                 # ミドルウェア after_node チェック
                 if self._middlewares and result.success:
                     mw_after = await self._run_after_middlewares(
-                        node.id, node.name, result.data, result.success,
+                        node.id,
+                        node.name,
+                        result.data,
+                        result.success,
                     )
                     if mw_after.decision == MiddlewareDecision.DENY:
                         # 実行後ガバナンスにより結果を拒否

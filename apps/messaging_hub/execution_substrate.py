@@ -12,12 +12,13 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from contracts.policy import EvalResult, PolicyDecision
 from kernel.state.models import Decision, DecisionType
 
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from contracts.policy import EvalResult, PolicyDecision
 
 
 def _utc_now_iso() -> str:
@@ -872,7 +873,9 @@ class ExecutionSubstrateService:
 
         verifier_feedback = [item for item in feedback if str(item.get("source", "")) == "verifier"]
         verifier_failures = [
-            item for item in verifier_feedback if item.get("passed") is False or float(item.get("score", 1.0) or 0.0) < 0.5
+            item
+            for item in verifier_feedback
+            if item.get("passed") is False or float(item.get("score", 1.0) or 0.0) < 0.5
         ]
         scorer_scores = [
             float(item.get("score", 0.0))
@@ -1061,10 +1064,10 @@ __all__ = [
     "ActionLogStatus",
     "CheckpointPolicy",
     "ContextHierarchy",
-    "ExecutionMonitoringSummary",
     "ExecutionFeedbackRecord",
     "ExecutionFeedbackSource",
     "ExecutionInspection",
+    "ExecutionMonitoringSummary",
     "ExecutionProfile",
     "ExecutionSessionRecord",
     "ExecutionSubstrateService",

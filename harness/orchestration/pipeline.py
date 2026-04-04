@@ -13,22 +13,25 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.governance.audit import AuditEvent, AuditLogger, LoggingAuditLogger
-from harness.guardrails.pipeline import GuardrailPipeline
 from harness.orchestration.audit_middleware import AuditMiddleware
-from harness.orchestration.dynamic_flow import DynamicFlowGenerator
 from harness.orchestration.models import (
     PlannerInput,
     PlannerOutput,
     ReplanRequest,
 )
-from harness.orchestration.planner import PlannerAgent
 from harness.orchestration.risk_gate import RiskGateMiddleware
 from harness.orchestration.step_verifier import StepVerifierMiddleware
-from harness.risk.service import RiskLevel
 from kernel.agents.dual_verifier import DualVerifier
+
+
+if TYPE_CHECKING:
+    from harness.guardrails.pipeline import GuardrailPipeline
+    from harness.orchestration.dynamic_flow import DynamicFlowGenerator
+    from harness.orchestration.planner import PlannerAgent
+
 
 _logger = logging.getLogger(__name__)
 
@@ -104,9 +107,7 @@ class AutonomousPipeline:
 
         # 1. ガードレール事前チェック
         if self._guardrails is not None:
-            pre_result = await self._guardrails.run_pre_check(
-                {"user_request": user_request, "context": context or {}}
-            )
+            pre_result = await self._guardrails.run_pre_check({"user_request": user_request, "context": context or {}})
             if not pre_result.all_passed and pre_result.short_circuited:
                 reason = f"ガードレール事前チェック失敗: {pre_result.summary()}"
                 self._emit_audit(run_id, "pipeline_rejected", reason)
@@ -128,7 +129,8 @@ class AutonomousPipeline:
         plan = planner_output.plan
 
         self._emit_audit(
-            run_id, "plan_generated",
+            run_id,
+            "plan_generated",
             f"計画生成完了: {len(plan.steps)} ステップ, リスク={plan.overall_risk.value}",
         )
 
@@ -152,7 +154,8 @@ class AutonomousPipeline:
 
             _logger.info("再計画実行: %d/%d", replan_count, self._max_replans)
             self._emit_audit(
-                run_id, "replan_start",
+                run_id,
+                "replan_start",
                 f"再計画 {replan_count}/{self._max_replans}",
             )
 
@@ -175,7 +178,8 @@ class AutonomousPipeline:
             if not post_result.all_passed:
                 flow_result["_post_check_warnings"] = post_result.summary()
                 self._emit_audit(
-                    run_id, "post_check_warning",
+                    run_id,
+                    "post_check_warning",
                     f"事後チェック警告: {post_result.summary()}",
                 )
 
@@ -189,6 +193,56 @@ class AutonomousPipeline:
             "run_id": run_id,
             "warnings": planner_output.warnings,
             "replan_count": replan_count,
+        }
+
+    async def execute_plan(
+        self,
+        plan: ExecutionPlan,
+        *,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """事前構築済みの ExecutionPlan を直接実行（PlannerAgent をスキップ）.
+
+        App が独自に計画を生成済みの場合に使用する。
+        ガードレール事前/事後チェック + フロー実行 + 監査を行う。
+
+        Args:
+            plan: 事前構築済みの実行計画
+            context: 追加コンテキスト（ガードレールに渡す）
+
+        Returns:
+            実行結果
+        """
+        run_id = f"run-{uuid.uuid4().hex[:8]}"
+        self._emit_audit(run_id, "execute_plan_start", f"計画直接実行: {plan.goal[:100]}")
+
+        # ガードレール事前チェック
+        if self._guardrails is not None:
+            pre_result = await self._guardrails.run_pre_check({"goal": plan.goal, **(context or {})})
+            if not pre_result.all_passed and pre_result.short_circuited:
+                reason = f"ガードレール事前チェック失敗: {pre_result.summary()}"
+                self._emit_audit(run_id, "pipeline_rejected", reason)
+                return {"status": "rejected", "reason": reason, "run_id": run_id}
+
+        # フロー実行
+        flow_result = await self._execute_flow(plan, run_id)
+
+        # ガードレール事後チェック
+        if self._guardrails is not None:
+            post_result = await self._guardrails.run_post_check(
+                {"goal": plan.goal},
+                flow_result,
+            )
+            if not post_result.all_passed:
+                flow_result["_post_check_warnings"] = post_result.summary()
+
+        self._emit_audit(run_id, "execute_plan_complete", "計画直接実行完了")
+
+        return {
+            "status": "completed",
+            "result": flow_result,
+            "plan": plan.model_dump(),
+            "run_id": run_id,
         }
 
     async def _plan(

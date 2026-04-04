@@ -12,6 +12,7 @@ const LEGACY_STAGE_INDEX_MAP = {
   "migration.extract_business_semantics": 1,
   "migration.design_architecture": 2,
 };
+const LEGACY_STAGE_KEYS = ['analysis', 'business_semantics', 'design'];
 const LEGACY_STAGES = ["analysis", "business_semantics", "design"];
 
 const STAGE_LABELS = {
@@ -33,11 +34,56 @@ const PIPELINE_STAGES = [
   "quality_gate",
 ];
 
+const STAGE_ALIAS_MAP = {
+  analysis: "analyzer",
+  business_semantics: "designer",
+  design: "designer",
+  transform: "transformer",
+  tests: "test_generator",
+  diff: "verifier",
+  quality: "quality_gate",
+};
+
 // ---------- アプリ状態 ----------
 let currentTaskId = null;
 let currentEventSource = null;
 let pendingHITLRequestId = null;
 let stageStates = {}; // stage => "pending" | "running" | "complete" | "error"
+
+function normalizeStage(stage) {
+  if (!stage) return stage;
+  return STAGE_ALIAS_MAP[stage] || stage;
+}
+
+function appendTimelineEntry({
+  stage,
+  title,
+  detail,
+  status = "info",
+  executor = null,
+  reason = null,
+}) {
+  const list = document.getElementById("timeline-list");
+  if (!list) return;
+
+  const item = document.createElement("div");
+  item.className = `timeline-item timeline-${status}`;
+
+  const meta = [
+    stage ? stageLabel(stage) : null,
+    executor ? `executor: ${executor}` : null,
+    reason ? `reason: ${reason}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  item.innerHTML = `
+    <div class="timeline-title">${escapeHtml(title || stageLabel(stage || "pipeline"))}</div>
+    <div class="timeline-detail">${escapeHtml(detail || "")}</div>
+    ${meta ? `<div class="timeline-meta">${escapeHtml(meta)}</div>` : ""}
+  `;
+  list.prepend(item);
+}
 
 // ---------- 認証ヘルパー ----------
 function getApiKey() {
@@ -195,12 +241,18 @@ async function checkStatusAndClose(taskId) {
 // ---------- イベントハンドリング ----------
 function handleEvent(event) {
   const type = event.type;
-  const stage = event.stage;
+  const stage = normalizeStage(event.stage);
 
   switch (type) {
     case "stage_start":
       updateStage(stage, "running");
       appendLog(`▶ ${stageLabel(stage)}: ${event.message || "開始"}`, "info");
+      appendTimelineEntry({
+        stage,
+        title: `${stageLabel(stage)} 開始`,
+        detail: event.message || "ステージを開始しました",
+        status: "running",
+      });
       break;
 
     case "progress":
@@ -214,6 +266,12 @@ function handleEvent(event) {
       updateStage(stage, "complete");
       const decision = event.decision ? ` [${event.decision}]` : "";
       appendLog(`✓ ${stageLabel(stage)} 完了${decision}`, "success");
+      appendTimelineEntry({
+        stage,
+        title: `${stageLabel(stage)} 完了`,
+        detail: event.decision || "ステージを完了しました",
+        status: "complete",
+      });
       break;
     }
 
@@ -231,6 +289,44 @@ function handleEvent(event) {
     case "hitl_required":
       showHITLDialog(event);
       appendLog(`⚠ HITL要求: ${stageLabel(stage)}`, "warn");
+      appendTimelineEntry({
+        stage,
+        title: `${stageLabel(stage)} 承認待ち`,
+        detail: event.reason || event.question || "人間レビューが必要です",
+        status: "waiting",
+        executor: "human",
+        reason: "approval_required",
+      });
+      break;
+
+    case "timeline":
+      appendTimelineEntry({
+        stage,
+        title: event.title || `${stageLabel(stage)} 更新`,
+        detail: event.detail || "",
+        status: event.status || "info",
+        executor: event.executor || null,
+        reason: event.reason || null,
+      });
+      break;
+
+    case "evidence":
+      appendTimelineEntry({
+        stage,
+        title: `${stageLabel(stage)} 証跡`,
+        detail: event.summary || "成果物を更新しました",
+        status: "complete",
+      });
+      break;
+
+    case "retry_decision":
+      appendTimelineEntry({
+        stage,
+        title: `${stageLabel(stage)} fallback`,
+        detail: event.decision || "retry",
+        status: "warn",
+        reason: event.reason || null,
+      });
       break;
 
     case "complete":
@@ -238,6 +334,12 @@ function handleEvent(event) {
         if (stageStates[s] !== "complete") updateStage(s, "complete");
       });
       appendLog("✓ 移行完了！", "success");
+      appendTimelineEntry({
+        stage: "pipeline",
+        title: "移行完了",
+        detail: event.message || "実行を完了しました",
+        status: "complete",
+      });
       if (currentEventSource) {
         currentEventSource.close();
         currentEventSource = null;
@@ -256,6 +358,12 @@ function handleEvent(event) {
       const errStage = stage || "pipeline";
       updateStage(errStage, "error");
       appendLog(`✗ エラー: ${event.message || "不明なエラー"}`, "error");
+      appendTimelineEntry({
+        stage: errStage,
+        title: `${stageLabel(errStage)} エラー`,
+        detail: event.message || "不明なエラー",
+        status: "error",
+      });
       if (currentEventSource) {
         currentEventSource.close();
         currentEventSource = null;
@@ -292,6 +400,7 @@ function initStageList() {
 }
 
 function updateStage(stage, status) {
+  stage = normalizeStage(stage);
   if (!stage || stage === "pipeline") return;
   stageStates[stage] = status;
   const el = document.getElementById(`stage-${stage}`);
@@ -308,6 +417,7 @@ function updateStage(stage, status) {
 }
 
 function resetStageFrom(startStage) {
+  startStage = normalizeStage(startStage);
   const idx = PIPELINE_STAGES.indexOf(startStage);
   if (idx === -1) return;
   for (let i = idx; i < PIPELINE_STAGES.length; i++) {
@@ -406,6 +516,8 @@ async function submitHITL(approved) {
 // ---------- UIリセット ----------
 function resetUI() {
   document.getElementById("log").innerHTML = "";
+  const timelineList = document.getElementById("timeline-list");
+  if (timelineList) timelineList.innerHTML = "";
   document.getElementById("result-section").style.display = "none";
   document.getElementById("download-btn").style.display = "none";
   currentTaskId = null;
@@ -418,6 +530,7 @@ function resetUI() {
 
 // ---------- ユーティリティ ----------
 function stageLabel(stage) {
+  stage = normalizeStage(stage);
   return STAGE_LABELS[stage]?.label || stage;
 }
 

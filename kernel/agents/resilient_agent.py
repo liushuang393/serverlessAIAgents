@@ -62,9 +62,7 @@ InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
 # A2A コンテキスト用 ContextVar（並行Flow安全性のため、インスタンス変数ではなくスレッド/タスクローカル）
-_a2a_context_var: contextvars.ContextVar[Any] = contextvars.ContextVar(
-    "_a2a_context_var", default=None
-)
+_a2a_context_var: contextvars.ContextVar[Any] = contextvars.ContextVar("_a2a_context_var", default=None)
 
 __all__ = [
     "BaseDecisionAgent",
@@ -195,9 +193,11 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](ABC):
                 # shared 層に ToolProvider ラッパーがない場合は infrastructure 直接（暫定）
                 try:
                     from shared.gateway.tool_provider import get_tool_provider
+
                     tool_provider_cls = get_tool_provider()
                 except ImportError:
                     from infrastructure.sandbox.tool_provider import ToolProvider
+
                     tool_provider_cls = ToolProvider
                 self._tool_provider = tool_provider_cls.discover()
                 self._logger.debug(f"{self.name}: 内蔵ツール登録完了")

@@ -26,10 +26,14 @@ import functools
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kernel.flow import Flow, create_flow
-from kernel.flow.types import AgentProtocol
+
+
+if TYPE_CHECKING:
+    from kernel.flow.types import AgentProtocol
+
 
 # 関数 Agent のコールバック型
 type _AgentFn = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]

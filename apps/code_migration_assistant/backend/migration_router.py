@@ -15,9 +15,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -25,10 +25,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from apps.code_migration_assistant.backend.migration_execution_adapter import (
-    CmaCliExecutionAdapter,
-    ExecutionConfig,
-)
+from apps.code_migration_assistant.adapters.factory import AdapterFactory
 from apps.code_migration_assistant.backend.migration_task_store import (
     HITLRequest as PendingHITLRequest,
 )
@@ -38,6 +35,7 @@ from apps.code_migration_assistant.backend.migration_task_store import (
     get_task_store,
 )
 from apps.code_migration_assistant.cobol_project import COBOLFile, COBOLProject
+from apps.code_migration_assistant.engine import CodeMigrationEngine
 
 
 if TYPE_CHECKING:
@@ -47,13 +45,23 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/migrate", tags=["migration"])
-_PASS_DECISIONS = {"PASSED", "KNOWN_LEGACY"}
 
 # 出力ルートディレクトリ（リポジトリルートからの絶対パス）
 _DEFAULT_OUTPUT_ROOT = Path(__file__).parent.parent.parent.parent / "migration_output"
 
 # バックグラウンドタスクの強参照セット（GCによる早期キャンセル防止）
 _background_tasks: set[asyncio.Task[Any]] = set()
+_STAGE_NODE_MAP: dict[str, str] = {
+    "migration.analyze_code": "analysis",
+    "migration.extract_business_semantics": "business_semantics",
+    "migration.design_architecture": "design",
+    "migration.transform_code": "transform",
+    "migration.synthesize_tests": "tests",
+    "migration.verify_diff": "diff",
+    "migration.evaluate_quality": "quality",
+    "migration.apply_fix": "fix",
+    "migration.generate_report": "report",
+}
 
 
 class UploadResponse(BaseModel):
@@ -93,168 +101,269 @@ def _get_output_root() -> Path:
     return _DEFAULT_OUTPUT_ROOT
 
 
-def _get_execution_backend() -> str:
-    """実行バックエンド種別を返す."""
-
-    backend = os.environ.get("MIGRATION_EXECUTION_BACKEND", "cma_cli").strip().lower()
-    if backend in {"cma_cli", "legacy_engine"}:
-        return backend
-    return "cma_cli"
-
-
 def _approval_bridge_path(task_id: str, request_id: str) -> Path:
     """cma_cli 承認応答の bridge file path を返す."""
     return _get_output_root() / "_runtime" / task_id / "approvals" / f"{request_id}.json"
 
 
-async def _run_legacy_pipeline(
+def _build_timeline_event(
+    *,
+    stage: str,
+    title: str,
+    detail: str,
+    status: str,
+    executor: str | None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """フロント投影向け timeline event を生成する."""
+    return {
+        "type": "timeline",
+        "event_type": "timeline",
+        "stage": stage,
+        "title": title,
+        "detail": detail,
+        "status": status,
+        "executor": executor,
+        "reason": reason,
+        "timestamp": time.time(),
+    }
+
+
+def _resolve_stage_plan(stage: str) -> tuple[str | None, list[str]]:
+    """ステージの実行器情報を返す."""
+    factory = AdapterFactory()
+    try:
+        plan = factory.get_stage_execution_plan("cobol-to-java", stage)
+    except ValueError:
+        return None, []
+    return plan.default_executor, list(plan.fallback_conditions)
+
+
+def _normalize_engine_event(
+    *,
+    program_name: str,
+    raw_event: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Engine イベントを migration SSE/timeline 契約へ変換する."""
+    events: list[dict[str, Any]] = []
+    event_name = str(raw_event.get("event", ""))
+    node_name = str(raw_event.get("node", ""))
+    stage = _STAGE_NODE_MAP.get(node_name)
+    executor, fallback_conditions = _resolve_stage_plan(stage or "")
+
+    if event_name == "node_start" and stage is not None:
+        events.append(
+            {
+                "type": "stage_start",
+                "stage": stage,
+                "program_name": program_name,
+                "message": f"{stage} 実行中...",
+            }
+        )
+        events.append(
+            _build_timeline_event(
+                stage=stage,
+                title=f"{program_name} / {stage}",
+                detail="ステージを開始しました",
+                status="running",
+                executor=executor,
+                reason="default_route",
+            )
+        )
+        return events
+
+    if event_name == "node_complete" and stage is not None:
+        result_raw = raw_event.get("result")
+        decision = ""
+        if isinstance(result_raw, dict):
+            decision_raw = result_raw.get("decision")
+            if isinstance(decision_raw, str):
+                decision = decision_raw
+        events.append(
+            {
+                "type": "stage_complete",
+                "stage": stage,
+                "program_name": program_name,
+                "decision": decision,
+            }
+        )
+        events.append(
+            _build_timeline_event(
+                stage=stage,
+                title=f"{program_name} / {stage}",
+                detail="ステージを完了しました",
+                status="complete",
+                executor=executor,
+                reason="completed",
+            )
+        )
+        return events
+
+    if str(raw_event.get("event_type", "")) == "approval_required":
+        context_raw = raw_event.get("context", {})
+        context = context_raw if isinstance(context_raw, dict) else {}
+        unknowns_raw = context.get("design_unknowns", [])
+        unknowns = [str(item) for item in unknowns_raw if item is not None]
+        stage_name = str(context.get("stage", "design"))
+        events.append(
+            {
+                "type": "hitl_required",
+                "stage": stage_name,
+                "program_name": program_name,
+                "request_id": raw_event.get("request_id"),
+                "reason": raw_event.get("reason", ""),
+                "question": raw_event.get("reason", ""),
+                "context": context,
+                "unknowns": unknowns,
+            }
+        )
+        events.append(
+            _build_timeline_event(
+                stage=stage_name,
+                title=f"{program_name} / human review",
+                detail=str(raw_event.get("reason", "")),
+                status="waiting",
+                executor=executor,
+                reason="approval_required",
+            )
+        )
+        return events
+
+    if str(raw_event.get("event_type", "")) == "approval_submitted":
+        approved = bool(raw_event.get("approved", False))
+        events.append(
+            _build_timeline_event(
+                stage="design",
+                title=f"{program_name} / human review",
+                detail="承認応答を受理しました" if approved else "拒否応答を受理しました",
+                status="complete" if approved else "error",
+                executor="human",
+                reason="approval_submitted",
+            )
+        )
+        return events
+
+    if str(raw_event.get("event_type", "")) == "approval_timeout":
+        events.append(
+            _build_timeline_event(
+                stage="design",
+                title=f"{program_name} / human review",
+                detail="承認待機がタイムアウトしました",
+                status="error",
+                executor="human",
+                reason="approval_timeout",
+            )
+        )
+        if fallback_conditions:
+            events.append(
+                {
+                    "type": "retry_decision",
+                    "stage": "design",
+                    "decision": "fallback_to_native",
+                    "reason": "approval_timeout",
+                    "fallback_conditions": fallback_conditions,
+                }
+            )
+        return events
+
+    return events
+
+
+async def _run_engine_pipeline(
     *,
     task_id: str,
     cobol_files: list[COBOLFile],
+    tmp_dir: Path,
     output_root: Path,
     fast_mode: bool,
     model: str,
     store: TaskStore,
 ) -> None:
-    """互換 MigrationEngine で実行する（legacy 経路）."""
+    """CodeMigrationEngine を唯一 runtime として実行する."""
+    del model
+    await store.update_status(task_id, TaskStatus.RUNNING)
 
-    from apps.code_migration_assistant.output.packager import OutputPackager
-    from apps.code_migration_assistant.pipeline.engine import MigrationEngine
-
-    engine = MigrationEngine(
-        output_root=output_root,
-        fast_mode=fast_mode,
-        model=model,
-    )
+    run_root = output_root / task_id
+    run_root.mkdir(parents=True, exist_ok=True)
+    approvals_dir = _get_output_root() / "_runtime" / task_id / "approvals"
+    approvals_dir.mkdir(parents=True, exist_ok=True)
 
     for cobol_file in cobol_files:
-        async for event in engine.run_file(cobol_file):
-            event_dict = {
-                "type": event.event_type,
-                "stage": event.stage,
-                **event.data,
-            }
-            await store.push_event(task_id, event_dict)
-            await store.update_status(
+        engine = CodeMigrationEngine(migration_type="cobol-to-java")
+        await engine._initialize()
+        program_root = run_root / cobol_file.program_name
+        runtime_inputs: dict[str, Any] = {
+            "source_code": cobol_file.content,
+            "task_id": task_id,
+            "module": cobol_file.program_name,
+            "migration_type": "cobol-to-java",
+            "artifacts_dir": str(program_root),
+            "fast_mode": fast_mode,
+            "options": {
+                "verification_mode": "fast" if fast_mode else "strict",
+                "approval_bridge_dir": str(approvals_dir),
+            },
+        }
+        final_result: dict[str, Any] | None = None
+
+        async for raw_event in engine._execute_stream(runtime_inputs):
+            normalized_events = _normalize_engine_event(program_name=cobol_file.program_name, raw_event=raw_event)
+            for event in normalized_events:
+                await store.push_event(task_id, event)
+                stage_raw = event.get("stage")
+                if isinstance(stage_raw, str) and stage_raw:
+                    await store.update_status(task_id, TaskStatus.RUNNING, current_stage=stage_raw)
+                if str(event.get("type", "")) == "hitl_required":
+                    task_obj = await store.get(task_id)
+                    if task_obj is not None:
+                        unknowns_raw = event.get("unknowns", [])
+                        unknowns = [str(item) for item in unknowns_raw if item is not None]
+                        task_obj.pending_hitl = PendingHITLRequest(
+                            request_id=str(event.get("request_id", "")),
+                            stage=str(event.get("stage", "")),
+                            artifact=event.get("context", {}) if isinstance(event.get("context"), dict) else {},
+                            unknowns=unknowns,
+                            question=str(event.get("question", "")),
+                            response_event=asyncio.Event(),
+                        )
+
+            if (
+                str(raw_event.get("event", "")) == "node_complete"
+                and str(raw_event.get("node", "")) == "migration_pipeline"
+            ):
+                result_obj = raw_event.get("result")
+                if isinstance(result_obj, dict):
+                    final_result = result_obj
+
+        if final_result is None:
+            msg = f"engine result missing for {cobol_file.program_name}"
+            raise RuntimeError(msg)
+
+        evidence_packets = final_result.get("artifact_paths", {})
+        if isinstance(evidence_packets, dict):
+            await store.push_event(
                 task_id,
-                TaskStatus.RUNNING,
-                current_stage=event.stage,
+                {
+                    "type": "evidence",
+                    "stage": "report",
+                    "program_name": cobol_file.program_name,
+                    "summary": "成果物を更新しました",
+                    "artifact_paths": {str(key): str(value) for key, value in evidence_packets.items()},
+                },
             )
 
-            hitl_event = getattr(event, "_hitl_event", None)
-            if event.event_type == "hitl_required" and isinstance(hitl_event, asyncio.Event):
-                task_obj = await store.get(task_id)
-                if task_obj is not None:
-                    task_obj.pending_hitl = PendingHITLRequest(
-                        request_id=event.data.get("request_id", ""),
-                        stage=event.stage or "",
-                        artifact=event.data.get("artifact", {}),
-                        unknowns=event.data.get("unknowns", []),
-                        question=event.data.get("question", ""),
-                        response_event=hitl_event,
-                    )
-
-            if event.event_type == "complete":
-                program_name_raw = event.data.get("program_name")
-                if isinstance(program_name_raw, str) and program_name_raw:
-                    try:
-                        packager = OutputPackager(output_root)
-                        zip_path = packager.create_download_package(program_name_raw)
-                        await store.set_download_path(task_id, zip_path)
-                    except Exception as exc:
-                        logger.warning("legacy zip作成失敗: %s", exc)
-
-
-async def _run_cma_cli_pipeline(
-    *,
-    task_id: str,
-    source_path: Path,
-    output_root: Path,
-    fast_mode: bool,
-    model: str,
-    store: TaskStore,
-) -> None:
-    """Run repeated one-task sessions until backlog completion."""
-
-    adapter = CmaCliExecutionAdapter(output_root / "_runtime")
-    max_sessions = 5000
-    last_output_dir: Path | None = None
-
-    for session_index in range(1, max_sessions + 1):
-        await adapter.start(
-            task_id,
-            ExecutionConfig(
-                source_path=source_path,
-                output_root=output_root,
-                fast_mode=fast_mode,
-                model=model,
-                options={"session_index": session_index},
-            ),
-        )
-
-        async for event in adapter.stream_events(task_id):
-            await store.push_event(task_id, event)
-            stage = event.get("stage")
-            if isinstance(stage, str):
-                await store.update_status(
-                    task_id,
-                    TaskStatus.RUNNING,
-                    current_stage=stage,
-                )
-            if str(event.get("type", "")) == "hitl_required":
-                task_obj = await store.get(task_id)
-                if task_obj is not None:
-                    context = event.get("context", {})
-                    unknowns_raw = context.get("design_unknowns", []) if isinstance(context, dict) else []
-                    unknowns = [str(item) for item in unknowns_raw if item is not None]
-                    task_obj.pending_hitl = PendingHITLRequest(
-                        request_id=str(event.get("request_id", "")),
-                        stage=str(event.get("stage", "")),
-                        artifact=context if isinstance(context, dict) else {},
-                        unknowns=unknowns,
-                        question=str(event.get("reason", "")),
-                        response_event=asyncio.Event(),
-                    )
-
-        result = await adapter.await_result(task_id)
-        if result.output_dir is not None and result.output_dir.exists():
-            last_output_dir = result.output_dir
-
-        summary = result.summary if isinstance(result.summary, dict) else {}
-        session_status_raw = summary.get("session_status", "")
-        session_status = str(session_status_raw).strip().lower()
-        backlog_completed = bool(summary.get("backlog_completed", False))
-        if not backlog_completed and not session_status:
-            decision_raw = summary.get("decision")
-            decision = str(decision_raw) if isinstance(decision_raw, str) else ""
-            if bool(summary.get("success", False)) and decision in _PASS_DECISIONS:
-                backlog_completed = True
-
-        if backlog_completed:
-            if last_output_dir is not None and last_output_dir.exists():
-                zip_path = CmaCliExecutionAdapter.create_download_package(last_output_dir, task_id)
-                await store.set_download_path(task_id, zip_path)
-            await store.update_status(task_id, TaskStatus.COMPLETE)
-            return
-
-        if session_status in {"blocked", "input_error", "env_error"}:
-            detail = result.error or str(summary.get("error") or "session blocked")
-            await store.update_status(task_id, TaskStatus.ERROR, error_message=detail)
-            await store.push_event(task_id, {"type": "error", "stage": None, "message": detail})
-            return
-
-        if session_status in {"done", "needs_fix"}:
-            continue
-
-    await store.update_status(task_id, TaskStatus.ERROR, error_message="session loop exceeded max_sessions")
+    zip_path = Path(shutil.make_archive(str(run_root / "download"), "zip", root_dir=str(run_root)))
+    await store.set_download_path(task_id, zip_path)
+    await store.update_status(task_id, TaskStatus.COMPLETE, current_stage="quality")
     await store.push_event(
         task_id,
         {
-            "type": "error",
-            "stage": None,
-            "message": "session loop exceeded max_sessions",
+            "type": "complete",
+            "stage": "pipeline",
+            "message": "engine runtime complete",
         },
     )
+    shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 async def _run_pipeline_background(
@@ -269,28 +378,17 @@ async def _run_pipeline_background(
 ) -> None:
     """バックグラウンドでパイプラインを実行し、イベントをキューに投入する."""
 
-    await store.update_status(task_id, TaskStatus.RUNNING)
-    backend = _get_execution_backend()
     try:
-        if backend == "legacy_engine":
-            await _run_legacy_pipeline(
-                task_id=task_id,
-                cobol_files=cobol_files,
-                output_root=output_root,
-                fast_mode=fast_mode,
-                model=model,
-                store=store,
-            )
-            await store.update_status(task_id, TaskStatus.COMPLETE)
-        else:
-            await _run_cma_cli_pipeline(
-                task_id=task_id,
-                source_path=source_path,
-                output_root=output_root,
-                fast_mode=fast_mode,
-                model=model,
-                store=store,
-            )
+        del source_path
+        await _run_engine_pipeline(
+            task_id=task_id,
+            cobol_files=cobol_files,
+            tmp_dir=tmp_dir,
+            output_root=output_root,
+            fast_mode=fast_mode,
+            model=model,
+            store=store,
+        )
     except Exception as exc:
         logger.exception("パイプライン実行エラー: %s", exc)
         await store.update_status(task_id, TaskStatus.ERROR, error_message=str(exc))
@@ -447,22 +545,21 @@ async def submit_hitl(
     if task is None:
         raise HTTPException(status_code=404, detail=f"タスクが存在しません: {task_id}")
 
-    if _get_execution_backend() == "cma_cli":
-        bridge_path = _approval_bridge_path(task_id, body.request_id)
-        bridge_path.parent.mkdir(parents=True, exist_ok=True)
-        bridge_path.write_text(
-            json.dumps(
-                {
-                    "approved": body.approved,
-                    "comment": body.comment,
-                    "modifications": body.modifications,
-                    "approver": "operator",
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+    bridge_path = _approval_bridge_path(task_id, body.request_id)
+    bridge_path.parent.mkdir(parents=True, exist_ok=True)
+    bridge_path.write_text(
+        json.dumps(
+            {
+                "approved": body.approved,
+                "comment": body.comment,
+                "modifications": body.modifications,
+                "approver": "operator",
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
     success = await store.submit_hitl_response(
         task_id=task_id,

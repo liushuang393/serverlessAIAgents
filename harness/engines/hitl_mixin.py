@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from harness.approval import ApprovalResponse, Command
-    from harness.approval.checkpointer import Checkpointer, CheckpointCursor, CheckpointData
+    from harness.approval.checkpointer import CheckpointData, Checkpointer
 
 
 @dataclass
@@ -177,10 +177,7 @@ class HITLEngineMixin:
             msg = f"チェックポイントが見つかりません: {thread_id}"
             raise InterruptError(msg)
 
-        logger.info(
-            f"Resuming from checkpoint: {checkpoint.checkpoint_id} "
-            f"(command: {command.type.value})"
-        )
+        logger.info(f"Resuming from checkpoint: {checkpoint.checkpoint_id} (command: {command.type.value})")
 
         schema_version = checkpoint.schema_version or 1
         if schema_version not in {1, 2}:
@@ -188,9 +185,7 @@ class HITLEngineMixin:
             raise InterruptError(msg)
 
         if schema_version >= 2 and checkpoint.cursor is None:
-            logger.warning(
-                "カーソル情報が欠落しているため、旧式の再開処理にフォールバックします"
-            )
+            logger.warning("カーソル情報が欠落しているため、旧式の再開処理にフォールバックします")
 
         response = await resume_with_command(
             command=command,

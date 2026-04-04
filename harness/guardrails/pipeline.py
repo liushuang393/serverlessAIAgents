@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -120,9 +121,7 @@ class GuardrailPipeline:
             try:
                 result = await guardrail.check(input_data, output_data)
             except Exception:
-                _logger.exception(
-                    "ガードレール '%s' の実行中にエラーが発生", guardrail.name
-                )
+                _logger.exception("ガードレール '%s' の実行中にエラーが発生", guardrail.name)
                 # エラー時は安全側に倒す（不合格扱い）
                 result = GuardrailResult(
                     passed=False,

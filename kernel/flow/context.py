@@ -128,7 +128,9 @@ class FlowContext(BaseModel):
                     unknown_keys = set(result.keys()) - schema_fields
                     if unknown_keys:
                         self._logger.warning(
-                            "state_schema にないキー: %s (node: %s)", unknown_keys, node_id,
+                            "state_schema にないキー: %s (node: %s)",
+                            unknown_keys,
+                            node_id,
                         )
             except Exception as e:
                 self._logger.warning("state_schema 検証エラー: %s (node: %s)", e, node_id)
@@ -362,9 +364,7 @@ class ScopedContextView:
         """自 Agent の出力を取得."""
         return self._ctx.get_result(self._agent_id)
 
-    def get_peer_output(
-        self, agent_id: str, default: Any = None
-    ) -> _ReadOnlyDict | Any:
+    def get_peer_output(self, agent_id: str, default: Any = None) -> _ReadOnlyDict | Any:
         """他 Agent の出力を読み取り専用で取得.
 
         Args:

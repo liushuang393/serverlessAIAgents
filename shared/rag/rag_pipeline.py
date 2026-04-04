@@ -324,8 +324,8 @@ class RAGPipeline:
         filtered: list[dict[str, Any]] = []
         for result in results:
             raw_score = result.get("score")
-            similarity = float(raw_score) if isinstance(raw_score, int | float) else 1.0 - float(
-                result.get("distance", 1.0)
+            similarity = (
+                float(raw_score) if isinstance(raw_score, int | float) else 1.0 - float(result.get("distance", 1.0))
             )
             if similarity >= min_similarity:
                 normalized = dict(result)

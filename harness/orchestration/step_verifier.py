@@ -8,13 +8,17 @@ FlowMiddleware プロトコルを実装し、各ノード実行後に DualVerifi
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from contracts.flow.contracts import MiddlewareDecision, MiddlewareResult
 from harness.governance.audit import AuditEvent, AuditLogger
-from harness.orchestration.models import ExecutionPlan, PlanStep
 from harness.risk.service import RiskLevel
 from kernel.agents.dual_verifier import DualVerifier, VerifyStatus
+
+
+if TYPE_CHECKING:
+    from harness.orchestration.models import ExecutionPlan, PlanStep
+
 
 _logger = logging.getLogger(__name__)
 
@@ -58,9 +62,7 @@ class StepVerifierMiddleware:
         self._retry_counts: dict[str, int] = {}
 
         # step_id → PlanStep の高速ルックアップ
-        self._step_map: dict[str, PlanStep] = {
-            step.step_id: step for step in plan.steps
-        }
+        self._step_map: dict[str, PlanStep] = {step.step_id: step for step in plan.steps}
 
     @property
     def name(self) -> str:
@@ -73,7 +75,7 @@ class StepVerifierMiddleware:
         if step is not None:
             return step
         for s in self._plan.steps:
-            if s.agent_id == node_name or s.description == node_name:
+            if node_name in (s.agent_id, s.description):
                 return s
         return None
 
@@ -145,7 +147,8 @@ class StepVerifierMiddleware:
         # 実行失敗はそのまま通す（FlowExecutor がエラー処理）
         if not success:
             self._emit_audit(
-                node_id, node_name,
+                node_id,
+                node_name,
                 "skip_verification",
                 "ノード実行失敗のため検証スキップ",
                 verify_status="skipped",
@@ -164,7 +167,8 @@ class StepVerifierMiddleware:
         # PASS: 次ステップへ
         if verify_result.status == VerifyStatus.PASS:
             self._emit_audit(
-                node_id, node_name,
+                node_id,
+                node_name,
                 "verification_passed",
                 f"検証合格: {verify_result.message}",
                 verify_status="pass",
@@ -176,7 +180,8 @@ class StepVerifierMiddleware:
         # WARNING: 警告付きで続行
         if verify_result.status == VerifyStatus.WARNING:
             self._emit_audit(
-                node_id, node_name,
+                node_id,
+                node_name,
                 "verification_warning",
                 f"検証警告: {verify_result.message}",
                 verify_status="warning",
@@ -196,7 +201,8 @@ class StepVerifierMiddleware:
         if verify_result.status == VerifyStatus.NEED_HUMAN:
             reason = f"人間確認が必要: {verify_result.message}"
             self._emit_audit(
-                node_id, node_name,
+                node_id,
+                node_name,
                 "approval_required",
                 reason,
                 verify_status="need_human",
@@ -226,12 +232,10 @@ class StepVerifierMiddleware:
         if current_retries < self._max_retries:
             # リトライ残あり → DENY で再実行シグナル
             self._retry_counts[node_id] = current_retries + 1
-            reason = (
-                f"検証失敗 (リトライ {current_retries + 1}/{self._max_retries}): "
-                f"{verify_result.message}"
-            )
+            reason = f"検証失敗 (リトライ {current_retries + 1}/{self._max_retries}): {verify_result.message}"
             self._emit_audit(
-                node_id, node_name,
+                node_id,
+                node_name,
                 "retry_requested",
                 reason,
                 verify_status="fail",
@@ -250,11 +254,10 @@ class StepVerifierMiddleware:
             )
 
         # リトライ超過 → 再計画シグナル
-        reason = (
-            f"検証失敗 (リトライ上限到達): {verify_result.message}"
-        )
+        reason = f"検証失敗 (リトライ上限到達): {verify_result.message}"
         self._emit_audit(
-            node_id, node_name,
+            node_id,
+            node_name,
             "replan_requested",
             reason,
             verify_status="fail",

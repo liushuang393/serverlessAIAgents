@@ -99,10 +99,22 @@ class TaskRuntime:
     def to_state(self, owner_instance: str | None) -> dict[str, Any]:
         """配布可能な状態スナップショットへ変換する."""
         capability_trace: list[dict[str, Any]] = []
+        timeline: list[dict[str, Any]] = []
+        evidence_packets: list[dict[str, Any]] = []
+        retry_decisions: list[dict[str, Any]] = []
         if isinstance(self.result, dict):
             trace = self.result.get("capability_trace")
             if isinstance(trace, list):
                 capability_trace = [item for item in trace if isinstance(item, dict)]
+            timeline_raw = self.result.get("timeline")
+            if isinstance(timeline_raw, list):
+                timeline = [item for item in timeline_raw if isinstance(item, dict)]
+            evidence_raw = self.result.get("evidence_packets")
+            if isinstance(evidence_raw, list):
+                evidence_packets = [item for item in evidence_raw if isinstance(item, dict)]
+            retry_raw = self.result.get("retry_decisions")
+            if isinstance(retry_raw, list):
+                retry_decisions = [item for item in retry_raw if isinstance(item, dict)]
 
         pending_approvals = _collect_pending_approvals(self.engine)
 
@@ -116,6 +128,9 @@ class TaskRuntime:
             "pending_approvals": pending_approvals,
             "observation_events_count": self.observation_events_count,
             "capability_trace": capability_trace,
+            "timeline": timeline,
+            "evidence_packets": evidence_packets,
+            "retry_decisions": retry_decisions,
             "owner_instance": owner_instance,
         }
 
@@ -227,6 +242,9 @@ def _normalize_state_payload(state: dict[str, Any]) -> dict[str, Any]:
     normalized.setdefault("pending_approvals", [])
     normalized.setdefault("observation_events_count", 0)
     normalized.setdefault("capability_trace", [])
+    normalized.setdefault("timeline", [])
+    normalized.setdefault("evidence_packets", [])
+    normalized.setdefault("retry_decisions", [])
     normalized.setdefault("status", "unknown")
     normalized.setdefault("error", None)
     return normalized

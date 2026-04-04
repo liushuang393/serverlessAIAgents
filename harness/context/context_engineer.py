@@ -59,9 +59,9 @@ from harness.context.turn_compressor import (
 )
 from shared.evolution.types import RetrievalDecisionInput, RetrievalMode, StalenessRisk
 
-from contracts.context.provider import ContextChunk, ContextProvider
 
 if TYPE_CHECKING:
+    from contracts.context.provider import ContextChunk, ContextProvider
     from infrastructure.sandbox.tool_provider import RegisteredTool
 
 _logger = logging.getLogger(__name__)

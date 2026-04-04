@@ -243,7 +243,7 @@ class AgentRegistry:
                     timeout=drain_timeout_seconds,
                 )
                 self._logger.info("Agent %s のドレイン完了", agent_id)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._logger.warning(
                     "Agent %s のドレインがタイムアウト（残り %d 件）、強制削除",
                     agent_id,
@@ -409,19 +409,11 @@ class AgentRegistry:
 
     def list_descriptors(self, tenant_id: str | None = None) -> list[AgentDescriptor]:
         """runtime descriptor 一覧を取得."""
-        return [
-            entry.descriptor
-            for _, entry in self._iter_entries(tenant_id)
-            if entry.descriptor is not None
-        ]
+        return [entry.descriptor for _, entry in self._iter_entries(tenant_id) if entry.descriptor is not None]
 
     def list_runtime_agent_ids(self, tenant_id: str | None = None) -> list[str]:
         """runtime instance を持つ agent id 一覧."""
-        return sorted(
-            agent_id
-            for agent_id, entry in self._iter_entries(tenant_id)
-            if entry.instance is not None
-        )
+        return sorted(agent_id for agent_id, entry in self._iter_entries(tenant_id) if entry.instance is not None)
 
     def get_all_capabilities(self, tenant_id: str | None = None) -> dict[str, AgentCapabilitySpec]:
         """全 Agent の能力を取得."""

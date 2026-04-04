@@ -12,14 +12,90 @@ migration_types:
   # ========================================
   - name: cobol-to-java
     description: "COBOL から Java への移行"
+    migration_family: "language_modernization"
     source:
       language: COBOL
       adapter: cobol_adapter.CobolAdapter
       parser: ply_cobol_parser.PLYCobolParser
+    source_profile:
+      language: COBOL
+      runtime: mainframe_batch
+      artifact_type: source_code
     target:
       language: Java
       adapter: java_adapter.JavaAdapter
       runner: junit_runner.JUnitRunner
+    target_profile:
+      language: Java
+      runtime: jvm
+      framework: plain_java
+    preparation_profile:
+      ingestion: cobol_project
+      packaging: upload_bundle
+      ci_mode: junit_runner
+    analysis_capability_set:
+      - legacy-ingestion
+      - business-semantics
+    transformation_strategy: ast_to_modern_code
+    verification_strategy: differential_verification
+    delivery_strategy: download_package
+    stage_execution:
+      analysis:
+        capability_id: legacy-ingestion
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+        fallback_conditions: ["executor_failure", "tool_unavailable"]
+        required_skills: ["preparation", "analysis"]
+        evidence_kinds: ["analysis_artifact", "timeline"]
+      business_semantics:
+        capability_id: business-semantics
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+        fallback_conditions: ["executor_failure"]
+        required_skills: ["analysis"]
+        evidence_kinds: ["semantics_artifact", "timeline"]
+      design:
+        capability_id: migration-design
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+        fallback_conditions: ["executor_failure"]
+        required_skills: ["analysis", "deliver"]
+        evidence_kinds: ["design_artifact", "approval"]
+      transform:
+        capability_id: modernization-generator
+        default_executor: codex_cli
+        fallback_executor: native
+        max_retries: 2
+        fallback_conditions: ["executor_failure", "verification_failed"]
+        required_skills: ["transform"]
+        evidence_kinds: ["code_artifact", "retry"]
+      tests:
+        capability_id: test-synthesis
+        default_executor: codex_cli
+        fallback_executor: native
+        max_retries: 2
+        fallback_conditions: ["executor_failure", "ci_failed"]
+        required_skills: ["test", "ci_cd"]
+        evidence_kinds: ["test_artifact", "retry"]
+      diff:
+        capability_id: differential-verification
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+        fallback_conditions: ["executor_failure"]
+        required_skills: ["verify"]
+        evidence_kinds: ["diff_report", "timeline"]
+      quality:
+        capability_id: quality-gate
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+        fallback_conditions: ["executor_failure"]
+        required_skills: ["verify", "deliver"]
+        evidence_kinds: ["quality_report", "decision"]
     prompts:
       transform: cobol_java/transform.txt
       checker: cobol_java/checker.txt
@@ -34,14 +110,69 @@ migration_types:
   # ========================================
   - name: cobol-to-springboot
     description: "COBOL から Spring Boot へのモダン化移行"
+    migration_family: "language_modernization"
     source:
       language: COBOL
       adapter: cobol_adapter.CobolAdapter
       parser: ply_cobol_parser.PLYCobolParser
+    source_profile:
+      language: COBOL
+      runtime: mainframe_batch
+      artifact_type: source_code
     target:
       language: SpringBoot
       adapter: springboot_adapter.SpringBootAdapter
       runner: maven_runner.MavenRunner
+    target_profile:
+      language: Java
+      runtime: jvm
+      framework: spring_boot
+    preparation_profile:
+      ingestion: cobol_project
+      packaging: upload_bundle
+      ci_mode: maven_runner
+    analysis_capability_set:
+      - legacy-ingestion
+      - business-semantics
+    transformation_strategy: ast_to_service_app
+    verification_strategy: differential_verification
+    delivery_strategy: download_package
+    stage_execution:
+      analysis:
+        capability_id: legacy-ingestion
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+      business_semantics:
+        capability_id: business-semantics
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+      design:
+        capability_id: migration-design
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+      transform:
+        capability_id: modernization-generator
+        default_executor: codex_cli
+        fallback_executor: native
+        max_retries: 2
+      tests:
+        capability_id: test-synthesis
+        default_executor: codex_cli
+        fallback_executor: native
+        max_retries: 2
+      diff:
+        capability_id: differential-verification
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
+      quality:
+        capability_id: quality-gate
+        default_executor: claude_code_cli
+        fallback_executor: native
+        max_retries: 1
     prompts:
       transform: cobol_springboot/transform.txt
       checker: cobol_java/checker.txt

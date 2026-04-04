@@ -11,12 +11,12 @@ import logging
 from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any
 
-from contracts.flow.contracts import FlowMiddleware
 from kernel.flow.builder import FlowBuilder
 
-from harness.orchestration.models import ExecutionPlan, PlanStep
 
 if TYPE_CHECKING:
+    from contracts.flow.contracts import FlowMiddleware
+    from harness.orchestration.models import ExecutionPlan, PlanStep
     from kernel.flow.context import FlowContext
     from kernel.flow.flow import Flow
     from kernel.flow.types import AgentProtocol
@@ -60,9 +60,7 @@ def _topological_layers(steps: list[PlanStep]) -> list[list[PlanStep]]:
 
     # BFS でレイヤー分割
     layers: list[list[PlanStep]] = []
-    queue: deque[str] = deque(
-        sid for sid, deg in in_degree.items() if deg == 0
-    )
+    queue: deque[str] = deque(sid for sid, deg in in_degree.items() if deg == 0)
 
     processed = 0
     while queue:
@@ -241,7 +239,7 @@ class DynamicFlowGenerator:
         # ミドルウェアを attach
         if middlewares:
             for mw in middlewares:
-                flow._executor.add_middleware(mw)  # noqa: SLF001 — Flow が public API を持たないため
+                flow._executor.add_middleware(mw)
 
         _logger.info(
             "動的フロー生成完了: plan_id=%s, ステップ数=%d, レイヤー数=%d",

@@ -32,6 +32,7 @@ import yaml
 
 from harness.security.policy_engine import AuthDecision, Policy
 
+
 logger = logging.getLogger(__name__)
 
 # effect 文字列と AuthDecision のマッピング
@@ -68,12 +69,14 @@ class PolicyLoader:
         """
         file_path = Path(path)
         if not file_path.exists():
-            raise FileNotFoundError(f"ポリシーファイルが見つかりません: {file_path}")
+            msg = f"ポリシーファイルが見つかりません: {file_path}"
+            raise FileNotFoundError(msg)
 
         try:
             content = file_path.read_text(encoding="utf-8")
         except OSError as e:
-            raise PolicyLoadError(f"ファイル読み込みエラー: {e}") from e
+            msg = f"ファイル読み込みエラー: {e}"
+            raise PolicyLoadError(msg) from e
 
         return self.load_from_string(content)
 
@@ -92,20 +95,23 @@ class PolicyLoader:
         try:
             data = yaml.safe_load(yaml_str)
         except yaml.YAMLError as e:
-            raise PolicyLoadError(f"YAMLパースエラー: {e}") from e
+            msg = f"YAMLパースエラー: {e}"
+            raise PolicyLoadError(msg) from e
 
         if data is None:
             return []
 
         if not isinstance(data, dict):
-            raise PolicyLoadError("YAMLのトップレベルは辞書である必要があります")
+            msg = "YAMLのトップレベルは辞書である必要があります"
+            raise PolicyLoadError(msg)
 
         raw_policies = data.get("policies")
         if raw_policies is None:
             return []
 
         if not isinstance(raw_policies, list):
-            raise PolicyLoadError("'policies' キーはリストである必要があります")
+            msg = "'policies' キーはリストである必要があります"
+            raise PolicyLoadError(msg)
 
         policies: list[Policy] = []
         for i, raw in enumerate(raw_policies):
@@ -113,9 +119,8 @@ class PolicyLoader:
                 policy = self._parse_policy(raw)
                 policies.append(policy)
             except (KeyError, ValueError, TypeError) as e:
-                raise PolicyLoadError(
-                    f"ポリシー定義 #{i} の変換エラー: {e}"
-                ) from e
+                msg = f"ポリシー定義 #{i} の変換エラー: {e}"
+                raise PolicyLoadError(msg) from e
 
         logger.info("YAMLから %d 件のポリシーを読み込みました", len(policies))
         return policies
@@ -142,9 +147,8 @@ class PolicyLoader:
         effect = _EFFECT_MAP.get(effect_str)
         if effect is None:
             valid = ", ".join(_EFFECT_MAP.keys())
-            raise ValueError(
-                f"不正な effect 値: '{effect_str}'（有効値: {valid}）"
-            )
+            msg = f"不正な effect 値: '{effect_str}'（有効値: {valid}）"
+            raise ValueError(msg)
 
         return Policy(
             policy_id=str(policy_id),

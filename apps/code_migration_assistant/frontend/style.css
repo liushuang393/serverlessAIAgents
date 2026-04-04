@@ -693,6 +693,56 @@ body {
   gap: 6px;
 }
 
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timeline-item {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--transform);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+
+.timeline-running {
+  border-left-color: var(--modern);
+}
+
+.timeline-complete {
+  border-left-color: var(--success);
+}
+
+.timeline-error {
+  border-left-color: var(--error);
+}
+
+.timeline-waiting,
+.timeline-warn {
+  border-left-color: var(--legacy);
+}
+
+.timeline-title {
+  font-size: 0.87rem;
+  font-weight: 600;
+}
+
+.timeline-detail {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.timeline-meta {
+  margin-top: 6px;
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+}
+
 /* ---------- ステージアイテム ---------- */
 .stage-item {
   display: flex;

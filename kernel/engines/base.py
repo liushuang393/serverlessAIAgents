@@ -42,7 +42,6 @@ from kernel.runtime import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
-    from harness.approval.checkpointer import Checkpointer
     from kernel.patterns.progress_emitter import AgentMeta, ProgressEmitter
 
 
@@ -730,10 +729,7 @@ class BaseEngine(ABC):
         HITL mixin 未合成時は NotImplementedError。
         harness.engines.hitl_mixin.HITLEngineMixin を合成すると利用可能になる。
         """
-        msg = (
-            "resume() は HITLEngineMixin が必要です。"
-            "Engine クラスに HITLEngineMixin を合成してください。"
-        )
+        msg = "resume() は HITLEngineMixin が必要です。Engine クラスに HITLEngineMixin を合成してください。"
         raise NotImplementedError(msg)
 
     @property

@@ -305,9 +305,7 @@ class FlowBuilder:
             ... )
         """
         node_id = id or self._next_id("branch")
-        resolved_routes = {
-            key: self._resolve_agent(agent) for key, agent in routes.items()
-        }
+        resolved_routes = {key: self._resolve_agent(agent) for key, agent in routes.items()}
         resolved_default = self._resolve_agent(default) if default else None
 
         node = BranchNode(

@@ -12,8 +12,6 @@ import logging
 import uuid
 from typing import Any
 
-from pydantic import BaseModel
-
 from harness.orchestration.models import (
     ExecutionPlan,
     PlannerInput,
@@ -24,18 +22,40 @@ from harness.orchestration.models import (
 from harness.risk.service import RiskLevel
 from kernel.agents.resilient_agent import ResilientAgent
 
+
 _logger = logging.getLogger(__name__)
 
 # リスクが高いと推定されるキーワード
-_HIGH_RISK_KEYWORDS: frozenset[str] = frozenset({
-    "delete", "drop", "remove", "destroy", "truncate",
-    "削除", "破棄", "消去", "リセット",
-})
+_HIGH_RISK_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "delete",
+        "drop",
+        "remove",
+        "destroy",
+        "truncate",
+        "削除",
+        "破棄",
+        "消去",
+        "リセット",
+    }
+)
 
-_MEDIUM_RISK_KEYWORDS: frozenset[str] = frozenset({
-    "update", "modify", "write", "send", "publish", "deploy",
-    "更新", "変更", "書き込み", "送信", "公開", "デプロイ",
-})
+_MEDIUM_RISK_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "update",
+        "modify",
+        "write",
+        "send",
+        "publish",
+        "deploy",
+        "更新",
+        "変更",
+        "書き込み",
+        "送信",
+        "公開",
+        "デプロイ",
+    }
+)
 
 
 # === LLM プロンプト構築 ===
@@ -151,11 +171,13 @@ def _parse_plan_json(raw: str, goal: str) -> ExecutionPlan:
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
-        raise ValueError(f"LLM 出力の JSON パースに失敗: {e}") from e
+        msg = f"LLM 出力の JSON パースに失敗: {e}"
+        raise ValueError(msg) from e
 
     steps_raw = data.get("steps", [])
     if not isinstance(steps_raw, list):
-        raise ValueError("steps フィールドがリストではありません")
+        msg = "steps フィールドがリストではありません"
+        raise ValueError(msg)
 
     steps: list[PlanStep] = []
     for i, s in enumerate(steps_raw):
@@ -177,8 +199,7 @@ def _parse_plan_json(raw: str, goal: str) -> ExecutionPlan:
         steps=steps,
         metadata={"reasoning": data.get("reasoning", "")},
     )
-    plan = plan.model_copy(update={"overall_risk": plan.compute_overall_risk()})
-    return plan
+    return plan.model_copy(update={"overall_risk": plan.compute_overall_risk()})
 
 
 # === PlannerAgent ===
@@ -249,10 +270,7 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
 
         # 完了済みステップを保持し、新ステップを追加
         completed_step_ids = set(request.completed_results.keys())
-        kept_steps = [
-            s for s in request.original_plan.steps
-            if s.step_id in completed_step_ids
-        ]
+        kept_steps = [s for s in request.original_plan.steps if s.step_id in completed_step_ids]
         # 新ステップの step_id 衝突を回避
         existing_ids = {s.step_id for s in kept_steps}
         for step in new_plan.steps:
@@ -262,10 +280,12 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
                 )
             kept_steps.append(step)
 
-        merged_plan = new_plan.model_copy(update={
-            "plan_id": request.original_plan.plan_id,
-            "steps": kept_steps,
-        })
+        merged_plan = new_plan.model_copy(
+            update={
+                "plan_id": request.original_plan.plan_id,
+                "steps": kept_steps,
+            }
+        )
         merged_plan = merged_plan.model_copy(
             update={"overall_risk": merged_plan.compute_overall_risk()},
         )
@@ -294,9 +314,7 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
         for step in plan.steps:
             for dep in step.dependencies:
                 if dep not in step_ids:
-                    warnings.append(
-                        f"ステップ '{step.step_id}' の依存 '{dep}' が計画内に存在しません"
-                    )
+                    warnings.append(f"ステップ '{step.step_id}' の依存 '{dep}' が計画内に存在しません")
 
         # エージェントID の存在チェック
         if available_agents:
@@ -304,8 +322,7 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
             for step in plan.steps:
                 if step.agent_id not in available_set:
                     warnings.append(
-                        f"ステップ '{step.step_id}' のエージェント '{step.agent_id}' は"
-                        f"利用可能リストに含まれません"
+                        f"ステップ '{step.step_id}' のエージェント '{step.agent_id}' は利用可能リストに含まれません"
                     )
 
         # 循環依存の簡易チェック

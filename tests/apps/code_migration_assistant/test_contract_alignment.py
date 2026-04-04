@@ -51,6 +51,25 @@ def test_state_response_contains_contract_and_capability_trace(tmp_path: Path) -
         artifacts_dir=tmp_path / task_id,
         result={
             "success": True,
+            "timeline": [
+                {
+                    "event_type": "timeline",
+                    "stage": "analysis",
+                    "title": "COBOL解析",
+                }
+            ],
+            "evidence_packets": [
+                {
+                    "stage": "analysis",
+                    "summary": "legacy analysis written",
+                }
+            ],
+            "retry_decisions": [
+                {
+                    "stage": "transform",
+                    "decision": "fallback_to_codex",
+                }
+            ],
             "capability_trace": [
                 {
                     "stage": "analysis",
@@ -66,4 +85,7 @@ def test_state_response_contains_contract_and_capability_trace(tmp_path: Path) -
     response = asyncio.run(backend_app.get_migration_state(task_id))
     assert response["contract_version"] == backend_app.CONTRACT_VERSION
     assert response["observation_events_count"] == 0
+    assert response["timeline"][0]["stage"] == "analysis"
+    assert response["evidence_packets"][0]["stage"] == "analysis"
+    assert response["retry_decisions"][0]["stage"] == "transform"
     assert response["capability_trace"][0]["capability_id"] == "legacy-ingestion"

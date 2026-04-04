@@ -19,8 +19,8 @@ from contracts.app.contracts import (
     LLMContractModality,
     LLMContractModelRef,
 )
-
 from infrastructure.llm.gateway import load_gateway_config
+
 
 _APP_PATH_PATTERN = re.compile(r"[/\\]apps[/\\]([a-zA-Z0-9_]+)[/\\]")
 _DEFAULT_APPS_DIR = "apps"
@@ -28,6 +28,7 @@ _DEFAULT_APPS_DIR = "apps"
 
 class LLMContractResolutionError(RuntimeError):
     """LLM 契約解決に失敗した場合の例外."""
+
 
 LLMContractsConfig = LLMContractConfig
 

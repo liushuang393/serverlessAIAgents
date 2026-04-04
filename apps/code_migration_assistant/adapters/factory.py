@@ -13,6 +13,7 @@ from apps.code_migration_assistant.adapters.base import (
     SourceLanguageAdapter,
     TargetLanguageAdapter,
 )
+from contracts.runtime.migration_execution import MigrationTaskProfile, StageExecutionPlan
 
 
 class AdapterFactory:
@@ -196,6 +197,64 @@ class AdapterFactory:
             msg = f"Unknown migration type: {migration_type}"
             raise ValueError(msg)
         return config
+
+    def get_task_profile(self, migration_type: str) -> MigrationTaskProfile:
+        """移行タイプから正規化 task profile を返す."""
+        config = self.get_migration_config(migration_type)
+
+        source_profile_raw = config.get("source_profile", config.get("source", {}))
+        source_profile = source_profile_raw if isinstance(source_profile_raw, dict) else {}
+
+        target_profile_raw = config.get("target_profile", config.get("target", {}))
+        target_profile = target_profile_raw if isinstance(target_profile_raw, dict) else {}
+
+        preparation_profile_raw = config.get("preparation_profile", {})
+        preparation_profile = preparation_profile_raw if isinstance(preparation_profile_raw, dict) else {}
+
+        analysis_capability_set_raw = config.get("analysis_capability_set", [])
+        analysis_capability_set = [
+            str(item) for item in analysis_capability_set_raw if isinstance(item, str) and item.strip()
+        ]
+
+        return MigrationTaskProfile(
+            migration_type=migration_type,
+            migration_family=str(config.get("migration_family", "custom")),
+            source_profile=source_profile,
+            target_profile=target_profile,
+            preparation_profile=preparation_profile,
+            analysis_capability_set=analysis_capability_set,
+            transformation_strategy=str(config.get("transformation_strategy", "")),
+            verification_strategy=str(config.get("verification_strategy", "")),
+            delivery_strategy=str(config.get("delivery_strategy", "")),
+        )
+
+    def get_stage_execution_plan(self, migration_type: str, stage: str) -> StageExecutionPlan:
+        """ステージ別の実行計画を返す."""
+        config = self.get_migration_config(migration_type)
+        stage_map_raw = config.get("stage_execution", {})
+        stage_map = stage_map_raw if isinstance(stage_map_raw, dict) else {}
+        stage_config_raw = stage_map.get(stage, {})
+        stage_config = stage_config_raw if isinstance(stage_config_raw, dict) else {}
+
+        required_skills_raw = stage_config.get("required_skills", [])
+        required_skills = [str(item) for item in required_skills_raw if isinstance(item, str) and item.strip()]
+
+        evidence_kinds_raw = stage_config.get("evidence_kinds", [])
+        evidence_kinds = [str(item) for item in evidence_kinds_raw if isinstance(item, str) and item.strip()]
+
+        fallback_conditions_raw = stage_config.get("fallback_conditions", [])
+        fallback_conditions = [str(item) for item in fallback_conditions_raw if isinstance(item, str) and item.strip()]
+
+        return StageExecutionPlan(
+            stage=stage,
+            capability_id=str(stage_config.get("capability_id", stage)),
+            default_executor=str(stage_config.get("default_executor", "native")),
+            fallback_executor=str(stage_config.get("fallback_executor", "native")),
+            max_retries=int(stage_config.get("max_retries", 1)),
+            fallback_conditions=fallback_conditions,
+            required_skills=required_skills,
+            evidence_kinds=evidence_kinds,
+        )
 
     def get_prompt(self, migration_type: str, prompt_type: str) -> str:
         """プロンプトテンプレートを取得.

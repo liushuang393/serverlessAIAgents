@@ -13,6 +13,7 @@ from typing import Any
 from contracts.flow.contracts import MiddlewareDecision, MiddlewareResult
 from harness.governance.audit import AuditEvent, AuditLogger
 
+
 _logger = logging.getLogger(__name__)
 
 
