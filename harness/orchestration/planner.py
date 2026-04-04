@@ -196,6 +196,10 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
     max_retries: int = 2
     temperature: float = 0.3  # 計画は決定的であるべき
 
+    def _parse_input(self, input_data: dict[str, Any]) -> PlannerInput:
+        """入力データを PlannerInput に変換."""
+        return PlannerInput.model_validate(input_data)
+
     async def process(self, input_data: PlannerInput) -> PlannerOutput:
         """タスク分解を実行し ExecutionPlan を生成.
 
