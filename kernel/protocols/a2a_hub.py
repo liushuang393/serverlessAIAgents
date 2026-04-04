@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from kernel.agents.agent_registry import reset_global_agent_registry
 from kernel.agents.local_agent_bus import (
     AgentNotFoundError,
     LocalAgentBus,
@@ -103,6 +104,8 @@ def reset_hub() -> None:
         _global_hub.clear()
     _global_hub = None
     reset_agent_bus()
+    # テスト汚染防止: バスが未初期化でも必ずグローバルレジストリをクリア
+    reset_global_agent_registry()
 
 
 __all__ = [

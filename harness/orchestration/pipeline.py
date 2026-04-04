@@ -30,6 +30,7 @@ from kernel.agents.dual_verifier import DualVerifier
 if TYPE_CHECKING:
     from harness.guardrails.pipeline import GuardrailPipeline
     from harness.orchestration.dynamic_flow import DynamicFlowGenerator
+    from harness.orchestration.models import ExecutionPlan
     from harness.orchestration.planner import PlannerAgent
 
 

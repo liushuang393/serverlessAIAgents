@@ -37,6 +37,20 @@ Messaging Hub は、複数のメッセージプラットフォームを単一の
 - **WebSocket Hub**: 管理ダッシュボードへのリアルタイムイベント配信を担う Pub/Sub ハブ。
 - **FastAPI + Lifespan 管理**: アプリ起動時にストア初期化・承認状態復元・プラットフォーム登録・Discord バックグラウンドタスク起動を行う。シャットダウン時はすべてのリソースをクリーンアップする。
 
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **B-Coordinator** | メッセージ受信 → 意図分類 → 専門 Agent 実行 | Gateway → PersonalAssistantCoordinator → IntentRouter → Specialist Agent |
+| **A（単発処理）** | Admin API（統計、セッション管理、エクスポート） | Router → Service |
+
+- Engine: 現状は独自 Coordinator パターン（※ kernel CoordinatorEngine 化を予定）
+- Specialist Agent: FileOrganizer, Meeting, BusinessAdvisor, FlightWatch
+- Admin UI: fetch + WebSocket（リアルタイム通知）+ API key 認証
+- ゲートウェイ: Telegram / Slack / Discord / Teams / WhatsApp / Signal
+
 ## アプリケーション階層
 
 - **Channel Layer**: 各メッセージプラットフォームとの接続（Webhook / Bot API / 長時間接続）。

@@ -32,6 +32,22 @@
 - Orchestration Layer: Pipeline 実行制御。
 - Agent Layer: 認知・分析・計画・レビュー。
 - Output Layer: レポート生成・可視化・エクスポート。
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **B-1（同期パイプライン）** | 意思決定分析（POST /api/decision） | Router → DecisionEngine.run() → Flow → 8 Agent 順次実行 |
+| **B-2（非同期パイプライン + SSE）** | ストリーミング分析（GET /api/decision/stream） | Router → DecisionEngine.run_stream() → SSE (EventSource) |
+| **A（単発処理）** | レポート取得、履歴、設定、認証 | Router → Repository / Service |
+
+- Engine: kernel `PipelineEngine` 継承の `DecisionEngine`
+- 8 Agent パイプライン: CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu(RAG) → Qi(RAG) → Review
+- フロントエンド: fetch ベース + Zustand + Cookie 認証 + 指数バックオフリトライ
+- ストリーミング: GET + EventSource（resume・自動再接続対応）
+- **模範的な kernel 準拠パターン**
+
 <!-- README_REQUIRED_SECTIONS_END -->
 
 ## 1. システム概要

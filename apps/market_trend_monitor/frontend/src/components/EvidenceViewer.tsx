@@ -134,7 +134,7 @@ export default function EvidenceViewer() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchEvidences();

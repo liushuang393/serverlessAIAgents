@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   CheckCircle2,
   ChevronDown,
@@ -169,7 +169,7 @@ export default function Conversations() {
   useEffect(() => {
     void verifyAuth();
     void refreshConversations();
-  }, []);
+  }, [verifyAuth, refreshConversations]);
 
   useEffect(() => {
     if (!isVisible) {
@@ -185,7 +185,7 @@ export default function Conversations() {
     return () => {
       window.clearInterval(timer);
     };
-  }, [isVisible, selectedConversationId]);
+  }, [isVisible, selectedConversationId, refreshConversations, refreshMessages]);
 
   useEffect(() => {
     if (!selectedConversationId) {
@@ -194,7 +194,7 @@ export default function Conversations() {
     }
     void refreshMessages(selectedConversationId);
     void subscribeEvents(selectedConversationId);
-  }, [selectedConversationId]);
+  }, [selectedConversationId, refreshMessages, subscribeEvents]);
 
   useEffect(() => {
     if (!lastMessage) {
@@ -217,7 +217,7 @@ export default function Conversations() {
       }
     }
     setStatusMessage(`リアルタイムイベント受信: ${eventType}`);
-  }, [lastMessage, selectedConversationId]);
+  }, [lastMessage, selectedConversationId, refreshConversations, refreshMessages]);
 
   useEffect(() => {
     if (!messageListRef.current) {
@@ -246,7 +246,7 @@ export default function Conversations() {
     subscribedRoomsRef.current = [...wsRooms];
   }, [isConnected, sendMessage, wsRooms]);
 
-  const verifyAuth = async () => {
+  const verifyAuth = useCallback(async () => {
     try {
       const response = await fetch("/api/sr_chat/auth.test", {
         method: "POST",
@@ -262,9 +262,9 @@ export default function Conversations() {
     } finally {
       setAuthChecked(true);
     }
-  };
+  }, []);
 
-  const refreshConversations = async (showLoading = true) => {
+  const refreshConversations = useCallback(async (showLoading = true) => {
     if (showLoading) {
       setLoadingConversations(true);
     }
@@ -292,9 +292,9 @@ export default function Conversations() {
         setLoadingConversations(false);
       }
     }
-  };
+  }, [selectedConversationId]);
 
-  const refreshMessages = async (
+  const refreshMessages = useCallback(async (
     conversationId: string,
     showLoading = true,
   ) => {
@@ -324,9 +324,9 @@ export default function Conversations() {
         setLoadingMessages(false);
       }
     }
-  };
+  }, []);
 
-  const subscribeEvents = async (conversationId: string) => {
+  const subscribeEvents = useCallback(async (conversationId: string) => {
     try {
       const response = await fetch("/api/sr_chat/events.subscribe", {
         method: "POST",
@@ -366,7 +366,7 @@ export default function Conversations() {
         error instanceof Error ? error.message : "イベント購読に失敗しました",
       );
     }
-  };
+  }, [clientId, userId]);
 
   const createConversation = () => {
     const idSuffix =

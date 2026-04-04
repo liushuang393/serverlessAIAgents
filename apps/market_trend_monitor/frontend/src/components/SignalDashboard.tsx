@@ -172,7 +172,7 @@ export default function SignalDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchSignals();

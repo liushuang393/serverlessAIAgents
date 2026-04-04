@@ -19,33 +19,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
-
-
-if TYPE_CHECKING:
-    from harness.approval import ApprovalResponse, Command
-    from harness.approval.checkpointer import CheckpointData, Checkpointer
-
-
-@dataclass
-class HITLEngineConfig:
-    """HITL 関連の Engine 設定.
-
-    Attributes:
-        enabled: HITL を有効にするか
-        checkpointer: チェックポインター（状態永続化）
-        interrupt_before: 指定ノードの実行前に割り込み
-        interrupt_after: 指定ノードの実行後に割り込み
-        approval_required_for: 承認が必要なアクションパターン
-        default_timeout_seconds: デフォルト承認タイムアウト
-    """
-
-    enabled: bool = False
-    checkpointer: Checkpointer | None = None
-    interrupt_before: list[str] = field(default_factory=list)
-    interrupt_after: list[str] = field(default_factory=list)
-    approval_required_for: list[str] = field(default_factory=list)
-    default_timeout_seconds: int = 3600
+from kernel.engines.base import HITLEngineConfig
 
 
 class HITLEngineMixin:

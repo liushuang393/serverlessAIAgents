@@ -15,6 +15,11 @@ def test_duplicate_entrypoint_files_removed() -> None:
     assert not (root / "web" / "main.py").exists()
 
 
+def test_cli_no_longer_imports_legacy_pipeline_runtime() -> None:
+    cli_source = Path("apps/code_migration_assistant/cli.py").read_text(encoding="utf-8")
+    assert "apps.code_migration_assistant.pipeline.engine" not in cli_source
+
+
 def test_adapter_factory_exposes_migration_task_profile() -> None:
     factory = AdapterFactory()
 

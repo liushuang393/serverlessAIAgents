@@ -44,13 +44,12 @@ export function PanelAccess(): JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     ragApi
       .getAccessMatrix()
       .then((resp) => {
         if (!cancelled) {
           setMatrix(resp.matrix);
+          setError(null);
           setLoading(false);
         }
       })

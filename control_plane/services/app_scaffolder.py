@@ -27,6 +27,33 @@ if TYPE_CHECKING:
 class AppScaffolderService:
     """新規 App 作成サービス."""
 
+    _CALLING_PATTERN_OPTIONS: tuple[dict[str, str], ...] = (
+        {
+            "value": "A",
+            "label": "A: 単発処理",
+            "description": "CRUD・検索・単一 Agent 応答。Router → Service / A2AHub.call(agent)",
+        },
+        {
+            "value": "B-1",
+            "label": "B-1: 同期パイプライン",
+            "description": "多段 Agent 協調（短時間）。Router → Engine.run() → Flow → Agent[]",
+        },
+        {
+            "value": "B-2",
+            "label": "B-2: 非同期パイプライン + SSE",
+            "description": "多段 Agent 協調（長時間）。task_id 即時返却 + SSE 進捗通知",
+        },
+        {
+            "value": "B-Coordinator",
+            "label": "B-Coordinator: 意図分類→ルーティング",
+            "description": "メッセージ受信 → 意図分類 → 専門 Agent 実行",
+        },
+        {
+            "value": "C",
+            "label": "C: リアルタイム対話",
+            "description": "チャットストリーム。Router → Agent.run_stream() → SSE/WS",
+        },
+    )
     _ENGINE_OPTIONS: tuple[dict[str, str], ...] = (
         {
             "value": "flow",
@@ -213,6 +240,7 @@ class AppScaffolderService:
 
         return {
             "surface_profile": surface_profile,
+            "calling_pattern_options": list(cls._CALLING_PATTERN_OPTIONS),
             "engine_patterns": list(cls._ENGINE_OPTIONS),
             "database_options": [
                 {"value": "none", "label": "なし"},
@@ -400,6 +428,7 @@ class AppScaffolderService:
             "name": request.name,
             "display_name": request.display_name,
             "description": request.description,
+            "calling_pattern": request.calling_pattern,
             "business_base": request.business_base,
             "version": "0.1.0",
             "icon": request.icon,
@@ -1057,11 +1086,33 @@ class {agent["class_name"]}:
         return "\n".join(lines)
 
     @staticmethod
+    @staticmethod
+    def _calling_pattern_description(pattern: str) -> str:
+        """呼び出しパターンの説明を返す."""
+        descriptions: dict[str, str] = {
+            "A": "A（単発処理）: Router → Service / A2AHub.call(agent) → 結果返却",
+            "B-1": "B-1（同期パイプライン）: Router → Engine.run() → Flow → Agent[] → 結果返却",
+            "B-2": "B-2（非同期パイプライン + SSE）: Router → task_id 返却 + Background Engine.run_stream() → SSE 進捗",
+            "B-Coordinator": "B-Coordinator: Gateway → CoordinatorEngine → IntentRouter → Specialist Agent",
+            "C": "C（リアルタイム対話）: Router → Agent.run_stream() → SSE/WS",
+        }
+        return descriptions.get(pattern, pattern)
+
+    @staticmethod
     def _render_readme(request: AppCreateRequest, ports: dict[str, int | None]) -> str:
         """README.md を生成."""
+        pattern_desc = AppScaffolderService._calling_pattern_description(request.calling_pattern)
         return f"""# {request.display_name}
 
 {request.description or "Platform 生成の新規 App"}
+
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 説明 |
+|----------|------|
+| **{request.calling_pattern}** | {pattern_desc} |
 
 ## クイックスタート
 
@@ -1082,6 +1133,7 @@ uvicorn apps.{request.name}.main:app --reload --port {ports["api"]}
 
 ## 設計メモ
 
+- Calling Pattern: `{request.calling_pattern}`
 - Engine Pattern: `{request.engine_pattern}`
 - Business Base: `{request.business_base}`
 - Flow Pattern: `{request.flow_pattern or "default"}`

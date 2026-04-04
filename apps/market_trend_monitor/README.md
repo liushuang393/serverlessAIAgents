@@ -26,6 +26,19 @@
 - Analysis Layer: 抽出・分類・センチメント。
 - Governance Layer: スコアリング・反証検証。
 - Delivery Layer: レポート生成・通知・UI 表示。
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **B-1（同期パイプライン）** | 市場データ収集・分析・レポート生成 | Router → MarketTrendWorkflow → kernel Flow.run() → 7 Agent |
+| **A（単発処理）** | トレンド一覧、レポート取得、ジョブ状態確認 | Router → Service / DB |
+
+- Engine: kernel `Flow` (`create_flow().then()`) + `PipelineEngine` の 2 パスが並存（※統一予定）
+- 7 Agent フロー: Collector → EvidenceLedger → Analyzer → SignalScorer → Reporter → RedTeam → Notifier
+- フロントエンド: axios + Zustand + ポーリング（3 秒間隔）
+
 <!-- README_REQUIRED_SECTIONS_END -->
 
 **市場動向監視システム** — COBOL→Java移行、AI関連技術の市場動向を自動収集・分析

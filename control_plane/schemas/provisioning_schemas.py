@@ -159,6 +159,23 @@ class AppCreateRequest(BaseModel):
         description="Business 作成向けリスクレベル",
     )
 
+    calling_pattern: Literal[
+        "A",
+        "B-1",
+        "B-2",
+        "B-Coordinator",
+        "C",
+    ] = Field(
+        default="A",
+        description=(
+            "呼び出しパターン。"
+            "A=単発処理(Router→Service/A2AHub)、"
+            "B-1=同期パイプライン(Router→Engine.run())、"
+            "B-2=非同期パイプライン+SSE、"
+            "B-Coordinator=意図分類→ルーティング→専門Agent、"
+            "C=リアルタイム対話(Agent.run_stream()→SSE/WS)"
+        ),
+    )
     engine_pattern: Literal[
         "simple",
         "flow",

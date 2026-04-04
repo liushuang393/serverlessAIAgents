@@ -265,7 +265,7 @@ export default function CompetitorView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchCompetitors();
@@ -564,8 +564,8 @@ export default function CompetitorView() {
                     value={
                       detectedCompetitors.length > 0
                         ? ((positionDist[pos] || 0) /
-                            detectedCompetitors.length) *
-                          100
+                          detectedCompetitors.length) *
+                        100
                         : 0
                     }
                     sx={{ flex: 1, height: 8 }}

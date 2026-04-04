@@ -12,7 +12,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json as _json
+from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
@@ -29,7 +31,14 @@ from apps.code_migration_assistant.cli import (
     cmd_retry,
     cmd_show,
 )
-from apps.code_migration_assistant.pipeline.engine import SSEEvent
+
+
+@dataclass
+class SSEEvent:
+    event_type: str
+    stage: str
+    data: dict[str, Any]
+    _hitl_event: Any | None = None
 
 
 # ============================================================
@@ -224,13 +233,13 @@ class TestCmdRetry:
                 fast=True,
                 model=None,
             )
-            # cli.py は関数内で import するため、ソースモジュールをパッチ
             with (
-                patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
-                patch("apps.code_migration_assistant.pipeline.engine.MigrationEngine"),
+                patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
+                patch("apps.code_migration_assistant.output.organizer.OutputOrganizer") as mock_organizer,
             ):
                 mock_project.return_value.setup.return_value = None
                 mock_project.return_value.get_cobol_files.return_value = []
+                mock_organizer.return_value.get_version_count.return_value = 1
                 result = cmd_retry(args)
             # COBOLファイルなしで 1 を返すが、「無効なステージ名」エラーではない
             assert result == 1
@@ -250,8 +259,7 @@ class TestCmdRetry:
             model=None,
         )
         with (
-            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
-            patch("apps.code_migration_assistant.pipeline.engine.MigrationEngine"),
+            patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
         ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
@@ -260,6 +268,38 @@ class TestCmdRetry:
         assert result == 1
         err = capsys.readouterr().err
         assert "既存バージョンがありません" in err
+
+    def test_retry_routes_resume_stage_into_contract_payload(self, tmp_path: Path) -> None:
+        """retry は backlog resume stage を payload に載せて engine runtime へ委譲する."""
+        mock_cobol_file = MagicMock()
+        mock_cobol_file.program_name = "SAMPLE"
+        captured: list[dict[str, Any]] = []
+
+        async def _run_stub(payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
+            _ = on_event
+            _ = max_sessions
+            captured.append(payload)
+            return ({"backlog_completed": True, "decision": "PASSED"}, 0)
+
+        args = argparse.Namespace(
+            source=str(self.SAMPLE_CBL),
+            output=str(tmp_path),
+            stage="designer",
+            fast=True,
+            model="claude-opus-4-6",
+        )
+        with (
+            patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.output.organizer.OutputOrganizer") as mock_organizer,
+            patch("apps.code_migration_assistant.cli._run_session_loop", side_effect=_run_stub),
+        ):
+            mock_project.return_value.setup.return_value = None
+            mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
+            mock_organizer.return_value.get_version_count.return_value = 1
+            result = cmd_retry(args)
+
+        assert result == 0
+        assert captured[0]["resume_from_stage"] == "business_semantics"
 
 
 # ============================================================
@@ -294,8 +334,7 @@ class TestCmdMigrate:
             fast=True,
             model=None,
         )
-        # cli.py は関数内で import するため、ソースモジュールをパッチ
-        with patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project:
+        with patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project:
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = []
             result = cmd_migrate(args)
@@ -306,21 +345,9 @@ class TestCmdMigrate:
 
     def test_success_returns_0_and_prints_result(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """変換成功時は 0 を返し ✅ と PASSED を表示する."""
-        from apps.code_migration_assistant.pipeline.engine import PipelineResult
-
         mock_cobol_file = MagicMock()
         mock_cobol_file.program_name = "SAMPLE"
         mock_cobol_file.relative_path = "sample.cbl"
-
-        mock_result = PipelineResult(
-            program_name="SAMPLE",
-            version=1,
-            decision="PASSED",
-            artifacts={},
-            output_dir=tmp_path / "output" / "SAMPLE",
-            java_files=[],
-            success=True,
-        )
 
         args = argparse.Namespace(
             source=str(self.SAMPLE_CBL),
@@ -328,9 +355,25 @@ class TestCmdMigrate:
             fast=True,
             model=None,
         )
+
+        async def _run_stub(payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
+            assert payload["model"] == "claude-opus-4-6"
+            assert max_sessions == 5000
+            await on_event({"type": "stage_start", "stage": "analysis", "message": "start"})
+            await on_event({"type": "complete", "decision": "PASSED", "output_dir": str(tmp_path / "output")})
+            return (
+                {
+                    "backlog_completed": True,
+                    "decision": "PASSED",
+                    "output_dir": str(tmp_path / "output"),
+                    "program_name": "SAMPLE",
+                },
+                0,
+            )
+
         with (
-            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
-            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", return_value=mock_result),
+            patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.cli._run_session_loop", side_effect=_run_stub),
         ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
@@ -344,22 +387,9 @@ class TestCmdMigrate:
 
     def test_failure_returns_1_and_prints_warning(self, tmp_path: Path, capsys: CaptureFixture[str]) -> None:
         """変換失敗（ENV_ISSUE）は 1 を返し --fast ヒントを表示する."""
-        from apps.code_migration_assistant.pipeline.engine import PipelineResult
-
         mock_cobol_file = MagicMock()
         mock_cobol_file.program_name = "SAMPLE"
         mock_cobol_file.relative_path = "sample.cbl"
-
-        mock_result = PipelineResult(
-            program_name="SAMPLE",
-            version=1,
-            decision="ENV_ISSUE",
-            artifacts={},
-            output_dir=tmp_path / "output" / "SAMPLE",
-            java_files=[],
-            success=False,
-            error_message="Java not found",
-        )
 
         args = argparse.Namespace(
             source=str(self.SAMPLE_CBL),
@@ -367,9 +397,23 @@ class TestCmdMigrate:
             fast=False,
             model=None,
         )
+
+        async def _run_stub(_payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
+            _ = max_sessions
+            await on_event({"type": "error", "message": "Java not found"})
+            return (
+                {
+                    "backlog_completed": False,
+                    "decision": "ENV_ISSUE",
+                    "error": "Java not found",
+                    "output_dir": str(tmp_path / "output"),
+                },
+                1,
+            )
+
         with (
-            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
-            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", return_value=mock_result),
+            patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.cli._run_session_loop", side_effect=_run_stub),
         ):
             mock_project.return_value.setup.return_value = None
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
@@ -381,27 +425,17 @@ class TestCmdMigrate:
 
     def test_model_from_env_variable(self, tmp_path: Path) -> None:
         """--model 未指定時は MIGRATION_MODEL 環境変数が使われる."""
-        from apps.code_migration_assistant.pipeline.engine import PipelineResult
-
         mock_cobol_file = MagicMock()
         mock_cobol_file.program_name = "SAMPLE"
         mock_cobol_file.relative_path = "sample.cbl"
 
-        mock_result = PipelineResult(
-            program_name="SAMPLE",
-            version=1,
-            decision="PASSED",
-            artifacts={},
-            output_dir=tmp_path / "output" / "SAMPLE",
-            java_files=[],
-            success=True,
-        )
-
         captured: list[str] = []
 
-        def capture(*_args, **kwargs) -> PipelineResult:
-            captured.append(kwargs.get("model", ""))
-            return mock_result
+        async def _run_stub(payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
+            _ = on_event
+            _ = max_sessions
+            captured.append(str(payload.get("model", "")))
+            return ({"backlog_completed": True, "decision": "PASSED"}, 0)
 
         args = argparse.Namespace(
             source=str(self.SAMPLE_CBL),
@@ -410,8 +444,8 @@ class TestCmdMigrate:
             model=None,
         )
         with (
-            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
-            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", side_effect=capture),
+            patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.cli._run_session_loop", side_effect=_run_stub),
             patch.dict("os.environ", {"MIGRATION_MODEL": "claude-sonnet-4-6"}),
         ):
             mock_project.return_value.setup.return_value = None
@@ -422,27 +456,17 @@ class TestCmdMigrate:
 
     def test_explicit_model_overrides_env(self, tmp_path: Path) -> None:
         """--model 明示指定は環境変数より優先される."""
-        from apps.code_migration_assistant.pipeline.engine import PipelineResult
-
         mock_cobol_file = MagicMock()
         mock_cobol_file.program_name = "SAMPLE"
         mock_cobol_file.relative_path = "sample.cbl"
 
-        mock_result = PipelineResult(
-            program_name="SAMPLE",
-            version=1,
-            decision="PASSED",
-            artifacts={},
-            output_dir=tmp_path / "output" / "SAMPLE",
-            java_files=[],
-            success=True,
-        )
-
         captured: list[str] = []
 
-        def capture(*_args, **kwargs) -> PipelineResult:
-            captured.append(kwargs.get("model", ""))
-            return mock_result
+        async def _run_stub(payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
+            _ = on_event
+            _ = max_sessions
+            captured.append(str(payload.get("model", "")))
+            return ({"backlog_completed": True, "decision": "PASSED"}, 0)
 
         args = argparse.Namespace(
             source=str(self.SAMPLE_CBL),
@@ -451,8 +475,8 @@ class TestCmdMigrate:
             model="claude-opus-4-6",
         )
         with (
-            patch("apps.code_migration_assistant.pipeline.project.COBOLProject") as mock_project,
-            patch("apps.code_migration_assistant.pipeline.engine.run_migration_sync", side_effect=capture),
+            patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
+            patch("apps.code_migration_assistant.cli._run_session_loop", side_effect=_run_stub),
             patch.dict("os.environ", {"MIGRATION_MODEL": "claude-haiku-4-5"}),
         ):
             mock_project.return_value.setup.return_value = None
@@ -472,11 +496,7 @@ class TestPrintProgressCli:
 
     def test_stage_start_shows_arrow(self, capsys: CaptureFixture[str]) -> None:
         """stage_start は ▶ アイコンで表示される."""
-        event = SSEEvent(
-            event_type="stage_start",
-            stage="analyzer",
-            data={"message": "COBOL解析中..."},
-        )
+        event = SimpleNamespace(event_type="stage_start", stage="analyzer", data={"message": "COBOL解析中..."})
         _print_progress_cli(event)
         out = capsys.readouterr().out
         assert "▶" in out
@@ -485,11 +505,7 @@ class TestPrintProgressCli:
 
     def test_stage_complete_shows_checkmark(self, capsys: CaptureFixture[str]) -> None:
         """stage_complete は ✓ アイコンで表示される."""
-        event = SSEEvent(
-            event_type="stage_complete",
-            stage="analyzer",
-            data={"decision": "PASSED"},
-        )
+        event = SimpleNamespace(event_type="stage_complete", stage="analyzer", data={"decision": "PASSED"})
         _print_progress_cli(event)
         out = capsys.readouterr().out
         assert "✓" in out
@@ -497,18 +513,14 @@ class TestPrintProgressCli:
 
     def test_evolution_shows_retry_icon(self, capsys: CaptureFixture[str]) -> None:
         """evolution は ↺ アイコンで表示される."""
-        event = SSEEvent(
-            event_type="evolution",
-            stage="designer",
-            data={"fix_summary": "プロンプト改善"},
-        )
+        event = SimpleNamespace(event_type="evolution", stage="designer", data={"fix_summary": "プロンプト改善"})
         _print_progress_cli(event)
         out = capsys.readouterr().out
         assert "↺" in out
 
     def test_complete_shows_checkmark_emoji(self, capsys: CaptureFixture[str]) -> None:
         """complete は ✅ アイコンで表示される."""
-        event = SSEEvent(
+        event = SimpleNamespace(
             event_type="complete",
             stage="pipeline",
             data={"program_name": "SAMPLE", "decision": "PASSED"},

@@ -62,6 +62,7 @@
 | ファイル                                                                   | 概要                                                                  | 利用場面                                     |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------- |
 | [`code-rules/project/architecture.md`](code-rules/project/architecture.md) | 7コア層+Apps の依存方向・レイヤ分離・設計原則                         | 層構造・依存関係・設計判断に関わるとき       |
+| [`code-rules/project/calling-patterns.md`](code-rules/project/calling-patterns.md) | Router→ビジネスロジックの呼び出し 3 パターン規約（A/B/C）+ FE 通信標準 | API エンドポイント・フロントエンド通信を設計するとき |
 | [`code-rules/AGENTS.md` § フレームワーク概要](code-rules/AGENTS.md#-agentflow-フレームワーク概要) | Agent/Engine/Flow/HITL の Public API 設計規約とシナリオ別構成例       | AgentFlow の Public API を設計・実装するとき |
 | [`code-rules/AGENTS.md` § 15](code-rules/AGENTS.md#15-agent-登録標準app_configjson--ai-必読) | `app_config.json` の `agents[]` 登録フォーマットと DoD チェックリスト | 新規 Agent を追加・登録するとき              |
 | [`code-rules/global/principles.md`](code-rules/global/principles.md)       | 品質優先・インクリメンタル改善・設計原則などの開発方針                | 設計・実装方針を確認したいとき               |

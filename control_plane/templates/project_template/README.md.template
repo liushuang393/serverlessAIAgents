@@ -6,6 +6,24 @@
 
 このエージェントは AgentFlow フレームワークを使用して作成されました。
 
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 説明 |
+|----------|------|
+{% if calling_pattern == 'A' %}
+| **A（単発処理）** | Router → Service / A2AHub.call(agent) → 結果返却 |
+{% elif calling_pattern == 'B-1' %}
+| **B-1（同期パイプライン）** | Router → Engine.run() → Flow → Agent[] → 結果返却 |
+{% elif calling_pattern == 'B-2' %}
+| **B-2（非同期パイプライン + SSE）** | Router → task_id 返却 + Background Engine.run_stream() → SSE 進捗 |
+{% elif calling_pattern == 'B-Coordinator' %}
+| **B-Coordinator** | Gateway → CoordinatorEngine → IntentRouter → Specialist Agent |
+{% elif calling_pattern == 'C' %}
+| **C（リアルタイム対話）** | Router → Agent.run_stream() → SSE/WS |
+{% endif %}
+
 ## セットアップ
 
 ```bash

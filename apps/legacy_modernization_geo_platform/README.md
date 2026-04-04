@@ -2,6 +2,19 @@
 
 旧システム刷新向けの需要診断、GEO コンテンツ生成、承認、静的公開を 1 つの運用フローで扱う MVP アプリです。
 
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **B-2（非同期パイプライン + SSE）** | GEO コンテンツ生成パイプライン（11 ステージ） | Router → GeoOrchestrator → 12 Agent（並列 + 承認ゲート） |
+| **A（単発処理）** | タスク状態取得、承認送信、アーティファクト取得 | Router → Repository / Service |
+
+- Engine: 現状は独自 GeoOrchestrator + asyncio.gather（※ kernel PipelineEngine + then_parallel() に移行予定）
+- 11 ステージ: BrandMemory‖DemandSignal → AccountScore → QuestionGraph‖LegacySemantics → EvidenceMatrix → ContentBlueprint → ContentDraft → GeoQA(承認) → Publishing → ReportAssembler
+- フロントエンド: fetch + SSE (EventSource) + Bearer token 認証
+
 ## できること
 
 - 対象業界、レガシースタック、地域を指定してキャンペーンを開始する

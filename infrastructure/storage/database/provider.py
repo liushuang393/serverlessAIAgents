@@ -554,7 +554,6 @@ def get_db(
 
     active_context = context or get_runtime_context()
     settings = resolve_settings(active_context) if active_context is not None else None
-    provider: DBProvider
 
     def _context_namespace() -> tuple[Any, ...]:
         if active_context is None:

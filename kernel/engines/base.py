@@ -18,7 +18,7 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -45,22 +45,36 @@ if TYPE_CHECKING:
     from kernel.patterns.progress_emitter import AgentMeta, ProgressEmitter
 
 
-# HITL 設定は harness 側 mixin から re-export（後方互換）
-# 実際の HITL ロジックは harness.engines.hitl_mixin.HITLEngineMixin で提供
-try:
-    from harness.engines.hitl_mixin import HITLEngineConfig
-except ImportError:
-    # harness が利用できない環境向けのフォールバック
-    @dataclass
-    class HITLEngineConfig:  # type: ignore[no-redef]
-        """HITL 関連の Engine 設定（フォールバック）."""
+@runtime_checkable
+class Checkpointer(Protocol):
+    """チェックポインターのインターフェース."""
 
-        enabled: bool = False
-        checkpointer: Any = None
-        interrupt_before: list[str] = field(default_factory=list)
-        interrupt_after: list[str] = field(default_factory=list)
-        approval_required_for: list[str] = field(default_factory=list)
-        default_timeout_seconds: int = 3600
+    async def save(self, data: Any) -> None:
+        """状態を保存."""
+
+    async def load_latest(self, thread_id: str) -> Any:
+        """最新の状態をロード."""
+
+
+@dataclass
+class HITLEngineConfig:
+    """HITL 関連の Engine 設定.
+
+    Attributes:
+        enabled: HITL を有効にするか
+        checkpointer: チェックポインター（状態永続化）
+        interrupt_before: 指定ノードの実行前に割り込み
+        interrupt_after: 指定ノードの実行後に割り込み
+        approval_required_for: 承認が必要なアクションパターン
+        default_timeout_seconds: デフォルト承認タイムアウト
+    """
+
+    enabled: bool = False
+    checkpointer: Checkpointer | None = None
+    interrupt_before: list[str] = field(default_factory=list)
+    interrupt_after: list[str] = field(default_factory=list)
+    approval_required_for: list[str] = field(default_factory=list)
+    default_timeout_seconds: int = 3600
 
 
 @dataclass
@@ -702,17 +716,17 @@ class BaseEngine(ABC):
     # HITLEngineMixin を合成すると、MRO により mixin 側のメソッドが優先される。
     # =========================================================================
 
-    def _setup_hitl_context(self) -> None:
+    def _setup_hitl_context(self) -> None:  # noqa: B027
         """HITL コンテキストを設定（no-op: mixin 未合成時）."""
 
-    def _cleanup_hitl_context(self) -> None:
+    def _cleanup_hitl_context(self) -> None:  # noqa: B027
         """HITL コンテキストをクリーンアップ（no-op: mixin 未合成時）."""
 
     def _is_interrupt_signal(self, exc: Exception) -> bool:
         """例外が InterruptSignal かどうかを判定（no-op: mixin 未合成時は常に False）."""
         return False
 
-    async def _handle_interrupt(
+    async def _handle_interrupt(  # noqa: B027
         self,
         exc: Exception,
         inputs: dict[str, Any],

@@ -27,6 +27,17 @@
 - Codegen: AI を活用したコード生成。
 - Wizard: Agent 構築ウィザード。
 
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **A（単発処理）** | コード解析、コード生成、Agent ウィザード | Router → Service モジュール（code_intelligence / codegen / wizard） |
+
+- Engine: なし（Service 直接呼び出し）
+- フロントエンド: なし（API 専用サービス）
+
 <!-- README_REQUIRED_SECTIONS_END -->
 
 `product_line`: `framework` / `surface_profile`: `developer`

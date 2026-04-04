@@ -182,7 +182,7 @@ class ApiClient {
     const disposition = response.headers["content-disposition"] as
       | string
       | undefined;
-    const matched = disposition?.match(/filename=\"?([^\";]+)\"?/i);
+    const matched = disposition?.match(/filename="?([^";]+)"?/i);
     const filename = matched?.[1] ?? `market_trend_report_${reportId}.pdf`;
 
     return {

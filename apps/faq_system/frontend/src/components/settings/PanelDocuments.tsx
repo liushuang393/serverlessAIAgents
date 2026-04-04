@@ -227,7 +227,7 @@ export function PanelDocuments(): JSX.Element {
             className={`border-2 border-dashed rounded-xl p-10 text-center transition-all ${dragOver
               ? "border-[var(--primary)]/40 bg-[var(--primary)]/5 shadow-[inset_0_0_20px_rgba(94,234,212,0.05)]"
               : "border-white/10 hover:border-[var(--primary)]/30 hover:bg-white/[0.02]"
-            }`}
+              }`}
           >
             <Upload
               size={24}
@@ -348,15 +348,14 @@ export function PanelDocuments(): JSX.Element {
                 >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2 py-0.5 rounded-full font-medium ${
-                        directoryLoadResult.status === "success"
-                          ? "bg-emerald-500/20 text-emerald-300"
-                          : directoryLoadResult.status === "dry_run"
-                            ? "bg-blue-500/20 text-blue-300"
-                            : directoryLoadResult.status === "partial"
-                              ? "bg-amber-500/20 text-amber-300"
-                              : "bg-rose-500/20 text-rose-300"
-                      }`}
+                      className={`px-2 py-0.5 rounded-full font-medium ${directoryLoadResult.status === "success"
+                        ? "bg-emerald-500/20 text-emerald-300"
+                        : directoryLoadResult.status === "dry_run"
+                          ? "bg-blue-500/20 text-blue-300"
+                          : directoryLoadResult.status === "partial"
+                            ? "bg-amber-500/20 text-amber-300"
+                            : "bg-rose-500/20 text-rose-300"
+                        }`}
                     >
                       {directoryLoadResult.status}
                     </span>
@@ -404,13 +403,12 @@ export function PanelDocuments(): JSX.Element {
                             </span>
                             {"status" in item && (
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[10px] ${
-                                  item.status === "success"
-                                    ? "text-emerald-400"
-                                    : item.status === "skipped"
-                                      ? "text-yellow-400"
-                                      : "text-rose-400"
-                                }`}
+                                className={`px-1.5 py-0.5 rounded text-[10px] ${item.status === "success"
+                                  ? "text-emerald-400"
+                                  : item.status === "skipped"
+                                    ? "text-yellow-400"
+                                    : "text-rose-400"
+                                  }`}
                               >
                                 {item.status}
                               </span>
@@ -459,46 +457,46 @@ export function PanelDocuments(): JSX.Element {
           <div className="space-y-1.5" data-testid="document-list">
             {hasGroups
               ? Object.entries(groupedDocs).map(([gid, docs]) => (
-                  <div key={gid} className="space-y-1">
-                    {gid !== "__ungrouped__" && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-[var(--text-muted)]">
-                        <Tag size={10} className="text-[var(--primary)]" />
-                        <span>グループ: {gid.slice(0, 8)}...</span>
-                        <span className="text-white/30">({docs.length} ファイル)</span>
-                      </div>
-                    )}
-                    {docs.map((doc) => (
-                      <DocumentRow
-                        key={doc.document_id}
-                        doc={doc}
-                        selectedCollection={selectedCollection}
-                        onPreview={(docId) => {
-                          setPreviewDocId(docId);
-                          void previewChunks(selectedCollection, docId);
-                        }}
-                        onIndex={(docId) => void indexDocument(selectedCollection, docId)}
-                        onReindex={(docId) => void reindexDocument(selectedCollection, docId)}
-                        onDelete={handleDelete}
-                        t={t}
-                      />
-                    ))}
-                  </div>
-                ))
+                <div key={gid} className="space-y-1">
+                  {gid !== "__ungrouped__" && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-[var(--text-muted)]">
+                      <Tag size={10} className="text-[var(--primary)]" />
+                      <span>グループ: {gid.slice(0, 8)}...</span>
+                      <span className="text-white/30">({docs.length} ファイル)</span>
+                    </div>
+                  )}
+                  {docs.map((doc) => (
+                    <DocumentRow
+                      key={doc.document_id}
+                      doc={doc}
+                      selectedCollection={selectedCollection}
+                      onPreview={(docId) => {
+                        setPreviewDocId(docId);
+                        void previewChunks(selectedCollection, docId);
+                      }}
+                      onIndex={(docId) => void indexDocument(selectedCollection, docId)}
+                      onReindex={(docId) => void reindexDocument(selectedCollection, docId)}
+                      onDelete={handleDelete}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              ))
               : documents.map((doc) => (
-                  <DocumentRow
-                    key={doc.document_id}
-                    doc={doc}
-                    selectedCollection={selectedCollection}
-                    onPreview={(docId) => {
-                      setPreviewDocId(docId);
-                      void previewChunks(selectedCollection, docId);
-                    }}
-                    onIndex={(docId) => void indexDocument(selectedCollection, docId)}
-                    onReindex={(docId) => void reindexDocument(selectedCollection, docId)}
-                    onDelete={handleDelete}
-                    t={t}
-                  />
-                ))}
+                <DocumentRow
+                  key={doc.document_id}
+                  doc={doc}
+                  selectedCollection={selectedCollection}
+                  onPreview={(docId) => {
+                    setPreviewDocId(docId);
+                    void previewChunks(selectedCollection, docId);
+                  }}
+                  onIndex={(docId) => void indexDocument(selectedCollection, docId)}
+                  onReindex={(docId) => void reindexDocument(selectedCollection, docId)}
+                  onDelete={handleDelete}
+                  t={t}
+                />
+              ))}
           </div>
 
           {/* チャンクプレビュー */}
@@ -566,7 +564,8 @@ export function PanelDocuments(): JSX.Element {
 /** ドキュメント行コンポーネント */
 function DocumentRow({
   doc,
-  selectedCollection: _collection,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  selectedCollection: _unused,
   onPreview,
   onIndex,
   onReindex,

@@ -38,7 +38,7 @@ from apps.code_migration_assistant.workflow.backlog_models import (
     SessionStatus,
     now_iso,
 )
-from apps.code_migration_assistant.workflow.backlog_store import BacklogStore
+from apps.code_migration_assistant.workflow.backlog_store import STAGE_ORDER, BacklogStore
 from apps.code_migration_assistant.workflow.dispatcher import BacklogDispatcher
 from apps.code_migration_assistant.workflow.evidence_gate import EvidenceGate
 from apps.code_migration_assistant.workflow.pipeline_runtime import execute_stage_task
@@ -53,6 +53,14 @@ _NODE_STAGE_MAP = {
     "migration.synthesize_tests": "test_generator",
     "migration.verify_diff": "verifier",
     "migration.evaluate_quality": "quality_gate",
+}
+_RETRY_STAGE_MAP = {
+    "analyzer": "analysis",
+    "designer": "business_semantics",
+    "transformer": "transform",
+    "test_generator": "tests",
+    "verifier": "diff",
+    "quality_gate": "quality",
 }
 
 
@@ -236,6 +244,59 @@ def _remaining_tasks(state: Any) -> int:
     return sum(1 for task in state.tasks if task.status not in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED})
 
 
+def _seed_resume_state(
+    backlog_store: BacklogStore,
+    state: Any,
+    *,
+    start_stage: str,
+) -> None:
+    if start_stage not in STAGE_ORDER:
+        return
+    start_index = STAGE_ORDER.index(start_stage)
+    for task in state.tasks:
+        stage = str(task.immutable.stage)
+        if stage not in STAGE_ORDER:
+            continue
+        updates = {
+            "status": BacklogTaskStatus.DONE if STAGE_ORDER.index(stage) < start_index else BacklogTaskStatus.PENDING,
+            "notes": [],
+            "unknowns": [],
+            "evidence_paths": [],
+            "attempts": 0,
+            "last_session_id": None,
+        }
+        backlog_store.update_task_mutable(state, task.task_id, updates)
+
+
+def _should_stop_session_loop(summary: dict[str, Any]) -> bool:
+    if bool(summary.get("backlog_completed", False)):
+        return True
+    status = str(summary.get("session_status", ""))
+    if status in {
+        SessionStatus.BLOCKED.value,
+        SessionStatus.INPUT_ERROR.value,
+        SessionStatus.ENV_ERROR.value,
+    }:
+        return True
+    return status == SessionStatus.NEEDS_FIX.value and not summary.get("next_task_id")
+
+
+async def _run_session_loop(
+    payload: dict[str, Any],
+    *,
+    on_event: Any,
+    max_sessions: int,
+) -> tuple[dict[str, Any], int]:
+    last_summary: dict[str, Any] = {}
+    exit_code = 1
+    for _ in range(max_sessions):
+        summary, exit_code = await run_contract_payload(payload, on_event=on_event)
+        last_summary = summary
+        if _should_stop_session_loop(summary):
+            break
+    return last_summary, exit_code
+
+
 async def run_contract_payload(
     payload: dict[str, Any],
     *,
@@ -312,6 +373,7 @@ async def run_contract_payload(
         return summary, 2
 
     backlog_store = BacklogStore(run_output_dir)
+    backlog_exists = backlog_store.backlog_path.exists()
     state = backlog_store.initialize_if_missing(
         run_id=run_id,
         source_path=str(source_path),
@@ -320,6 +382,11 @@ async def run_contract_payload(
         fast_mode=fast_mode,
         modules=module_names,
     )
+    resume_from_stage_raw = payload.get("resume_from_stage")
+    resume_from_stage = str(resume_from_stage_raw) if isinstance(resume_from_stage_raw, str) else ""
+    if resume_from_stage and not backlog_exists:
+        _seed_resume_state(backlog_store, state, start_stage=resume_from_stage)
+        state = backlog_store.load()
     corrections = backlog_store.enforce_immutability(state)
 
     dispatcher = BacklogDispatcher()
@@ -682,15 +749,7 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
     async def _ignore_event(_event: dict[str, Any]) -> None:
         return None
 
-    last_summary: dict[str, Any] = {}
-    for _ in range(200):
-        summary, _ = await run_contract_payload(payload, on_event=_ignore_event)
-        last_summary = summary
-        if bool(summary.get("backlog_completed", False)):
-            break
-        status = str(summary.get("session_status", ""))
-        if status in {SessionStatus.BLOCKED.value, SessionStatus.INPUT_ERROR.value, SessionStatus.ENV_ERROR.value}:
-            break
+    last_summary, _ = await _run_session_loop(payload, on_event=_ignore_event, max_sessions=200)
 
     output_dir_raw = last_summary.get("output_dir")
     output_dir = Path(output_dir_raw) if isinstance(output_dir_raw, str) else Path()
@@ -774,19 +833,7 @@ async def _run_migrate_command(args: argparse.Namespace) -> int:
         elif event_type == "error":
             print(f"[error] {event.get('message')}", file=sys.stderr)
 
-    summary: dict[str, Any] = {}
-    exit_code = 1
-    for _ in range(5000):
-        summary, exit_code = await run_contract_payload(payload, on_event=_print_event)
-        if bool(summary.get("backlog_completed", False)):
-            break
-        status = str(summary.get("session_status", ""))
-        if status in {
-            SessionStatus.BLOCKED.value,
-            SessionStatus.INPUT_ERROR.value,
-            SessionStatus.ENV_ERROR.value,
-        }:
-            break
+    summary, exit_code = await _run_session_loop(payload, on_event=_print_event, max_sessions=5000)
 
     if summary.get("backlog_completed"):
         print(json.dumps(summary, ensure_ascii=False, indent=2))
@@ -796,9 +843,7 @@ async def _run_migrate_command(args: argparse.Namespace) -> int:
 
 
 def cmd_migrate(args: argparse.Namespace) -> int:
-    """Legacy-compatible migrate command (sync)."""
-    from apps.code_migration_assistant.pipeline.engine import run_migration_sync
-
+    """Human-friendly sync wrapper over the engine/backlog runtime."""
     source_path = Path(args.source).resolve()
     output_root = Path(args.output).resolve()
     model = args.model or os.environ.get("MIGRATION_MODEL", "claude-opus-4-6")
@@ -829,28 +874,35 @@ def cmd_migrate(args: argparse.Namespace) -> int:
             print(f"  - {cobol_file.program_name} ({cobol_file.relative_path})")
         print()
 
-        exit_code = 0
-        for cobol_file in cobol_files:
-            print(f"⚙  {cobol_file.program_name} を変換中...")
-            result = run_migration_sync(
-                cobol_file=cobol_file,
-                output_root=output_root,
-                fast_mode=bool(args.fast),
-                model=model,
-            )
-            if result.success:
-                print(f"  ✅ {cobol_file.program_name}: {result.decision}")
-                print(f"     出力: {result.output_dir}")
-            else:
-                print(f"  ⚠  {cobol_file.program_name}: {result.decision}")
-                if result.error_message:
-                    print(f"     エラー: {result.error_message}")
-                if result.decision == "ENV_ISSUE":
-                    print("     ヒント: --fast フラグを使うと実行比較をスキップできます。")
-                exit_code = max(exit_code, 1)
-            print()
+    payload = {
+        "task_id": f"cli-{uuid.uuid4().hex[:8]}",
+        "source_path": str(source_path),
+        "output_root": str(output_root),
+        "fast_mode": bool(args.fast),
+        "migration_type": "cobol-to-java",
+        "model": model,
+        "options": {},
+    }
 
-        return exit_code
+    async def _print_event(event: dict[str, Any]) -> None:
+        event_type = str(event.get("type", ""))
+        stage = str(event.get("stage", ""))
+        message = str(event.get("message", event.get("decision", "")))
+        if event_type in {"stage_start", "stage_complete"}:
+            print(f"[{event_type}] {stage} {message}")
+        elif event_type == "complete":
+            print(f"[complete] decision={event.get('decision')} output={event.get('output_dir')}")
+        elif event_type == "error":
+            print(f"[error] {event.get('message')}", file=sys.stderr)
+
+    summary, exit_code = asyncio.run(_run_session_loop(payload, on_event=_print_event, max_sessions=5000))
+    if summary.get("decision") == "ENV_ISSUE" and not bool(args.fast):
+        print("ヒント: --fast フラグを使うと実行比較をスキップできます。")
+    if summary.get("backlog_completed"):
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps(summary, ensure_ascii=False, indent=2), file=sys.stderr)
+    return exit_code
 
 
 def _print_progress_cli(event: Any) -> None:
@@ -870,28 +922,6 @@ def _print_progress_cli(event: Any) -> None:
     if isinstance(data, dict):
         msg = str(data.get("message", "") or data.get("decision", ""))
     print(f"  {icon} [{stage}] {msg}")
-
-
-def _run_retry_sync(engine: Any, cobol_file: Any, start_stage: str) -> str:
-    """retry の1ファイル分の同期ラッパー."""
-    import anyio
-
-    result_decision = "UNKNOWN"
-
-    async def _run() -> None:
-        nonlocal result_decision
-        async for event in engine.run_file_from_stage(
-            cobol_file=cobol_file,
-            start_stage=start_stage,
-        ):
-            _print_progress_cli(event)
-            if getattr(event, "event_type", "") == "complete":
-                data = getattr(event, "data", {})
-                if isinstance(data, dict):
-                    result_decision = str(data.get("decision", "UNKNOWN"))
-
-    anyio.run(_run)
-    return result_decision
 
 
 def cmd_show(args: argparse.Namespace) -> int:
@@ -999,9 +1029,8 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 
 def cmd_retry(args: argparse.Namespace) -> int:
-    """retry コマンドを実行する（特定ステージから再実行）."""
+    """retry コマンドを実行する（engine/backlog 上で特定ステージから再開）."""
     from apps.code_migration_assistant.output.organizer import OutputOrganizer
-    from apps.code_migration_assistant.pipeline.engine import MigrationEngine
 
     source_path = Path(args.source).resolve()
     output_root = Path(args.output).resolve()
@@ -1035,28 +1064,48 @@ def cmd_retry(args: argparse.Namespace) -> int:
             print("エラー: 変換対象のCOBOLファイルが見つかりませんでした。", file=sys.stderr)
             return 1
 
-        engine = MigrationEngine(output_root=output_root, fast_mode=bool(args.fast), model=model)
-        exit_code = 0
+        organizer = OutputOrganizer(output_root)
+        missing_programs: list[str] = []
         for cobol_file in cobol_files:
-            organizer = OutputOrganizer(output_root)
             version = organizer.get_version_count(cobol_file.program_name)
             if version == 0:
+                missing_programs.append(str(cobol_file.program_name))
+
+        if missing_programs:
+            for program_name in missing_programs:
                 print(
-                    f"  ⚠  {cobol_file.program_name}: 既存バージョンがありません。migrate を先に実行してください。",
+                    f"  ⚠  {program_name}: 既存バージョンがありません。migrate を先に実行してください。",
                     file=sys.stderr,
                 )
-                exit_code = 1
-                continue
+            return 1
 
-            print(f"⚙  {cobol_file.program_name} (v{version}) を {start_stage} から再実行中...")
-            result_decision = _run_retry_sync(engine, cobol_file, start_stage)
-            if result_decision in {"PASSED", "KNOWN_LEGACY"}:
-                print(f"  ✅ {cobol_file.program_name}: {result_decision}")
-            else:
-                print(f"  ⚠  {cobol_file.program_name}: {result_decision}")
-                exit_code = max(exit_code, 1)
-            print()
+    payload = {
+        "task_id": f"retry-{uuid.uuid4().hex[:8]}",
+        "source_path": str(source_path),
+        "output_root": str(output_root),
+        "fast_mode": bool(args.fast),
+        "migration_type": "cobol-to-java",
+        "model": model,
+        "resume_from_stage": _RETRY_STAGE_MAP[start_stage],
+        "options": {},
+    }
 
+    async def _print_event(event: dict[str, Any]) -> None:
+        event_type = str(event.get("type", ""))
+        stage = str(event.get("stage", ""))
+        message = str(event.get("message", event.get("decision", "")))
+        if event_type in {"stage_start", "stage_complete"}:
+            print(f"[{event_type}] {stage} {message}")
+        elif event_type == "complete":
+            print(f"[complete] decision={event.get('decision')} output={event.get('output_dir')}")
+        elif event_type == "error":
+            print(f"[error] {event.get('message')}", file=sys.stderr)
+
+    summary, exit_code = asyncio.run(_run_session_loop(payload, on_event=_print_event, max_sessions=5000))
+    if summary.get("backlog_completed"):
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
+    print(json.dumps(summary, ensure_ascii=False, indent=2), file=sys.stderr)
     return exit_code
 
 

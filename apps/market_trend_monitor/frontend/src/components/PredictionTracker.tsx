@@ -114,7 +114,7 @@ export default function PredictionTracker() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchPredictions();

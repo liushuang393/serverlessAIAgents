@@ -77,7 +77,8 @@ export default defineConfig({
         timeout: apiProxyTimeoutMs,
         proxyTimeout: apiProxyTimeoutMs,
         configure: (proxy) => {
-          proxy.on("error", (_err, req, _res) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          proxy.on("error", (_err, req, _) => {
             const url = req.url ?? "";
             if (url.includes("/api/auth")) {
               console.error(

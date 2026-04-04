@@ -26,6 +26,17 @@
 - Validation Layer: 契約チェック・準備状況評価。
 - Reporting Layer: 判定結果の構造化出力。
 - Integration Layer: CI/CD・Platform 連携。
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **A（単発処理）** | オーケストレーション検証、プロトコル契約チェック | Router → OrchestrationGuardianAgent（※ A2AHub 経由に変更予定） |
+
+- Engine: なし（単一 Agent 直接呼び出し）
+- フロントエンド: なし（API 専用サービス）
+
 <!-- README_REQUIRED_SECTIONS_END -->
 
 オーケストレーション準備状況とプロトコル契約カバレッジを検証するための軽量 app です。

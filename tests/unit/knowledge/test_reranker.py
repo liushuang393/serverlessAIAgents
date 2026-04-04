@@ -218,16 +218,16 @@ class _VectorDBStub:
     def __init__(self) -> None:
         self.last_top_k: int | None = None
 
-    async def search(
+    async def similarity_search(
         self,
-        *,
         query: str,
-        query_embedding: list[float],
-        top_k: int,
-        filter_metadata: dict[str, Any] | None = None,
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
-        del query, query_embedding, filter_metadata
-        self.last_top_k = top_k
+        """VectorDBProvider.similarity_search プロトコルに準拠したスタブ."""
+        del query, filter, kwargs
+        self.last_top_k = k
         return [
             {
                 "id": f"id-{idx}",

@@ -35,6 +35,20 @@
 - Orchestration: Migration Coordinator / HITL / Kill Switch。
 - Domain Services: 解析・変換・成果物生成。
 - Governance: 監査、ポリシー適合、証跡管理。
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **B-2（非同期パイプライン + SSE）** | COBOL→Java 移行パイプライン | Router → Background Task → CodeMigrationEngine._execute_stream() → SSE |
+| **A（単発処理）** | HITL 応答、ステータス確認、ダウンロード | Router → TaskStore / ApprovalFlow |
+
+- Engine: kernel `BaseEngine` 継承の `CodeMigrationEngine`
+- 9 Agent パイプライン: LegacyAnalysis → BusinessSemantics → MigrationDesign → CodeTransformation → TestSynthesis → DifferentialVerification → QualityGate → LimitedFixer → ComplianceReporter
+- CLI エントリポイントあり（`cli.py`）
+- フロントエンド: vanilla JS + fetch + SSE (EventSource) + API key 認証
+
 <!-- README_REQUIRED_SECTIONS_END -->
 
 ## Product Position

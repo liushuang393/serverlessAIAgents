@@ -31,6 +31,20 @@ BizCore 共通基盤の Agent/サービスを使用した FAQ システムです
 - Pipeline Layer: RetrievalPipeline（Sequential 処理、ミドルウェア追加可能）。
 - Backend Layer: VectorStoreBackend / FileSystemBackend / DatabaseBackend（プラガブル）。
 - Output Layer: チャート・画像・テキスト応答。
+## 呼び出しパターン
+
+> 規約詳細: [`code-rules/project/calling-patterns.md`](../../code-rules/project/calling-patterns.md)
+
+| パターン | 用途 | 経路 |
+|----------|------|------|
+| **A（単発処理）** | FAQ 検索、RAG クエリ、SQL 分析、コレクション CRUD | Router → A2AHub.call(agent) / Service.execute() |
+| **C（リアルタイム対話）** | チャットストリーム | Router → Agent.run_stream() → SSE (POST + ReadableStream) |
+
+- Agent 呼び出しは全て **A2AHub 経由**（`hub.call(agent_name, inputs)`）
+- Service（RAGService, Text2SQLService）は **Depends() DI** + lazy cache
+- フロントエンド: fetch ベース + Zustand + Bearer token 認証
+- ストリーミング: POST + ReadableStream（リクエストボディ送信が必要なため）
+
 <!-- README_REQUIRED_SECTIONS_END -->
 
 ## Product Position
