@@ -704,7 +704,7 @@ export type LLMProviderKind =
   | "anthropic"
   | "gemini"
   | "azure_openai"
-  | "ollama"
+  | "local"
   | "openrouter"
   | "custom";
 export type ProductLineKind = "migration" | "faq" | "assistant" | "framework";
@@ -1002,7 +1002,7 @@ export interface LLMProviderRuntimeStatus {
   last_error: string | null;
 }
 
-export type InferenceEngineType = "vllm" | "sglang" | "tgi";
+export type InferenceEngineType = "vllm" | "sglang" | "tgi" | "ollama";
 
 export interface LLMInferenceEngineConfigItem {
   name: string;
@@ -1012,7 +1012,7 @@ export interface LLMInferenceEngineConfigItem {
   metrics_path: string;
   model_list_path: string;
   enabled: boolean;
-  deployment_mode: "manual" | "docker";
+  deployment_mode: "manual" | "docker" | "native";
   docker_image: string | null;
   served_model_name: string | null;
   container_name: string | null;
@@ -1101,14 +1101,13 @@ export type LLMManagementProviderKind =
   | "openai"
   | "anthropic"
   | "google"
-  | "ollama"
   | "azure_openai"
   | "openrouter"
   | "deepseek"
   | "custom"
   | "local";
 
-export type LLMBackendKind = "none" | "vllm" | "sglang" | "tgi";
+export type LLMBackendKind = "none" | "vllm" | "sglang" | "tgi" | "ollama";
 
 export interface LLMCatalogProvider {
   name: LLMManagementProviderKind;
@@ -1119,6 +1118,8 @@ export interface LLMCatalogProvider {
   default_api_base: string | null;
   recommended_models: string[];
   install_recipes: string[][];
+  category: "cloud" | "local";
+  local_engines: LLMBackendKind[];
 }
 
 export interface LLMCatalogModel {

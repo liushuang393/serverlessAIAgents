@@ -27,7 +27,6 @@ _PROVIDER_ALIASES: dict[str, list[str]] = {
 }
 
 _PROVIDER_INSTALL_RECIPES: dict[str, list[list[str]]] = {
-    "ollama": [["ollama", "--version"]],
     "openai": [],
     "anthropic": [],
     "google": [],
@@ -42,8 +41,7 @@ _PROVIDER_PRIORITY_MODELS: dict[str, list[str]] = {
     "openai": ["gpt-5.2", "gpt-5-mini", "gpt-5-nano"],
     "anthropic": ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"],
     "google": ["gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"],
-    "ollama": ["llama3.3:70b", "qwen2.5:72b", "qwen2.5-coder:32b"],
-    "local": ["Qwen/Qwen2.5-0.5B-Instruct"],
+    "local": ["Qwen/Qwen2.5-0.5B-Instruct", "llama3.3:70b", "qwen2.5:72b", "qwen2.5-coder:32b"],
 }
 
 _BACKEND_METADATA: dict[LLMBackendKind, dict[str, Any]] = {
@@ -67,6 +65,13 @@ _BACKEND_METADATA: dict[LLMBackendKind, dict[str, Any]] = {
         "health_path": "/health",
         "install": [["docker", "pull", "ghcr.io/huggingface/text-generation-inference:3.3.7"]],
         "start": [["docker", "compose", "up", "-d"]],
+    },
+    LLMBackendKind.OLLAMA: {
+        "display_name": "Ollama",
+        "base_url": "http://127.0.0.1:11434",
+        "health_path": "/",
+        "install": [["ollama", "--version"]],
+        "start": [["ollama", "serve"]],
     },
 }
 
@@ -100,16 +105,24 @@ class LLMCatalogService:
                 continue
             seen_provider_names.add(provider_name)
             kind = LLMProviderKind(provider_name)
+            is_local = provider_name in {"local", "custom"}
+            local_engines = (
+                [LLMBackendKind.VLLM, LLMBackendKind.SGLANG, LLMBackendKind.TGI, LLMBackendKind.OLLAMA]
+                if provider_name == "local"
+                else []
+            )
             result.append(
                 LLMCatalogProvider(
                     name=kind,
                     canonical_name=provider_name,
                     aliases=_PROVIDER_ALIASES.get(provider_name, []),
-                    requires_api_key=provider_name not in {"ollama", "local", "custom"},
+                    requires_api_key=not is_local,
                     default_api_key_env=provider_default_api_key_env(provider_name),
                     default_api_base=provider_default_api_base(provider_name),
                     recommended_models=self._recommended_models(provider_name),
                     install_recipes=_PROVIDER_INSTALL_RECIPES.get(provider_name, []),
+                    category="local" if is_local else "cloud",
+                    local_engines=local_engines,
                 )
             )
         return sorted(result, key=lambda item: item.name.value)
@@ -126,7 +139,7 @@ class LLMCatalogService:
                 recommended_for.append("coding")
             if info.input_cost_per_1k <= 0.001 and info.output_cost_per_1k <= 0.002:
                 recommended_for.append("cheap")
-            if info.provider in {"ollama", "local"}:
+            if info.provider == "local":
                 recommended_for.append("local")
             models.append(
                 LLMCatalogModel(

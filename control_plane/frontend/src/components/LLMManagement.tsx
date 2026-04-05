@@ -72,6 +72,7 @@ const DEFAULT_ENGINE_PORTS: Record<Exclude<LLMBackendKind, "none">, number> = {
   vllm: 18001,
   sglang: 18002,
   tgi: 18003,
+  ollama: 11434,
 };
 const OFFICIAL_PROVIDER_MODELS: Record<string, string[]> = {
   openai: ["gpt-5.2", "gpt-5-mini", "gpt-5-nano"],
@@ -81,8 +82,12 @@ const OFFICIAL_PROVIDER_MODELS: Record<string, string[]> = {
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite-preview",
   ],
-  ollama: ["llama3.3:70b", "qwen2.5:72b", "qwen2.5-coder:32b"],
-  local: ["Qwen/Qwen2.5-0.5B-Instruct"],
+  local: [
+    "Qwen/Qwen2.5-0.5B-Instruct",
+    "llama3.3:70b",
+    "qwen2.5:72b",
+    "qwen2.5-coder:32b",
+  ],
 };
 const OFFICIAL_VOICE_STACK_NOTES = [
   "2026-03-10 時点の公式ドキュメントを基準に、音声連携の実装しやすさ順で上位 3 系統を整理しています。",
@@ -255,13 +260,6 @@ const inferLocalCategory = (
   provider: LLMProviderConfigItem,
   models: LLMModelConfigItem[],
 ): { label: string; detail: string } => {
-  if (provider.name === "ollama") {
-    return {
-      label: "ollama",
-      detail:
-        "Ollama のローカル実行系です。11434 の OpenAI 互換 API を使います。",
-    };
-  }
   if (provider.name !== "local") {
     return {
       label: provider.name,
@@ -1752,7 +1750,7 @@ export function LLMManagement() {
         <section className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-slate-100">
-              vLLM / Engine 配備
+              ローカル推論エンジン
             </h2>
             <p className="text-xs text-slate-500 mt-1">
               engine 設定を保存したあとに docker compose

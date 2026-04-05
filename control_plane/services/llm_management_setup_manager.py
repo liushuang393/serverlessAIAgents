@@ -155,7 +155,7 @@ class LLMSetupManager:
                 "",
             )
 
-        result = await self._run_command(command, dry_run=False, cwd=None, timeout_seconds=5.0)
+        await self._run_command(command, dry_run=False, cwd=None, timeout_seconds=5.0)
         # ollama serve はブロッキングなのでタイムアウトしても正常
         # ヘルスチェックで起動確認する
 
@@ -194,6 +194,11 @@ class LLMSetupManager:
             )
         command = ["docker", "compose", "-f", str(compose_path), "down"]
         return await self._run_command(command, dry_run=False, cwd=str(compose_path.parent), timeout_seconds=900.0)
+
+    async def pull_ollama_model(self, model_name: str) -> LLMSetupCommandResult:
+        """Ollama モデルをダウンロードする."""
+        command = ["ollama", "pull", model_name]
+        return await self._run_command(command, dry_run=False, cwd=None, timeout_seconds=900.0)
 
     async def preflight(
         self,
@@ -533,6 +538,8 @@ class LLMSetupManager:
             return ["python", "-m", "pip", "show", "vllm"]
         if backend == LLMBackendKind.SGLANG:
             return ["python", "-m", "pip", "show", "sglang"]
+        if backend == LLMBackendKind.OLLAMA:
+            return ["ollama", "--version"]
         return ["docker", "--version"]
 
     @staticmethod
@@ -541,13 +548,16 @@ class LLMSetupManager:
             return ["python", "-m", "pip", "install", "vllm"]
         if backend == LLMBackendKind.SGLANG:
             return ["python", "-m", "pip", "install", "sglang"]
+        if backend == LLMBackendKind.OLLAMA:
+            return ["docker", "pull", "ollama/ollama"]
         return ["docker", "pull", "ghcr.io/huggingface/text-generation-inference:3.3.7"]
 
     def _backend_health_url(self, config: LLMGatewayConfig, backend: LLMBackendKind) -> str:
-        defaults = {
+        defaults: dict[LLMBackendKind, tuple[str, str]] = {
             LLMBackendKind.VLLM: ("http://127.0.0.1:18001", "/health"),
             LLMBackendKind.SGLANG: ("http://127.0.0.1:18002", "/health"),
             LLMBackendKind.TGI: ("http://127.0.0.1:18003", "/health"),
+            LLMBackendKind.OLLAMA: ("http://127.0.0.1:11434", "/"),
         }
         base_url, health_path = defaults[backend]
         for engine in config.inference_engines:
@@ -613,7 +623,12 @@ class LLMSetupManager:
             if engine.gpu_devices:
                 environment["CUDA_VISIBLE_DEVICES"] = ",".join(engine.gpu_devices)
 
-        if engine.engine_type in {"vllm", "sglang"}:
+        if engine.engine_type == "ollama":
+            # Ollama はモデルストレージを /root/.ollama にマウント
+            ollama_host_dir = str(Path.home() / ".ollama")
+            Path(ollama_host_dir).mkdir(parents=True, exist_ok=True)
+            volumes.append(f"{ollama_host_dir}:/root/.ollama")
+        elif engine.engine_type in {"vllm", "sglang"}:
             cache_target = "/root/.cache/huggingface"
             environment.setdefault("HF_HOME", cache_target)
             volumes.append(f"{cache_host_dir}:{cache_target}")
@@ -656,6 +671,9 @@ class LLMSetupManager:
                 "--port",
                 str(container_port),
             ]
+        elif engine.engine_type == "ollama":
+            # Ollama コンテナは ollama serve を自動起動する
+            pass
         else:
             service["command"] = [
                 "--model-id",
@@ -672,6 +690,8 @@ class LLMSetupManager:
             return "vllm/vllm-openai:v0.8.5"
         if engine_type == "sglang":
             return "lmsysorg/sglang:v0.4.9.post4-cu126"
+        if engine_type == "ollama":
+            return "ollama/ollama:latest"
         return "ghcr.io/huggingface/text-generation-inference:3.3.7"
 
     @staticmethod
@@ -686,6 +706,8 @@ class LLMSetupManager:
             return 8000
         if engine_type == "sglang":
             return 30000
+        if engine_type == "ollama":
+            return 11434
         return 80
 
     @staticmethod
@@ -725,6 +747,17 @@ class LLMSetupManager:
       HF_HOME: /root/.cache/huggingface
     volumes:
       - "~/.cache/huggingface:/root/.cache/huggingface"
+"""
+        if backend == LLMBackendKind.OLLAMA:
+            return """services:
+  llm-ollama:
+    image: ollama/ollama:latest
+    container_name: llm-ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    volumes:
+      - "~/.ollama:/root/.ollama"
 """
         return """services:
   llm-tgi:
