@@ -45,13 +45,13 @@ class InferenceEngineConfig(BaseModel):
     """Local inference engine configuration."""
 
     name: str = Field(..., min_length=1)
-    engine_type: Literal["vllm", "sglang", "tgi"]
+    engine_type: Literal["vllm", "sglang", "tgi", "ollama"]
     base_url: str
     health_path: str = "/health"
     metrics_path: str = "/metrics"
     model_list_path: str = "/v1/models"
     enabled: bool = True
-    deployment_mode: Literal["manual", "docker"] = "manual"
+    deployment_mode: Literal["manual", "docker", "native"] = "manual"
     docker_image: str | None = None
     served_model_name: str | None = None
     container_name: str | None = None
@@ -165,7 +165,7 @@ class EngineRuntimeStatus(BaseModel):
     """Inference engine runtime status for platform UI."""
 
     name: str
-    engine_type: Literal["vllm", "sglang", "tgi"]
+    engine_type: Literal["vllm", "sglang", "tgi", "ollama"]
     status: _AVAILABLE_STATUS
     latency_ms: float | None = None
     gpu_usage: float | None = None
@@ -243,6 +243,16 @@ def _default_gateway_config() -> LLMGatewayConfig:
                 served_model_name="Qwen/Qwen2.5-0.5B-Instruct",
                 container_name="llm-tgi",
                 host_port=18003,
+            ),
+            InferenceEngineConfig(
+                name="ollama",
+                engine_type="ollama",
+                base_url="http://127.0.0.1:11434",
+                health_path="/",
+                model_list_path="/api/tags",
+                enabled=False,
+                deployment_mode="native",
+                host_port=11434,
             ),
         ],
         models=[

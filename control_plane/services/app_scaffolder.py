@@ -95,7 +95,7 @@ class AppScaffolderService:
         {"value": "anthropic", "label": "Anthropic"},
         {"value": "gemini", "label": "Google Gemini"},
         {"value": "azure_openai", "label": "Azure OpenAI"},
-        {"value": "ollama", "label": "Ollama"},
+        {"value": "local", "label": "Local (Ollama/vLLM/SGLang/TGI)"},
         {"value": "openrouter", "label": "OpenRouter"},
         {"value": "custom", "label": "Custom"},
     )
@@ -689,7 +689,7 @@ class AppScaffolderService:
 
     def _resolve_llm_api_key_env(self, request: AppCreateRequest) -> str | None:
         """LLM API キー env 名を解決."""
-        if request.llm_provider in {"ollama"}:
+        if request.llm_provider in {"local"}:
             return None
         if request.llm_api_key_env:
             return request.llm_api_key_env

@@ -211,7 +211,7 @@ class AppCreateRequest(BaseModel):
         "anthropic",
         "gemini",
         "azure_openai",
-        "ollama",
+        "local",
         "openrouter",
         "custom",
     ] = Field(default="auto", description="LLM プロバイダー")

@@ -14,13 +14,13 @@ if TYPE_CHECKING:
 
 _CANONICAL_PROVIDER_MAP: dict[str, str] = {
     "gemini": "google",
+    "ollama": "local",
 }
 
 _SUPPORTED_PROVIDERS: set[str] = {
     "openai",
     "anthropic",
     "google",
-    "ollama",
     "azure_openai",
     "openrouter",
     "deepseek",
@@ -143,15 +143,16 @@ class LLMConfigValidator:
     def _canonicalize_models(self, models: Iterable[ModelConfig]) -> list[ModelConfig]:
         normalized: list[ModelConfig] = []
         for model in models:
+            original_provider = model.provider.strip().lower()
             normalized_provider = self.canonical_provider_name(model.provider)
-            normalized.append(
-                model.model_copy(
-                    update={
-                        "alias": model.alias.strip().lower(),
-                        "provider": normalized_provider,
-                    }
-                )
-            )
+            updates: dict[str, str] = {
+                "alias": model.alias.strip().lower(),
+                "provider": normalized_provider,
+            }
+            # 後方互換: provider="ollama" → provider="local", engine="ollama"
+            if original_provider == "ollama" and model.engine is None:
+                updates["engine"] = "ollama"
+            normalized.append(model.model_copy(update=updates))
         return normalized
 
 
@@ -177,7 +178,6 @@ def provider_default_api_base(provider: str) -> str | None:
         "azure_openai": "https://{resource}.openai.azure.com",
         "openrouter": "https://openrouter.ai/api/v1",
         "deepseek": "https://api.deepseek.com/v1",
-        "ollama": "http://127.0.0.1:11434/v1",
         "local": "http://127.0.0.1:18001/v1",
     }
     return mapping.get(LLMConfigValidator.canonical_provider_name(provider))

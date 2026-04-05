@@ -120,6 +120,9 @@ class LLMSetupManager:
         engine: InferenceEngineConfig,
     ) -> tuple[LLMSetupCommandResult, Path, str]:
         """Engine 設定から compose を生成して起動する."""
+        if engine.deployment_mode == "native":
+            return await self._deploy_engine_native(engine)
+
         compose_path, compose_yaml = self._ensure_engine_compose(engine)
         command = ["docker", "compose", "-f", str(compose_path), "up", "-d"]
         result = await self._run_command(command, dry_run=False, cwd=str(compose_path.parent), timeout_seconds=900.0)
@@ -131,8 +134,56 @@ class LLMSetupManager:
             return health_result, compose_path, compose_yaml
         return result, compose_path, compose_yaml
 
+    async def _deploy_engine_native(
+        self,
+        engine: InferenceEngineConfig,
+    ) -> tuple[LLMSetupCommandResult, Path, str]:
+        """native モードで engine を起動する（Ollama 等）."""
+        marker_dir = self._config_path.parent / "llm_backends" / engine.name
+        marker_dir.mkdir(parents=True, exist_ok=True)
+        marker_path = marker_dir / "native.marker"
+        marker_path.write_text(f"deployment_mode=native\nengine={engine.name}\n", encoding="utf-8")
+
+        command = ["ollama", "serve"] if engine.engine_type == "ollama" else []
+        if not command:
+            return (
+                LLMSetupCommandResult(
+                    command=command, allowed=True,
+                    error=f"native デプロイは engine_type={engine.engine_type} に未対応です。",
+                ),
+                marker_path,
+                "",
+            )
+
+        result = await self._run_command(command, dry_run=False, cwd=None, timeout_seconds=5.0)
+        # ollama serve はブロッキングなのでタイムアウトしても正常
+        # ヘルスチェックで起動確認する
+
+        health_result = await self._wait_for_engine_health(engine, timeout_seconds=30.0, interval_seconds=2.0)
+        if health_result is not None:
+            # ollama serve が既に起動中の場合はヘルスチェックで確認
+            return health_result, marker_path, ""
+        return (
+            LLMSetupCommandResult(
+                command=command, allowed=True, return_code=0,
+                stdout="native engine started successfully",
+            ),
+            marker_path,
+            "",
+        )
+
     async def stop_engine(self, engine_name: str) -> LLMSetupCommandResult:
-        """既存 compose から engine を停止する."""
+        """既存 compose または native プロセスから engine を停止する."""
+        # native モードの場合はマーカーファイルで判定
+        native_marker = self._config_path.parent / "llm_backends" / engine_name / "native.marker"
+        if native_marker.is_file():
+            return LLMSetupCommandResult(
+                command=["native", "stop", engine_name],
+                allowed=True,
+                return_code=0,
+                stdout="native engine は手動停止してください（例: systemctl stop ollama）。",
+            )
+
         compose_path = self._config_path.parent / "llm_backends" / engine_name / "docker-compose.yml"
         if not compose_path.is_file():
             return LLMSetupCommandResult(
@@ -217,7 +268,7 @@ class LLMSetupManager:
             provider = by_name.get(name)
             env_name = provider.api_key_env if provider is not None else provider_default_api_key_env(name)
 
-            if name in {"local", "ollama", "custom"} and not env_name:
+            if name in {"local", "custom"} and not env_name:
                 steps.append(
                     LLMPreflightStep(
                         category="provider",

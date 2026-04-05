@@ -15,7 +15,6 @@ class LLMProviderKind(StrEnum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
-    OLLAMA = "ollama"
     AZURE_OPENAI = "azure_openai"
     OPENROUTER = "openrouter"
     DEEPSEEK = "deepseek"
@@ -30,6 +29,7 @@ class LLMBackendKind(StrEnum):
     VLLM = "vllm"
     SGLANG = "sglang"
     TGI = "tgi"
+    OLLAMA = "ollama"
 
 
 class LLMProviderSecretStatusPayload(BaseModel):
@@ -73,13 +73,13 @@ class LLMInferenceEngineConfigPayload(BaseModel):
     """Typed inference engine payload used by PUT /engines."""
 
     name: str = Field(..., min_length=1)
-    engine_type: Literal["vllm", "sglang", "tgi"]
+    engine_type: Literal["vllm", "sglang", "tgi", "ollama"]
     base_url: str = Field(..., min_length=1)
     health_path: str = "/health"
     metrics_path: str = "/metrics"
     model_list_path: str = "/v1/models"
     enabled: bool = True
-    deployment_mode: Literal["manual", "docker"] = "manual"
+    deployment_mode: Literal["manual", "docker", "native"] = "manual"
     docker_image: str | None = None
     served_model_name: str | None = None
     container_name: str | None = None
@@ -103,7 +103,7 @@ class LLMEngineRuntimeStatusPayload(BaseModel):
     """Engine runtime status payload."""
 
     name: str
-    engine_type: Literal["vllm", "sglang", "tgi"]
+    engine_type: Literal["vllm", "sglang", "tgi", "ollama"]
     status: Literal["available", "unavailable"]
     latency_ms: float | None = None
     gpu_usage: float | None = None
@@ -310,6 +310,8 @@ class LLMCatalogProvider(BaseModel):
     default_api_base: str | None = None
     recommended_models: list[str] = Field(default_factory=list)
     install_recipes: list[list[str]] = Field(default_factory=list)
+    category: Literal["cloud", "local"] = "cloud"
+    local_engines: list[LLMBackendKind] = Field(default_factory=list)
 
 
 class LLMCatalogModel(BaseModel):

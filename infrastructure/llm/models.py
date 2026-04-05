@@ -343,11 +343,11 @@ MODELS: dict[str, ModelInfo] = {
         description="DeepSeek R1 推論専用",
     ),
     # ========================================
-    # ローカルモデル（Ollama/LocalAI）
+    # ローカルモデル（Ollama/vLLM/SGLang/TGI）
     # ========================================
     "llama3.3-70b": ModelInfo(
         name="llama3.3:70b",
-        provider="ollama",
+        provider="local",
         tier=ModelTier.PREMIUM,
         capabilities=[
             ModelCapability.CHAT,
@@ -362,7 +362,7 @@ MODELS: dict[str, ModelInfo] = {
     ),
     "qwen2.5-72b": ModelInfo(
         name="qwen2.5:72b",
-        provider="ollama",
+        provider="local",
         tier=ModelTier.PREMIUM,
         capabilities=[
             ModelCapability.CHAT,
@@ -377,7 +377,7 @@ MODELS: dict[str, ModelInfo] = {
     ),
     "qwen2.5-coder-32b": ModelInfo(
         name="qwen2.5-coder:32b",
-        provider="ollama",
+        provider="local",
         tier=ModelTier.STANDARD,
         capabilities=[
             ModelCapability.CHAT,
@@ -391,7 +391,7 @@ MODELS: dict[str, ModelInfo] = {
     ),
     "mistral-large": ModelInfo(
         name="mistral-large:latest",
-        provider="ollama",
+        provider="local",
         tier=ModelTier.PREMIUM,
         capabilities=[
             ModelCapability.CHAT,
@@ -407,7 +407,7 @@ MODELS: dict[str, ModelInfo] = {
     ),
     "phi-4": ModelInfo(
         name="phi4:latest",
-        provider="ollama",
+        provider="local",
         tier=ModelTier.ECONOMY,
         capabilities=[
             ModelCapability.CHAT,

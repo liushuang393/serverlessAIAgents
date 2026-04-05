@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 _PROBE_TIMEOUT = httpx.Timeout(2.0, connect=1.0)
-_ACTIVE_PROBE_PROVIDERS = {"local", "custom", "ollama"}
+_ACTIVE_PROBE_PROVIDERS = {"local", "custom"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,12 +185,6 @@ def _probe_attempts(provider_name: str, base_url: str) -> list[_ProbeAttempt]:
     root_url = _root_api_url(base_url)
     openai_models = _openai_models_url(base_url)
     health_url = f"{root_url}/health"
-    if provider_name == "ollama":
-        return [
-            _ProbeAttempt(label="api_tags", url=f"{root_url}/api/tags"),
-            _ProbeAttempt(label="v1_models", url=openai_models),
-            _ProbeAttempt(label="health", url=health_url),
-        ]
     return [
         _ProbeAttempt(label="v1_models", url=openai_models),
         _ProbeAttempt(label="health", url=health_url),
