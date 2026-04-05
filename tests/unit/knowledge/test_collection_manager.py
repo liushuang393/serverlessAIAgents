@@ -6,7 +6,9 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import StaticPool, event
@@ -18,6 +20,7 @@ from shared.rag.models import (
     Base,
     DocumentStatus,
 )
+from shared.services.base import ServiceResult
 from shared.services.rag_service import RerankerType
 
 
@@ -358,6 +361,37 @@ class TestDocumentManagerUpload:
         assert doc.status == DocumentStatus.UPLOADED
         assert doc.content_hash is not None
 
+    async def test_upload_document_persists_group_tags_and_metadata(
+        self,
+        collection_mgr: CollectionManager,
+        document_mgr: DocumentManager,
+    ) -> None:
+        """アップロード時に group/tags/metadata を保存する."""
+        await collection_mgr.create_collection(
+            collection_name="upload_test",
+            app_name="faq_system",
+        )
+        doc = await document_mgr.upload_document(
+            collection_name="upload_test",
+            file_content=b"This is travel policy content.",
+            filename="policy.txt",
+            user_id="user_1",
+            metadata={
+                "document_group_id": "group-hr-travel",
+                "tags": ["policy", "travel"],
+                "scenario_id": "hr-travel",
+                "source_title": "出張旅費規程",
+            },
+        )
+
+        stored = await document_mgr.get_document(doc.document_id)
+        assert stored is not None
+        assert stored.document_group_id == "group-hr-travel"
+        assert stored.to_dict()["tags"] == ["policy", "travel"]
+        stored_metadata = json.loads(stored.metadata_json)
+        assert stored_metadata["scenario_id"] == "hr-travel"
+        assert stored_metadata["source_title"] == "出張旅費規程"
+
     async def test_upload_to_nonexistent_collection_raises(self, document_mgr: DocumentManager) -> None:
         """存在しないコレクションへのアップロードで ValueError を送出."""
         with pytest.raises(ValueError, match="not found"):
@@ -495,6 +529,51 @@ class TestDocumentManagerChunking:
             chunk_overlap=10,
         )
         assert len(chunks) > 0
+
+    async def test_index_document_reuses_saved_metadata(
+        self,
+        collection_mgr: CollectionManager,
+        document_mgr: DocumentManager,
+    ) -> None:
+        """インデックス時に保存済み metadata をベクトル登録へ引き継ぐ."""
+        await collection_mgr.create_collection(
+            collection_name="chunk_custom",
+            app_name="faq_system",
+        )
+        doc = await document_mgr.upload_document(
+            collection_name="chunk_custom",
+            file_content=b"Policy content with metadata.",
+            filename="policy.txt",
+            user_id="user_1",
+            metadata={
+                "document_group_id": "group-hr-travel",
+                "tags": ["policy", "travel"],
+                "scenario_id": "hr-travel",
+                "effective_date": "2026-04-01",
+            },
+        )
+
+        mock_service = AsyncMock()
+        mock_service.execute = AsyncMock(
+            return_value=ServiceResult(
+                success=True,
+                data={"ids": ["chunk-1"], "count": 1},
+            )
+        )
+        with patch(
+            "shared.services.rag_service.RAGService",
+            return_value=mock_service,
+        ):
+            await document_mgr.index_document(doc.document_id)
+
+        execute_kwargs = mock_service.execute.await_args.kwargs
+        metadata = execute_kwargs["metadata"]
+        assert metadata["document_id"] == doc.document_id
+        assert metadata["collection_name"] == "chunk_custom"
+        assert metadata["document_group_id"] == "group-hr-travel"
+        assert metadata["scenario_id"] == "hr-travel"
+        assert metadata["tags"] == ["policy", "travel"]
+        assert metadata["effective_date"] == "2026-04-01"
 
 
 class TestDocumentManagerDuplicate:

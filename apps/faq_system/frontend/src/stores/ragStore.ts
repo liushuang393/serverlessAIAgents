@@ -8,6 +8,7 @@ import {
   ragApi,
   type CollectionInfo,
   type DocumentInfo,
+  type DocumentUploadOptions,
   type IngestRunSummary,
   type ChunkPreview,
   type KBLoadDirectoryRequest,
@@ -49,6 +50,7 @@ interface RAGState {
     collection: string,
     file: File,
     autoIndex?: boolean,
+    options?: DocumentUploadOptions,
   ) => Promise<DocumentInfo>;
   deleteDocument: (collection: string, docId: string) => Promise<void>;
   indexDocument: (collection: string, docId: string) => Promise<void>;
@@ -64,6 +66,7 @@ interface RAGState {
     collection: string,
     files: File[],
     autoIndex?: boolean,
+    options?: DocumentUploadOptions,
   ) => Promise<DocumentInfo[]>;
 
   // ディレクトリロード
@@ -130,8 +133,8 @@ export const useRAGStore = create<RAGState>((set, get) => ({
       set({ error: (e as Error).message, documentsLoading: false });
     }
   },
-  uploadDocument: async (collection, file, autoIndex) => {
-    const resp = await ragApi.uploadDocument(collection, file, autoIndex);
+  uploadDocument: async (collection, file, autoIndex, options) => {
+    const resp = await ragApi.uploadDocument(collection, file, autoIndex, options);
     await get().fetchDocuments(collection);
     return resp.document;
   },
@@ -149,8 +152,8 @@ export const useRAGStore = create<RAGState>((set, get) => ({
   },
 
   // バッチアップロード
-  uploadDocuments: async (collection, files, autoIndex) => {
-    const results = await ragApi.uploadDocuments(collection, files, autoIndex);
+  uploadDocuments: async (collection, files, autoIndex, options) => {
+    const results = await ragApi.uploadDocuments(collection, files, autoIndex, options);
     await get().fetchDocuments(collection);
     return results;
   },

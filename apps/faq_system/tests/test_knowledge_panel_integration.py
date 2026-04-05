@@ -326,3 +326,50 @@ class TestKnowledgeManagementIntegration:
 
         # auto_index 後は indexed レコードが返る
         assert result["document"]["status"] == "indexed"
+
+    @pytest.mark.asyncio
+    async def test_upload_forwards_group_tags_and_scenario_metadata(self) -> None:
+        """アップロード API が group/tags/scenario を正規化して転送する。"""
+        uploaded_record = MagicMock()
+        uploaded_record.document_id = "doc-meta"
+        uploaded_record.to_dict.return_value = {
+            "document_id": "doc-meta",
+            "status": "uploaded",
+            "document_group_id": "group-hr-travel",
+            "tags": ["policy", "travel"],
+        }
+
+        fake_doc_mgr = MagicMock()
+        fake_doc_mgr.upload_document = AsyncMock(return_value=uploaded_record)
+
+        fake_file = MagicMock()
+        fake_file.read = AsyncMock(return_value=b"content")
+        fake_file.filename = "policy.txt"
+
+        with (
+            patch(
+                "apps.faq_system.routers.collections.is_rag_enabled",
+                return_value=True,
+            ),
+            patch(
+                "apps.faq_system.routers.collections._get_doc_mgr",
+                return_value=fake_doc_mgr,
+            ),
+        ):
+            await upload_document(
+                name="test_kb",
+                file=fake_file,
+                auto_index=False,
+                document_group_id="group-hr-travel",
+                tags="policy, travel",
+                scenario_id="hr-travel",
+                user=_fake_user("admin"),
+            )
+
+        fake_doc_mgr.upload_document.assert_awaited_once()
+        upload_kwargs = fake_doc_mgr.upload_document.call_args.kwargs
+        assert upload_kwargs["metadata"] == {
+            "document_group_id": "group-hr-travel",
+            "tags": ["policy", "travel"],
+            "scenario_id": "hr-travel",
+        }

@@ -139,6 +139,9 @@ function setupStore(overrides: Partial<typeof mockStoreState> = {}) {
 describe("PanelDocuments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("crypto", {
+      randomUUID: vi.fn().mockReturnValue("group-hr-travel-001"),
+    });
     setupStore();
   });
 
@@ -213,5 +216,48 @@ describe("PanelDocuments", () => {
 
     expect(window.confirm).toHaveBeenCalled();
     expect(mockDeleteDocument).toHaveBeenCalledWith("faq_main", "doc-001");
+  });
+
+  it("複数ファイルのアップロード時に同じ group と metadata を渡す", async () => {
+    const user = userEvent.setup();
+    render(<PanelDocuments />);
+
+    await user.selectOptions(
+      screen.getByTestId("collection-select"),
+      "faq_main",
+    );
+
+    await user.type(screen.getByTestId("scenario-id-input"), "hr-travel");
+    await user.type(screen.getByTestId("tag-input"), "policy, travel");
+
+    const input = screen.getByTestId("file-input");
+    const first = new File(["policy"], "policy.pdf", { type: "application/pdf" });
+    const second = new File(["faq"], "faq.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    await user.upload(input, [first, second]);
+
+    expect(mockUploadDocument).toHaveBeenNthCalledWith(
+      1,
+      "faq_main",
+      first,
+      false,
+      {
+        document_group_id: "group-hr-travel-001",
+        scenario_id: "hr-travel",
+        tags: ["policy", "travel"],
+      },
+    );
+    expect(mockUploadDocument).toHaveBeenNthCalledWith(
+      2,
+      "faq_main",
+      second,
+      false,
+      {
+        document_group_id: "group-hr-travel-001",
+        scenario_id: "hr-travel",
+        tags: ["policy", "travel"],
+      },
+    );
   });
 });

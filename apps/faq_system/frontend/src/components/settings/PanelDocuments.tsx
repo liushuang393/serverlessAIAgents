@@ -55,6 +55,23 @@ const FORMAT_LABELS = [
   { ext: "HTML", color: "text-cyan-400" },
 ];
 
+function createBatchGroupId(): string {
+  if (
+    typeof globalThis.crypto !== "undefined" &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `group-${Date.now().toString(36)}`;
+}
+
+function parseTagInput(value: string): string[] {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+}
+
 /** パネル内ドキュメント管理 */
 export function PanelDocuments(): JSX.Element {
   const { t } = useI18n();
@@ -84,6 +101,9 @@ export function PanelDocuments(): JSX.Element {
   const [previewDocId, setPreviewDocId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [scenarioId, setScenarioId] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [lastBatchGroupId, setLastBatchGroupId] = useState<string | null>(null);
 
   // ディレクトリロードフォーム
   const [showDirLoad, setShowDirLoad] = useState(false);
@@ -109,9 +129,21 @@ export function PanelDocuments(): JSX.Element {
       if (!files || !selectedCollection) return;
       setUploading(true);
       setUploadError(null);
+      const uploadFiles = Array.from(files);
+      const tags = parseTagInput(tagInput);
+      const documentGroupId = uploadFiles.length > 1 ? createBatchGroupId() : undefined;
+      if (documentGroupId) {
+        setLastBatchGroupId(documentGroupId);
+      } else {
+        setLastBatchGroupId(null);
+      }
       try {
-        for (const file of Array.from(files)) {
-          await uploadDocument(selectedCollection, file, autoIndex);
+        for (const file of uploadFiles) {
+          await uploadDocument(selectedCollection, file, autoIndex, {
+            ...(documentGroupId ? { document_group_id: documentGroupId } : {}),
+            ...(scenarioId.trim() ? { scenario_id: scenarioId.trim() } : {}),
+            ...(tags.length > 0 ? { tags } : {}),
+          });
         }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
@@ -121,7 +153,7 @@ export function PanelDocuments(): JSX.Element {
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [selectedCollection, uploadDocument, autoIndex],
+    [selectedCollection, uploadDocument, autoIndex, scenarioId, tagInput],
   );
 
   /** ドラッグ＆ドロップハンドラー */
@@ -258,6 +290,47 @@ export function PanelDocuments(): JSX.Element {
                 : t("knowledge_panel.select_file")}
             </button>
           </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs text-[var(--text-muted)]">
+                {t("knowledge_panel.scenario_id")}
+              </label>
+              <input
+                data-testid="scenario-id-input"
+                type="text"
+                value={scenarioId}
+                onChange={(e) => setScenarioId(e.target.value)}
+                placeholder={t("knowledge_panel.scenario_id_placeholder")}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs text-[var(--text-muted)]">
+                {t("knowledge_panel.tags")}
+              </label>
+              <input
+                data-testid="tag-input"
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder={t("knowledge_panel.tags_placeholder")}
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-[var(--text-muted)]"
+              />
+            </div>
+          </div>
+
+          {lastBatchGroupId && (
+            <div
+              data-testid="batch-group-notice"
+              className="rounded-xl border border-[var(--primary)]/20 bg-[var(--primary)]/5 px-4 py-3 text-xs text-[var(--text-muted)]"
+            >
+              <span className="font-medium text-[var(--primary)]">
+                {t("knowledge_panel.batch_group_created")}
+              </span>{" "}
+              <span>{lastBatchGroupId}</span>
+            </div>
+          )}
 
           {/* オプション行 */}
           <div className="flex items-center justify-between gap-4">

@@ -111,6 +111,9 @@ class DocumentManager:
 
         # SHA-256 ハッシュ（重複検出用）
         content_hash = hashlib.sha256(file_content).hexdigest()
+        normalized_metadata = dict(metadata or {})
+        document_group_id = self._extract_document_group_id(normalized_metadata)
+        tags = self._extract_tags(normalized_metadata)
 
         doc_id = uuid.uuid4().hex[:16]
 
@@ -130,8 +133,10 @@ class DocumentManager:
                 file_size=len(file_content),
                 status=DocumentStatus.UPLOADED.value,
                 content_hash=content_hash,
+                document_group_id=document_group_id,
+                tags_json=json.dumps(tags, ensure_ascii=False),
                 metadata_json=json.dumps(
-                    {**(metadata or {}), "file_path": str(file_path)},
+                    {**normalized_metadata, "file_path": str(file_path)},
                     ensure_ascii=False,
                 ),
                 uploaded_by=user_id,
@@ -245,10 +250,7 @@ class DocumentManager:
             action="add_document",
             content=content,
             source=doc.filename,
-            metadata={
-                "document_id": document_id,
-                "collection_name": doc.collection_name,
-            },
+            metadata=self._build_index_metadata(doc),
         )
 
         if not result.success:
@@ -514,6 +516,51 @@ class DocumentManager:
             start += step
 
         return chunks
+
+    @staticmethod
+    def _extract_document_group_id(metadata: dict[str, Any]) -> str | None:
+        """metadata から document_group_id を取り出す."""
+        value = metadata.get("document_group_id")
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped or None
+        return None
+
+    @staticmethod
+    def _extract_tags(metadata: dict[str, Any]) -> list[str]:
+        """metadata から tags を正規化して取り出す."""
+        raw_tags = metadata.get("tags")
+        if isinstance(raw_tags, list):
+            return [tag.strip() for tag in raw_tags if isinstance(tag, str) and tag.strip()]
+        if isinstance(raw_tags, str):
+            return [tag.strip() for tag in raw_tags.split(",") if tag.strip()]
+        return []
+
+    @staticmethod
+    def _build_index_metadata(doc: DocumentRecordModel) -> dict[str, Any]:
+        """インデックス登録時に渡す metadata を構築する."""
+        metadata = {
+            "document_id": doc.document_id,
+            "collection_name": doc.collection_name,
+        }
+        try:
+            stored_metadata = json.loads(doc.metadata_json or "{}")
+            if isinstance(stored_metadata, dict):
+                metadata.update(stored_metadata)
+        except (TypeError, ValueError):
+            logger.warning("metadata_json の読込に失敗: doc_id=%s", doc.document_id)
+
+        if doc.document_group_id:
+            metadata["document_group_id"] = doc.document_group_id
+
+        try:
+            tags = json.loads(doc.tags_json or "[]")
+            if isinstance(tags, list):
+                metadata["tags"] = [tag for tag in tags if isinstance(tag, str) and tag.strip()]
+        except (TypeError, ValueError):
+            logger.warning("tags_json の読込に失敗: doc_id=%s", doc.document_id)
+
+        return metadata
 
 
 # ---------------------------------------------------------------------------

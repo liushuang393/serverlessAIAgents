@@ -36,6 +36,33 @@ _KB_TYPES = ("internal", "external", "confidential")
 # ---------------------------------------------------------------------------
 
 
+def _get_permission_config() -> Any:
+    """PermissionConfig の遅延取得."""
+    from apps.faq_system.backend.security.permission_config import PermissionConfig
+
+    return PermissionConfig()
+
+
+def _build_matrix(config: Any) -> dict[str, dict[str, bool]]:
+    """PermissionConfig からロール x KB タイプのマトリクスを生成."""
+    from apps.faq_system.backend.security.permission_config import KBPermission
+
+    matrix: dict[str, dict[str, bool]] = {}
+    for role_name in config.list_roles():
+        role_perms = config.get_role_permissions(role_name)
+        if role_perms is None:
+            continue
+        row: dict[str, bool] = {}
+        for kb_type in _KB_TYPES:
+            try:
+                permission = KBPermission(f"{kb_type}:read")
+                row[kb_type] = permission in role_perms.kb_permissions
+            except ValueError:
+                row[kb_type] = False
+        matrix[role_name] = row
+    return matrix
+
+
 async def _build_matrix_from_db() -> dict[str, dict[str, bool]]:
     """DB からロール × KB タイプのアクセスマトリクスを生成.
 
@@ -64,25 +91,7 @@ async def _build_matrix_from_db() -> dict[str, dict[str, bool]]:
                 matrix[role_name] = row
     except Exception:
         logger.warning("DB からロール権限を読み込めません。フォールバック使用。", exc_info=True)
-        # DB 未初期化時のフォールバック
-        from apps.faq_system.backend.security.permission_config import (
-            KBPermission,
-            PermissionConfig,
-        )
-
-        config = PermissionConfig()
-        for role_name in config.list_roles():
-            role_perms = config.get_role_permissions(role_name)
-            if role_perms is None:
-                continue
-            row = {}
-            for kb_type in _KB_TYPES:
-                try:
-                    perm = KBPermission(f"{kb_type}:read")
-                    row[kb_type] = perm in role_perms.kb_permissions
-                except ValueError:
-                    row[kb_type] = False
-            matrix[role_name] = row
+        matrix = _build_matrix(_get_permission_config())
     return matrix
 
 

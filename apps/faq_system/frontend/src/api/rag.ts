@@ -186,6 +186,12 @@ export interface ChunkPreview {
   strategy: string;
 }
 
+export interface DocumentUploadOptions {
+  document_group_id?: string;
+  tags?: string[];
+  scenario_id?: string;
+}
+
 export interface IngestRunSummary {
   run_id: string;
   status: string;
@@ -251,11 +257,25 @@ export const ragApi = {
       `/collections/${collection}/documents/${docId}`,
     ),
 
-  uploadDocument: (collection: string, file: File, autoIndex = false) =>
+  uploadDocument: (
+    collection: string,
+    file: File,
+    autoIndex = false,
+    options?: DocumentUploadOptions,
+  ) =>
     upload<{ document: DocumentInfo }>(
       `/collections/${collection}/documents`,
       file,
-      autoIndex ? { auto_index: "true" } : undefined,
+      {
+        ...(autoIndex ? { auto_index: "true" } : {}),
+        ...(options?.document_group_id
+          ? { document_group_id: options.document_group_id }
+          : {}),
+        ...(options?.scenario_id ? { scenario_id: options.scenario_id } : {}),
+        ...(options?.tags && options.tags.length > 0
+          ? { tags: options.tags.join(",") }
+          : {}),
+      },
     ),
 
   deleteDocument: (collection: string, docId: string) =>
@@ -315,13 +335,23 @@ export const ragApi = {
     collection: string,
     files: File[],
     autoIndex = false,
+    options?: DocumentUploadOptions,
   ): Promise<DocumentInfo[]> => {
     const results: DocumentInfo[] = [];
     for (const file of files) {
       const resp = await upload<{ document: DocumentInfo }>(
         `/collections/${collection}/documents`,
         file,
-        autoIndex ? { auto_index: "true" } : undefined,
+        {
+          ...(autoIndex ? { auto_index: "true" } : {}),
+          ...(options?.document_group_id
+            ? { document_group_id: options.document_group_id }
+            : {}),
+          ...(options?.scenario_id ? { scenario_id: options.scenario_id } : {}),
+          ...(options?.tags && options.tags.length > 0
+            ? { tags: options.tags.join(",") }
+            : {}),
+        },
       );
       results.push(resp.document);
     }

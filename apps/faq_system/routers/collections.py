@@ -285,6 +285,9 @@ async def upload_document(
     name: str,
     file: UploadFile = File(...),
     auto_index: bool = Form(False),
+    document_group_id: str | None = Form(default=None),
+    tags: str | None = Form(default=None),
+    scenario_id: str | None = Form(default=None),
     user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """ドキュメントアップロード（認証必須）."""
@@ -293,12 +296,22 @@ async def upload_document(
 
     file_bytes = await file.read()
     filename = file.filename or "uploaded_file"
+    metadata: dict[str, Any] = {}
+    if document_group_id is not None and document_group_id.strip():
+        metadata["document_group_id"] = document_group_id.strip()
+    if scenario_id is not None and scenario_id.strip():
+        metadata["scenario_id"] = scenario_id.strip()
+    if tags is not None and tags.strip():
+        normalized_tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        if normalized_tags:
+            metadata["tags"] = normalized_tags
 
     try:
         record = await doc_mgr.upload_document(
             collection_name=name,
             file_content=file_bytes,
             filename=filename,
+            metadata=metadata or None,
             user_id=getattr(user, "user_id", None),
         )
     except ValueError as exc:
