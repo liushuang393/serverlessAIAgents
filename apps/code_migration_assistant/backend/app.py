@@ -89,7 +89,7 @@ def _build_startup_runtime_overrides() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 _APP_CONFIG_PATH = Path(__file__).resolve().parents[1] / "app_config.json"
-_PUBLIC_HTTP_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
+_PUBLIC_HTTP_PATHS = {"/api/health", "/api/auth/dev-info", "/docs", "/redoc", "/openapi.json"}
 _AUTH_HEADER_NAME = "x-api-key"
 _auth_guard = ContractAuthGuard(
     ContractAuthGuardConfig(
@@ -175,6 +175,21 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def cache_control_middleware(request: Request, call_next: Any) -> Any:
+    """Cache-Control ヘッダーを設定するミドルウェア."""
+    response = await call_next(request)
+
+    # HTMLファイルに対してキャッシュを無効化
+    path = request.url.path
+    if path.endswith(".html") or path == "/" or path == "":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+    return response
+
+
+@app.middleware("http")
 async def auth_middleware(request: Request, call_next: Any) -> Any:
     """Apply app-level auth contract to HTTP requests."""
     return await _auth_guard.http_middleware(request, call_next)
@@ -206,10 +221,10 @@ async def run_migration_task(task_id: str, runtime: TaskRuntime) -> None:
         async for raw_event in runtime.engine.execute_stream(runtime.inputs):
             await emit_event(task_id, raw_event)
 
-            event_name = str(raw_event.get("event") or "")
-            node_name = str(raw_event.get("node") or "")
-            if event_name == "node_complete" and node_name == "migration_pipeline":
-                result_obj = raw_event.get("result")
+            event_name = str(raw_event.get("event_type") or raw_event.get("event") or "")
+            node_id = str(raw_event.get("node_name") or raw_event.get("node") or "")
+            if event_name in {"node.complete", "node_complete"} and node_id == "migration_pipeline":
+                result_obj = raw_event.get("data") or raw_event.get("result")
                 if isinstance(result_obj, dict):
                     runtime.result = result_obj
 
@@ -291,6 +306,29 @@ async def _start_task(body: MigrationRequest, background_tasks: BackgroundTasks)
 async def health_check() -> dict[str, str]:
     """ヘルスチェック."""
     return {"status": "healthy", "service": "code_migration_assistant"}
+
+
+@app.get("/api/auth/dev-info")
+async def dev_auth_info() -> dict[str, Any]:
+    """開発用キー情報を返す（自動生成モード時のみキーを公開）.
+
+    本番では CODE_MIGRATION_AUTO_API_KEY=false にすることで
+    このエンドポイントはキーを返さなくなる。
+    """
+    auto_flag = os.getenv("CODE_MIGRATION_AUTO_API_KEY", "true").strip().lower()
+    is_auto_mode = auto_flag in {"true", "1", "yes"}
+    auth_required = _auth_guard.is_auth_required()
+
+    if is_auto_mode and auth_required:
+        return {
+            "auth_required": True,
+            "auto_key_mode": True,
+            "api_key": os.getenv("CODE_MIGRATION_API_KEY", ""),
+        }
+    return {
+        "auth_required": auth_required,
+        "auto_key_mode": is_auto_mode,
+    }
 
 
 # ---------------------------------------------------------------------------

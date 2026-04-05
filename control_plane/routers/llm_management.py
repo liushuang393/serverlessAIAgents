@@ -158,6 +158,15 @@ async def stop_engine(engine_name: str) -> LLMEngineDeployResponse:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.post("/engines/{engine_name}/prefetch-model", response_model=LLMEngineDeployResponse)
+async def prefetch_engine_model(engine_name: str) -> LLMEngineDeployResponse:
+    service = _get_service()
+    try:
+        return await service.prefetch_engine_model(engine_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.get("/engines/status", response_model=LLMEngineStatusResponse)
 async def get_engine_status() -> LLMEngineStatusResponse:
     service = _get_service()

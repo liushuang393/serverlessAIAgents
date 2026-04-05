@@ -19,6 +19,7 @@ from control_plane.services.llm_management_validator import (
 )
 from control_plane.services.llm_runtime_status import resolve_provider_runtime_statuses
 from infrastructure.llm.gateway import (
+    InferenceEngineConfig,
     LiteLLMGateway,
     LLMGatewayConfig,
     ModelConfig,
@@ -70,6 +71,7 @@ class LLMSwitchService:
         runtime_errors = list(runtime_check.errors)
         if request.validate_runtime and runtime_errors:
             self._store.save(original)
+            detail = runtime_errors[0]
             return LLMSwitchResponse(
                 success=False,
                 rolled_back=True,
@@ -78,7 +80,7 @@ class LLMSwitchService:
                 registry=dict(original.registry),
                 diffs=diffs,
                 runtime_check=runtime_check,
-                message="実行時チェックに失敗したため、直前の設定へロールバックしました。",
+                message=f"実行時チェックに失敗したため、直前の設定へロールバックしました。 {detail}",
             )
 
         return LLMSwitchResponse(
@@ -252,6 +254,7 @@ class LLMSwitchService:
         if request.backend != LLMBackendKind.NONE:
             backend_name = request.backend.value
             engine_status = by_engine.get(backend_name)
+            engine_config = self._resolve_backend_engine_config(config, backend_name)
             if engine_status is None:
                 runtime.errors.append(f"backend '{backend_name}' の実行時状態が見つかりません。")
             else:
@@ -260,5 +263,72 @@ class LLMSwitchService:
                     runtime.errors.append(
                         f"backend '{backend_name}' は利用不可です: {engine_status.last_error or 'unknown'}",
                     )
+                model_status, model_error = self._check_model_runtime(
+                    request=request,
+                    engine_status=engine_status,
+                    engine_config=engine_config,
+                )
+                runtime.model_status = model_status
+                if request.validate_runtime and model_error is not None:
+                    runtime.errors.append(model_error)
 
         return runtime
+
+    @staticmethod
+    def _resolve_backend_engine_config(
+        config: LLMGatewayConfig,
+        backend_name: str,
+    ) -> InferenceEngineConfig | None:
+        for engine in config.inference_engines:
+            if engine.name == backend_name:
+                return engine
+        return None
+
+    @staticmethod
+    def _normalize_model_name(model_name: str) -> str:
+        return model_name.strip().lower()
+
+    def _check_model_runtime(
+        self,
+        *,
+        request: LLMSwitchRequest,
+        engine_status: object,
+        engine_config: InferenceEngineConfig | None,
+    ) -> tuple[str | None, str | None]:
+        requested_model = self._normalize_model_name(request.model)
+        if not requested_model:
+            return None, None
+
+        loaded_models = [
+            model_name
+            for model_name in getattr(engine_status, "loaded_models", [])
+            if isinstance(model_name, str) and model_name.strip()
+        ]
+        normalized_loaded = {self._normalize_model_name(model_name): model_name for model_name in loaded_models}
+        if requested_model in normalized_loaded:
+            return "available", None
+
+        if loaded_models:
+            preview = ", ".join(loaded_models[:5])
+            return (
+                "unavailable",
+                f"model '{request.model}' は backend '{request.backend.value}' で利用できません。検出モデル: {preview}",
+            )
+
+        if (
+            engine_config is not None
+            and engine_config.engine_type in {"vllm", "sglang", "tgi"}
+            and isinstance(engine_config.served_model_name, str)
+            and engine_config.served_model_name.strip()
+        ):
+            configured_model = self._normalize_model_name(engine_config.served_model_name)
+            if requested_model == configured_model:
+                return "available", None
+            return (
+                "unavailable",
+                "model "
+                f"'{request.model}' は backend '{request.backend.value}' の served_model_name "
+                f"'{engine_config.served_model_name}' と一致しません。",
+            )
+
+        return None, None

@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from control_plane.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
+from control_plane.services.llm_management_validator import (
+    LLMConfigValidationError,
+    LLMConfigValidator,
+    provider_default_api_base,
+    provider_default_api_key_env,
+)
 from infrastructure.llm.gateway import LLMGatewayConfig, ModelConfig, ProviderConfig, RoutingPolicyConfig
 
 
@@ -56,3 +61,8 @@ def test_validate_or_raise_rejects_unknown_provider() -> None:
     else:
         msg = "expected LLMConfigValidationError"
         raise AssertionError(msg)
+
+
+def test_huggingface_defaults_are_supported() -> None:
+    assert provider_default_api_key_env("huggingface") == "HF_TOKEN"
+    assert provider_default_api_base("huggingface") == "https://router.huggingface.co/v1"

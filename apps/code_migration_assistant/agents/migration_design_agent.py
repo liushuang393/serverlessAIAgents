@@ -61,7 +61,7 @@ class MigrationDesignAgent:
             ),
             package_mapping={"default": "com.migration.generated"},
             class_mapping={"primary_class": class_name},
-            transaction_policy={"mode": "preserve", "rationale": "旧システムの境界を維持"},
+            transaction_policy={"mode": "preserve", "rationale": "レガシーシステムの境界を維持"},
             state_model=business_semantics.get(
                 "state_model",
                 {

@@ -32,7 +32,7 @@ _REPORT_COPY: dict[str, dict[str, str]] = {
         "highlight_page_count": "公開ページ数",
         "highlight_risk": "リスクレベル",
         "none": "なし",
-        "summary": "旧システム刷新向け需要捕捉ランが完了しました。",
+        "summary": "レガシーシステム刷新向け需要捕捉ランが完了しました。",
     },
     "en": {
         "title": "Legacy Modernization GEO Platform Report",

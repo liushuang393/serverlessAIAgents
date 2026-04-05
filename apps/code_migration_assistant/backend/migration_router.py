@@ -146,12 +146,12 @@ def _normalize_engine_event(
 ) -> list[dict[str, Any]]:
     """Engine イベントを migration SSE/timeline 契約へ変換する."""
     events: list[dict[str, Any]] = []
-    event_name = str(raw_event.get("event", ""))
-    node_name = str(raw_event.get("node", ""))
-    stage = _STAGE_NODE_MAP.get(node_name)
+    event_name = str(raw_event.get("event_type") or raw_event.get("event") or "")
+    node_id = str(raw_event.get("node_name") or raw_event.get("node") or "")
+    stage = _STAGE_NODE_MAP.get(node_id)
     executor, fallback_conditions = _resolve_stage_plan(stage or "")
 
-    if event_name == "node_start" and stage is not None:
+    if event_name in {"node.start", "node_start"} and stage is not None:
         events.append(
             {
                 "type": "stage_start",
@@ -172,8 +172,8 @@ def _normalize_engine_event(
         )
         return events
 
-    if event_name == "node_complete" and stage is not None:
-        result_raw = raw_event.get("result")
+    if event_name in {"node.complete", "node_complete"} and stage is not None:
+        result_raw = raw_event.get("data") or raw_event.get("result")
         decision = ""
         if isinstance(result_raw, dict):
             decision_raw = result_raw.get("decision")
@@ -327,30 +327,34 @@ async def _run_engine_pipeline(
                             response_event=asyncio.Event(),
                         )
 
-            if (
-                str(raw_event.get("event", "")) == "node_complete"
-                and str(raw_event.get("node", "")) == "migration_pipeline"
-            ):
-                result_obj = raw_event.get("result")
+            # AG-UI NodeCompleteEvent の検出
+            # event_type="node.complete", node_name="migration_pipeline", data={...}
+            event_type = str(raw_event.get("event_type", raw_event.get("event", "")))
+            node_id = str(raw_event.get("node_name", raw_event.get("node", "")))
+            if event_type in {"node.complete", "node_complete"} and node_id == "migration_pipeline":
+                result_obj = raw_event.get("data", raw_event.get("result"))
                 if isinstance(result_obj, dict):
                     final_result = result_obj
 
         if final_result is None:
-            msg = f"engine result missing for {cobol_file.program_name}"
-            raise RuntimeError(msg)
-
-        evidence_packets = final_result.get("artifact_paths", {})
-        if isinstance(evidence_packets, dict):
-            await store.push_event(
-                task_id,
-                {
-                    "type": "evidence",
-                    "stage": "report",
-                    "program_name": cobol_file.program_name,
-                    "summary": "成果物を更新しました",
-                    "artifact_paths": {str(key): str(value) for key, value in evidence_packets.items()},
-                },
+            logger.warning(
+                "engine result (node_complete) が取得できませんでした: %s — "
+                "成果物パスの自動通知はスキップされます",
+                cobol_file.program_name,
             )
+        else:
+            evidence_packets = final_result.get("artifact_paths", {})
+            if isinstance(evidence_packets, dict):
+                await store.push_event(
+                    task_id,
+                    {
+                        "type": "evidence",
+                        "stage": "report",
+                        "program_name": cobol_file.program_name,
+                        "summary": "成果物を更新しました",
+                        "artifact_paths": {str(key): str(value) for key, value in evidence_packets.items()},
+                    },
+                )
 
     zip_path = Path(shutil.make_archive(str(run_root / "download"), "zip", root_dir=str(run_root)))
     await store.set_download_path(task_id, zip_path)
@@ -440,7 +444,7 @@ async def _sse_generator(
 async def upload_cobol(
     file: Annotated[UploadFile, File(description="COBOLファイルまたはzipアーカイブ")],
     fast: bool = Query(default=True, description="実行比較スキップ（Java/gnucobol不要）"),
-    model: str = Query(default="claude-opus-4-6", description="使用するClaudeモデルID"),
+    model: str = Query(default="platform_text_default", description="使用するモデル alias（gateway 管理）"),
     store: TaskStore = Depends(get_task_store),
 ) -> UploadResponse:
     """COBOLファイルをアップロードして移行タスクを開始する."""
@@ -641,8 +645,10 @@ async def download_result(
     if task.download_path is None or not task.download_path.exists():
         raise HTTPException(status_code=404, detail="ダウンロードファイルが見つかりません")
 
+    download_name = f"migration_{task_id[:8]}.zip"
     return FileResponse(
         path=str(task.download_path),
         media_type="application/zip",
-        filename=task.download_path.name,
+        filename=download_name,
+        headers={"Content-Disposition": f'attachment; filename="{download_name}"'},
     )

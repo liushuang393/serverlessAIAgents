@@ -169,8 +169,8 @@
       "enabled": true,
       "defaults": {
         "text": {
-          "provider": "openai",
-          "model_id": "platform_text_default",
+          "provider": "local",
+          "model_id": "local_ollama_gemma4",
           "model_type": "text"
         },
         "speech_to_text": {

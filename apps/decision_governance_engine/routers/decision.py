@@ -873,8 +873,9 @@ async def process_decision_stream(
                     logger.info(f"[SSE] イベント発行: {event_type}")
 
                     # flow.complete または result イベントから結果を取得
-                    if event_type == "flow.complete" and event.get("result"):
-                        final_result = event.get("result", {})
+                    # AG-UI では data が正、result は後方互換
+                    if event_type == "flow.complete" and (event.get("data") or event.get("result")):
+                        final_result = event.get("data") or event.get("result", {})
                         if final_result and not is_rejected:
                             # PDF出力の即時性を優先し、DB保存前にキャッシュへ格納
                             _cache_report_from_result(final_result, request_id=str(request_uuid))
@@ -1036,8 +1037,8 @@ async def websocket_decision(websocket: WebSocket) -> None:
                 event_type = event.get("event_type") or event.get("type", "")
                 if hasattr(event_type, "value"):
                     event_type = event_type.value
-                if event_type == "flow.complete" and event.get("result"):
-                    final_result = event.get("result", {})
+                if event_type == "flow.complete" and (event.get("data") or event.get("result")):
+                    final_result = event.get("data") or event.get("result", {})
 
                 await websocket.send_json(event_data)
 

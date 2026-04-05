@@ -286,7 +286,7 @@ class TestCmdRetry:
             output=str(tmp_path),
             stage="designer",
             fast=True,
-            model="claude-opus-4-6",
+            model="platform_text_default",
         )
         with (
             patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
@@ -357,7 +357,7 @@ class TestCmdMigrate:
         )
 
         async def _run_stub(payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
-            assert payload["model"] == "claude-opus-4-6"
+            assert payload["model"] == "platform_text_default"
             assert max_sessions == 5000
             await on_event({"type": "stage_start", "stage": "analysis", "message": "start"})
             await on_event({"type": "complete", "decision": "PASSED", "output_dir": str(tmp_path / "output")})
@@ -474,7 +474,7 @@ class TestCmdMigrate:
             source=str(self.SAMPLE_CBL),
             output=str(tmp_path / "output"),
             fast=True,
-            model="claude-opus-4-6",
+            model="platform_text_default",
         )
         with (
             patch("apps.code_migration_assistant.cli.COBOLProject") as mock_project,
@@ -485,7 +485,7 @@ class TestCmdMigrate:
             mock_project.return_value.get_cobol_files.return_value = [mock_cobol_file]
             cmd_migrate(args)
 
-        assert captured[0] == "claude-opus-4-6"
+        assert captured[0] == "platform_text_default"
 
 
 # ============================================================

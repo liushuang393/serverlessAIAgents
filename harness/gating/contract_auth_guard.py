@@ -230,7 +230,9 @@ class ContractAuthGuard:
             if provider == _AUTH_SERVICE_PROVIDER:
                 return await self._resolve_auth_service_http(request, auth)
             if provider == _API_KEY_PROVIDER:
-                incoming_key = request.headers.get(self._config.auth_header_name)
+                incoming_key = request.headers.get(
+                    self._config.auth_header_name,
+                ) or request.query_params.get(self._config.ws_query_key)
                 self.verify_api_key(incoming_key)
                 return None
 

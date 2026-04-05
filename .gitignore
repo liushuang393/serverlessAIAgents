@@ -123,3 +123,8 @@ pytest_output.txt
 memory/knowledge/knowledge.json
 memory/knowledge/knowledge.json
 .bizcore/*
+.playwright-mcp/*.yml
+migration_output/*
+
+test_sample.cbl
+test_sample.zip

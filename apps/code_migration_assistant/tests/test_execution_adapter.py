@@ -82,7 +82,7 @@ async def test_cma_cli_adapter_streams_events_and_result(
             source_path=tmp_path / "sample.cbl",
             output_root=tmp_path / "output",
             fast_mode=True,
-            model="claude-opus-4-6",
+            model="platform_text_default",
             options={},
         ),
     )
@@ -147,7 +147,7 @@ async def test_cma_cli_adapter_invalid_ndjson_emits_error(
             source_path=tmp_path / "sample.cbl",
             output_root=tmp_path / "output",
             fast_mode=True,
-            model="claude-opus-4-6",
+            model="platform_text_default",
             options={},
         ),
     )

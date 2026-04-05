@@ -30,6 +30,7 @@ _PROVIDER_INSTALL_RECIPES: dict[str, list[list[str]]] = {
     "openai": [],
     "anthropic": [],
     "google": [],
+    "huggingface": [],
     "azure_openai": [],
     "openrouter": [],
     "deepseek": [],
@@ -41,6 +42,7 @@ _PROVIDER_PRIORITY_MODELS: dict[str, list[str]] = {
     "openai": ["gpt-5.2", "gpt-5-mini", "gpt-5-nano"],
     "anthropic": ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"],
     "google": ["gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"],
+    "huggingface": [],
     "local": ["Qwen/Qwen2.5-0.5B-Instruct", "llama3.3:70b", "qwen2.5:72b", "qwen2.5-coder:32b"],
 }
 

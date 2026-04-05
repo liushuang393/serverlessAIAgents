@@ -106,7 +106,7 @@ class QualityGateAgent:
             return (
                 QualityDecision.KNOWN_LEGACY,
                 "None",
-                "既知の旧システム不具合に一致",
+                "既知のレガシーシステム不具合に一致",
                 "LOW",
                 "known_legacy_match",
             )

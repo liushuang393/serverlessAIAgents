@@ -1,6 +1,6 @@
 """Legacy Analysis Agent - 事実抽出専用.
 
-推測を避け、旧システムコードから観測可能な事実のみを抽出する。
+推測を避け、レガシーシステムコードから観測可能な事実のみを抽出する。
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from kernel import agent
 
 @agent
 class LegacyAnalysisAgent:
-    """旧システム分析 Agent."""
+    """レガシーシステム分析 Agent."""
 
     system_prompt = LEGACY_ANALYSIS_PROMPT
 

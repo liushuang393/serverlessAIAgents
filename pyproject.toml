@@ -71,6 +71,7 @@ studio = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "websockets>=13.0",
+    "huggingface_hub>=0.32.0",  # Hugging Face model prefetch for local LLM engine testing
 ]
 
 # Sample applications dependencies
@@ -101,6 +102,7 @@ apps = [
     "sqlglot>=25.20.2",  # SQL AST-based guard/normalization for ingestion
     "trafilatura>=1.12.2",  # Web extraction preview for staged web source
     "tenacity>=8.5.0",  # Retry for ingestion I/O operations
+    "huggingface_hub>=0.32.0",  # Hugging Face model prefetch for local LLM engine testing
 
     # ドキュメントパース（RAG インジェスト用）
     "markitdown[all]>=0.1.5",  # Microsoft 製ドキュメント→Markdown 変換（PDF/Office/Excel 等）

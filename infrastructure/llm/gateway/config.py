@@ -208,6 +208,12 @@ def _default_gateway_config() -> LLMGatewayConfig:
                 api_key_env="GEMINI_API_KEY",
                 enabled=True,
             ),
+            ProviderConfig(
+                name="huggingface",
+                api_base="https://router.huggingface.co/v1",
+                api_key_env="HF_TOKEN",
+                enabled=True,
+            ),
             ProviderConfig(name="local", api_base="http://127.0.0.1:18001", api_key_env=None, enabled=True),
         ],
         inference_engines=[

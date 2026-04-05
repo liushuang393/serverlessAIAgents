@@ -81,10 +81,10 @@ def _normalize_stream_event(
     raw_event: dict[str, Any],
 ) -> dict[str, Any] | None:
     """Engine 内部イベントを Studio 互換イベントへ変換する."""
-    raw_event_type = str(raw_event.get("event") or raw_event.get("event_type") or "")
+    raw_event_type = str(raw_event.get("event_type") or raw_event.get("event") or "")
 
-    if raw_event_type == "node_start":
-        stage = _NODE_STAGE_MAP.get(str(raw_event.get("node", "")))
+    if raw_event_type in {"node.start", "node_start"}:
+        stage = _NODE_STAGE_MAP.get(str(raw_event.get("node_name") or raw_event.get("node") or ""))
         if stage is None:
             return None
         return {
@@ -94,11 +94,11 @@ def _normalize_stream_event(
             "message": f"{stage} 実行中...",
         }
 
-    if raw_event_type == "node_complete":
-        node_name = str(raw_event.get("node", ""))
-        if node_name == "migration_pipeline":
+    if raw_event_type in {"node.complete", "node_complete"}:
+        node_id = str(raw_event.get("node_name") or raw_event.get("node") or "")
+        if node_id == "migration_pipeline":
             return None
-        stage = _NODE_STAGE_MAP.get(node_name)
+        stage = _NODE_STAGE_MAP.get(node_id)
         if stage is None:
             return None
         event: dict[str, Any] = {
@@ -106,7 +106,7 @@ def _normalize_stream_event(
             "stage": stage,
             "program_name": program_name,
         }
-        result = raw_event.get("result")
+        result = raw_event.get("data") or raw_event.get("result")
         if isinstance(result, dict) and stage == "quality_gate":
             decision = result.get("decision")
             if isinstance(decision, str):
@@ -156,11 +156,10 @@ async def _run_engine_for_program(
         if normalized is not None:
             await on_event(normalized)
 
-        if (
-            str(raw_event.get("event", "")) == "node_complete"
-            and str(raw_event.get("node", "")) == "migration_pipeline"
-        ):
-            result_obj = raw_event.get("result")
+        event_type = str(raw_event.get("event_type") or raw_event.get("event") or "")
+        node_id = str(raw_event.get("node_name") or raw_event.get("node") or "")
+        if event_type in {"node.complete", "node_complete"} and node_id == "migration_pipeline":
+            result_obj = raw_event.get("data") or raw_event.get("result")
             if isinstance(result_obj, dict):
                 final_result = result_obj
 

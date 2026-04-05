@@ -17,7 +17,7 @@
   },
   "hero": {
     "eyebrow": "Operator Surface",
-    "title": "旧システム刷新 GEO の最小閉ループ",
+    "title": "レガシーシステム刷新 GEO の最小閉ループ",
     "description": "操作台はオーケストレーションと人手介入を担い、公開ページは配信フェーズで静的生成されます。"
   },
   "status": {

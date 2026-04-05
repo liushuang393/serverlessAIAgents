@@ -344,6 +344,38 @@ async def test_resolve_provider_runtime_statuses_uses_linked_engine_without_dire
 
 
 @pytest.mark.asyncio
+async def test_resolve_provider_runtime_statuses_marks_local_available_when_ollama_is_available(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
+    config = LLMManagementService(config_path=config_path).get_config()
+
+    statuses = await resolve_provider_runtime_statuses(
+        config,
+        config_path=config_path,
+        engine_statuses=[
+            EngineRuntimeStatus(
+                name="vllm",
+                engine_type="vllm",
+                status="unavailable",
+                last_error="disabled",
+            ),
+            EngineRuntimeStatus(
+                name="ollama",
+                engine_type="ollama",
+                status="available",
+                last_error=None,
+            ),
+        ],
+    )
+
+    by_name = {item.name: item for item in statuses}
+    assert by_name["local"].status == "available"
+    assert by_name["local"].source == "engine:ollama"
+    assert by_name["local"].last_error is None
+
+
+@pytest.mark.asyncio
 async def test_deploy_engine_generates_compose_and_persists_status(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -700,6 +700,15 @@ export async function stopLLMEngine(
   return data;
 }
 
+export async function prefetchLLMEngineModel(
+  engineName: string,
+): Promise<LLMEngineDeployResponse> {
+  const { data } = await longRunningApi.post<LLMEngineDeployResponse>(
+    `/studios/framework/llm/engines/${engineName}/prefetch-model`,
+  );
+  return data;
+}
+
 export async function fetchLLMModels(): Promise<{
   models: LLMModelConfigItem[];
 }> {

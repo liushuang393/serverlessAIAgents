@@ -142,3 +142,45 @@ async def test_preflight_dry_run_returns_dry_run_status(tmp_path: Path) -> None:
 
     assert report.status == "dry_run"
     assert any(step.status == "dry_run" for step in report.steps)
+
+
+async def test_prefetch_model_for_ollama_uses_ollama_pull(tmp_path: Path) -> None:
+    manager = LLMSetupManager(
+        config_path=tmp_path / ".bizcore" / "llm_gateway.yaml",
+        command_runner=StubRunner(),
+    )
+    engine = InferenceEngineConfig(
+        name="ollama",
+        engine_type="ollama",
+        base_url="http://127.0.0.1:11434",
+        served_model_name="llama3.2:3b",
+    )
+
+    result = await manager.prefetch_model_for_engine(engine)
+
+    assert result.return_code == 0
+    assert result.command[:2] == ["ollama", "pull"]
+
+
+async def test_prefetch_model_for_tgi_uses_huggingface_snapshot_download(tmp_path: Path) -> None:
+    manager = LLMSetupManager(
+        config_path=tmp_path / ".bizcore" / "llm_gateway.yaml",
+        command_runner=StubRunner(),
+    )
+    engine = InferenceEngineConfig(
+        name="tgi",
+        engine_type="tgi",
+        base_url="http://127.0.0.1:18003",
+        served_model_name="Qwen/Qwen2.5-0.5B-Instruct",
+    )
+
+    def _fake_snapshot_download(*, repo_id: str, cache_dir: str, token: str | None = None) -> str:
+        del token
+        return f"{cache_dir}/{repo_id}"
+
+    manager._hf_snapshot_download = _fake_snapshot_download
+    result = await manager.prefetch_model_for_engine(engine)
+
+    assert result.return_code == 0
+    assert result.command[:2] == ["huggingface_hub", "snapshot_download"]
+    assert "downloaded_to=" in result.stdout

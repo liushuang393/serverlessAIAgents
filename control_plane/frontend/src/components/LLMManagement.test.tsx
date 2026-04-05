@@ -12,6 +12,7 @@ const apiMocks = vi.hoisted(() => ({
   fetchLLMEngineStatus: vi.fn(),
   fetchLLMManagementOverview: vi.fn(),
   fetchOpenAPIPaths: vi.fn(),
+  prefetchLLMEngineModel: vi.fn(),
   reloadLLMManagementConfig: vi.fn(),
   setupAndSwitchLLM: vi.fn(),
   switchLLM: vi.fn(),
@@ -318,6 +319,437 @@ describe("LLMManagement component", () => {
     expect(container.textContent).toContain("利用不可");
   });
 
+  it("keeps local as the provider name and auto-selects a local backend", async () => {
+    apiMocks.fetchLLMManagementOverview.mockResolvedValueOnce({
+      gateway: {
+        default_role: "reasoning",
+        request_timeout_seconds: 120,
+        max_retries: 2,
+      },
+      providers: [
+        {
+          name: "local",
+          api_base: "http://127.0.0.1:18001/v1",
+          api_key_env: null,
+          models: ["Qwen/Qwen2.5-0.5B-Instruct"],
+          enabled: true,
+          secret_status: {
+            configured: false,
+            masked: null,
+            source: "unavailable",
+            available: false,
+            last_error: null,
+          },
+        },
+      ],
+      providers_runtime: [
+        {
+          name: "local",
+          status: "available",
+          api_key_env: null,
+          source: "engine:vllm",
+          masked: null,
+          last_error: null,
+        },
+      ],
+      inference_engines: [
+        {
+          name: "vllm",
+          engine_type: "vllm",
+          base_url: "http://127.0.0.1:18001",
+          health_path: "/health",
+          metrics_path: "/metrics",
+          model_list_path: "/v1/models",
+          enabled: true,
+          deployment_mode: "docker",
+          docker_image: "vllm/vllm-openai:v0.8.5",
+          served_model_name: "Qwen/Qwen2.5-0.5B-Instruct",
+          container_name: "llm-vllm",
+          host_port: 18001,
+          public_base_url: null,
+          gpu_enabled: false,
+          gpu_devices: [],
+          gpu_count: null,
+          extra_env: {},
+          deployment_status: "running",
+          deployment_error: null,
+          compose_path: null,
+        },
+      ],
+      models: [
+        {
+          alias: "local_vllm_default",
+          model_id: "local_vllm_default",
+          provider: "local",
+          model: "Qwen/Qwen2.5-0.5B-Instruct",
+          model_type: "text",
+          api_base: "http://127.0.0.1:18001/v1",
+          api_key_env: null,
+          engine: "vllm",
+          enabled: true,
+          modalities: ["text"],
+          quality_score: 0.7,
+          avg_latency_ms: 550,
+          cost: { input_per_1k: 0, output_per_1k: 0 },
+        },
+      ],
+      registry: { local: "local_vllm_default" },
+      routing_policy: {
+        priority: "latency",
+        fallback_chain: {},
+        load_balance_strategy: "round_robin",
+        cost_budget: null,
+      },
+      cost_summary: {
+        total_cost_usd: 0,
+        details: [],
+        cost_budget: null,
+        budget_exceeded: false,
+      },
+      config_version: "version-b",
+    });
+    apiMocks.fetchLLMCatalog.mockResolvedValueOnce({
+      providers: [
+        {
+          name: "openai",
+          canonical_name: "openai",
+          aliases: [],
+          requires_api_key: true,
+          default_api_key_env: "OPENAI_API_KEY",
+          default_api_base: "https://api.openai.com/v1",
+          recommended_models: ["gpt-5-mini"],
+          install_recipes: [],
+          category: "cloud",
+          local_engines: [],
+        },
+        {
+          name: "local",
+          canonical_name: "local",
+          aliases: [],
+          requires_api_key: false,
+          default_api_key_env: null,
+          default_api_base: "http://127.0.0.1:18001",
+          recommended_models: ["Qwen/Qwen2.5-0.5B-Instruct"],
+          install_recipes: [],
+          category: "local",
+          local_engines: ["vllm", "sglang", "tgi", "ollama"],
+        },
+      ],
+      backends: [
+        {
+          name: "vllm",
+          display_name: "vLLM",
+          default_base_url: "http://127.0.0.1:18001",
+          default_health_path: "/health",
+          install_recipes: [],
+          start_recipes: [],
+        },
+      ],
+      models: [
+        {
+          alias: "local_vllm_default",
+          model_id: "local_vllm_default",
+          provider: "local",
+          model: "Qwen/Qwen2.5-0.5B-Instruct",
+          model_type: "text",
+          capabilities: ["text"],
+          context_window: 32000,
+          recommended_for: ["local"],
+        },
+      ],
+      generated_at: "2026-03-05T00:00:00",
+    });
+    apiMocks.fetchLLMEngineStatus.mockResolvedValueOnce({
+      engine_status: [
+        {
+          name: "vllm",
+          engine_type: "vllm",
+          status: "available",
+          latency_ms: 120,
+          gpu_usage: null,
+          loaded_models: ["Qwen/Qwen2.5-0.5B-Instruct"],
+          last_error: null,
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <LLMManagement />
+        </I18nProvider>,
+      );
+      await flush();
+    });
+
+    expect(container.textContent).toContain("local");
+    expect(container.textContent).not.toContain("local / vllm");
+
+    const providerSelect = container.querySelector<HTMLSelectElement>(
+      '[data-testid="llm-switch-provider"]',
+    );
+    const backendSelect = container.querySelector<HTMLSelectElement>(
+      '[data-testid="llm-switch-backend"]',
+    );
+    expect(providerSelect).not.toBeNull();
+    expect(backendSelect).not.toBeNull();
+
+    await act(async () => {
+      providerSelect!.value = "local";
+      providerSelect!.dispatchEvent(new Event("change", { bubbles: true }));
+      await flush();
+    });
+
+    expect(backendSelect?.value).toBe("vllm");
+    expect(container.textContent).toContain(
+      "local は provider 名です。実際の実装は中央の backend で",
+    );
+  });
+
+  it("updates local model hints from the selected backend", async () => {
+    apiMocks.fetchLLMManagementOverview.mockResolvedValueOnce({
+      gateway: {
+        default_role: "reasoning",
+        request_timeout_seconds: 120,
+        max_retries: 2,
+      },
+      providers: [
+        {
+          name: "local",
+          api_base: "http://127.0.0.1:18001/v1",
+          api_key_env: null,
+          models: ["Qwen/Qwen2.5-0.5B-Instruct", "llama3.3:70b"],
+          enabled: true,
+          secret_status: {
+            configured: false,
+            masked: null,
+            source: "unavailable",
+            available: false,
+            last_error: null,
+          },
+        },
+      ],
+      providers_runtime: [
+        {
+          name: "local",
+          status: "available",
+          api_key_env: null,
+          source: "engine:vllm",
+          masked: null,
+          last_error: null,
+        },
+      ],
+      inference_engines: [
+        {
+          name: "vllm",
+          engine_type: "vllm",
+          base_url: "http://127.0.0.1:18001",
+          health_path: "/health",
+          metrics_path: "/metrics",
+          model_list_path: "/v1/models",
+          enabled: true,
+          deployment_mode: "docker",
+          docker_image: "vllm/vllm-openai:v0.8.5",
+          served_model_name: "Qwen/Qwen2.5-0.5B-Instruct",
+          container_name: "llm-vllm",
+          host_port: 18001,
+          public_base_url: null,
+          gpu_enabled: false,
+          gpu_devices: [],
+          gpu_count: null,
+          extra_env: {},
+          deployment_status: "running",
+          deployment_error: null,
+          compose_path: null,
+        },
+        {
+          name: "ollama",
+          engine_type: "ollama",
+          base_url: "http://127.0.0.1:11434",
+          health_path: "/api/tags",
+          metrics_path: "/metrics",
+          model_list_path: "/api/tags",
+          enabled: false,
+          deployment_mode: "native",
+          docker_image: null,
+          served_model_name: "llama3.3:70b",
+          container_name: null,
+          host_port: 11434,
+          public_base_url: null,
+          gpu_enabled: false,
+          gpu_devices: [],
+          gpu_count: null,
+          extra_env: {},
+          deployment_status: null,
+          deployment_error: null,
+          compose_path: null,
+        },
+      ],
+      models: [
+        {
+          alias: "local_vllm_default",
+          model_id: "local_vllm_default",
+          provider: "local",
+          model: "Qwen/Qwen2.5-0.5B-Instruct",
+          model_type: "text",
+          api_base: "http://127.0.0.1:18001/v1",
+          api_key_env: null,
+          engine: "vllm",
+          enabled: true,
+          modalities: ["text"],
+          quality_score: 0.7,
+          avg_latency_ms: 550,
+          cost: { input_per_1k: 0, output_per_1k: 0 },
+        },
+        {
+          alias: "local_ollama_default",
+          model_id: "local_ollama_default",
+          provider: "local",
+          model: "llama3.3:70b",
+          model_type: "text",
+          api_base: "http://127.0.0.1:11434/v1",
+          api_key_env: null,
+          engine: "ollama",
+          enabled: true,
+          modalities: ["text"],
+          quality_score: 0.65,
+          avg_latency_ms: 600,
+          cost: { input_per_1k: 0, output_per_1k: 0 },
+        },
+      ],
+      registry: { local: "local_vllm_default" },
+      routing_policy: {
+        priority: "latency",
+        fallback_chain: {},
+        load_balance_strategy: "round_robin",
+        cost_budget: null,
+      },
+      cost_summary: {
+        total_cost_usd: 0,
+        details: [],
+        cost_budget: null,
+        budget_exceeded: false,
+      },
+      config_version: "version-c",
+    });
+    apiMocks.fetchLLMCatalog.mockResolvedValueOnce({
+      providers: [
+        {
+          name: "local",
+          canonical_name: "local",
+          aliases: [],
+          requires_api_key: false,
+          default_api_key_env: null,
+          default_api_base: "http://127.0.0.1:18001",
+          recommended_models: [
+            "Qwen/Qwen2.5-0.5B-Instruct",
+            "llama3.3:70b",
+            "qwen2.5:72b",
+          ],
+          install_recipes: [],
+          category: "local",
+          local_engines: ["vllm", "ollama"],
+        },
+      ],
+      backends: [
+        {
+          name: "vllm",
+          display_name: "vLLM",
+          default_base_url: "http://127.0.0.1:18001",
+          default_health_path: "/health",
+          install_recipes: [],
+          start_recipes: [],
+        },
+        {
+          name: "ollama",
+          display_name: "Ollama",
+          default_base_url: "http://127.0.0.1:11434",
+          default_health_path: "/api/tags",
+          install_recipes: [],
+          start_recipes: [],
+        },
+      ],
+      models: [
+        {
+          alias: "local_vllm_default",
+          model_id: "local_vllm_default",
+          provider: "local",
+          model: "Qwen/Qwen2.5-0.5B-Instruct",
+          model_type: "text",
+          capabilities: ["text"],
+          context_window: 32000,
+          recommended_for: ["local"],
+        },
+        {
+          alias: "local_ollama_default",
+          model_id: "local_ollama_default",
+          provider: "local",
+          model: "llama3.3:70b",
+          model_type: "text",
+          capabilities: ["text"],
+          context_window: 32000,
+          recommended_for: ["local"],
+        },
+      ],
+      generated_at: "2026-03-05T00:00:00",
+    });
+    apiMocks.fetchLLMEngineStatus.mockResolvedValueOnce({
+      engine_status: [
+        {
+          name: "vllm",
+          engine_type: "vllm",
+          status: "available",
+          latency_ms: 120,
+          gpu_usage: null,
+          loaded_models: ["Qwen/Qwen2.5-0.5B-Instruct"],
+          last_error: null,
+        },
+        {
+          name: "ollama",
+          engine_type: "ollama",
+          status: "unavailable",
+          latency_ms: null,
+          gpu_usage: null,
+          loaded_models: ["llama3.3:70b"],
+          last_error: "connection refused",
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <LLMManagement />
+        </I18nProvider>,
+      );
+      await flush();
+    });
+
+    const backendSelect = container.querySelector<HTMLSelectElement>(
+      '[data-testid="llm-switch-backend"]',
+    );
+    const modelInput = container.querySelector<HTMLInputElement>(
+      '[data-testid="llm-switch-model"]',
+    );
+    expect(backendSelect?.value).toBe("vllm");
+    expect(modelInput?.value).toBe("Qwen/Qwen2.5-0.5B-Instruct");
+
+    await act(async () => {
+      backendSelect!.value = "ollama";
+      backendSelect!.dispatchEvent(new Event("change", { bubbles: true }));
+      await flush();
+    });
+
+    expect(modelInput?.value).toBe("llama3.3:70b");
+    expect(container.textContent).toContain(
+      "候補は provider と backend の組み合わせから自動補完します。",
+    );
+    expect(container.textContent).toContain("公式候補: llama3.3:70b");
+    expect(container.textContent).not.toContain(
+      "公式候補: Qwen/Qwen2.5-0.5B-Instruct",
+    );
+  });
+
   it("keeps successful engine deploy output in the result area without card errors", async () => {
     const overview = {
       gateway: {
@@ -462,5 +894,125 @@ describe("LLMManagement component", () => {
     expect(container.textContent).toContain("Created container llm-vllm");
     expect(container.textContent).toContain("稼働中");
     expect(container.textContent).not.toContain("エラー:");
+  });
+
+  it("prefetches a local engine model before deployment", async () => {
+    const overview = {
+      gateway: {
+        default_role: "reasoning",
+        request_timeout_seconds: 120,
+        max_retries: 2,
+      },
+      providers: [
+        {
+          name: "local",
+          api_base: "http://127.0.0.1:18003/v1",
+          api_key_env: null,
+          models: ["Qwen/Qwen2.5-0.5B-Instruct"],
+          enabled: true,
+          secret_status: {
+            configured: false,
+            masked: null,
+            source: "unavailable",
+            available: false,
+            last_error: null,
+          },
+        },
+      ],
+      providers_runtime: [],
+      inference_engines: [
+        {
+          name: "tgi",
+          engine_type: "tgi",
+          base_url: "http://127.0.0.1:18003",
+          health_path: "/health",
+          metrics_path: "/metrics",
+          model_list_path: "/v1/models",
+          enabled: true,
+          deployment_mode: "docker",
+          docker_image: "ghcr.io/huggingface/text-generation-inference:3.3.7",
+          served_model_name: "Qwen/Qwen2.5-0.5B-Instruct",
+          container_name: "llm-tgi",
+          host_port: 18003,
+          public_base_url: null,
+          gpu_enabled: false,
+          gpu_devices: [],
+          gpu_count: null,
+          extra_env: {},
+          deployment_status: null,
+          deployment_error: null,
+          compose_path: null,
+        },
+      ],
+      models: [],
+      registry: { local: "local_vllm_default" },
+      routing_policy: {
+        priority: "latency",
+        fallback_chain: {},
+        load_balance_strategy: "round_robin",
+        cost_budget: null,
+      },
+      cost_summary: {
+        total_cost_usd: 0,
+        details: [],
+        cost_budget: null,
+        budget_exceeded: false,
+      },
+      config_version: "version-c",
+    };
+    apiMocks.fetchLLMManagementOverview.mockResolvedValueOnce(overview);
+    apiMocks.fetchLLMEngineStatus.mockResolvedValueOnce({
+      engine_status: [
+        {
+          name: "tgi",
+          engine_type: "tgi",
+          status: "unavailable",
+          latency_ms: null,
+          gpu_usage: null,
+          loaded_models: [],
+          last_error: null,
+        },
+      ],
+    });
+    apiMocks.prefetchLLMEngineModel.mockResolvedValueOnce({
+      success: true,
+      message: "engine モデルの取得が完了しました。",
+      engine: overview.inference_engines[0],
+      command: {
+        command: ["huggingface_hub", "snapshot_download", "Qwen/Qwen2.5-0.5B-Instruct"],
+        cwd: "/tmp/hf-cache",
+        return_code: 0,
+        stdout: "downloaded_to=/tmp/hf-cache/models--Qwen--Qwen2.5-0.5B-Instruct",
+        stderr: "",
+        error: null,
+        allowed: true,
+        timed_out: false,
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <LLMManagement />
+        </I18nProvider>,
+      );
+      await flush();
+    });
+
+    const prefetchButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "モデル取得",
+    );
+    expect(prefetchButton).not.toBeUndefined();
+
+    await act(async () => {
+      prefetchButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await flush();
+    });
+
+    expect(apiMocks.prefetchLLMEngineModel).toHaveBeenCalledWith("tgi");
+    expect(container.textContent).toContain(
+      "モデル取得結果: engine モデルの取得が完了しました。",
+    );
+    expect(container.textContent).toContain("downloaded_to=/tmp/hf-cache");
   });
 });

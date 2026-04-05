@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 import httpx
 import yaml
@@ -23,6 +23,10 @@ from control_plane.services.llm_management_validator import (
     provider_default_api_key_env,
 )
 from infrastructure.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, resolve_secret
+
+
+if TYPE_CHECKING:
+    from huggingface_hub import snapshot_download as SnapshotDownloadCallable
 
 
 _DANGEROUS_TOKENS: set[str] = {
@@ -114,6 +118,7 @@ class LLMSetupManager:
         self._config_path = config_path
         self._runner = command_runner or DefaultLLMCommandRunner()
         self._validator = LLMConfigValidator()
+        self._hf_snapshot_download: SnapshotDownloadCallable | None = None
 
     async def deploy_engine(
         self,
@@ -199,6 +204,21 @@ class LLMSetupManager:
         """Ollama モデルをダウンロードする."""
         command = ["ollama", "pull", model_name]
         return await self._run_command(command, dry_run=False, cwd=None, timeout_seconds=900.0)
+
+    async def prefetch_model_for_engine(self, engine: InferenceEngineConfig) -> LLMSetupCommandResult:
+        """engine が参照するモデルをローカルへ事前取得する."""
+        model_name = (engine.served_model_name or "").strip()
+        if not model_name:
+            return LLMSetupCommandResult(
+                command=["prefetch-model", engine.name],
+                allowed=True,
+                error="served_model_name が未設定です。",
+            )
+
+        if engine.engine_type == "ollama":
+            return await self.pull_ollama_model(model_name)
+
+        return await self._prefetch_huggingface_model(model_name)
 
     async def preflight(
         self,
@@ -601,6 +621,58 @@ class LLMSetupManager:
         )
         target.write_text(compose_yaml, encoding="utf-8")
         return target, compose_yaml
+
+    async def _prefetch_huggingface_model(self, model_name: str) -> LLMSetupCommandResult:
+        command = ["huggingface_hub", "snapshot_download", model_name]
+        cache_dir = self._huggingface_cache_dir()
+        token, _source = resolve_secret(
+            provider_default_api_key_env("huggingface"),
+            provider_name="huggingface",
+            config_path=self._config_path,
+        )
+        try:
+            snapshot_download = self._resolve_hf_snapshot_download()
+        except ImportError as exc:
+            return LLMSetupCommandResult(
+                command=command,
+                cwd=cache_dir,
+                allowed=True,
+                error=str(exc),
+            )
+
+        try:
+            downloaded_path = await asyncio.to_thread(
+                snapshot_download,
+                repo_id=model_name,
+                cache_dir=cache_dir,
+                token=token or None,
+            )
+        except Exception as exc:
+            return LLMSetupCommandResult(
+                command=command,
+                cwd=cache_dir,
+                allowed=True,
+                error=str(exc),
+            )
+
+        return LLMSetupCommandResult(
+            command=command,
+            cwd=cache_dir,
+            return_code=0,
+            stdout=f"downloaded_to={downloaded_path}",
+            allowed=True,
+        )
+
+    def _resolve_hf_snapshot_download(self) -> SnapshotDownloadCallable:
+        if self._hf_snapshot_download is not None:
+            return self._hf_snapshot_download
+        try:
+            from huggingface_hub import snapshot_download
+        except ImportError as exc:
+            msg = "huggingface_hub が必要です。`pip install huggingface_hub` を実行してください。"
+            raise ImportError(msg) from exc
+        self._hf_snapshot_download = snapshot_download
+        return snapshot_download
 
     def _compose_payload_for_engine(self, engine: InferenceEngineConfig) -> dict[str, object]:
         container_port = self._container_port_for_engine(engine.engine_type)

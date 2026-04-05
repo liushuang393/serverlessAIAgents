@@ -154,7 +154,7 @@ class CodeMigrationOrchestrator:
         コード変換は行わない（診断のみ）。
 
         使用 Skill:
-            - legacy-ingestion: 旧システム摂取
+            - legacy-ingestion: レガシーシステム摂取
             - business-semantics: 業務語義モデリング
             - compliance-reporter: 診断報告書生成
 

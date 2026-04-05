@@ -94,6 +94,7 @@ class AppScaffolderService:
         {"value": "openai", "label": "OpenAI"},
         {"value": "anthropic", "label": "Anthropic"},
         {"value": "gemini", "label": "Google Gemini"},
+        {"value": "huggingface", "label": "Hugging Face"},
         {"value": "azure_openai", "label": "Azure OpenAI"},
         {"value": "local", "label": "Local (Ollama/vLLM/SGLang/TGI)"},
         {"value": "openrouter", "label": "OpenRouter"},
@@ -699,6 +700,7 @@ class AppScaffolderService:
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
             "gemini": "GEMINI_API_KEY",
+            "huggingface": "HF_TOKEN",
             "azure_openai": "AZURE_OPENAI_API_KEY",
             "openrouter": "OPENROUTER_API_KEY",
         }

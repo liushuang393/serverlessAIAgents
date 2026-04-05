@@ -210,6 +210,7 @@ class AppCreateRequest(BaseModel):
         "openai",
         "anthropic",
         "gemini",
+        "huggingface",
         "azure_openai",
         "local",
         "openrouter",

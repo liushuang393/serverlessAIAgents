@@ -26,7 +26,7 @@ graph TB
         M3C["Kill Switch"]
     end
 
-    subgraph "M1 Layer: 旧システム摂取"
+    subgraph "M1 Layer: レガシーシステム摂取"
         M1A["legacy-ingestion Skill"]
         M1B["Source Adapters"]
         M1C["code-analysis Skill"]

@@ -56,7 +56,7 @@ class QueryExpansionService:
         ],
         "legacy": [
             "レガシー",
-            "旧システム",
+            "レガシーシステム",
             "old system",
             "technical debt",
             "技術的負債",

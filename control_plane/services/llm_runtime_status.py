@@ -72,8 +72,28 @@ async def resolve_provider_runtime_statuses(
 
         provider_linked_engines = linked_engines.get(provider_name, [])
         if provider_linked_engines:
-            ordered_statuses.append(_resolve_linked_engine_status(base_status, provider_linked_engines, engine_by_name))
+            linked_status = _resolve_linked_engine_status(base_status, provider_linked_engines, engine_by_name)
+            if provider_name == "local" and linked_status.status != "available":
+                fallback_status = _resolve_any_available_local_engine_status(
+                    status=base_status,
+                    config=config,
+                    engine_by_name=engine_by_name,
+                )
+                ordered_statuses.append(fallback_status or linked_status)
+                continue
+
+            ordered_statuses.append(linked_status)
             continue
+
+        if provider_name == "local":
+            fallback_status = _resolve_any_available_local_engine_status(
+                status=base_status,
+                config=config,
+                engine_by_name=engine_by_name,
+            )
+            if fallback_status is not None:
+                ordered_statuses.append(fallback_status)
+                continue
 
         if provider.api_key_env is None and provider_name in _ACTIVE_PROBE_PROVIDERS:
             probe_tasks[provider_name] = asyncio.create_task(
@@ -148,6 +168,27 @@ def _resolve_linked_engine_status(
             "last_error": None,
         }
     )
+
+
+def _resolve_any_available_local_engine_status(
+    *,
+    status: ProviderRuntimeStatus,
+    config: LLMGatewayConfig,
+    engine_by_name: dict[str, EngineRuntimeStatus],
+) -> ProviderRuntimeStatus | None:
+    for engine in config.inference_engines:
+        normalized_name = engine.name.strip().lower()
+        engine_status = engine_by_name.get(normalized_name)
+        if engine_status is None or engine_status.status != "available":
+            continue
+        return status.model_copy(
+            update={
+                "status": "available",
+                "source": f"engine:{normalized_name}",
+                "last_error": None,
+            }
+        )
+    return None
 
 
 async def _probe_provider_runtime(provider: ProviderConfig, models: list[ModelConfig]) -> _ProbeResult:

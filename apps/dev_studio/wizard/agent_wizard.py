@@ -673,7 +673,8 @@ __all__ = ["{name}"]
         import os
 
         publish_id = f"pub_{uuid.uuid4().hex[:12]}"
-        base_dir_str = os.environ.get("WIZARD_PUBLISH_DIR", "/tmp/agentflow_published")
+        _workspace_default = str(Path(__file__).resolve().parents[3] / "wizard_published")
+        base_dir_str = os.environ.get("WIZARD_PUBLISH_DIR", _workspace_default)
         out_dir = Path(base_dir_str) / publish_id
         out_dir.mkdir(parents=True, exist_ok=True)
 

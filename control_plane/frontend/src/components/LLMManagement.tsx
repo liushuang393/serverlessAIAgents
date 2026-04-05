@@ -12,6 +12,7 @@ import {
   fetchLLMEngineStatus,
   fetchLLMManagementOverview,
   fetchOpenAPIPaths,
+  prefetchLLMEngineModel,
   reloadLLMManagementConfig,
   setupAndSwitchLLM,
   stopLLMEngine,
@@ -82,12 +83,27 @@ const OFFICIAL_PROVIDER_MODELS: Record<string, string[]> = {
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite-preview",
   ],
-  local: [
+};
+const OFFICIAL_LOCAL_BACKEND_MODELS: Record<
+  Exclude<LLMBackendKind, "none">,
+  string[]
+> = {
+  vllm: [
     "Qwen/Qwen2.5-0.5B-Instruct",
-    "llama3.3:70b",
-    "qwen2.5:72b",
-    "qwen2.5-coder:32b",
+    "Qwen/Qwen2.5-Coder-7B-Instruct",
+    "meta-llama/Llama-3.1-8B-Instruct",
   ],
+  sglang: [
+    "Qwen/Qwen2.5-0.5B-Instruct",
+    "Qwen/Qwen2.5-Coder-7B-Instruct",
+    "meta-llama/Llama-3.1-8B-Instruct",
+  ],
+  tgi: [
+    "Qwen/Qwen2.5-0.5B-Instruct",
+    "Qwen/Qwen2.5-Coder-7B-Instruct",
+    "meta-llama/Llama-3.1-8B-Instruct",
+  ],
+  ollama: ["llama3.3:70b", "qwen2.5:72b", "qwen2.5-coder:32b"],
 };
 const OFFICIAL_VOICE_STACK_NOTES = [
   "2026-03-10 時点の公式ドキュメントを基準に、音声連携の実装しやすさ順で上位 3 系統を整理しています。",
@@ -256,6 +272,86 @@ const recommendedProviderModels = (
   ]).slice(0, 8);
 };
 
+const modelMatchesBackend = (
+  modelName: string,
+  backend: LLMBackendKind,
+): boolean => {
+  if (backend === "none") {
+    return true;
+  }
+  if (backend === "ollama") {
+    return !modelName.includes("/");
+  }
+  return modelName.includes("/");
+};
+
+const recommendedSwitchModels = (
+  catalog: LLMCatalogResponse,
+  overview: LLMManagementOverviewResponse | null,
+  engineRuntime: LLMEngineRuntimeStatus[],
+  providerName: LLMManagementProviderKind,
+  backend: LLMBackendKind,
+): string[] => {
+  if (providerName !== "local") {
+    return recommendedProviderModels(catalog, providerName);
+  }
+
+  const selectedBackend = backend === "none" ? null : backend;
+  const engineNames = overview?.inference_engines
+    .filter(
+      (item) =>
+        selectedBackend === null ||
+        item.name === selectedBackend ||
+        item.engine_type === selectedBackend,
+    )
+    .map((item) => item.name);
+  const engineNameSet = new Set(engineNames ?? []);
+  const engineSpecificModels = uniqueStrings([
+    ...(overview?.inference_engines
+      .filter((item) => engineNameSet.has(item.name))
+      .map((item) => item.served_model_name) ?? []),
+    ...(overview?.models
+      .filter(
+        (item) =>
+          item.provider === "local" &&
+          item.engine !== null &&
+          engineNameSet.has(item.engine),
+      )
+      .map((item) => item.model) ?? []),
+    ...engineRuntime
+      .filter((item) => engineNameSet.has(item.name))
+      .flatMap((item) => item.loaded_models),
+  ]);
+
+  const compatibleEngineModels = engineSpecificModels.filter((item) =>
+    modelMatchesBackend(item, backend),
+  );
+  const fallbackEngineModels = engineSpecificModels.filter(
+    (item) => !modelMatchesBackend(item, backend),
+  );
+  const catalogLocalModels = catalog.models
+    .filter(
+      (item) =>
+        item.provider === "local" && modelMatchesBackend(item.model, backend),
+    )
+    .map((item) => item.model);
+  const providerRecommended =
+    catalog.providers
+      .find((item) => item.name === "local")
+      ?.recommended_models.filter((item) => modelMatchesBackend(item, backend)) ??
+    [];
+  const officialModels =
+    selectedBackend === null ? [] : OFFICIAL_LOCAL_BACKEND_MODELS[selectedBackend];
+
+  return uniqueStrings([
+    ...officialModels,
+    ...compatibleEngineModels,
+    ...catalogLocalModels,
+    ...providerRecommended,
+    ...fallbackEngineModels,
+  ]).slice(0, 8);
+};
+
 const inferLocalCategory = (
   provider: LLMProviderConfigItem,
   models: LLMModelConfigItem[],
@@ -273,8 +369,8 @@ const inferLocalCategory = (
   const linkedEngines = uniqueStrings(relatedModels.map((item) => item.engine));
   if (linkedEngines.length > 0) {
     return {
-      label: `local / ${linkedEngines.join(", ")}`,
-      detail: `現在の local は ${linkedEngines.join(", ")} 経由で OpenAI 互換 API を公開しています。`,
+      label: "local",
+      detail: `ローカル provider です。現在は ${linkedEngines.join(", ")} を backend として OpenAI 互換 API を公開しています。`,
     };
   }
 
@@ -285,20 +381,20 @@ const inferLocalCategory = (
   ).toLowerCase();
   if (apiBase.includes("11434")) {
     return {
-      label: "local / Ollama互換",
-      detail: "ポート特性から Ollama 互換エンドポイントと推定されます。",
+      label: "local",
+      detail: "ローカル provider です。ポート特性から Ollama 互換 backend と推定されます。",
     };
   }
   if (apiBase.includes("8080")) {
     return {
-      label: "local / LocalAI互換",
-      detail: "ポート特性から LocalAI 互換エンドポイントと推定されます。",
+      label: "local",
+      detail: "ローカル provider です。ポート特性から LocalAI 互換 backend と推定されます。",
     };
   }
   return {
-    label: "local / その他 OpenAI互換",
+    label: "local",
     detail:
-      "実装は特定できませんが、汎用の OpenAI 互換ローカル入口として扱います。",
+      "ローカル provider です。実装は特定できませんが、汎用の OpenAI 互換ローカル入口として扱います。",
   };
 };
 
@@ -997,6 +1093,8 @@ export function LLMManagement() {
   const [lastSwitch, setLastSwitch] = useState<LLMSwitchResponse | null>(null);
   const [lastEngineAction, setLastEngineAction] =
     useState<LLMEngineDeployResponse | null>(null);
+  const [lastEngineActionLabel, setLastEngineActionLabel] =
+    useState("配備結果");
 
   const diagnoseMissingRoute = async () => {
     const hints: string[] = [];
@@ -1127,15 +1225,76 @@ export function LLMManagement() {
   }, [catalog.providers, overview?.providers]);
 
   const providerModelHints = useMemo(() => {
-    return recommendedProviderModels(catalog, switchProvider);
-  }, [catalog, switchProvider]);
+    return recommendedSwitchModels(
+      catalog,
+      overview ?? null,
+      engineRuntime,
+      switchProvider,
+      switchBackend,
+    );
+  }, [catalog, engineRuntime, overview, switchBackend, switchProvider]);
+
+  const switchBackendOptions = useMemo(() => {
+    if (switchProvider !== "local") {
+      return ["none"] as LLMBackendKind[];
+    }
+
+    const catalogLocalEngines =
+      catalog.providers.find((item) => item.name === "local")?.local_engines ??
+      [];
+    const configuredLocalEngines =
+      overview?.inference_engines.map((item) => item.name as LLMBackendKind) ??
+      [];
+    const merged = uniqueStrings([
+      ...catalogLocalEngines,
+      ...configuredLocalEngines,
+    ]) as LLMBackendKind[];
+    return merged.length > 0 ? merged : ["vllm", "sglang", "tgi", "ollama"];
+  }, [catalog.providers, overview?.inference_engines, switchProvider]);
+
+  useEffect(() => {
+    if (switchProvider !== "local") {
+      if (switchBackend !== "none") {
+        setSwitchBackend("none");
+      }
+      return;
+    }
+
+    const availableEngine = overview?.inference_engines.find((engine) =>
+      engineRuntime.some(
+        (runtime) =>
+          runtime.name === engine.name && runtime.status === "available",
+      ),
+    );
+    const enabledEngine = overview?.inference_engines.find(
+      (engine) => engine.enabled,
+    );
+    const preferredBackend =
+      (availableEngine?.name as LLMBackendKind | undefined) ??
+      (enabledEngine?.name as LLMBackendKind | undefined) ??
+      switchBackendOptions[0];
+
+    if (
+      preferredBackend &&
+      (switchBackend === "none" || !switchBackendOptions.includes(switchBackend))
+    ) {
+      setSwitchBackend(preferredBackend as LLMBackendKind);
+    }
+  }, [
+    engineRuntime,
+    overview?.inference_engines,
+    switchBackend,
+    switchBackendOptions,
+    switchProvider,
+  ]);
 
   useEffect(() => {
     if (providerModelHints.length === 0) {
       return;
     }
     setSwitchModel((current) => {
-      if (!current.trim()) {
+      const normalized = current.trim();
+      if (!normalized || !providerModelHints.includes(normalized)) {
         return providerModelHints[0];
       }
       return current;
@@ -1344,6 +1503,7 @@ export function LLMManagement() {
       const response = await deployLLMEngine(engine.name, {
         public_base_url: engine.public_base_url,
       });
+      setLastEngineActionLabel("配備結果");
       setLastEngineAction(response);
       if (!response.success) {
         throw new Error(response.message);
@@ -1353,6 +1513,17 @@ export function LLMManagement() {
   const handleStopEngine = async (engine: LLMInferenceEngineConfigItem) =>
     withSave(async () => {
       const response = await stopLLMEngine(engine.name);
+      setLastEngineActionLabel("停止結果");
+      setLastEngineAction(response);
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+    });
+
+  const handlePrefetchEngineModel = async (engine: LLMInferenceEngineConfigItem) =>
+    withSave(async () => {
+      const response = await prefetchLLMEngineModel(engine.name);
+      setLastEngineActionLabel("モデル取得結果");
       setLastEngineAction(response);
       if (!response.success) {
         throw new Error(response.message);
@@ -1845,6 +2016,14 @@ export function LLMManagement() {
                   <div className="flex items-center justify-end gap-2">
                     <button
                       type="button"
+                      disabled={saving || !engine.served_model_name}
+                      onClick={() => void handlePrefetchEngineModel(engine)}
+                      className="px-3 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 disabled:opacity-50"
+                    >
+                      モデル取得
+                    </button>
+                    <button
+                      type="button"
                       disabled={saving}
                       onClick={() => void handleStopEngine(engine)}
                       className="px-3 py-2 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 disabled:opacity-50"
@@ -1873,7 +2052,7 @@ export function LLMManagement() {
       >
         <h2 className="text-sm font-semibold text-slate-100">クイック切替</h2>
         <p className="text-xs text-slate-500">
-          provider / model / backend を選んで、setup と atomic switch
+          provider / backend / model を選んで、setup と atomic switch
           をまとめて実行します。
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1895,6 +2074,37 @@ export function LLMManagement() {
                 </option>
               ))}
             </select>
+            <p className="text-[11px] text-slate-500">
+              {switchProvider === "local"
+                ? "local は provider 名です。実際の実装は中央の backend で vllm / sglang / tgi / ollama を選びます。"
+                : "SaaS provider は backend なしで直接切り替えます。"}
+            </p>
+          </label>
+          <label className="text-xs text-slate-300 space-y-1">
+            <span>バックエンド</span>
+            <select
+              data-testid="llm-switch-backend"
+              value={switchBackend}
+              onChange={(event) =>
+                setSwitchBackend(event.target.value as LLMBackendKind)
+              }
+              disabled={switchProvider !== "local"}
+              className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm"
+            >
+              <option value="none">なし</option>
+              {catalog.backends
+                .filter((backend) => switchBackendOptions.includes(backend.name))
+                .map((backend) => (
+                <option key={backend.name} value={backend.name}>
+                  {backend.name}
+                </option>
+                ))}
+            </select>
+            <p className="text-[11px] text-slate-500">
+              {switchProvider === "local"
+                ? "local provider を選んだときだけ backend を指定します。"
+                : "cloud provider では backend は使いません。"}
+            </p>
           </label>
           <label className="text-xs text-slate-300 space-y-1">
             <span>モデル</span>
@@ -1911,6 +2121,11 @@ export function LLMManagement() {
                 <option key={model} value={model} />
               ))}
             </datalist>
+            <p className="text-[11px] text-slate-500">
+              {switchProvider === "local"
+                ? "候補は provider と backend の組み合わせから自動補完します。"
+                : "候補は provider に対応する catalog から自動補完します。"}
+            </p>
             <div className="flex flex-wrap gap-2 pt-1">
               {providerModelHints.slice(0, 3).map((model) => (
                 <button
@@ -1923,24 +2138,6 @@ export function LLMManagement() {
                 </button>
               ))}
             </div>
-          </label>
-          <label className="text-xs text-slate-300 space-y-1">
-            <span>バックエンド</span>
-            <select
-              data-testid="llm-switch-backend"
-              value={switchBackend}
-              onChange={(event) =>
-                setSwitchBackend(event.target.value as LLMBackendKind)
-              }
-              className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm"
-            >
-              <option value="none">なし</option>
-              {catalog.backends.map((backend) => (
-                <option key={backend.name} value={backend.name}>
-                  {backend.name}
-                </option>
-              ))}
-            </select>
           </label>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2110,12 +2307,37 @@ export function LLMManagement() {
               <p className="text-xs text-slate-400">
                 ロールバック: {lastSwitch.rolled_back ? "あり" : "なし"}
               </p>
+              {lastSwitch.runtime_check.provider_status && (
+                <p className="text-xs text-slate-400">
+                  Provider 検証:{" "}
+                  {formatRuntimeStatus(lastSwitch.runtime_check.provider_status)}
+                </p>
+              )}
+              {lastSwitch.runtime_check.backend_status && (
+                <p className="text-xs text-slate-400">
+                  Backend 検証:{" "}
+                  {formatRuntimeStatus(lastSwitch.runtime_check.backend_status)}
+                </p>
+              )}
+              {lastSwitch.runtime_check.model_status && (
+                <p className="text-xs text-slate-400">
+                  Model 検証:{" "}
+                  {formatRuntimeStatus(lastSwitch.runtime_check.model_status)}
+                </p>
+              )}
+              {lastSwitch.runtime_check.errors.length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs text-rose-300">
+                  {lastSwitch.runtime_check.errors.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
           {lastEngineAction && (
             <div>
               <p className="text-xs text-slate-300">
-                配備結果: {lastEngineAction.message}
+                {lastEngineActionLabel}: {lastEngineAction.message}
               </p>
               <p className="text-xs text-slate-400">
                 対象: {lastEngineAction.engine.name}

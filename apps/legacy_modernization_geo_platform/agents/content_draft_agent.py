@@ -29,7 +29,7 @@ _COPY: dict[str, dict[str, str]] = {
         "sections.evidence": "根拠サマリー",
         "sections.semantics": "業務意味の維持ポイント",
         "sections.next": "次の一手",
-        "paragraph.background": "旧システム刷新では、保守要員不足・調査難易度・一括刷新リスクが同時に発生します。",
+        "paragraph.background": "レガシーシステム刷新では、保守要員不足・調査難易度・一括刷新リスクが同時に発生します。",
         "paragraph.approach": "既存資産を可視化し、業務ルールを抽出してから API・バッチ・画面を順次刷新します。",
         "paragraph.comparison": "全面刷新と比較すると、段階刷新は業務停止リスクを抑えつつ投資判断を分割できます。",
         "paragraph.next": "{question} を起点に、対象資産の棚卸しと優先順位付けから着手します。",

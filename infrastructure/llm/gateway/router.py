@@ -942,15 +942,11 @@ class LiteLLMGateway:
 
                 loaded_models: list[str] = []
                 try:
-                    model_response = await client.get(model_url)
-                    if model_response.status_code < 400:
-                        body = model_response.json()
-                        raw_models = body.get("data", []) if isinstance(body, dict) else []
-                        for item in raw_models:
-                            if isinstance(item, dict):
-                                model_id = item.get("id")
-                                if isinstance(model_id, str):
-                                    loaded_models.append(model_id)
+                    loaded_models = await self._fetch_loaded_models(
+                        client=client,
+                        engine=engine,
+                        model_url=model_url,
+                    )
                 except Exception:
                     loaded_models = []
 
@@ -977,6 +973,83 @@ class LiteLLMGateway:
                 status="unavailable",
                 last_error=str(exc),
             )
+
+    async def _fetch_loaded_models(
+        self,
+        *,
+        client: httpx.AsyncClient,
+        engine: InferenceEngineConfig,
+        model_url: str,
+    ) -> list[str]:
+        if engine.engine_type == "ollama":
+            cli_models = await self._list_ollama_models()
+            if cli_models:
+                return cli_models
+
+        model_response = await client.get(model_url)
+        if model_response.status_code >= 400:
+            return []
+        return self._extract_loaded_models(model_response.json())
+
+    async def _list_ollama_models(self) -> list[str]:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "ollama",
+                "list",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except FileNotFoundError:
+            return []
+
+        try:
+            stdout_b, _stderr_b = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+        except TimeoutError:
+            proc.kill()
+            await asyncio.gather(proc.wait(), return_exceptions=True)
+            return []
+
+        if proc.returncode != 0:
+            return []
+
+        lines = stdout_b.decode("utf-8", errors="ignore").splitlines()
+        models: list[str] = []
+        for raw_line in lines[1:]:
+            line = raw_line.strip()
+            if not line:
+                continue
+            model_name = line.split(maxsplit=1)[0].strip()
+            if model_name:
+                models.append(model_name)
+        return models
+
+    @staticmethod
+    def _extract_loaded_models(payload: object) -> list[str]:
+        raw_models: list[object] = []
+        if isinstance(payload, dict):
+            for key in ("data", "models"):
+                value = payload.get(key)
+                if isinstance(value, list):
+                    raw_models.extend(value)
+        elif isinstance(payload, list):
+            raw_models.extend(payload)
+
+        loaded_models: list[str] = []
+        seen: set[str] = set()
+        for item in raw_models:
+            if not isinstance(item, dict):
+                continue
+            for field_name in ("id", "name", "model"):
+                value = item.get(field_name)
+                if not isinstance(value, str):
+                    continue
+                normalized = value.strip()
+                if not normalized or normalized in seen:
+                    continue
+                loaded_models.append(normalized)
+                seen.add(normalized)
+                break
+        return loaded_models
 
     @staticmethod
     def _parse_gpu_usage(metrics_text: str) -> float | None:

@@ -1,7 +1,7 @@
 {
   "name": "legacy_modernization_geo_platform",
   "display_name": "Legacy Modernization GEO Platform",
-  "description": "旧システム刷新向けの需要診断・GEOコンテンツ生成・承認・公開を統合するMVPプラットフォーム",
+  "description": "レガシーシステム刷新向けの需要診断・GEOコンテンツ生成・承認・公開を統合するMVPプラットフォーム",
   "business_base": "growth",
   "product_line": "framework",
   "surface_profile": "operator",

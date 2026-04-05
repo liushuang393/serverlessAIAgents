@@ -703,6 +703,7 @@ export type LLMProviderKind =
   | "openai"
   | "anthropic"
   | "gemini"
+  | "huggingface"
   | "azure_openai"
   | "local"
   | "openrouter"
@@ -1101,6 +1102,7 @@ export type LLMManagementProviderKind =
   | "openai"
   | "anthropic"
   | "google"
+  | "huggingface"
   | "azure_openai"
   | "openrouter"
   | "deepseek"
@@ -1213,6 +1215,7 @@ export interface LLMSwitchDiffItem {
 export interface LLMSwitchRuntimeCheck {
   provider_status: string | null;
   backend_status: string | null;
+  model_status: string | null;
   errors: string[];
 }
 

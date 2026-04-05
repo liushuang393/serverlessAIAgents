@@ -15,6 +15,7 @@ class LLMProviderKind(StrEnum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
+    HUGGINGFACE = "huggingface"
     AZURE_OPENAI = "azure_openai"
     OPENROUTER = "openrouter"
     DEEPSEEK = "deepseek"
@@ -430,6 +431,7 @@ class LLMSwitchRuntimeCheck(BaseModel):
 
     provider_status: str | None = None
     backend_status: str | None = None
+    model_status: str | None = None
     errors: list[str] = Field(default_factory=list)
 
 

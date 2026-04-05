@@ -380,6 +380,31 @@ class LLMManagementService:
             command=command_result,
         )
 
+    async def prefetch_engine_model(self, engine_name: str) -> LLMEngineDeployResponse:
+        """Engine が参照するモデルを事前取得する."""
+        config = self.get_config()
+        engine = next((item for item in config.inference_engines if item.name == engine_name.strip().lower()), None)
+        if engine is None:
+            msg = f"engine '{engine_name}' は設定されていません。"
+            raise ValueError(msg)
+
+        command_result = await self._setup_manager.prefetch_model_for_engine(engine)
+        success = bool(command_result.error is None and command_result.return_code == 0)
+        return LLMEngineDeployResponse(
+            success=success,
+            engine=LLMInferenceEngineConfigPayload.model_validate(
+                {
+                    **engine.model_dump(mode="python"),
+                    "deployment_status": None,
+                    "deployment_error": None,
+                    "compose_path": None,
+                    "public_base_url": engine.public_base_url,
+                }
+            ),
+            message="engine モデルの取得が完了しました。" if success else "engine モデルの取得に失敗しました。",
+            command=command_result,
+        )
+
     async def preflight(self, request: LLMPreflightRequest) -> LLMPreflightReport:
         """Run setup preflight workflow."""
         config = self._store.load()

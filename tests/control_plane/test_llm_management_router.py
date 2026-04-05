@@ -15,6 +15,7 @@ import pytest
 from control_plane.db.session import close_platform_db
 from control_plane.main import create_app
 from control_plane.routers.llm_management import init_llm_management_service
+from control_plane.schemas.llm_management_schemas import LLMSetupCommandResult
 from control_plane.services.llm_management import LLMManagementService
 
 
@@ -62,12 +63,14 @@ def test_llm_new_endpoints_and_legacy_overview(llm_client: Any) -> None:
     overview_json = overview.json()
     assert "providers" in overview_json
     assert "routing_policy" in overview_json
+    assert any(provider["name"] == "huggingface" for provider in overview_json["providers"])
 
     catalog = client.get("/api/studios/framework/llm/catalog")
     assert catalog.status_code == 200
     catalog_json = catalog.json()
     assert "providers" in catalog_json
     assert "backends" in catalog_json
+    assert any(provider["name"] == "huggingface" for provider in catalog_json["providers"])
 
     diagnostics = client.get("/api/studios/framework/llm/diagnostics")
     assert diagnostics.status_code == 200
@@ -151,6 +154,29 @@ def test_deploy_unknown_engine_returns_400(llm_client: Any) -> None:
 
     assert response.status_code == 400
     assert "設定されていません" in response.json()["detail"]
+
+
+def test_prefetch_engine_model_endpoint_returns_success(llm_client: Any) -> None:
+    client, service = llm_client
+
+    async def _fake_prefetch_model_for_engine(_engine: Any) -> LLMSetupCommandResult:
+        return LLMSetupCommandResult(
+            command=["huggingface_hub", "snapshot_download", "Qwen/Qwen2.5-0.5B-Instruct"],
+            return_code=0,
+            stdout="downloaded_to=/tmp/hf-cache/model",
+            allowed=True,
+        )
+
+    service._setup_manager.prefetch_model_for_engine = _fake_prefetch_model_for_engine  # type: ignore[method-assign]
+
+    response = client.post(
+        "/api/studios/framework/llm/engines/tgi/prefetch-model",
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["message"] == "engine モデルの取得が完了しました。"
 
 
 def test_put_engines_port_conflict_returns_400(llm_client: Any) -> None:

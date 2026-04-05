@@ -13,7 +13,7 @@ from control_plane.schemas.llm_management_schemas import (
 from control_plane.services.llm_management_config_store import LLMConfigStore
 from control_plane.services.llm_management_switch_service import LLMSwitchService
 from control_plane.services.llm_management_validator import LLMConfigValidationError, LLMConfigValidator
-from infrastructure.llm.gateway import ProviderRuntimeStatus
+from infrastructure.llm.gateway import EngineRuntimeStatus, ProviderRuntimeStatus
 
 
 if TYPE_CHECKING:
@@ -161,4 +161,118 @@ async def test_runtime_check_uses_shared_provider_status_resolver(tmp_path: Path
     )
 
     assert runtime.provider_status == "available"
+    assert runtime.errors == []
+
+
+async def test_runtime_check_rejects_unloaded_local_model(tmp_path: Path, monkeypatch) -> None:
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
+    service, _store, _validator = _build_service(config_path)
+    config = service._store.load()
+
+    async def _provider_statuses(*args, **kwargs):  # type: ignore[no-untyped-def]
+        del args, kwargs
+        return [
+            ProviderRuntimeStatus(
+                name="local",
+                status="available",
+                api_key_env=None,
+                source="engine:ollama",
+                masked=None,
+                last_error=None,
+            )
+        ]
+
+    async def _engine_statuses(*args, **kwargs):  # type: ignore[no-untyped-def]
+        del args, kwargs
+        return [
+            EngineRuntimeStatus(
+                name="ollama",
+                engine_type="ollama",
+                status="available",
+                loaded_models=["llama3.3:70b"],
+                last_error=None,
+            )
+        ]
+
+    monkeypatch.setattr(
+        "control_plane.services.llm_management_switch_service.resolve_provider_runtime_statuses",
+        _provider_statuses,
+    )
+    monkeypatch.setattr(
+        "control_plane.services.llm_management_switch_service.LiteLLMGateway.get_engine_statuses",
+        _engine_statuses,
+    )
+
+    runtime = await service._runtime_check(
+        config,
+        LLMSwitchRequest(
+            provider=LLMProviderKind.LOCAL,
+            model="gemma4",
+            backend=LLMBackendKind.OLLAMA,
+            roles=["local"],
+            validate_runtime=True,
+        ),
+    )
+
+    assert runtime.provider_status == "available"
+    assert runtime.backend_status == "available"
+    assert runtime.model_status == "unavailable"
+    assert runtime.errors == [
+        "model 'gemma4' は backend 'ollama' で利用できません。検出モデル: llama3.3:70b"
+    ]
+
+
+async def test_runtime_check_accepts_loaded_local_model(tmp_path: Path, monkeypatch) -> None:
+    config_path = tmp_path / ".bizcore" / "llm_gateway.yaml"
+    service, _store, _validator = _build_service(config_path)
+    config = service._store.load()
+
+    async def _provider_statuses(*args, **kwargs):  # type: ignore[no-untyped-def]
+        del args, kwargs
+        return [
+            ProviderRuntimeStatus(
+                name="local",
+                status="available",
+                api_key_env=None,
+                source="engine:ollama",
+                masked=None,
+                last_error=None,
+            )
+        ]
+
+    async def _engine_statuses(*args, **kwargs):  # type: ignore[no-untyped-def]
+        del args, kwargs
+        return [
+            EngineRuntimeStatus(
+                name="ollama",
+                engine_type="ollama",
+                status="available",
+                loaded_models=["gemma4"],
+                last_error=None,
+            )
+        ]
+
+    monkeypatch.setattr(
+        "control_plane.services.llm_management_switch_service.resolve_provider_runtime_statuses",
+        _provider_statuses,
+    )
+    monkeypatch.setattr(
+        "control_plane.services.llm_management_switch_service.LiteLLMGateway.get_engine_statuses",
+        _engine_statuses,
+    )
+
+    runtime = await service._runtime_check(
+        config,
+        LLMSwitchRequest(
+            provider=LLMProviderKind.LOCAL,
+            model="gemma4",
+            backend=LLMBackendKind.OLLAMA,
+            roles=["local"],
+            validate_runtime=True,
+        ),
+    )
+
+    assert runtime.provider_status == "available"
+    assert runtime.backend_status == "available"
+    assert runtime.model_status == "available"
     assert runtime.errors == []

@@ -449,13 +449,35 @@ function showResult(success, title, desc) {
 // ---------- ダウンロード ----------
 async function downloadResult() {
   if (!currentTaskId) return;
-  const url = withApiKey(`${API_BASE}/api/migrate/${currentTaskId}/download`);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  var btn = document.getElementById("download-btn");
+  if (btn) btn.disabled = true;
+
+  try {
+    var url = API_BASE + "/api/migrate/" + currentTaskId + "/download";
+    var res = await fetch(url, { headers: buildAuthHeaders() });
+    if (!res.ok) {
+      var errBody = "";
+      try { errBody = (await res.json()).detail || res.statusText; } catch (_e) { errBody = res.statusText; }
+      appendLog("ダウンロード失敗: " + errBody, "error");
+      return;
+    }
+    var blob = await res.blob();
+    var disposition = res.headers.get("content-disposition") || "";
+    var match = disposition.match(/filename="?([^";\s]+)"?/);
+    var filename = match ? match[1] : "migration_" + currentTaskId.slice(0, 8) + ".zip";
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    appendLog("成果物をダウンロードしました: " + filename, "success");
+  } catch (e) {
+    appendLog("ダウンロードエラー: " + e.message, "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ---------- HITL ----------
@@ -543,3 +565,21 @@ function formatBytes(bytes) {
 function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+// ---------- 起動時初期化: 開発用 API キー自動取得 ----------
+// /api/auth/dev-info を呼び出し、自動生成モードなら localStorage に保存する。
+// 本番（auto_key_mode=false）ではキーは返されないため安全。
+// サーバー再起動で鍵が変わった場合も自動更新する。
+(function () {
+  fetch(API_BASE + "/api/auth/dev-info")
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (info) {
+      if (!info || !info.auto_key_mode || !info.api_key) return;
+      var current = getApiKey();
+      if (current !== info.api_key) {
+        localStorage.setItem("CODE_MIGRATION_API_KEY", info.api_key);
+        console.info("[auth] 開発用 API キーを" + (current ? "更新" : "取得") + "しました");
+      }
+    })
+    .catch(function () { /* ネットワークエラー時は無視 */ });
+}());

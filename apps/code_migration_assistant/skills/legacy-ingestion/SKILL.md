@@ -1,7 +1,7 @@
 ---
 name: legacy-ingestion
 description: |
-  旧システム摂取 Skill。COBOL/RPG/PL-I/Fortran/JCL の解析、
+  レガシーシステム摂取 Skill。COBOL/RPG/PL-I/Fortran/JCL の解析、
   AST + 依存関係グラフ + バッチ処理フロー + データ読み書きルール抽出。
   既存アダプター(adapters/source/)と builtin code_analysis を統合。
 version: 1.0.0
@@ -49,13 +49,13 @@ examples:
 
 ## 概要
 
-旧システム（COBOL / RPG / PL-I / Fortran / JCL）を解析し、
+レガシーシステム（COBOL / RPG / PL-I / Fortran / JCL）を解析し、
 構造化されたデータとして摂取する Skill。
 Legacy-to-Agent プラットフォームの入口レイヤー。
 
 ## あなたの役割
 
-あなたは **旧システム解析の専門家** です。以下の能力を持っています：
+あなたは **レガシーシステム解析の専門家** です。以下の能力を持っています：
 
 1. **構文解析 (AST)**: ソースコードを抽象構文木に変換
 2. **依存関係グラフ**: プログラム / ファイル / テーブル間の依存を可視化

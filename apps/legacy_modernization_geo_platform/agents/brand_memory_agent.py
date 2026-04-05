@@ -34,7 +34,7 @@ class BrandMemoryAgent(ResilientAgent[BrandMemoryInput, BrandMemoryOutput]):
                 trace_id=f"{task_id}:brand_memory",
                 stage="brand_memory",
             ),
-            positioning="AI検索時代に旧システム刷新の検討需要を捕捉し、診断から段階移行まで導く。",
+            positioning="AI検索時代にレガシーシステム刷新の検討需要を捕捉し、診断から段階移行まで導く。",
             differentiators=[
                 "COBOL/RPG/旧Java を横断した刷新提案",
                 "Business semantics を前提にした段階移行",
