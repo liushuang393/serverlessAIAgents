@@ -1,0 +1,40 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - img [ref=e4]
+      - generic [ref=e8]:
+        - heading "TEMPORAL FORGE" [level=1] [ref=e9]
+        - generic [ref=e10]: COBOL → Java Spring Boot Migration Studio
+    - generic [ref=e13]: SYSTEM ONLINE
+  - main [ref=e14]:
+    - complementary [ref=e15]:
+      - generic [ref=e17] [cursor=pointer]:
+        - img [ref=e19]
+        - paragraph [ref=e22]: COBOLファイルをロード
+        - paragraph [ref=e23]: .cbl / .cob / .cobol / .zip
+        - button "ファイルを選択" [ref=e24]
+      - generic [ref=e25]:
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e28]: Fast mode
+          - generic [ref=e29]: （実行比較スキップ）
+        - generic [ref=e30]:
+          - generic [ref=e31]: MODEL
+          - combobox [ref=e32] [cursor=pointer]:
+            - option "claude-opus-4-6" [selected]
+            - option "claude-sonnet-4-6"
+      - button "LAUNCH MIGRATION" [disabled] [ref=e33]:
+        - generic [ref=e35]: LAUNCH MIGRATION
+        - img [ref=e36]
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]: READY TO FORGE
+        - heading "旧システムを次世代へ" [level=2] [ref=e42]
+        - paragraph [ref=e43]: COBOLコードをJava Spring Bootに完全移行
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - generic [ref=e46]: COBOL · LEGACY
+          - generic [ref=e47]: IDENTIFICATION DIVISION. PROGRAM-ID. CALC-TAX. DATA DIVISION. WORKING-STORAGE SECTION. 01 WS-INCOME PIC 9(7)V99. 01 WS-TAX-RATE PIC V9(3). 01 WS-TAX-AMT PIC 9(7)V99. PROCEDURE DIVISION. COMPUTE WS-TAX-AMT = WS-INCOME * WS-TAX-RATE STOP RUN.
+        - img [ref=e51]
+        - generic [ref=e55]:
+          - generic [ref=e56]: JAVA · MODERN
+          - generic [ref=e57]: "@Service public class TaxService { @Value(\"${tax.rate}\") private BigDecimal rate; public BigDecimal calc( BigDecimal income) { return income .multiply(rate) .setScale(2, HALF_UP); } }"

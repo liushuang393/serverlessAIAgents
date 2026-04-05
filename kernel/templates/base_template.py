@@ -100,7 +100,7 @@ class TemplateConfig(BaseModel):
     """テンプレート設定."""
 
     # LLM設定
-    model: str = "gpt-4o"
+    model: str = "platform_text_default"  # ゲートウェイエイリアス（実モデルはllm_gateway.yamlで解決）
     temperature: float = 0.4
     max_tokens: int = 4096
     # Agent設定

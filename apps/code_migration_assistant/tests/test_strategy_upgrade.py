@@ -333,9 +333,9 @@ def test_request_design_approval_returns_true_after_submit(tmp_path: Path) -> No
 
     async def _approve_when_pending() -> None:
         for _ in range(50):
-            pending = engine._approval_flow.get_pending_requests()
+            pending = engine.approval_flow.get_pending_requests()
             if pending:
-                await engine._approval_flow.submit_response(
+                await engine.approval_flow.submit_response(
                     request_id=pending[0].id,
                     approved=True,
                     approver="tester",
@@ -360,7 +360,7 @@ def test_request_design_approval_returns_true_after_submit(tmp_path: Path) -> No
     approved = asyncio.run(_run())
 
     assert approved is True
-    assert engine._approval_flow.get_pending_requests() == []
+    assert engine.approval_flow.get_pending_requests() == []
     queued_events: list[dict[str, Any]] = []
     while not engine._event_queue.empty():
         queued_events.append(engine._event_queue.get_nowait())
@@ -377,9 +377,9 @@ def test_request_design_approval_returns_false_on_reject(tmp_path: Path) -> None
 
     async def _reject_when_pending() -> None:
         for _ in range(50):
-            pending = engine._approval_flow.get_pending_requests()
+            pending = engine.approval_flow.get_pending_requests()
             if pending:
-                await engine._approval_flow.submit_response(
+                await engine.approval_flow.submit_response(
                     request_id=pending[0].id,
                     approved=False,
                     approver="tester",

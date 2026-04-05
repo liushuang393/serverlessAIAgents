@@ -70,72 +70,73 @@ class ModelSelectionCriteria(BaseModel):
 # タスクタイプ別推奨モデル設定
 TASK_TYPE_RECOMMENDATIONS: dict[TaskType, dict[str, Any]] = {
     # 分析・推論タスク：高品質モデル推奨
+    # 分析・推論タスク：高品質モデル推奨
     TaskType.ANALYSIS: {
-        "recommended": ["claude-3-5-sonnet-20241022", "gpt-4o", "o1"],
+        "recommended": ["reasoning_claude", "coding_openai"],
         "capabilities": ["reasoning"],
         "priority_override": "quality",
     },
     TaskType.REASONING: {
-        "recommended": ["o1", "o3-mini", "claude-3-5-sonnet-20241022"],
+        "recommended": ["reasoning_claude"],
         "capabilities": ["reasoning"],
         "priority_override": "quality",
     },
     TaskType.DECISION: {
-        "recommended": ["claude-3-5-sonnet-20241022", "gpt-4o"],
+        "recommended": ["reasoning_claude", "coding_openai"],
         "capabilities": ["reasoning"],
         "priority_override": "quality",
     },
     # コード関連タスク：コード能力重視
     TaskType.CODE_GENERATION: {
-        "recommended": ["claude-3-5-sonnet-20241022", "gpt-4o", "deepseek-chat"],
+        "recommended": ["reasoning_claude", "coding_openai"],
         "capabilities": ["code"],
         "priority_override": None,
     },
     TaskType.CODE_REVIEW: {
-        "recommended": ["claude-3-5-sonnet-20241022", "gpt-4o"],
+        "recommended": ["reasoning_claude", "coding_openai"],
         "capabilities": ["code", "reasoning"],
         "priority_override": "quality",
     },
     TaskType.CODE_MIGRATION: {
-        "recommended": ["claude-3-5-sonnet-20241022", "gpt-4o"],
+        "recommended": ["reasoning_claude", "coding_openai"],
         "capabilities": ["code"],
         "priority_override": "quality",
     },
-    # テキスト処理：バランス重視
+    # テキスト処理：バランス重視（ゲートウェイの低コストモデルを使用）
     TaskType.SUMMARIZATION: {
-        "recommended": ["gpt-4o-mini", "claude-3-5-haiku-20241022", "gemini-2.0-flash"],
+        "recommended": ["cheap_gemini"],
         "capabilities": ["chat"],
         "priority_override": None,
     },
     TaskType.TRANSLATION: {
-        "recommended": ["gpt-4o", "claude-3-5-sonnet-20241022"],
+        "recommended": ["coding_openai", "reasoning_claude"],
         "capabilities": ["chat"],
         "priority_override": None,
     },
     TaskType.EXTRACTION: {
-        "recommended": ["gpt-4o-mini", "claude-3-5-haiku-20241022"],
+        "recommended": ["cheap_gemini"],
         "capabilities": ["chat"],
         "priority_override": None,
     },
-    # 対話タスク：速度重視
+    # 対話タスク：速度重視（ゲートウェイの低コストモデルを使用）
     TaskType.CHAT: {
-        "recommended": ["gpt-4o-mini", "claude-3-5-haiku-20241022", "gemini-2.0-flash"],
+        "recommended": ["cheap_gemini"],
         "capabilities": ["chat"],
         "priority_override": "speed",
     },
     TaskType.QA: {
-        "recommended": ["gpt-4o-mini", "claude-3-5-haiku-20241022"],
+        "recommended": ["cheap_gemini"],
         "capabilities": ["chat"],
         "priority_override": None,
     },
     # マルチモーダル
     TaskType.VISION: {
-        "recommended": ["gpt-4o", "claude-3-5-sonnet-20241022", "gemini-2.0-flash"],
+        "recommended": ["coding_openai", "reasoning_claude", "cheap_gemini"],
         "capabilities": ["vision"],
         "priority_override": None,
     },
     TaskType.AUDIO: {
-        "recommended": ["gpt-4o-audio", "gemini-2.0-flash"],
+        "recommended": ["coding_openai", "cheap_gemini"],
         "capabilities": ["audio"],
         "priority_override": None,
     },
@@ -154,7 +155,7 @@ class ModelSelector:
         ...     criteria=ModelSelectionCriteria(priority="quality"),
         ... )
         >>> print(model)
-        'claude-3-5-sonnet-20241022'
+        'reasoning_claude'
     """
 
     def __init__(self, available_models: list[str] | None = None) -> None:
@@ -186,7 +187,7 @@ class ModelSelector:
         recommendation = TASK_TYPE_RECOMMENDATIONS.get(task_type)
         if not recommendation:
             logger.warning(f"タスクタイプ {task_type} の推奨設定が見つかりません")
-            return "gpt-4o"  # デフォルトフォールバック
+            return "platform_text_default"  # デフォルトフォールバック
 
         recommended = recommendation["recommended"]
         priority = recommendation.get("priority_override") or criteria.priority
@@ -195,7 +196,7 @@ class ModelSelector:
         candidates = self._filter_available(recommended)
         if not candidates:
             logger.warning("利用可能な推奨モデルがありません、デフォルトを使用")
-            return "gpt-4o"
+            return "platform_text_default"
 
         # 優先基準に基づいて選択
         return self._select_by_priority(candidates, priority, criteria)

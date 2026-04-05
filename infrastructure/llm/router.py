@@ -54,9 +54,9 @@ class ModelRouter:
         ```python
         router = ModelRouter(
             models={
-                "primary": LLMConfig(provider="anthropic", model="claude-3-5-sonnet-20241022"),
-                "fallback": LLMConfig(provider="openai", model="gpt-4o"),
-                "economy": LLMConfig(provider="openai", model="gpt-4o-mini"),
+                "primary": LLMConfig(provider="anthropic", model="platform_text_default"),
+                "fallback": LLMConfig(provider="openai", model="platform_text_default"),
+                "economy": LLMConfig(provider="openai", model="cheap_gemini"),
             },
             routing_config=RoutingConfig(strategy=RoutingStrategy.BALANCED),
         )
@@ -493,6 +493,10 @@ class ModelRouter:
 
 def create_router_from_env() -> ModelRouter:
     """環境変数からルーターを作成.
+
+    .. deprecated::
+        新規コードでは Platform LLM Management（.bizcore/llm_gateway.yaml）を使用してください。
+        この関数は gateway 導入前の互換レイヤーです。
 
     環境変数（優先度の高い順）:
         - OPENAI_API_KEY: OpenAI APIキー

@@ -167,7 +167,7 @@ class SupplyChainTemplate(AgentTemplate):
         ),
     ]
     default_config: TemplateConfig = TemplateConfig(
-        model="gpt-4o",
+        model="platform_text_default",
         temperature=0.3,
         max_tokens=4096,
     )

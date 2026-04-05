@@ -290,7 +290,7 @@ async def _run_engine_pipeline(
 
     for cobol_file in cobol_files:
         engine = CodeMigrationEngine(migration_type="cobol-to-java")
-        await engine._initialize()
+        await engine.initialize()
         program_root = run_root / cobol_file.program_name
         runtime_inputs: dict[str, Any] = {
             "source_code": cobol_file.content,
@@ -306,7 +306,7 @@ async def _run_engine_pipeline(
         }
         final_result: dict[str, Any] | None = None
 
-        async for raw_event in engine._execute_stream(runtime_inputs):
+        async for raw_event in engine.execute_stream(runtime_inputs):
             normalized_events = _normalize_engine_event(program_name=cobol_file.program_name, raw_event=raw_event)
             for event in normalized_events:
                 await store.push_event(task_id, event)

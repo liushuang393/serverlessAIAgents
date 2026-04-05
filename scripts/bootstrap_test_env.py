@@ -39,7 +39,6 @@ def _token(prefix: str) -> str:
 
 def _default_specs() -> list[EnvSpec]:
     return [
-        EnvSpec("LLM_PROVIDER", "mock"),
         EnvSpec("MESSAGING_HUB_API_KEY_ENV", "MESSAGING_HUB_API_KEY"),
         EnvSpec("MESSAGING_HUB_API_KEY", _token("mh")),
         EnvSpec("CODE_MIGRATION_API_KEY_ENV", "CODE_MIGRATION_API_KEY"),

@@ -246,6 +246,23 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         self._killed = True
         self._logger.warning("Kill Switch activated - pipeline will stop at next checkpoint")
 
+    # ------------------------------------------------------------------
+    # 公開 API（外部モジュールはこちらを使用すること）
+    # ------------------------------------------------------------------
+
+    async def initialize(self) -> None:
+        """Agent を初期化する（公開 API）."""
+        await self._initialize()
+
+    def execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+        """ストリーム実行を返す（公開 API）."""
+        return self._execute_stream(inputs)
+
+    @property
+    def approval_flow(self) -> ApprovalFlow:
+        """ApprovalFlow インスタンスを返す（公開 API）."""
+        return self._approval_flow
+
     async def _initialize(self) -> None:
         """内部 Agent を初期化."""
         self._legacy_analysis_agent = create_agent(

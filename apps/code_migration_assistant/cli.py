@@ -13,7 +13,7 @@
   "output_root": "/tmp/migration_output",
   "fast_mode": true,
   "migration_type": "cobol-to-java",
-  "model": "claude-opus-4-6",
+  "model": "platform_text_default",
   "options": {}
 }
 """
@@ -139,7 +139,7 @@ async def _run_engine_for_program(
 ) -> dict[str, Any]:
     """単一プログラムを実行し、進捗イベントをコールバックへ渡す."""
     engine = CodeMigrationEngine(migration_type=migration_type)
-    await engine._initialize()
+    await engine.initialize()
 
     inputs = {
         "source_code": source_code,
@@ -151,7 +151,7 @@ async def _run_engine_for_program(
     }
 
     final_result: dict[str, Any] | None = None
-    async for raw_event in engine._execute_stream(inputs):
+    async for raw_event in engine.execute_stream(inputs):
         normalized = _normalize_stream_event(program_name=program_name, raw_event=raw_event)
         if normalized is not None:
             await on_event(normalized)
@@ -540,7 +540,7 @@ async def run_contract_payload(
         manifest_paths: list[str] = []
     else:
         engine = CodeMigrationEngine(migration_type=migration_type)
-        await engine._initialize()
+        await engine.initialize()
         stage_result = await execute_stage_task(
             engine,
             {
@@ -846,7 +846,7 @@ def cmd_migrate(args: argparse.Namespace) -> int:
     """Human-friendly sync wrapper over the engine/backlog runtime."""
     source_path = Path(args.source).resolve()
     output_root = Path(args.output).resolve()
-    model = args.model or os.environ.get("MIGRATION_MODEL", "claude-opus-4-6")
+    model = args.model or os.environ.get("MIGRATION_MODEL", "platform_text_default")
 
     print("\n🚀 Code Migration Assistant")
     print(f"  ソース: {source_path}")
@@ -1034,7 +1034,7 @@ def cmd_retry(args: argparse.Namespace) -> int:
 
     source_path = Path(args.source).resolve()
     output_root = Path(args.output).resolve()
-    model = args.model or os.environ.get("MIGRATION_MODEL", "claude-opus-4-6")
+    model = args.model or os.environ.get("MIGRATION_MODEL", "platform_text_default")
     start_stage = str(args.stage)
 
     valid_stages = ["analyzer", "designer", "transformer", "test_generator", "verifier", "quality_gate"]
@@ -1142,7 +1142,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     migrate_parser.add_argument(
         "--model",
-        default="claude-opus-4-6",
+        default="platform_text_default",
         help="使用モデル識別子（オプション情報として保存）",
     )
 
@@ -1197,7 +1197,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     retry_parser.add_argument(
         "--model",
-        default="claude-opus-4-6",
+        default="platform_text_default",
         help="使用モデル識別子",
     )
 

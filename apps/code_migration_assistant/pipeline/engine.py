@@ -97,7 +97,7 @@ class MigrationEngine:
         output_root: Path,
         fast_mode: bool = False,
         max_iterations: int = _DEFAULT_MAX_ITERATIONS,
-        model: str = "claude-opus-4-6",
+        model: str = "platform_text_default",
     ) -> None:
         """初期化.
 
@@ -725,7 +725,7 @@ def run_migration_sync(
     cobol_file: COBOLFile,
     output_root: Path,
     fast_mode: bool = False,
-    model: str = "claude-opus-4-6",
+    model: str = "platform_text_default",
 ) -> PipelineResult:
     """同期版パイプライン実行（CLI用）.
 

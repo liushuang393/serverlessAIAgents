@@ -6,11 +6,11 @@
 使用例:
     >>> router = MultiLLMRouter(
     ...     agent_mapping=AgentModelMapping(
-    ...         default_model="gpt-4o",
+    ...         default_model="platform_text_default",
     ...         agent_models={
-    ...             "dao": "claude-sonnet-4.5",
-    ...             "fa": "gpt-4o",
-    ...             "shu": "gemini-2.0-flash",
+    ...             "dao": "reasoning_claude",
+    ...             "fa": "coding_openai",
+    ...             "shu": "cheap_gemini",
     ...         }
     ...     )
     ... )
@@ -101,8 +101,8 @@ class MultiLLMRouter:
     使用例:
         >>> router = MultiLLMRouter(
         ...     agent_mapping=AgentModelMapping(
-        ...         default_model="gpt-4o",
-        ...         agent_models={"dao": "claude-sonnet-4.5"},
+        ...         default_model="platform_text_default",
+        ...         agent_models={"dao": "reasoning_claude"},
         ...     ),
         ...     config=RouterConfig(priority="quality"),
         ... )

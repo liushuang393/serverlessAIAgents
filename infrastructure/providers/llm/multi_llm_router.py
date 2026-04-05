@@ -6,11 +6,11 @@
 使用例:
     >>> router = MultiLLMRouter(
     ...     agent_mapping=AgentModelMapping(
-    ...         default_model="gpt-4o",
+    ...         default_model="platform_text_default",
     ...         agent_models={
-    ...             "dao": "claude-sonnet-4.5",
-    ...             "fa": "gpt-4o",
-    ...             "shu": "gemini-2.0-flash",
+    ...             "dao": "reasoning_claude",
+    ...             "fa": "coding_openai",
+    ...             "shu": "cheap_gemini",
     ...         }
     ...     )
     ... )
@@ -41,7 +41,7 @@ class AgentModelMapping(BaseModel):
         task_type_models: タスクタイプ → モデル名のマッピング
     """
 
-    default_model: str = Field(default="gpt-4o", description="デフォルトモデル")
+    default_model: str = Field(default="platform_text_default", description="デフォルトモデル")
     agent_models: dict[str, str] = Field(
         default_factory=dict,
         description="Agent別モデル割り当て（agent_id → model_name）",
@@ -70,8 +70,8 @@ class RouterConfig(BaseModel):
     max_latency_ms: int = Field(default=5000, description="最大レイテンシ（ms）")
     enable_fallback: bool = Field(default=True, description="フォールバック有効化")
     fallback_models: list[str] = Field(
-        default_factory=lambda: ["gpt-4o-mini", "claude-3-5-haiku-20241022"],
-        description="フォールバックモデル",
+        default_factory=list,
+        description="フォールバックモデル（ゲートウェイルーティングポリシーで管理）",
     )
 
 
@@ -101,8 +101,8 @@ class MultiLLMRouter:
     使用例:
         >>> router = MultiLLMRouter(
         ...     agent_mapping=AgentModelMapping(
-        ...         default_model="gpt-4o",
-        ...         agent_models={"dao": "claude-sonnet-4.5"},
+        ...         default_model="platform_text_default",
+        ...         agent_models={"dao": "reasoning_claude"},
         ...     ),
         ...     config=RouterConfig(priority="quality"),
         ... )

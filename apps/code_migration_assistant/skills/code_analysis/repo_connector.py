@@ -13,6 +13,7 @@ Git/SVNリポジトリに接続し、コードを取得するスキル。
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -94,7 +95,10 @@ class RepoConnector(AgentBlock):
         """
         super().__init__()
         self._config = config or RepoConfig()
-        self._work_dir = Path(work_dir) if work_dir else Path("/tmp/repo_work")
+        default_work = os.getenv("CODE_MIGRATION_WORK_DIR", "").strip()
+        if not default_work:
+            default_work = str(Path(__file__).resolve().parents[2] / "data" / "repo_work")
+        self._work_dir = Path(work_dir) if work_dir else Path(default_work)
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """スキル実行.
