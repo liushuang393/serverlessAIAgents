@@ -10,7 +10,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import pytest
-
 from apps.legacy_modernization_geo_platform.agents._models import (
     AccountScoreInput,
     BrandMemoryInput,
@@ -58,10 +57,10 @@ from apps.legacy_modernization_geo_platform.backend.schemas import (
 )
 from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
 
+
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from kernel.runtime import resolve_app_runtime
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +70,7 @@ if TYPE_CHECKING:
 TASK_ID = "geo-test-001"
 
 
-@pytest.fixture()
+@pytest.fixture
 def request_fixture() -> GeoExecuteRequest:
     return GeoExecuteRequest(
         campaign_name="unit-test-campaign",
@@ -84,7 +83,7 @@ def request_fixture() -> GeoExecuteRequest:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def intelligence_fixture() -> IntelligenceSnapshot:
     now = datetime.now(UTC)
     sources = [
@@ -105,14 +104,14 @@ def intelligence_fixture() -> IntelligenceSnapshot:
     return IntelligenceSnapshot(sources=sources, warnings=[], primary_provider="sample")
 
 
-@pytest.fixture()
+@pytest.fixture
 async def brand_memory_artifact(request_fixture: GeoExecuteRequest) -> BrandMemoryArtifact:
     agent = BrandMemoryAgent()
     result = await agent.process(BrandMemoryInput(task_id=TASK_ID, request=request_fixture))
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def signal_artifact(
     request_fixture: GeoExecuteRequest,
     intelligence_fixture: IntelligenceSnapshot,
@@ -124,7 +123,7 @@ async def signal_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def score_artifact(
     request_fixture: GeoExecuteRequest,
     signal_artifact: AccountSignalArtifact,
@@ -136,7 +135,7 @@ async def score_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def question_graph_artifact(
     request_fixture: GeoExecuteRequest,
     score_artifact: AccountScoreArtifact,
@@ -148,7 +147,7 @@ async def question_graph_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def evidence_matrix_artifact(
     question_graph_artifact: QuestionGraphArtifact,
     intelligence_fixture: IntelligenceSnapshot,
@@ -164,7 +163,7 @@ async def evidence_matrix_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def legacy_semantics_artifact(
     request_fixture: GeoExecuteRequest,
     brand_memory_artifact: BrandMemoryArtifact,
@@ -176,7 +175,7 @@ async def legacy_semantics_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def blueprint_artifact(
     request_fixture: GeoExecuteRequest,
     question_graph_artifact: QuestionGraphArtifact,
@@ -188,7 +187,7 @@ async def blueprint_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 async def content_draft_artifact(
     request_fixture: GeoExecuteRequest,
     blueprint_artifact: ContentBlueprintArtifact,
@@ -208,7 +207,7 @@ async def content_draft_artifact(
     return result.artifact
 
 
-@pytest.fixture()
+@pytest.fixture
 def geo_settings(tmp_path: Path) -> GeoPlatformSettings:
     from kernel.runtime import resolve_app_runtime as _resolve
 
@@ -477,7 +476,9 @@ async def test_report_assembler_builds_report(
 ) -> None:
     gate = GeoQualityGate()
     qa_report = gate.evaluate(
-        task_id=TASK_ID, draft=content_draft_artifact, evidence_matrix=evidence_matrix_artifact,
+        task_id=TASK_ID,
+        draft=content_draft_artifact,
+        evidence_matrix=evidence_matrix_artifact,
     )
     publisher = GeoPublisher(geo_settings)
     manifest = publisher.publish(TASK_ID, content_draft_artifact)

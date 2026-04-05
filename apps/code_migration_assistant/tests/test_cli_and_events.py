@@ -398,7 +398,9 @@ class TestCmdMigrate:
             model=None,
         )
 
-        async def _run_stub(_payload: dict[str, Any], *, on_event: Any, max_sessions: int) -> tuple[dict[str, Any], int]:
+        async def _run_stub(
+            _payload: dict[str, Any], *, on_event: Any, max_sessions: int
+        ) -> tuple[dict[str, Any], int]:
             _ = max_sessions
             await on_event({"type": "error", "message": "Java not found"})
             return (

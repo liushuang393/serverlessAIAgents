@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,6 +16,10 @@ from kernel.prompts.builders import (
     ToolEnvironmentBuilder,
 )
 from kernel.prompts.models import ToolDescription
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestCoreSystemBuilder:

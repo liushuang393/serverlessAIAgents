@@ -28,6 +28,7 @@ from kernel.agents.dual_verifier import DualVerifier
 
 
 if TYPE_CHECKING:
+    from contracts.flow.contracts import FlowMiddleware
     from harness.guardrails.pipeline import GuardrailPipeline
     from harness.orchestration.dynamic_flow import DynamicFlowGenerator
     from harness.orchestration.models import ExecutionPlan
@@ -288,7 +289,7 @@ class AutonomousPipeline:
         )
 
         # 順序: Audit → RiskGate → StepVerifier
-        middlewares = [audit_mw, risk_mw, verifier_mw]
+        middlewares: list[FlowMiddleware] = [audit_mw, risk_mw, verifier_mw]
 
         flow = self._flow_generator.generate_flow(plan, middlewares=middlewares)
 

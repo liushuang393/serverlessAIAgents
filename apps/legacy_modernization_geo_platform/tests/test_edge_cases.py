@@ -9,14 +9,14 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-import pytest
-from apps.legacy_modernization_geo_platform.backend.schemas import GeoExecuteRequest, TaskStatus
+from apps.legacy_modernization_geo_platform.backend.schemas import TaskStatus
 from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
 from apps.legacy_modernization_geo_platform.main import create_app
 from fastapi.testclient import TestClient
 
 from infrastructure.security.auth_client.client import RemoteUser
 from kernel.runtime import resolve_app_runtime
+
 
 if TYPE_CHECKING:
     from pathlib import Path

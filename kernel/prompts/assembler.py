@@ -34,7 +34,8 @@ from kernel.prompts.models import (
     TaskSystemLayer,
     ToolEnvironmentLayer,
 )
-from kernel.prompts.patterns import PATTERN_REGISTRY, PatternConfig
+from kernel.prompts.patterns import PATTERN_REGISTRY
+
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -207,19 +208,20 @@ class PromptAssembler:
 
     def _render_layer(self, name: str, layer: BaseModel) -> str:
         """レイヤーをテキストにレンダリング."""
-        renderers = {
-            LAYER_CORE_SYSTEM: self._render_core_system,
-            LAYER_TASK_SYSTEM: self._render_task_system,
-            LAYER_RUNTIME_CONTEXT: self._render_runtime_context,
-            LAYER_CONVERSATION_STATE: self._render_conversation_state,
-            LAYER_MEMORY_PROFILE: self._render_memory_profile,
-            LAYER_TOOL_ENVIRONMENT: self._render_tool_environment,
-        }
-        renderer = renderers.get(name)
-        if renderer is None:
-            logger.warning("未知のレイヤー: %s", name)
-            return ""
-        return renderer(layer)  # type: ignore[arg-type]
+        if name == LAYER_CORE_SYSTEM and isinstance(layer, CoreSystemLayer):
+            return self._render_core_system(layer)
+        if name == LAYER_TASK_SYSTEM and isinstance(layer, TaskSystemLayer):
+            return self._render_task_system(layer)
+        if name == LAYER_RUNTIME_CONTEXT and isinstance(layer, RuntimeContextLayer):
+            return self._render_runtime_context(layer)
+        if name == LAYER_CONVERSATION_STATE and isinstance(layer, ConversationStateLayer):
+            return self._render_conversation_state(layer)
+        if name == LAYER_MEMORY_PROFILE and isinstance(layer, MemoryProfileLayer):
+            return self._render_memory_profile(layer)
+        if name == LAYER_TOOL_ENVIRONMENT and isinstance(layer, ToolEnvironmentLayer):
+            return self._render_tool_environment(layer)
+        logger.warning("未知または不整合なレイヤー: %s", name)
+        return ""
 
     def _render_core_system(self, layer: CoreSystemLayer) -> str:
         """L1: コアシステムのレンダリング."""

@@ -9,12 +9,12 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from contracts.app.contracts import LLMContractConfig, LLMContractModelRef
+from contracts.app.contracts import LLMContractConfig, LLMContractModality, LLMContractModelRef
 from shared.config.manifest import load_app_manifest_dict
 
 
 logger = logging.getLogger("bizcore.startup")
-_MODALITY_ORDER = {
+_MODALITY_ORDER: dict[LLMContractModality, int] = {
     "text": 0,
     "embedding": 1,
     "image": 2,
@@ -119,7 +119,10 @@ def _load_app_llm_contract(app_config_path: str | Path | None) -> tuple[str, LLM
     except Exception:
         return None
 
-    app_name = str(manifest.get("name") or Path(app_config_path).resolve().parent.name).strip() or "unknown"
+    fallback_app_name = "unknown"
+    if app_config_path is not None:
+        fallback_app_name = Path(app_config_path).resolve().parent.name
+    app_name = str(manifest.get("name") or fallback_app_name).strip() or "unknown"
     return app_name, config
 
 
@@ -148,7 +151,9 @@ def _build_model_lookup() -> dict[str, dict[str, Any]]:
     return lookup
 
 
-def _resolve_gateway_model(model_ref: LLMContractModelRef, *, model_lookup: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+def _resolve_gateway_model(
+    model_ref: LLMContractModelRef, *, model_lookup: dict[str, dict[str, Any]]
+) -> dict[str, Any] | None:
     """contracts.llm の model ref を gateway model へ解決する."""
     return model_lookup.get(model_ref.model_id)
 
@@ -238,7 +243,7 @@ def _resolve_supported_models(app_config_path: str | Path | None) -> list[dict[s
 def _resolve_default_contract_model(
     app_config_path: str | Path | None,
     *,
-    modality: str,
+    modality: LLMContractModality,
 ) -> dict[str, Any] | None:
     """contracts.llm.defaults の指定 modality を実モデルへ解決する."""
     loaded = _load_app_llm_contract(app_config_path)
@@ -399,7 +404,9 @@ def _log_supported_models(supported_models: list[dict[str, Any]]) -> None:
             if not item.get("resolved"):
                 logger.info("  - %s: %s -> unresolved", modality, model_id)
                 continue
-            logger.info("  - %s: %s -> %s / %s", modality, model_id, _normalize_value(provider), _normalize_value(model))
+            logger.info(
+                "  - %s: %s -> %s / %s", modality, model_id, _normalize_value(provider), _normalize_value(model)
+            )
 
 
 def log_startup_info(

@@ -2,25 +2,21 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from harness.governance.audit import AuditEvent, AuditLogger
 from harness.guardrails.pipeline import (
-    Guardrail,
     GuardrailPipeline,
     GuardrailResult,
-    PipelineResult,
     Severity,
 )
 from harness.orchestration.dynamic_flow import DynamicFlowGenerator
-from harness.orchestration.models import ExecutionPlan, PlanStep, PlannerOutput
+from harness.orchestration.models import ExecutionPlan, PlannerOutput, PlanStep
 from harness.orchestration.pipeline import AutonomousPipeline
 from harness.orchestration.planner import PlannerAgent
-from harness.risk.service import RiskLevel
 
 
 class _SpyAuditLogger(AuditLogger):
@@ -90,7 +86,9 @@ def _make_plan_output() -> PlannerOutput:
         steps=[
             PlanStep(step_id="s1", agent_id="analyzer", description="データ分析"),
             PlanStep(
-                step_id="s2", agent_id="reporter", description="レポート生成",
+                step_id="s2",
+                agent_id="reporter",
+                description="レポート生成",
                 dependencies=["s1"],
             ),
         ],

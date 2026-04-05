@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from apps.code_migration_assistant.runtime_env import load_code_migration_env
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _write_env(path: Path, content: str) -> None:

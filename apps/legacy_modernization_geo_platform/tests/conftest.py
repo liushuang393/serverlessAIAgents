@@ -8,12 +8,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
 from apps.legacy_modernization_geo_platform.backend.settings import GeoPlatformSettings
 from apps.legacy_modernization_geo_platform.main import create_app
+
 from harness.testing.fixtures import clean_env_fixture
 from infrastructure.security.auth_client.client import RemoteUser
 from kernel.runtime import resolve_app_runtime
+
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -60,7 +61,7 @@ AUTH_HEADERS: dict[str, str] = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def geo_settings(tmp_path: Path) -> GeoPlatformSettings:
     """テスト用 GeoPlatformSettings を生成する."""
     runtime = resolve_app_runtime("apps/legacy_modernization_geo_platform/app_config.json")
@@ -85,13 +86,13 @@ def geo_settings(tmp_path: Path) -> GeoPlatformSettings:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def geo_app(geo_settings: GeoPlatformSettings) -> FastAPI:
     """テスト用 FastAPI アプリケーションを生成する."""
     return create_app(geo_settings, auth_client_factory=StubAuthClient)
 
 
-@pytest.fixture()
+@pytest.fixture
 def geo_client(geo_app: FastAPI) -> Generator[TestClient]:
     """テスト用 HTTP クライアントを生成する（blocking portal 維持）."""
     from fastapi.testclient import TestClient as _TestClient
@@ -100,7 +101,7 @@ def geo_client(geo_app: FastAPI) -> Generator[TestClient]:
         yield client
 
 
-@pytest.fixture()
+@pytest.fixture
 def clean_env() -> Generator[dict[str, str]]:
     """harness/testing 標準のクリーン環境フィクスチャ."""
     with clean_env_fixture() as env:

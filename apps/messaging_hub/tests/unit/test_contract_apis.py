@@ -17,8 +17,7 @@ from apps.messaging_hub.agents.business_advisor_agent import BusinessAdvisorOutp
 from apps.messaging_hub.approval_manager import ApprovalManager
 from apps.messaging_hub.execution_tracker import ExecutionTracker
 from apps.messaging_hub.flight_watch import FlightOffer, FlightSearchResult, RankingWeights
-from apps.messaging_hub.skills_manager import SkillsManager
-from apps.messaging_hub.skills_manager import WorkflowRunResult
+from apps.messaging_hub.skills_manager import SkillsManager, WorkflowRunResult
 from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 from kernel.skills import RiskLevel
 
@@ -516,9 +515,7 @@ async def test_orchestration_requires_clarification_and_resumes(
     assert replay.status_code == 200
     replay_timeline = replay.json()["replay"]["timeline"]
     replay_kinds = {item["kind"] for item in replay_timeline}
-    assert {"action_log", "decision", "checkpoint", "feedback", "agui_event", "execution_event"}.issubset(
-        replay_kinds
-    )
+    assert {"action_log", "decision", "checkpoint", "feedback", "agui_event", "execution_event"}.issubset(replay_kinds)
 
 
 @pytest.mark.asyncio
@@ -618,7 +615,10 @@ async def test_orchestration_routes_existing_agent_and_gap_fills(
     routed_runtime_json = routed_runtime.json()
     assert routed_runtime_json["status"] == "completed"
     assert routed_runtime_json["result"]["agent"] == runtime_agent_name
-    assert routed_runtime_json["result"]["output"]["runtime_artifact_id"] == gap_fill_json["generated_artifact"]["artifact_id"]
+    assert (
+        routed_runtime_json["result"]["output"]["runtime_artifact_id"]
+        == gap_fill_json["generated_artifact"]["artifact_id"]
+    )
     assert routed_runtime_json["execution_summary"]["decision_count"] >= 1
 
 
@@ -638,7 +638,7 @@ async def test_capability_route_includes_specialist_and_verifier_execution_conte
     monkeypatch.setattr(
         main._orchestration_service._capability_router,
         "select_best_candidate",
-        lambda required_capability: {"name": "BusinessAdvisorAgent", "app_name": "messaging_hub"},
+        lambda _required_capability: {"name": "BusinessAdvisorAgent", "app_name": "messaging_hub"},
     )
     monkeypatch.setattr(main._orchestration_service._a2a_hub, "call", _fake_a2a_call)
 

@@ -18,6 +18,7 @@ Agent/サービスは具体的なDB実装を知る必要がありません。
 
 import logging
 import re
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 from urllib.parse import urlparse
 
@@ -566,7 +567,7 @@ def get_db(
             tuple(sorted(active_context.env_overrides.items())),
         )
 
-    def _cached_or_create(key: tuple[Any, ...], factory: Any) -> DBProvider:
+    def _cached_or_create(key: tuple[Any, ...], factory: Callable[[], DBProvider]) -> DBProvider:
         if not _new_instance:
             cached = _db_instances.get(key)
             if cached is not None:

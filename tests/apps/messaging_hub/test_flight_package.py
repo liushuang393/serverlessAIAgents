@@ -5,21 +5,18 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
-
 from apps.messaging_hub.flight.models import (
     DateWindow,
     FlightOffer,
     FlightSearchRequest,
     RankingWeights,
-    extract_request_from_message,
     build_clarification_questions,
+    extract_request_from_message,
     merge_clarification_answers,
 )
-from apps.messaging_hub.flight.ranking import rank_offers, _calculate_convenience_score
 from apps.messaging_hub.flight.providers.fake import FakeFlightProvider
+from apps.messaging_hub.flight.ranking import _calculate_convenience_score, rank_offers
 
 
 # === モデルテスト ===
@@ -116,20 +113,38 @@ class TestRankOffers:
     def _make_offers(self) -> list[FlightOffer]:
         return [
             FlightOffer(
-                offer_id="1", provider="fake", origin="NRT", destination="LAX",
-                depart_date="2025-07-01", return_date="2025-07-10",
-                price=300.0, total_duration_minutes=700, stops=0,
+                offer_id="1",
+                provider="fake",
+                origin="NRT",
+                destination="LAX",
+                depart_date="2025-07-01",
+                return_date="2025-07-10",
+                price=300.0,
+                total_duration_minutes=700,
+                stops=0,
             ),
             FlightOffer(
-                offer_id="2", provider="fake", origin="NRT", destination="LAX",
-                depart_date="2025-07-01", return_date="2025-07-10",
-                price=200.0, total_duration_minutes=900, stops=1,
+                offer_id="2",
+                provider="fake",
+                origin="NRT",
+                destination="LAX",
+                depart_date="2025-07-01",
+                return_date="2025-07-10",
+                price=200.0,
+                total_duration_minutes=900,
+                stops=1,
                 layover_minutes=[120],
             ),
             FlightOffer(
-                offer_id="3", provider="fake", origin="NRT", destination="LAX",
-                depart_date="2025-07-01", return_date="2025-07-10",
-                price=500.0, total_duration_minutes=600, stops=0,
+                offer_id="3",
+                provider="fake",
+                origin="NRT",
+                destination="LAX",
+                depart_date="2025-07-01",
+                return_date="2025-07-10",
+                price=500.0,
+                total_duration_minutes=600,
+                stops=0,
             ),
         ]
 
@@ -164,18 +179,31 @@ class TestConvenienceScore:
 
     def test_direct_flight(self) -> None:
         offer = FlightOffer(
-            offer_id="1", provider="f", origin="A", destination="B",
-            depart_date="d", return_date="r", price=100.0,
-            total_duration_minutes=600, stops=0,
+            offer_id="1",
+            provider="f",
+            origin="A",
+            destination="B",
+            depart_date="d",
+            return_date="r",
+            price=100.0,
+            total_duration_minutes=600,
+            stops=0,
         )
         score = _calculate_convenience_score(offer)
         assert score == 1.0
 
     def test_red_eye_penalty(self) -> None:
         offer = FlightOffer(
-            offer_id="1", provider="f", origin="A", destination="B",
-            depart_date="d", return_date="r", price=100.0,
-            total_duration_minutes=600, stops=0, red_eye=True,
+            offer_id="1",
+            provider="f",
+            origin="A",
+            destination="B",
+            depart_date="d",
+            return_date="r",
+            price=100.0,
+            total_duration_minutes=600,
+            stops=0,
+            red_eye=True,
         )
         score = _calculate_convenience_score(offer)
         assert score < 1.0

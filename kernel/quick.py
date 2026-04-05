@@ -22,7 +22,6 @@ Example::
 
 from __future__ import annotations
 
-import functools
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
@@ -57,6 +56,8 @@ class QuickAgent(ABC):
 class _FuncAgent:
     """関数を AgentProtocol 互換にラップする内部クラス."""
 
+    __wrapped__: _AgentFn
+
     def __init__(self, func: _AgentFn, name: str) -> None:
         self.name = name
         self._func = func
@@ -82,7 +83,9 @@ def as_agent(*, name: str) -> Callable[[_AgentFn], _FuncAgent]:
 
     def _decorator(func: _AgentFn) -> _FuncAgent:
         agent = _FuncAgent(func=func, name=name)
-        functools.update_wrapper(agent, func)
+        agent.__doc__ = func.__doc__
+        agent.__module__ = func.__module__
+        agent.__wrapped__ = func
         return agent
 
     return _decorator

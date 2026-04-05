@@ -9,7 +9,7 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,6 +25,10 @@ from apps.code_migration_assistant.runtime_env import load_code_migration_env
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from infrastructure.observability.startup import log_startup_info
 from shared.config.manifest import load_app_manifest
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 logging.basicConfig(level=logging.INFO)
@@ -711,8 +715,9 @@ async def run_migration_task(task_id: str, runtime: TaskRuntime) -> None:
 _cors_origins = _resolve_cors_origins()
 _cors_allow_credentials = not (len(_cors_origins) == 1 and _cors_origins[0] == "*")
 
+
 @asynccontextmanager
-async def _lifespan(_app: FastAPI):
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     await _init_knowledge_managers()
     app_config_path = _APP_ROOT / "app_config.json"
     app_config = _load_app_config()

@@ -37,17 +37,13 @@ class TestPatternRegistry:
         """各パターンの予算配分比率が合計1.0になること."""
         for pattern, config in PATTERN_REGISTRY.items():
             total = sum(config.budget_ratios.values())
-            assert abs(total - 1.0) < 0.01, (
-                f"{pattern}: 予算比率合計 = {total}"
-            )
+            assert abs(total - 1.0) < 0.01, f"{pattern}: 予算比率合計 = {total}"
 
     def test_required_layers_in_budget(self) -> None:
         """必須レイヤーが予算配分に含まれていること."""
         for pattern, config in PATTERN_REGISTRY.items():
             for layer in config.required_layers:
-                assert layer in config.budget_ratios, (
-                    f"{pattern}: {layer} が予算配分に未定義"
-                )
+                assert layer in config.budget_ratios, f"{pattern}: {layer} が予算配分に未定義"
 
 
 class TestSingleTaskConfig:

@@ -404,6 +404,7 @@ def test_geo_stream_endpoint_supports_eventsource_query_auth(
     app = create_app(_build_settings(tmp_path), auth_client_factory=_StubAuthClient)
 
     with TestClient(app) as client:
+
         async def _stream_events(task_id: str) -> AsyncIterator[TaskEvent]:
             yield TaskEvent(
                 event_type="flow.start",

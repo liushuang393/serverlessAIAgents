@@ -107,10 +107,12 @@ class TestGuardrailPipeline:
     @pytest.mark.asyncio
     async def test_critical_short_circuit(self) -> None:
         """CRITICAL 失敗で短絡評価されるか."""
-        pipeline = GuardrailPipeline([
-            CriticalGuardrail(),
-            PassGuardrail(),  # CRITICAL 後なので実行されない
-        ])
+        pipeline = GuardrailPipeline(
+            [
+                CriticalGuardrail(),
+                PassGuardrail(),  # CRITICAL 後なので実行されない
+            ]
+        )
         result = await pipeline.run_pre_check({"question": "danger"})
         assert result.all_passed is False
         # CRITICAL で短絡 → results は 1 つだけ

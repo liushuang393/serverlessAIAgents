@@ -10,7 +10,6 @@ from harness.orchestration.app_adapter import (
     AppOrchestrationAdapter,
     convert_app_plan_to_execution_plan,
 )
-from harness.orchestration.models import ExecutionPlan, PlanStep
 from harness.risk.service import RiskLevel
 
 

@@ -12,7 +12,6 @@ from contracts.flow.contracts import (
 from kernel.flow.builder import create_flow
 from kernel.flow.context import FlowContext, ScopedContextView
 from kernel.flow.nodes import BranchNode
-from kernel.flow.types import AgentProtocol
 
 
 # ============================================================
@@ -45,14 +44,10 @@ class AllowMiddleware:
     def name(self) -> str:
         return "AllowMiddleware"
 
-    async def before_node(
-        self, node_id: str, node_name: str, inputs: dict
-    ) -> MiddlewareResult:
+    async def before_node(self, node_id: str, node_name: str, inputs: dict) -> MiddlewareResult:
         return MiddlewareResult(decision=MiddlewareDecision.ALLOW)
 
-    async def after_node(
-        self, node_id: str, node_name: str, result: dict, success: bool
-    ) -> MiddlewareResult:
+    async def after_node(self, node_id: str, node_name: str, result: dict, success: bool) -> MiddlewareResult:
         return MiddlewareResult(
             decision=MiddlewareDecision.ALLOW,
             metadata={"audited": True},
@@ -66,17 +61,13 @@ class DenyMiddleware:
     def name(self) -> str:
         return "DenyMiddleware"
 
-    async def before_node(
-        self, node_id: str, node_name: str, inputs: dict
-    ) -> MiddlewareResult:
+    async def before_node(self, node_id: str, node_name: str, inputs: dict) -> MiddlewareResult:
         return MiddlewareResult(
             decision=MiddlewareDecision.DENY,
             reason="テスト用拒否",
         )
 
-    async def after_node(
-        self, node_id: str, node_name: str, result: dict, success: bool
-    ) -> MiddlewareResult:
+    async def after_node(self, node_id: str, node_name: str, result: dict, success: bool) -> MiddlewareResult:
         return MiddlewareResult(decision=MiddlewareDecision.ALLOW)
 
 

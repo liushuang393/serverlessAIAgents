@@ -12,7 +12,7 @@ import pytest
 from apps.code_migration_assistant.agents.business_semantics_agent import BusinessSemanticsAgent
 from apps.code_migration_assistant.agents.migration_design_agent import MigrationDesignAgent
 from apps.code_migration_assistant.engine import MIGRATION_ANALYSIS, CodeMigrationEngine
-from apps.code_migration_assistant.workflow.capabilities import CAPABILITY_MAP, StageCapabilityRunner
+from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner
 from apps.code_migration_assistant.workflow.models import (
     BusinessSemanticsArtifact,
     DifferentialVerificationArtifact,
@@ -33,6 +33,10 @@ from apps.code_migration_assistant.workflow.models import (
 from apps.code_migration_assistant.workflow.pipeline_runtime import execute_stage_task, run_pipeline
 from apps.code_migration_assistant.workflow.reflection import run_reflection_loop
 from shared.integrations.context_bridge import FlowContext, SourceSystemType
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class _StaticAgent:

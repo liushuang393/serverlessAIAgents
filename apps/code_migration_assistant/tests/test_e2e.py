@@ -19,10 +19,10 @@ from typing import Any
 
 import pytest
 
+from apps.code_migration_assistant.cobol_project import COBOLProject
 from apps.code_migration_assistant.evolution.manager import EvolutionManager
 from apps.code_migration_assistant.output.organizer import OutputOrganizer
 from apps.code_migration_assistant.output.packager import OutputPackager
-from apps.code_migration_assistant.cobol_project import COBOLProject
 
 
 # サンプルCOBOLファイルのパス

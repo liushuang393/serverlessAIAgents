@@ -233,8 +233,7 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
         user_prompt = _build_user_prompt(input_data)
 
         response = await self._call_llm(
-            prompt=user_prompt,
-            system_prompt=_SYSTEM_PROMPT,
+            prompt=f"{_SYSTEM_PROMPT}\n\n{user_prompt}",
         )
 
         plan = _parse_plan_json(response, goal=input_data.user_request)
@@ -262,8 +261,7 @@ class PlannerAgent(ResilientAgent[PlannerInput, PlannerOutput]):
         available_agents = list({s.agent_id for s in request.original_plan.steps})
 
         response = await self._call_llm(
-            prompt=user_prompt,
-            system_prompt=_SYSTEM_PROMPT,
+            prompt=f"{_SYSTEM_PROMPT}\n\n{user_prompt}",
         )
 
         new_plan = _parse_plan_json(response, goal=request.original_plan.goal)

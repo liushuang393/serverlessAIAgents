@@ -32,6 +32,7 @@ from kernel.agents.resilient_agent import ResilientAgent
 from kernel.protocols.a2a_hub import get_hub
 from shared.config.manifest import load_app_manifest_dict
 
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 

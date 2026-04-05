@@ -12,6 +12,7 @@ from collections import defaultdict, deque
 from typing import TYPE_CHECKING, Any
 
 from kernel.flow.builder import FlowBuilder
+from kernel.flow.types import AgentProtocol
 
 
 if TYPE_CHECKING:
@@ -19,7 +20,6 @@ if TYPE_CHECKING:
     from harness.orchestration.models import ExecutionPlan, PlanStep
     from kernel.flow.context import FlowContext
     from kernel.flow.flow import Flow
-    from kernel.flow.types import AgentProtocol
 
 _logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class _AgentResolver:
         # Registry フォールバック
         if self._registry is not None:
             instance = self._registry.get_instance(agent_id)
-            if instance is not None:
+            if isinstance(instance, AgentProtocol):
                 return instance
 
         msg = f"エージェント '{agent_id}' が見つかりません"

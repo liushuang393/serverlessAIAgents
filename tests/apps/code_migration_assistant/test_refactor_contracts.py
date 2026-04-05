@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from apps.code_migration_assistant.adapters.factory import AdapterFactory
+
 from contracts.runtime.migration_execution import MigrationTaskProfile, StageExecutionPlan
 
 

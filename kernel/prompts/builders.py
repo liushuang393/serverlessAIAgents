@@ -12,7 +12,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from kernel.prompts.models import (
@@ -25,10 +24,14 @@ from kernel.prompts.models import (
     ToolEnvironmentLayer,
 )
 
+
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from harness.context.key_notes import KeyNotesStore, NoteImportance
     from harness.context.turn_compressor import TurnBasedCompressor
-    from kernel.memory.context_builder import ContextBlock, ContextBuilder, MemoryManager
+    from kernel.memory.context_builder import ContextBlock, ContextBuilder
+    from kernel.memory.memory_manager import MemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +182,7 @@ class ConversationStateBuilder:
             decisions.append(note.content)
 
         # コンテキストサマリ取得
-        context = compressor.get_context_with_notes()
+        compressor.get_context_with_notes()
 
         return ConversationStateLayer(
             decisions=decisions,

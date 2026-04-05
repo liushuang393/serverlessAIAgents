@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -20,6 +20,10 @@ from apps.messaging_hub.execution_substrate import (
 )
 from contracts.policy import EvalResult
 from kernel.state.models import Decision, DecisionType
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.mark.asyncio

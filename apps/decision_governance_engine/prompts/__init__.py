@@ -148,17 +148,17 @@ COGNITIVE_GATE_TASK = TaskSystemLayer(
 
 
 __all__ = [
-    "PROMPTS_DIR",
-    "build_full_prompt",
-    "get_agent_prompt",
-    "get_common_system_prompt",
-    "load_prompt",
+    "COGNITIVE_GATE_TASK",
     # 6層レイヤー
     "CORE_SYSTEM",
     "DAO_TASK",
     "FA_TASK",
-    "SHU_TASK",
+    "PROMPTS_DIR",
     "QI_TASK",
     "REVIEW_TASK",
-    "COGNITIVE_GATE_TASK",
+    "SHU_TASK",
+    "build_full_prompt",
+    "get_agent_prompt",
+    "get_common_system_prompt",
+    "load_prompt",
 ]

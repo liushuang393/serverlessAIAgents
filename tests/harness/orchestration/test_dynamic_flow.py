@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -12,7 +12,6 @@ from harness.orchestration.dynamic_flow import (
     _topological_layers,
 )
 from harness.orchestration.models import ExecutionPlan, PlanStep
-from harness.risk.service import RiskLevel
 
 
 class _MockAgent:

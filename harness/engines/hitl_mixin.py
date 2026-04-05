@@ -18,8 +18,12 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from dataclasses import dataclass, field
-from kernel.engines.base import HITLEngineConfig
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from harness.approval.checkpointer import CheckpointData
+    from harness.approval.types import ApprovalResponse, Command
 
 
 class HITLEngineMixin:
@@ -38,6 +42,14 @@ class HITLEngineMixin:
     - _is_resuming: bool
     - _resume_checkpoint_id: str | None
     """
+
+    _config: Any
+    _thread_id: str | None
+    _run_id: str
+    _flow_id: str
+    _logger: logging.Logger
+    _is_resuming: bool
+    _resume_checkpoint_id: str | None
 
     def _setup_hitl_context(self) -> None:
         """HITL コンテキストを設定."""
@@ -169,14 +181,17 @@ class HITLEngineMixin:
 
         # 合成先 Engine の属性を設定
         if hasattr(self, "_is_resuming"):
-            self._is_resuming = True  # type: ignore[attr-defined]
+            self._is_resuming = True
         if hasattr(self, "_resume_checkpoint_id"):
-            self._resume_checkpoint_id = checkpoint.checkpoint_id  # type: ignore[attr-defined]
+            self._resume_checkpoint_id = checkpoint.checkpoint_id
 
         inputs = self._rehydrate_inputs(checkpoint, response, command)
 
         # 合成先の run() を呼び出す
-        return await self.run(inputs, thread_id=thread_id)  # type: ignore[attr-defined]
+        result_obj: object = await self.run(inputs, thread_id=thread_id)  # type: ignore[attr-defined]
+        if isinstance(result_obj, dict):
+            return {str(key): value for key, value in result_obj.items()}
+        return {"result": result_obj}
 
     def _rehydrate_inputs(
         self,

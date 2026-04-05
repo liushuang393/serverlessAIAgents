@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from kernel.agents.agent_registry import reset_global_agent_registry
 from kernel.agents.local_agent_bus import (
@@ -45,7 +45,7 @@ class LocalA2AHub:
         if resolved_card is None:
             msg = f"Failed to build AgentCard for {descriptor.agent_id}"
             raise ValueError(msg)
-        return resolved_card
+        return cast("AgentCard", resolved_card)
 
     async def unregister(self, agent_name: str) -> None:
         """Agent を解除."""

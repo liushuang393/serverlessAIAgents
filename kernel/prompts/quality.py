@@ -15,10 +15,12 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-from kernel.prompts.assembler import _estimate_tokens
-from kernel.prompts.models import AssembledPrompt
-from kernel.prompts.patterns import PatternConfig
+
+if TYPE_CHECKING:
+    from kernel.prompts.models import AssembledPrompt
+    from kernel.prompts.patterns import PatternConfig
 
 
 @dataclass
@@ -89,12 +91,8 @@ class PromptQualityChecker:
         # フレーズレベルの重複検出（N-gram方式）
         phrases = self._extract_phrases(text)
         phrase_counts = Counter(phrases)
-        phrase_duplicates = sum(
-            count - 1 for count in phrase_counts.values() if count > 1
-        )
-        phrase_redundancy = (
-            phrase_duplicates / len(phrases) if phrases else 0.0
-        )
+        phrase_duplicates = sum(count - 1 for count in phrase_counts.values() if count > 1)
+        phrase_redundancy = phrase_duplicates / len(phrases) if phrases else 0.0
 
         # 加重平均（行重複をより重視）
         return min(1.0, line_redundancy * 0.7 + phrase_redundancy * 0.3)
@@ -146,12 +144,11 @@ class PromptQualityChecker:
         # 最適ゾーン: 30%-80%
         if 0.3 <= usage_ratio <= 0.8:
             return 1.0
-        elif usage_ratio < 0.3:
+        if usage_ratio < 0.3:
             # 活用不足（情報が少なすぎる可能性）
             return usage_ratio / 0.3
-        else:
-            # 圧迫（トークン超過に近い）
-            return max(0.0, 1.0 - (usage_ratio - 0.8) / 0.2)
+        # 圧迫（トークン超過に近い）
+        return max(0.0, 1.0 - (usage_ratio - 0.8) / 0.2)
 
     def full_check(
         self,
@@ -187,11 +184,7 @@ class PromptQualityChecker:
 
         # 最小性の問題
         if minimality < 0.5:
-            usage_ratio = (
-                prompt.token_count / prompt.token_budget
-                if prompt.token_budget > 0
-                else 0
-            )
+            usage_ratio = prompt.token_count / prompt.token_budget if prompt.token_budget > 0 else 0
             if usage_ratio < 0.3:
                 issues.append("トークン使用率が低い（情報不足の可能性）")
                 suggestions.append("必要な情報が欠けていないか確認してください")
@@ -201,9 +194,7 @@ class PromptQualityChecker:
 
         # ドロップされたレイヤーの警告
         if prompt.layers_dropped:
-            issues.append(
-                f"予算不足でドロップされたレイヤー: {', '.join(prompt.layers_dropped)}"
-            )
+            issues.append(f"予算不足でドロップされたレイヤー: {', '.join(prompt.layers_dropped)}")
             suggestions.append("トークン予算を増やすか、情報を圧縮してください")
 
         return QualityReport(
@@ -218,8 +209,4 @@ class PromptQualityChecker:
         """テキストからフレーズを抽出（冗長性チェック用）."""
         # 句読点で分割してフレーズを抽出
         phrases = re.split(r"[。、\n,.\-:：]", text)
-        return [
-            p.strip()
-            for p in phrases
-            if len(p.strip()) >= _MIN_PHRASE_LENGTH
-        ]
+        return [p.strip() for p in phrases if len(p.strip()) >= _MIN_PHRASE_LENGTH]

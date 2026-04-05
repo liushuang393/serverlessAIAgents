@@ -149,9 +149,7 @@ def test_app_contract_schema_accepts_runtime_llm_shape() -> None:
                 },
             },
             "agent_overrides": {
-                "FAQAgent": {
-                    "text": {"provider": "openai", "model_id": "faq_agent_text", "model_type": "text"}
-                }
+                "FAQAgent": {"text": {"provider": "openai", "model_id": "faq_agent_text", "model_type": "text"}}
             },
             "allowed_modalities": ["text", "embedding"],
             "extra_model_refs": [

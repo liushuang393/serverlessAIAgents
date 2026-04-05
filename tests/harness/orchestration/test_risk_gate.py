@@ -53,7 +53,8 @@ class TestRiskGateMedium:
 
     @pytest.mark.asyncio
     async def test_medium_risk_allows_with_enhanced_logging(
-        self, spy_logger: _SpyAuditLogger,
+        self,
+        spy_logger: _SpyAuditLogger,
     ) -> None:
         plan = _make_plan(("s1", RiskLevel.MEDIUM))
         mw = RiskGateMiddleware(plan, spy_logger)
@@ -69,7 +70,8 @@ class TestRiskGateHigh:
 
     @pytest.mark.asyncio
     async def test_high_risk_requires_approval_no_manager(
-        self, spy_logger: _SpyAuditLogger,
+        self,
+        spy_logger: _SpyAuditLogger,
     ) -> None:
         """ApprovalManager 未設定の場合は APPROVAL_REQUIRED を返す."""
         plan = _make_plan(("s1", RiskLevel.HIGH))

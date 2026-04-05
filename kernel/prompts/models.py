@@ -50,15 +50,9 @@ class CoreSystemLayer(BaseModel):
     """
 
     role: str = Field(..., description="Agentの役割定義")
-    success_criteria: list[str] = Field(
-        default_factory=list, description="成功基準リスト"
-    )
-    prohibitions: list[str] = Field(
-        default_factory=list, description="禁止事項リスト"
-    )
-    output_principles: list[str] = Field(
-        default_factory=list, description="出力原則リスト"
-    )
+    success_criteria: list[str] = Field(default_factory=list, description="成功基準リスト")
+    prohibitions: list[str] = Field(default_factory=list, description="禁止事項リスト")
+    output_principles: list[str] = Field(default_factory=list, description="出力原則リスト")
     priority: LayerPriority = Field(default=LayerPriority.REQUIRED)
 
 
@@ -73,18 +67,10 @@ class TaskSystemLayer(BaseModel):
     """
 
     goal: str = Field(..., description="タスクの目標")
-    deliverables: list[str] = Field(
-        default_factory=list, description="成果物リスト"
-    )
-    constraints: list[str] = Field(
-        default_factory=list, description="タスク制約"
-    )
-    task_success_criteria: list[str] = Field(
-        default_factory=list, description="タスク固有の成功基準"
-    )
-    priorities: list[str] = Field(
-        default_factory=list, description="優先順位リスト"
-    )
+    deliverables: list[str] = Field(default_factory=list, description="成果物リスト")
+    constraints: list[str] = Field(default_factory=list, description="タスク制約")
+    task_success_criteria: list[str] = Field(default_factory=list, description="タスク固有の成功基準")
+    priorities: list[str] = Field(default_factory=list, description="優先順位リスト")
     priority: LayerPriority = Field(default=LayerPriority.REQUIRED)
 
 
@@ -100,12 +86,8 @@ class RuntimeContextLayer(BaseModel):
     """
 
     user_request: str = Field(default="", description="ユーザーリクエスト要約")
-    extracted_points: list[str] = Field(
-        default_factory=list, description="入力から抽出された要点"
-    )
-    reference_summaries: list[str] = Field(
-        default_factory=list, description="参照資料からの要約"
-    )
+    extracted_points: list[str] = Field(default_factory=list, description="入力から抽出された要点")
+    reference_summaries: list[str] = Field(default_factory=list, description="参照資料からの要約")
     priority: LayerPriority = Field(default=LayerPriority.HIGH)
 
 
@@ -119,18 +101,10 @@ class ConversationStateLayer(BaseModel):
     マルチターン時のみ使用。
     """
 
-    decisions: list[str] = Field(
-        default_factory=list, description="確定した決定事項"
-    )
-    open_items: list[str] = Field(
-        default_factory=list, description="未解決事項"
-    )
-    next_actions: list[str] = Field(
-        default_factory=list, description="次のアクション"
-    )
-    continued_constraints: list[str] = Field(
-        default_factory=list, description="継続する制約"
-    )
+    decisions: list[str] = Field(default_factory=list, description="確定した決定事項")
+    open_items: list[str] = Field(default_factory=list, description="未解決事項")
+    next_actions: list[str] = Field(default_factory=list, description="次のアクション")
+    continued_constraints: list[str] = Field(default_factory=list, description="継続する制約")
     turn_count: int = Field(default=0, description="現在のターン数")
     priority: LayerPriority = Field(default=LayerPriority.MEDIUM)
 
@@ -145,15 +119,9 @@ class MemoryProfileLayer(BaseModel):
     必要な時だけ注入する（relevance gating）。
     """
 
-    memory_blocks: list[str] = Field(
-        default_factory=list, description="注入される記憶ブロック"
-    )
-    key_notes: list[str] = Field(
-        default_factory=list, description="永続的な重要情報"
-    )
-    user_preferences: dict[str, str] = Field(
-        default_factory=dict, description="ユーザー嗜好"
-    )
+    memory_blocks: list[str] = Field(default_factory=list, description="注入される記憶ブロック")
+    key_notes: list[str] = Field(default_factory=list, description="永続的な重要情報")
+    user_preferences: dict[str, str] = Field(default_factory=dict, description="ユーザー嗜好")
     priority: LayerPriority = Field(default=LayerPriority.LOW)
 
 
@@ -165,9 +133,7 @@ class ToolDescription(BaseModel):
 
     name: str = Field(..., description="ツール名")
     description: str = Field(..., description="ツールの説明")
-    parameters_summary: str = Field(
-        default="", description="パラメータの要約"
-    )
+    parameters_summary: str = Field(default="", description="パラメータの要約")
 
 
 class ToolEnvironmentLayer(BaseModel):
@@ -176,15 +142,9 @@ class ToolEnvironmentLayer(BaseModel):
     Agentが今できることの説明。ツール使用パターン時のみ注入。
     """
 
-    available_tools: list[ToolDescription] = Field(
-        default_factory=list, description="利用可能ツール"
-    )
-    environment_info: dict[str, str] = Field(
-        default_factory=dict, description="実行環境情報"
-    )
-    tool_usage_guidelines: str = Field(
-        default="", description="ツール使用ガイドライン"
-    )
+    available_tools: list[ToolDescription] = Field(default_factory=list, description="利用可能ツール")
+    environment_info: dict[str, str] = Field(default_factory=dict, description="実行環境情報")
+    tool_usage_guidelines: str = Field(default="", description="ツール使用ガイドライン")
     priority: LayerPriority = Field(default=LayerPriority.MEDIUM)
 
 
@@ -199,20 +159,12 @@ class AssembledPrompt(BaseModel):
 
     system_prompt: str = Field(..., description="合成されたシステムプロンプト")
     pattern: PromptPattern = Field(..., description="使用パターン")
-    layers_used: list[str] = Field(
-        default_factory=list, description="使用されたレイヤー名"
-    )
+    layers_used: list[str] = Field(default_factory=list, description="使用されたレイヤー名")
     token_count: int = Field(default=0, description="合計トークン数")
     token_budget: int = Field(default=0, description="トークン予算")
-    layers_truncated: list[str] = Field(
-        default_factory=list, description="切り詰められたレイヤー"
-    )
-    layers_dropped: list[str] = Field(
-        default_factory=list, description="予算不足でスキップされたレイヤー"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="メタデータ"
-    )
+    layers_truncated: list[str] = Field(default_factory=list, description="切り詰められたレイヤー")
+    layers_dropped: list[str] = Field(default_factory=list, description="予算不足でスキップされたレイヤー")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="メタデータ")
 
 
 # === レイヤーセット ===

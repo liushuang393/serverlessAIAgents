@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import time
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.code_migration_assistant.backend import migration_router as router_module
 from apps.code_migration_assistant.backend.migration_task_store import HITLRequest
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _disable_auth(monkeypatch: Any) -> None:

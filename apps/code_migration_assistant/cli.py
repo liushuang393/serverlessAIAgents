@@ -257,7 +257,7 @@ def _seed_resume_state(
         stage = str(task.immutable.stage)
         if stage not in STAGE_ORDER:
             continue
-        updates = {
+        updates: dict[str, Any] = {
             "status": BacklogTaskStatus.DONE if STAGE_ORDER.index(stage) < start_index else BacklogTaskStatus.PENDING,
             "notes": [],
             "unknowns": [],
@@ -737,7 +737,7 @@ async def run_contract_payload(
 
 async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
     """既存互換用の単一ファイル移行ヘルパー."""
-    payload = {
+    payload: dict[str, Any] = {
         "task_id": f"legacy-{uuid.uuid4().hex[:8]}",
         "source_path": str(Path(file_path).resolve()),
         "output_root": str((Path.cwd() / "migration_output").resolve()),
@@ -812,7 +812,7 @@ async def _run_migrate_command(args: argparse.Namespace) -> int:
     source_path = Path(args.source).resolve()
     output_root = Path(args.output).resolve()
 
-    payload = {
+    payload: dict[str, Any] = {
         "task_id": f"cli-{uuid.uuid4().hex[:8]}",
         "source_path": str(source_path),
         "output_root": str(output_root),
@@ -874,7 +874,7 @@ def cmd_migrate(args: argparse.Namespace) -> int:
             print(f"  - {cobol_file.program_name} ({cobol_file.relative_path})")
         print()
 
-    payload = {
+    payload: dict[str, Any] = {
         "task_id": f"cli-{uuid.uuid4().hex[:8]}",
         "source_path": str(source_path),
         "output_root": str(output_root),
@@ -1079,7 +1079,7 @@ def cmd_retry(args: argparse.Namespace) -> int:
                 )
             return 1
 
-    payload = {
+    payload: dict[str, Any] = {
         "task_id": f"retry-{uuid.uuid4().hex[:8]}",
         "source_path": str(source_path),
         "output_root": str(output_root),

@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import pytest
 
-from harness.orchestration.models import ExecutionPlan, PlanStep, ReplanRequest
+from harness.orchestration.models import ExecutionPlan, PlannerInput, PlanStep
 from harness.orchestration.planner import (
     PlannerAgent,
     _build_user_prompt,
     _estimate_step_risk,
     _parse_plan_json,
 )
-from harness.orchestration.models import PlannerInput
 from harness.risk.service import RiskLevel
 
 
@@ -40,7 +38,8 @@ class TestEstimateStepRisk:
     def test_explicit_risk_preserved(self) -> None:
         """LLM が明示的に指定した CRITICAL は上書きしない."""
         step = PlanStep(
-            step_id="s1", agent_id="a1",
+            step_id="s1",
+            agent_id="a1",
             description="安全な読み取り",
             risk_level=RiskLevel.CRITICAL,
         )
@@ -51,26 +50,28 @@ class TestParsePlanJson:
     """LLM 出力 JSON パースのテスト."""
 
     def test_valid_json(self) -> None:
-        raw = json.dumps({
-            "steps": [
-                {
-                    "step_id": "s1",
-                    "agent_id": "analyzer",
-                    "description": "データ分析",
-                    "input_spec": {"key": "value"},
-                    "dependencies": [],
-                    "risk_level": "low",
-                },
-                {
-                    "step_id": "s2",
-                    "agent_id": "reporter",
-                    "description": "レポート生成",
-                    "dependencies": ["s1"],
-                    "risk_level": "medium",
-                },
-            ],
-            "reasoning": "分析→レポートの順序で実行",
-        })
+        raw = json.dumps(
+            {
+                "steps": [
+                    {
+                        "step_id": "s1",
+                        "agent_id": "analyzer",
+                        "description": "データ分析",
+                        "input_spec": {"key": "value"},
+                        "dependencies": [],
+                        "risk_level": "low",
+                    },
+                    {
+                        "step_id": "s2",
+                        "agent_id": "reporter",
+                        "description": "レポート生成",
+                        "dependencies": ["s1"],
+                        "risk_level": "medium",
+                    },
+                ],
+                "reasoning": "分析→レポートの順序で実行",
+            }
+        )
 
         plan = _parse_plan_json(raw, goal="テスト")
 
@@ -94,19 +95,23 @@ class TestParsePlanJson:
             _parse_plan_json('{"steps": "not a list"}', goal="テスト")
 
     def test_auto_step_id(self) -> None:
-        raw = json.dumps({
-            "steps": [{"agent_id": "a1", "description": "d"}],
-        })
+        raw = json.dumps(
+            {
+                "steps": [{"agent_id": "a1", "description": "d"}],
+            }
+        )
         plan = _parse_plan_json(raw, goal="テスト")
         assert plan.steps[0].step_id == "step-1"
 
     def test_risk_heuristic_applied(self) -> None:
         """risk_level=low でも description にキーワードがあれば上書き."""
-        raw = json.dumps({
-            "steps": [
-                {"step_id": "s1", "agent_id": "a1", "description": "データを削除", "risk_level": "low"},
-            ],
-        })
+        raw = json.dumps(
+            {
+                "steps": [
+                    {"step_id": "s1", "agent_id": "a1", "description": "データを削除", "risk_level": "low"},
+                ],
+            }
+        )
         plan = _parse_plan_json(raw, goal="テスト")
         assert plan.steps[0].risk_level == RiskLevel.HIGH
 

@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from infrastructure.observability import startup
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _write_app_config(tmp_path: Path, *, llm_contracts: dict, runtime_database: dict | None = None) -> Path:

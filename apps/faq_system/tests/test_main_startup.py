@@ -52,7 +52,7 @@ def test_log_faq_startup_uses_unified_startup_summary(monkeypatch) -> None:
     monkeypatch.setattr(
         type(faq_main.db_manager),
         "resolved_url",
-        property(lambda self: "postgresql+asyncpg://faq:secret@localhost:5433/faq_system"),
+        property(lambda _self: "postgresql+asyncpg://faq:secret@localhost:5433/faq_system"),
     )
 
     faq_main._log_faq_startup("0.0.0.0", 8000)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
 from fastapi import FastAPI
@@ -11,6 +11,10 @@ from fastapi.testclient import TestClient
 from control_plane.routers.dev_studio import init_dev_studio_services
 from control_plane.routers.dev_studio import router as dev_studio_router
 from control_plane.services.app_discovery import AppDiscoveryService
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _build_client(tmp_path: Path, monkeypatch) -> TestClient:
@@ -26,13 +30,13 @@ def test_proxy_passes_json_response(tmp_path, monkeypatch) -> None:
     """proxy は upstream の JSON を返す."""
 
     class _FakeAsyncClient:
-        def __init__(self, *args, **kwargs) -> None:  # noqa: D401, ANN002, ANN003
+        def __init__(self, *args, **kwargs) -> None:
             del args, kwargs
 
-        async def __aenter__(self):  # noqa: D401
+        async def __aenter__(self):
             return self
 
-        async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001
+        async def __aexit__(self, exc_type, exc, tb) -> None:
             del exc_type, exc, tb
 
         async def request(self, method: str, url: str, **kwargs) -> httpx.Response:
@@ -56,18 +60,19 @@ def test_proxy_connect_error_returns_503(tmp_path, monkeypatch) -> None:
     """upstream 不達時は 503 を返す."""
 
     class _BrokenAsyncClient:
-        def __init__(self, *args, **kwargs) -> None:  # noqa: D401, ANN002, ANN003
+        def __init__(self, *args, **kwargs) -> None:
             del args, kwargs
 
-        async def __aenter__(self):  # noqa: D401
+        async def __aenter__(self):
             return self
 
-        async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001
+        async def __aexit__(self, exc_type, exc, tb) -> None:
             del exc_type, exc, tb
 
         async def request(self, method: str, url: str, **kwargs) -> httpx.Response:
             del kwargs
-            raise httpx.ConnectError("down", request=httpx.Request(method, url))
+            msg = "down"
+            raise httpx.ConnectError(msg, request=httpx.Request(method, url))
 
     monkeypatch.setattr("control_plane.routers.dev_studio.httpx.AsyncClient", _BrokenAsyncClient)
     client = _build_client(tmp_path, monkeypatch)

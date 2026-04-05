@@ -209,7 +209,14 @@ class RiskGateMiddleware:
 
         if self._approval_manager is not None:
             approval_request = ApprovalRequest(
-                description=f"[HIGH リスク] {step.description}",
+                action="execute",
+                reason=f"[HIGH リスク] {step.description}",
+                resource_id=step.step_id,
+                resource_type="agent_step",
+                context={
+                    "node_id": node_id,
+                    "node_name": node_name,
+                },
                 metadata={
                     "step_id": step.step_id,
                     "agent_id": step.agent_id,

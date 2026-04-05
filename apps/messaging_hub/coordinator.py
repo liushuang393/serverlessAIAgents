@@ -24,7 +24,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import quote
 
 from apps.messaging_hub.control_plane import (
@@ -852,10 +852,16 @@ class PersonalAssistantCoordinator(ResilientAgent[Any, Any]):
         )
         handler_name = getattr(handler, "__name__", "")
         if handler_name == "_execute_business_advice":
-            return await handler(intent, context)
+            business_handler = cast("Callable[[Intent, dict[str, Any]], Awaitable[dict[str, Any]]]", handler)
+            return await business_handler(intent, context)
         if handler_name == "_execute_general_task":
-            return await handler(intent.original_text, context)
-        return await handler(params, context)
+            general_handler = cast("Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]", handler)
+            return await general_handler(intent.original_text, context)
+        param_handler = cast(
+            "Callable[[dict[str, Any], dict[str, Any]], Awaitable[dict[str, Any]]]",
+            handler,
+        )
+        return await param_handler(params, context)
 
     async def _answer_query(
         self,

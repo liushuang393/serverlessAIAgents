@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from kernel.prompts.assembler import (
     PromptAssembler,
     _estimate_tokens,
@@ -97,7 +95,8 @@ class TestPromptAssembler:
         """SINGLE_TASK パターンでの合成."""
         layers = self._make_basic_layers()
         result = self.assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK,
+            layers,
+            PromptPattern.SINGLE_TASK,
         )
         assert result.system_prompt != ""
         assert result.pattern == PromptPattern.SINGLE_TASK
@@ -112,7 +111,8 @@ class TestPromptAssembler:
         assembler = PromptAssembler(default_budget=100)
         layers = self._make_basic_layers()
         result = assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK,
+            layers,
+            PromptPattern.SINGLE_TASK,
         )
         # CoreSystem は REQUIRED なので必ず含まれる
         assert LAYER_CORE_SYSTEM in result.layers_used
@@ -130,7 +130,8 @@ class TestPromptAssembler:
             ),
         )
         result = assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK,
+            layers,
+            PromptPattern.SINGLE_TASK,
         )
         # LOW の memory_profile がドロップされる可能性が高い
         if LAYER_MEMORY_PROFILE in result.layers_dropped:
@@ -140,7 +141,8 @@ class TestPromptAssembler:
         """空のレイヤーセット."""
         layers = PromptLayerSet()
         result = self.assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK,
+            layers,
+            PromptPattern.SINGLE_TASK,
         )
         assert result.system_prompt == ""
         assert result.layers_used == []
@@ -149,7 +151,9 @@ class TestPromptAssembler:
         """カスタムトークン予算."""
         layers = self._make_basic_layers()
         result = self.assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK, token_budget=8000,
+            layers,
+            PromptPattern.SINGLE_TASK,
+            token_budget=8000,
         )
         assert result.token_budget == 8000
 
@@ -168,7 +172,8 @@ class TestPromptAssembler:
             ),
         )
         result = self.assembler.assemble(
-            layers, PromptPattern.MULTI_TURN,
+            layers,
+            PromptPattern.MULTI_TURN,
         )
         assert "確定事項" in result.system_prompt
         assert "JWT認証を採用" in result.system_prompt
@@ -193,7 +198,8 @@ class TestPromptAssembler:
             ),
         )
         result = self.assembler.assemble(
-            layers, PromptPattern.TOOL_AUGMENTED,
+            layers,
+            PromptPattern.TOOL_AUGMENTED,
         )
         assert "search" in result.system_prompt
         assert "全文検索" in result.system_prompt
@@ -246,7 +252,8 @@ class TestPromptAssembler:
             ),
         )
         result = assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK,
+            layers,
+            PromptPattern.SINGLE_TASK,
         )
         # REQUIRED なので含まれるが、切り詰めが発生しうる
         assert LAYER_CORE_SYSTEM in result.layers_used
@@ -255,7 +262,8 @@ class TestPromptAssembler:
         """metadata がデフォルトで空であること."""
         layers = self._make_basic_layers()
         result = self.assembler.assemble(
-            layers, PromptPattern.SINGLE_TASK,
+            layers,
+            PromptPattern.SINGLE_TASK,
         )
         assert result.metadata == {}
 

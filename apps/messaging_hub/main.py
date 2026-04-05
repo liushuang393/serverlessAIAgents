@@ -70,6 +70,7 @@ from apps.messaging_hub.storage import SQLiteMessagingHubStore
 from harness.budget.service import BudgetConfig, TokenBudgetManager
 from harness.gating.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from harness.scoring.service import DimensionScore, ExecutionScorer, ScoreDimension, ScoringResult
+from infrastructure.observability.startup import log_startup_info
 from kernel.protocols.a2ui.components import CardComponent, TextComponent
 from kernel.protocols.agui_events import A2UIComponentEvent, ApprovalRequiredEvent
 from kernel.runtime import WebSocketHub
@@ -81,7 +82,6 @@ from kernel.skills import (
     create_skill_gateway,
 )
 from kernel.tools.cli.runtime_manager import CLIRuntimeManager
-from infrastructure.observability.startup import log_startup_info
 from shared.channels import (
     DiscordAdapter,
     MessageGateway,

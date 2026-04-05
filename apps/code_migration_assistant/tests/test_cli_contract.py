@@ -190,4 +190,3 @@ async def test_run_contract_payload_quality_issue_returns_needs_fix(
     assert summary["session_status"] == "needs_fix"
     assert summary["dispatched_task"]["task_id"] == "SAMPLE:quality"
     assert summary["backlog_completed"] is False
-

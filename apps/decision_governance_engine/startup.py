@@ -15,6 +15,7 @@ import yaml
 
 from infrastructure.observability.startup import log_startup_info as _framework_log_startup
 
+
 _APP_CONFIG_PATH = Path(__file__).parent / "app_config.json"
 
 

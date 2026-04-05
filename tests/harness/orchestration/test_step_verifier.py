@@ -8,7 +8,6 @@ from contracts.flow.contracts import MiddlewareDecision
 from harness.governance.audit import AuditEvent, AuditLogger
 from harness.orchestration.models import ExecutionPlan, PlanStep
 from harness.orchestration.step_verifier import StepVerifierMiddleware
-from harness.risk.service import RiskLevel
 from kernel.agents.dual_verifier import DualVerifier, VerifyResult, VerifyStatus, VerifyType
 
 
@@ -119,7 +118,8 @@ class TestVerificationFail:
 
     @pytest.mark.asyncio
     async def test_fail_exceeds_max_retries_requests_replan(
-        self, spy_logger: _SpyAuditLogger,
+        self,
+        spy_logger: _SpyAuditLogger,
     ) -> None:
         plan = _make_plan()
         verifier = _make_verifier(VerifyStatus.FAIL, "致命的エラー")
