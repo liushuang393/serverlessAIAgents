@@ -21,7 +21,7 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-7 flex flex-col gap-3 shadow-sm hover:bg-white/[0.05] transition-all">
+    <div className="rounded-xl bg-white/[0.03] border border-white/5 p-7 flex flex-col gap-4 shadow-sm hover:bg-white/[0.05] transition-all">
       <Icon size={24} className={color} />
       <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
       <p className="text-xs text-[var(--text-muted)] font-medium uppercase tracking-wider">{label}</p>
@@ -51,7 +51,7 @@ export function KBDashboard() {
   return (
     <div className="space-y-12">
       {/* 統計カード */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           icon={Database}
           label={t("rag.stat_collections")}
@@ -106,7 +106,7 @@ export function KBDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {collections.slice(0, 6).map((col) => (
             <button
               key={col.collection_name}
@@ -115,9 +115,9 @@ export function KBDashboard() {
                 useRAGStore.getState().selectCollection(col.collection_name);
                 setActiveTab("documents");
               }}
-              className="text-left rounded-xl bg-white/[0.03] border border-white/5 p-6 hover:bg-white/[0.06] hover:border-[var(--primary)]/20 transition-all group"
+              className="text-left rounded-xl bg-white/[0.03] border border-white/5 p-7 hover:bg-white/[0.06] hover:border-[var(--primary)]/20 transition-all group flex flex-col gap-1"
             >
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-[var(--primary)]/10 transition-colors">
                   <Database size={16} className="text-indigo-400" />
                 </div>
@@ -148,11 +148,11 @@ export function KBDashboard() {
               {t("rag.view_all")}
             </button>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {ingestRuns.slice(0, 3).map((run) => (
               <div
                 key={run.run_id}
-                className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5 text-xs hover:bg-white/[0.04] transition-colors"
+                className="flex items-center justify-between px-5 py-4 rounded-xl bg-white/[0.02] border border-white/5 text-xs hover:bg-white/[0.04] transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <span

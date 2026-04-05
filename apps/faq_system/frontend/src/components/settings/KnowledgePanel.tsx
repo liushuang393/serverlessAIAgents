@@ -116,7 +116,7 @@ export const KnowledgePanel = ({
           }`}
       >
         {/* ヘッダー */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10 bg-gradient-to-r from-white/[0.03] to-transparent">
+        <div className="flex items-center justify-between p-6 px-8 border-b border-white/10 bg-gradient-to-r from-white/[0.03] to-transparent">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--primary)]/20 to-[var(--primary)]/5 flex items-center justify-center border border-[var(--primary)]/20 shadow-[0_0_20px_rgba(94,234,212,0.1)]">
               <Database size={20} className="text-[var(--primary)]" />
@@ -140,7 +140,7 @@ export const KnowledgePanel = ({
         </div>
 
         {/* タブナビゲーション */}
-        <div className="flex gap-1 px-6 pt-4 border-b border-white/5 bg-white/[0.01]">
+        <div className="flex gap-1 px-8 pt-[23px] border-b border-white/5 bg-white/[0.01]">
           {tabs.map(({ key, i18nKey, icon: Icon }) => {
             const isActive = activeTab === key;
             return (
@@ -163,7 +163,7 @@ export const KnowledgePanel = ({
         </div>
 
         {/* タブコンテンツ */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-black/10">
+        <div className="flex-1 overflow-y-auto p-6 px-8 custom-scrollbar bg-black/10">
           <div className="max-w-5xl mx-auto h-full">
             {activeTab === "dashboard" && <KBDashboard />}
             {activeTab === "collections" && <PanelCollections />}

@@ -214,28 +214,28 @@ export const ChatWindow = () => {
                   <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">
                     {t("chat.welcome_title")}
                   </h1>
-                  <p className="text-[var(--text-dim)] text-center max-w-sm mb-10 text-sm">
+                  <p className="text-[var(--text-dim)] text-center max-w-md px-6 mb-10 text-sm">
                     {t("chat.welcome_subtitle")}
                   </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full max-w-2xl px-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 w-full max-w-4xl px-4 sm:px-8">
                     {quickActions.map((item) => (
                       <button
                         key={item.label}
                         onClick={() => setInput(item.label)}
-                        className="glass p-6 rounded-2xl flex items-start gap-4 hover:bg-white/5 text-left transition-all group border border-white/5 hover:border-white/10 shadow-sm"
+                        className="glass px-6 py-5 rounded-2xl flex items-start gap-4 hover:bg-white/5 text-left transition-all group border border-white/5 hover:border-white/10 shadow-sm"
                       >
-                        <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/15 flex-shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/15 shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors mt-0.5 sm:mt-1">
                           <item.icon
                             size={18}
                             className="text-[var(--primary)]"
                           />
                         </div>
-                        <div>
-                          <div className="text-sm font-semibold text-white group-hover:text-[var(--primary)] transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-white group-hover:text-[var(--primary)] transition-colors leading-tight mb-1">
                             {item.label}
                           </div>
-                          <div className="text-xs text-[var(--text-muted)] mt-0.5">
+                          <div className="text-xs text-[var(--text-muted)] mt-1.5 leading-relaxed">
                             {item.sub}
                           </div>
                         </div>
