@@ -167,7 +167,7 @@ def test_prefetch_engine_model_endpoint_returns_success(llm_client: Any) -> None
             allowed=True,
         )
 
-    service._setup_manager.prefetch_model_for_engine = _fake_prefetch_model_for_engine  # type: ignore[method-assign]
+    service._setup_manager.prefetch_model_for_engine = _fake_prefetch_model_for_engine
 
     response = client.post(
         "/api/studios/framework/llm/engines/tgi/prefetch-model",

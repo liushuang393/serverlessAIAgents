@@ -337,7 +337,7 @@ export default function Layout() {
         >
           {/* 折り畳み時：アイコンのみ縦並び（グループ区切り線あり） */}
           {!sidebarOpen && (
-            <div className="flex flex-col items-center pt-3 gap-1">
+            <div className="flex flex-col items-center pt-3 gap-1 h-full">
               {/* 展開ボタン */}
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -379,6 +379,9 @@ export default function Layout() {
                   })}
                 </div>
               ))}
+              <div className="mt-auto mb-3 flex-shrink-0">
+                <InstallAppButton variant="icon" />
+              </div>
             </div>
           )}
 
@@ -440,14 +443,14 @@ export default function Layout() {
                   </div>
                 ))}
               </nav>
+              <div className="px-3 pb-4 flex-shrink-0">
+                <InstallAppButton variant="sidebar" />
+              </div>
             </>
           )}
         </aside>
 
         <main className="flex-1 overflow-auto p-4 md:p-6">
-          <div className="mb-3 flex justify-end">
-            <InstallAppButton />
-          </div>
           <HealthAndAuthBanner />
           {/* モバイル用ナビ */}
           <div className="md:hidden glass-panel mb-4 p-2">

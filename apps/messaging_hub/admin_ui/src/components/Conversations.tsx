@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import {
   CheckCircle2,
   ChevronDown,
@@ -167,36 +174,6 @@ export default function Conversations() {
   );
 
   useEffect(() => {
-    void verifyAuth();
-    void refreshConversations();
-  }, [verifyAuth, refreshConversations]);
-
-  useEffect(() => {
-    if (!isVisible) {
-      return;
-    }
-    void refreshConversations(false);
-    if (selectedConversationId) {
-      void refreshMessages(selectedConversationId, false);
-    }
-    const timer = window.setInterval(() => {
-      void refreshConversations(false);
-    }, 7000);
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [isVisible, selectedConversationId, refreshConversations, refreshMessages]);
-
-  useEffect(() => {
-    if (!selectedConversationId) {
-      setMessages([]);
-      return;
-    }
-    void refreshMessages(selectedConversationId);
-    void subscribeEvents(selectedConversationId);
-  }, [selectedConversationId, refreshMessages, subscribeEvents]);
-
-  useEffect(() => {
     if (!lastMessage) {
       return;
     }
@@ -217,7 +194,12 @@ export default function Conversations() {
       }
     }
     setStatusMessage(`リアルタイムイベント受信: ${eventType}`);
-  }, [lastMessage, selectedConversationId, refreshConversations, refreshMessages]);
+  }, [
+    lastMessage,
+    selectedConversationId,
+    refreshConversations,
+    refreshMessages,
+  ]);
 
   useEffect(() => {
     if (!messageListRef.current) {
@@ -264,117 +246,160 @@ export default function Conversations() {
     }
   }, []);
 
-  const refreshConversations = useCallback(async (showLoading = true) => {
-    if (showLoading) {
-      setLoadingConversations(true);
-    }
-    try {
-      const response = await fetch("/api/sr_chat/conversations.list");
-      if (!response.ok) {
-        setPageError(await readErrorMessage(response));
-        return;
-      }
-      const data = await response.json();
-      const items = Array.isArray(data.conversations)
-        ? (data.conversations as ConversationSummary[])
-        : [];
-      setConversations(items);
-      if (!selectedConversationId && items.length > 0) {
-        setSelectedConversationId(items[0].conversation_id);
-      }
-      setPageError(null);
-    } catch (error) {
-      setPageError(
-        error instanceof Error ? error.message : "会話一覧の取得に失敗しました",
-      );
-    } finally {
+  const refreshConversations = useCallback(
+    async (showLoading = true) => {
       if (showLoading) {
-        setLoadingConversations(false);
+        setLoadingConversations(true);
       }
-    }
-  }, [selectedConversationId]);
+      try {
+        const response = await fetch("/api/sr_chat/conversations.list");
+        if (!response.ok) {
+          setPageError(await readErrorMessage(response));
+          return;
+        }
+        const data = await response.json();
+        const items = Array.isArray(data.conversations)
+          ? (data.conversations as ConversationSummary[])
+          : [];
+        setConversations(items);
+        if (!selectedConversationId && items.length > 0) {
+          setSelectedConversationId(items[0].conversation_id);
+        }
+        setPageError(null);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "会話一覧の取得に失敗しました",
+        );
+      } finally {
+        if (showLoading) {
+          setLoadingConversations(false);
+        }
+      }
+    },
+    [selectedConversationId],
+  );
 
-  const refreshMessages = useCallback(async (
-    conversationId: string,
-    showLoading = true,
-  ) => {
-    if (showLoading) {
-      setLoadingMessages(true);
-    }
-    try {
-      const response = await fetch(
-        `/api/sr_chat/conversations.history?conversation_id=${encodeURIComponent(conversationId)}&limit=200`,
-      );
-      if (!response.ok) {
-        setPageError(await readErrorMessage(response));
-        return;
-      }
-      const data = await response.json();
-      const rawItems = Array.isArray(data.messages)
-        ? (data.messages as SRMessage[])
-        : [];
-      setMessages([...rawItems].reverse());
-      setPageError(null);
-    } catch (error) {
-      setPageError(
-        error instanceof Error ? error.message : "履歴取得に失敗しました",
-      );
-    } finally {
+  const refreshMessages = useCallback(
+    async (conversationId: string, showLoading = true) => {
       if (showLoading) {
-        setLoadingMessages(false);
+        setLoadingMessages(true);
       }
-    }
-  }, []);
+      try {
+        const response = await fetch(
+          `/api/sr_chat/conversations.history?conversation_id=${encodeURIComponent(conversationId)}&limit=200`,
+        );
+        if (!response.ok) {
+          setPageError(await readErrorMessage(response));
+          return;
+        }
+        const data = await response.json();
+        const rawItems = Array.isArray(data.messages)
+          ? (data.messages as SRMessage[])
+          : [];
+        setMessages([...rawItems].reverse());
+        setPageError(null);
+      } catch (error) {
+        setPageError(
+          error instanceof Error ? error.message : "履歴取得に失敗しました",
+        );
+      } finally {
+        if (showLoading) {
+          setLoadingMessages(false);
+        }
+      }
+    },
+    [],
+  );
 
-  const subscribeEvents = useCallback(async (conversationId: string) => {
-    try {
-      const response = await fetch("/api/sr_chat/events.subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: clientId,
-          conversation_id: conversationId,
-          user_id: userId || "admin_ui",
-          event_types: [
-            "RunStarted",
-            "StepStarted",
-            "ToolApprovalRequested",
-            "ToolExecuted",
-            "EvidenceAdded",
-            "RunFinished",
-            "flow.start",
-            "progress",
-            "clarification.required",
-            "a2ui.component",
-            "flow.complete",
-            "flow.error",
-          ],
-        }),
-      });
-      if (!response.ok) {
-        setPageError(await readErrorMessage(response));
-        return;
+  const subscribeEvents = useCallback(
+    async (conversationId: string) => {
+      try {
+        const response = await fetch("/api/sr_chat/events.subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: clientId,
+            conversation_id: conversationId,
+            user_id: userId || "admin_ui",
+            event_types: [
+              "RunStarted",
+              "StepStarted",
+              "ToolApprovalRequested",
+              "ToolExecuted",
+              "EvidenceAdded",
+              "RunFinished",
+              "flow.start",
+              "progress",
+              "clarification.required",
+              "a2ui.component",
+              "flow.complete",
+              "flow.error",
+            ],
+          }),
+        });
+        if (!response.ok) {
+          setPageError(await readErrorMessage(response));
+          return;
+        }
+        const data = (await response.json()) as SubscriptionResponse;
+        if (data.ok) {
+          setSubscriptionId(data.subscription_id);
+          setWsUrl(data.ws_url);
+          setWsRooms(Array.isArray(data.rooms) ? data.rooms : []);
+        }
+      } catch (error) {
+        setPageError(
+          error instanceof Error ? error.message : "イベント購読に失敗しました",
+        );
       }
-      const data = (await response.json()) as SubscriptionResponse;
-      if (data.ok) {
-        setSubscriptionId(data.subscription_id);
-        setWsUrl(data.ws_url);
-        setWsRooms(Array.isArray(data.rooms) ? data.rooms : []);
-      }
-    } catch (error) {
-      setPageError(
-        error instanceof Error ? error.message : "イベント購読に失敗しました",
-      );
+    },
+    [clientId, userId],
+  );
+
+  useEffect(() => {
+    void verifyAuth();
+    void refreshConversations();
+  }, [verifyAuth, refreshConversations]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
     }
-  }, [clientId, userId]);
+    void refreshConversations(false);
+    if (selectedConversationId) {
+      void refreshMessages(selectedConversationId, false);
+    }
+    const timer = window.setInterval(() => {
+      void refreshConversations(false);
+    }, 7000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [
+    isVisible,
+    selectedConversationId,
+    refreshConversations,
+    refreshMessages,
+  ]);
+
+  useEffect(() => {
+    if (!selectedConversationId) {
+      setMessages([]);
+      return;
+    }
+    void refreshMessages(selectedConversationId);
+    void subscribeEvents(selectedConversationId);
+  }, [selectedConversationId, refreshMessages, subscribeEvents]);
 
   const createConversation = () => {
     const idSuffix =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID().slice(0, 8)
-        : String(Date.now());
-    const conversationId = `chat:${idSuffix}`;
-    setSelectedConversationId(conversationId);
+        : Math.random().toString(36).substring(2, 10);
+    const newId = `conv_${idSuffix}`;
+    setSelectedConversationId(newId);
     setMessages([]);
     setStatusMessage("新規会話を作成しました");
   };

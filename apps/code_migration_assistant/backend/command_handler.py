@@ -23,6 +23,7 @@ from apps.code_migration_assistant.backend.task_runtime import (
     write_feedback_artifact,
 )
 
+
 logger = logging.getLogger("migration_server")
 
 
@@ -82,7 +83,7 @@ async def apply_local_command(
             human_facts = getattr(runtime.engine, "_human_facts", None)
             if not isinstance(human_facts, list):
                 human_facts = []
-                runtime.engine._human_facts = human_facts  # type: ignore[attr-defined]
+                runtime.engine._human_facts = human_facts
             human_facts.append(fact)
 
             feedback_record = {

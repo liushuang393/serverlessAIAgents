@@ -30,11 +30,7 @@ async def test_list_ollama_models_parses_cli_output() -> None:
         returncode = 0
 
         async def communicate(self) -> tuple[bytes, bytes]:
-            stdout = (
-                "NAME ID SIZE MODIFIED\n"
-                "gemma4 abc123 5.4 GB 2 hours ago\n"
-                "qwen2.5:72b def456 42 GB 1 day ago\n"
-            ).encode("utf-8")
+            stdout = b"NAME ID SIZE MODIFIED\ngemma4 abc123 5.4 GB 2 hours ago\nqwen2.5:72b def456 42 GB 1 day ago\n"
             return stdout, b""
 
     async def _fake_create_subprocess_exec(*args, **kwargs):  # type: ignore[no-untyped-def]
@@ -42,10 +38,10 @@ async def test_list_ollama_models_parses_cli_output() -> None:
         return _FakeProc()
 
     original = asyncio.create_subprocess_exec
-    asyncio.create_subprocess_exec = _fake_create_subprocess_exec  # type: ignore[assignment]
+    asyncio.create_subprocess_exec = _fake_create_subprocess_exec
     try:
         models = await gateway._list_ollama_models()
     finally:
-        asyncio.create_subprocess_exec = original  # type: ignore[assignment]
+        asyncio.create_subprocess_exec = original
 
     assert models == ["gemma4", "qwen2.5:72b"]
