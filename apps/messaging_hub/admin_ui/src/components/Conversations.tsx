@@ -577,52 +577,51 @@ export default function Conversations() {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-[calc(100vh-6rem)]">
-      {(pageError || statusMessage) && (
-        <div className="space-y-2">
-          {pageError && (
-            <div className="glass-panel border border-rose-300/70 bg-rose-50/80 p-3 text-sm text-rose-800 flex items-center justify-between gap-2">
-              <span>{pageError}</span>
-              <button
-                onClick={() => setPageError(null)}
-                className="text-rose-700"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-          {statusMessage && (
-            <div className="glass-panel border border-emerald-300/70 bg-emerald-50/80 p-3 text-sm text-emerald-800 flex items-center gap-2">
-              <CheckCircle2 size={14} />
-              <span>{statusMessage}</span>
-            </div>
-          )}
+    <div className="flex flex-col gap-3 h-[calc(100vh-4rem)]">
+      {pageError && (
+        <div className="glass-panel border border-rose-300/70 bg-rose-50/80 p-2 text-xs text-rose-800 flex items-center justify-between gap-2">
+          <span>{pageError}</span>
+          <button
+            onClick={() => setPageError(null)}
+            className="text-rose-700"
+          >
+            <X size={12} />
+          </button>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">
+      <div className="flex items-center justify-between gap-4 glass-panel px-4 py-2 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <h2 className="text-lg font-bold text-slate-900 flex-shrink-0">
             会話ワークスペース
           </h2>
-          <p className="text-sm text-muted mt-1">
-            Messaging Hub 独自チャット画面（sr_chat API 接続）
-          </p>
-          <div className="text-xs text-muted mt-1 flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-              {isConnected ? "WebSocket 接続中" : "WebSocket 未接続"}
+          <div className="flex items-center gap-3 text-xs text-muted border-l pl-3 truncate">
+            <span className="flex items-center gap-1 flex-shrink-0">
+              {isConnected ? (
+                <Wifi size={14} className="text-emerald-500" />
+              ) : (
+                <WifiOff size={14} className="text-rose-500" />
+              )}
+              {isConnected ? "オンライン" : "オフライン"}
             </span>
-            {subscriptionId && <span>subscription: {subscriptionId}</span>}
+            {statusMessage && (
+              <span className="truncate border-l pl-3 max-w-[300px]">
+                {statusMessage.replace("リアルタイムイベント受信: ", "受信: ")}
+              </span>
+            )}
             {!authChecked && (
               <span className="flex items-center gap-1">
                 <Loader2 size={12} className="animate-spin" />
-                auth check...
+              </span>
+            )}
+            {subscriptionId && (
+              <span className="truncate border-l pl-3 text-[10px]">
+                ID: {subscriptionId.slice(0, 8)}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => {
               void refreshConversations();
@@ -630,16 +629,16 @@ export default function Conversations() {
                 void refreshMessages(selectedConversationId);
               }
             }}
-            className="glass-panel px-3 py-2 text-sm flex items-center gap-2"
+            className="glass-panel px-2 py-1.5 text-xs flex items-center gap-1.5 hover:bg-white/80 transition-colors"
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={12} />
             更新
           </button>
           <button
             onClick={createConversation}
-            className="neo-button elevated flex items-center gap-2 px-4 py-2"
+            className="neo-button elevated flex items-center gap-1.5 px-3 py-1.5 text-xs"
           >
-            <Plus size={16} />
+            <Plus size={14} />
             新規会話
           </button>
         </div>

@@ -4,6 +4,7 @@ import { getMessagingHubApiKey } from "../shared/auth";
 interface WSMessage {
   type: string;
   data: unknown;
+  room?: string;
 }
 
 /**
