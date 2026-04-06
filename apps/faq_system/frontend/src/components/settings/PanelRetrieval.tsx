@@ -24,6 +24,10 @@ interface TestResultItem {
 }
 
 interface TestQueryResult {
+  answer?: string;
+  documents?: TestResultItem[];
+  related_documents?: TestResultItem[];
+  diagnostics?: Record<string, unknown>;
   results?: TestResultItem[];
   total?: number;
   error?: string;
@@ -177,6 +181,11 @@ export function PanelRetrieval() {
       return next;
     });
   };
+
+  const normalizedResults = [
+    ...(testResults?.results ?? testResults?.documents ?? []),
+    ...(testResults?.related_documents ?? []),
+  ];
 
   return (
     <div data-testid="panel-retrieval" className="space-y-4">
@@ -534,7 +543,16 @@ export function PanelRetrieval() {
                   </div>
                 )}
 
-                {testResults.results && (
+                {testResults.answer && (
+                  <div
+                    data-testid="test-answer"
+                    className="rounded-xl border border-white/5 bg-white/[0.02] p-3 text-xs text-white/80 whitespace-pre-wrap"
+                  >
+                    {testResults.answer}
+                  </div>
+                )}
+
+                {normalizedResults.length > 0 && (
                   <>
                     <p className="text-xs text-[var(--text-muted)]">
                       {t("knowledge_panel.hits")}:{" "}
@@ -542,10 +560,10 @@ export function PanelRetrieval() {
                         data-testid="hit-count"
                         className="text-white font-semibold"
                       >
-                        {testResults.results.length}
+                        {normalizedResults.length}
                       </span>
                     </p>
-                    {testResults.results.map((item, idx) => {
+                    {normalizedResults.map((item, idx) => {
                       const content = item.content ?? "";
                       const isLong = content.length > 200;
                       const isExpanded = expandedChunks.has(idx);

@@ -76,6 +76,7 @@ class RAGConfig:
     chunk_strategy: ChunkStrategy = ChunkStrategy.RECURSIVE
     chunk_size: int = 1000
     chunk_overlap: int = 200
+    retrieval_method: str = "semantic"
     reranker: RerankerType = RerankerType.BM25
     reranker_options: dict[str, Any] = field(default_factory=dict)
     top_k: int = 5
@@ -107,6 +108,13 @@ class RAGConfig:
                 "default": 1000,
                 "min": 100,
                 "max": 4000,
+            },
+            {
+                "name": "retrieval_method",
+                "type": "select",
+                "label": "検索手法",
+                "options": ["semantic", "keyword", "hybrid", "multi_query"],
+                "default": "semantic",
             },
             {
                 "name": "reranker",
@@ -288,7 +296,14 @@ class RAGService(ServiceBase[dict[str, Any]]):
             {
                 "answer": answer,
                 "documents": [
-                    {"id": d.id, "content": d.content[:500], "source": d.source, "score": d.score} for d in documents
+                    {
+                        "id": d.id,
+                        "content": d.content[:500],
+                        "source": d.source,
+                        "score": d.score,
+                        "metadata": d.metadata,
+                    }
+                    for d in documents
                 ],
                 "query": question,
             },
@@ -314,7 +329,14 @@ class RAGService(ServiceBase[dict[str, Any]]):
             execution_id,
             {
                 "documents": [
-                    {"id": d.id, "content": d.content, "source": d.source, "score": d.score} for d in documents
+                    {
+                        "id": d.id,
+                        "content": d.content,
+                        "source": d.source,
+                        "score": d.score,
+                        "metadata": d.metadata,
+                    }
+                    for d in documents
                 ],
                 "query": query,
                 "count": len(documents),

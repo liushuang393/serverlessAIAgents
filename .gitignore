@@ -128,3 +128,5 @@ migration_output/*
 
 test_sample.cbl
 test_sample.zip
+apps/faq_system/tests/fixtures/knowledge_samples/hr_travel_bundle/*
+data/chroma/*

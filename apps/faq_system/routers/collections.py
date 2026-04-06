@@ -13,6 +13,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from pydantic import BaseModel, Field
 
 from apps.faq_system.backend.auth.dependencies import require_auth, require_role
+from apps.faq_system.backend.services.collection_test_query_service import (
+    CollectionTestQueryService,
+)
 from apps.faq_system.routers.dependencies import invalidate_service_cache, is_rag_enabled
 
 
@@ -111,6 +114,7 @@ class TestQueryRequest(BaseModel):
 
     query: str = Field(..., description="テスト検索クエリ")
     top_k: int = Field(5, ge=1, le=50, description="取得件数")
+    expand_related: bool = Field(True, description="関連ドキュメント展開を有効化")
 
 
 class ChunkPreviewRequest(BaseModel):
@@ -261,18 +265,20 @@ async def test_query(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    from shared.services import RAGService
-
     rag_config.top_k = request.top_k
-    service = RAGService(rag_config)
-    result = await service.execute(action="query", question=request.query)
-
-    if not result.success:
-        raise HTTPException(
-            status_code=500,
-            detail={"message": result.error_message or "Query failed", "error_code": result.error_code},
+    service = CollectionTestQueryService(
+        collection_name=name,
+        rag_config=rag_config,
+        document_manager=_get_doc_mgr(),
+    )
+    try:
+        return await service.run_test_query(
+            query=request.query,
+            top_k=request.top_k,
+            expand_related=request.expand_related,
         )
-    return result.data
+    finally:
+        await service.cleanup()
 
 
 # ---------------------------------------------------------------------------

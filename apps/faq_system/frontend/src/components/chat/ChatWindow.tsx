@@ -168,6 +168,7 @@ export const ChatWindow = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsKnowledgePanelOpen((prev) => !prev)}
+            data-testid="btn-open-knowledge-panel"
             className={`p-2.5 rounded-xl transition-all border shadow-sm ${isKnowledgePanelOpen
               ? "text-[var(--primary)] bg-[var(--primary)]/10 border-[var(--primary)]/30 shadow-[0_0_15px_rgba(94,234,212,0.2)]"
               : "text-[var(--text-muted)] hover:text-white border-white/5 hover:border-white/20 hover:bg-white/5"

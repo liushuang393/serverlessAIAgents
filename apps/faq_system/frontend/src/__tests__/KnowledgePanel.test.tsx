@@ -29,11 +29,12 @@ describe("KnowledgePanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-  /** パネルが閉じている時に translate-x-full クラスがある */
-  it("閉じている時に translate-x-full クラスを持つ", () => {
+  /** パネルが閉じている時に非表示クラスがある */
+  it("閉じている時に非表示クラスを持つ", () => {
     render(<KnowledgePanel isOpen={false} onClose={vi.fn()} />);
     const panel = screen.getByTestId("knowledge-panel");
-    expect(panel.className).toContain("translate-x-full");
+    expect(panel.className).toContain("opacity-0");
+    expect(panel.className).toContain("invisible");
   });
 
   /** パネルが開いている時にタブ名が表示される */

@@ -146,6 +146,7 @@ export const KnowledgePanel = ({
             return (
               <button
                 key={key}
+                data-testid={`knowledge-tab-${key}`}
                 onClick={() => setActiveTab(key as RAGTab)}
                 className={`flex items-center gap-2 px-5 py-3.5 text-xs font-bold rounded-t-xl transition-all relative group ${isActive
                   ? "text-[var(--primary)] bg-[var(--primary)]/5"

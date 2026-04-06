@@ -37,6 +37,9 @@ from apps.faq_system.backend.services.feedback_service import (
     FeedbackType,
     ImprovementSuggestion,
 )
+from apps.faq_system.backend.services.collection_test_query_service import (
+    CollectionTestQueryService,
+)
 
 # FAQ System 固有サービス
 from apps.faq_system.backend.services.glossary_service import (
@@ -52,6 +55,7 @@ from kernel.agents import FAQAgentConfig as FAQConfig
 
 __all__ = [
     "ChatHistoryService",
+    "CollectionTestQueryService",
     "Citation",
     # 引用
     "CitationService",

@@ -39,6 +39,8 @@ class VectorStoreBackend(RetrievalBackend):
         chunk_strategy: str = "recursive",
         reranker: str = "bm25",
         top_k: int = 5,
+        min_similarity: float = 0.3,
+        retrieval_method: str = "semantic",
     ) -> None:
         """初期化.
 
@@ -53,6 +55,8 @@ class VectorStoreBackend(RetrievalBackend):
         self._chunk_strategy = chunk_strategy
         self._reranker = reranker
         self._default_top_k = top_k
+        self._min_similarity = min_similarity
+        self._retrieval_method = retrieval_method
         self._rag_service: Any = None  # 遅延初期化（RAGService 型は動的 import）
         self._started = False
 
@@ -68,8 +72,10 @@ class VectorStoreBackend(RetrievalBackend):
             config = RAGConfig(
                 collection=self._collection,
                 chunk_strategy=chunk_strategy,
+                retrieval_method=self._retrieval_method,
                 reranker=reranker,
                 top_k=self._default_top_k,
+                min_similarity=self._min_similarity,
             )
             self._rag_service = RAGService(config)
             await self._rag_service.start()
@@ -102,8 +108,9 @@ class VectorStoreBackend(RetrievalBackend):
         top_k = query.options.get("top_k", query.top_k)
         rag_result = await self._rag_service.execute(
             action="search",
-            question=query.query,
+            query=query.query,
             top_k=top_k,
+            filters=query.filters,
         )
 
         if not rag_result.success:

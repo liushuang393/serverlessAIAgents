@@ -314,6 +314,7 @@ class CollectionManager:
             chunk_strategy=chunk_strategy,
             chunk_size=model.chunk_size,
             chunk_overlap=model.chunk_overlap,
+            retrieval_method=model.retrieval_method or "semantic",
             reranker=reranker,
             top_k=model.top_k,
             min_similarity=model.min_similarity,

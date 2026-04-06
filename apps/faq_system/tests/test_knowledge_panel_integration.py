@@ -24,9 +24,11 @@ from apps.faq_system.routers.access_control import (
 )
 from apps.faq_system.routers.collections import (
     CreateCollectionRequest,
+    TestQueryRequest,
     UpdateCollectionRequest,
     create_collection,
     index_document,
+    test_query,
     update_collection,
     upload_document,
 )
@@ -208,6 +210,81 @@ class TestKnowledgeManagementIntegration:
             "my_col",
             {"top_k": 20},
         )
+
+    @pytest.mark.asyncio
+    async def test_test_query_route_delegates_to_collection_test_query_service(self) -> None:
+        """test-query route が route 独自補完ではなく service へ委譲することを検証。"""
+        from shared.services.rag_service import ChunkStrategy, RAGConfig, RerankerType
+
+        rag_config = RAGConfig(
+            collection="faq_main",
+            chunk_strategy=ChunkStrategy.SENTENCE,
+            chunk_size=500,
+            chunk_overlap=80,
+            retrieval_method="hybrid",
+            reranker=RerankerType.BM25,
+            top_k=8,
+            min_similarity=0.15,
+        )
+
+        fake_col_mgr = MagicMock()
+        fake_col_mgr.build_rag_config = AsyncMock(return_value=rag_config)
+        fake_doc_mgr = MagicMock()
+
+        fake_service = MagicMock()
+        fake_service.run_test_query = AsyncMock(
+            return_value={
+                "answer": "Follow the latest update notice.",
+                "documents": [{"source": "travel_policy_official_2025.pdf"}],
+                "related_documents": [{"source": "travel_faq_exceptions.docx"}],
+                "query": "policy conflict",
+                "total": 2,
+                "diagnostics": {
+                    "retrieval_method": "hybrid",
+                    "used_lexical_fallback": True,
+                    "expanded_related_count": 1,
+                    "answer_mode": "policy_conflict_guided",
+                },
+            }
+        )
+        fake_service.cleanup = AsyncMock(return_value=None)
+
+        with (
+            patch(
+                "apps.faq_system.routers.collections.is_rag_enabled",
+                return_value=True,
+            ),
+            patch(
+                "apps.faq_system.routers.collections._get_col_mgr",
+                return_value=fake_col_mgr,
+            ),
+            patch(
+                "apps.faq_system.routers.collections._get_doc_mgr",
+                return_value=fake_doc_mgr,
+            ),
+            patch(
+                "apps.faq_system.routers.collections.CollectionTestQueryService",
+                return_value=fake_service,
+            ) as mock_query_service,
+        ):
+            result = await test_query(
+                name="faq_main",
+                request=TestQueryRequest(query="policy conflict", top_k=8),
+                _user=_fake_user("admin"),
+            )
+
+        assert result["diagnostics"]["retrieval_method"] == "hybrid"
+        mock_query_service.assert_called_once_with(
+            collection_name="faq_main",
+            rag_config=rag_config,
+            document_manager=fake_doc_mgr,
+        )
+        fake_service.run_test_query.assert_awaited_once_with(
+            query="policy conflict",
+            top_k=8,
+            expand_related=True,
+        )
+        fake_service.cleanup.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_access_matrix_reflects_rbac(self) -> None:

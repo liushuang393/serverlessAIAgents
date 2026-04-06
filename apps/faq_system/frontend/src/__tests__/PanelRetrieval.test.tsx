@@ -199,6 +199,37 @@ describe("PanelRetrieval", () => {
     });
   });
 
+  it("API が documents 形式を返しても結果を表示できる", async () => {
+    mockTestQuery.mockResolvedValue({
+      answer: "正式規程と更新通知を参照してください。",
+      documents: [
+        {
+          score: 0.91,
+          content: "2026年4月1日以降、東京の部長職は宿泊上限18,000円です。",
+          source: "travel_policy_update_notice_2026.txt",
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<PanelRetrieval />);
+
+    await user.selectOptions(
+      screen.getByTestId("select-collection"),
+      "faq_main",
+    );
+    await user.type(screen.getByTestId("test-query-input"), "東京出張の宿泊上限");
+    await user.click(screen.getByTestId("btn-test-query"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("test-results")).toBeInTheDocument();
+      expect(screen.getByTestId("test-answer")).toHaveTextContent(
+        "正式規程と更新通知を参照してください。",
+      );
+      expect(screen.getByTestId("hit-count")).toHaveTextContent("1");
+    });
+  });
+
   // 4. 設定保存ボタンで updateCollection が呼ばれる
   it("設定保存ボタンで updateCollection が呼ばれる", async () => {
     const user = userEvent.setup();
